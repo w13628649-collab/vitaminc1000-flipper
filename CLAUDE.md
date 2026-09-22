@@ -1,10 +1,14 @@
 # Albion 市场数据与交易工具
 
-## 项目现状(2026-09-21)
+## 项目现状(2026-09-22)
 
-**当前阶段:做倒爷工具(跨城/同城价差扫描)。**
-精炼/制造利润系统是后续阶段,暂不动工。别把两者混在一起——倒爷工具不需要
-NATS、不需要时序数据库,一个定时脚本就够。
+**公会版:Go 客户端 + Go 服务端,全公会共用一份数据。**
+
+- 语言**只用 Go**,前端除外。Python 已经全部删掉,别再写
+- 倒爷工具(同城价差、查价、销量榜)已经移植进服务端
+- 精炼/制造利润系统还没动工
+
+进度和接口清单见 `docs/progress.md`,口径和设计取舍见 `docs/flipper.md`。
 
 ### 作者情况
 
@@ -22,14 +26,14 @@ NATS、不需要时序数据库,一个定时脚本就够。
 
 ---
 
-## 第一阶段交付物:价差扫描器
+## 不变的核心要求
 
-详细需求见 `SPEC-flipper.md`。核心要点:
+原始需求见 `SPEC-flipper.md`。这几条任何时候都不能破:
 
-- 数据源只用 **AODP REST API**(免费),不碰 NATS
 - 必须有 **troll 过滤**——这是最容易漏且代价最高的一环
 - 必须输出**数据新鲜度**,不能只给价差
-- 排序主键是**日化收益**,不是单笔利润率
+- 排序主键是**日化绝对收益**,不是单笔利润率
+- 抓包数据优先,AODP 兜底。两边的成交历史是同一份,不能取平均
 
 ---
 
@@ -151,8 +155,10 @@ def return_rate(base, city, focus):
 
 ## 参考
 
+- 进度与接口:`docs/progress.md`
+- 倒爷工具口径:`docs/flipper.md`
 - 完整讨论记录(需要时再读,不要默认加载):`docs/session-transcript.md`
-- 第一阶段需求:`SPEC-flipper.md`
+- 原始需求:`SPEC-flipper.md`
 - 物品/配方:https://github.com/ao-data/ao-bin-dumps(`items.json`、`world.txt`)
 - 抓包客户端:https://github.com/ao-data/albiondata-client
 - 物品图标:`https://render.albiononline.com/v1/item/{id}.png`

@@ -7,193 +7,264 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --paper:#dfe1e3; --surface:#eef0f1; --surface-2:#e6e8ea;
-  --ink:#15181c; --ink-mid:#4a5158; --ink-soft:#7c858d;
-  --rule:#c6cbcf; --rule-soft:#d6dadd;
-  --bronze:#8a6320; --gain:#2c6e49; --warn:#9c3232;
-  --thetford:#6b4a8f; --fort-sterling:#69737d; --lymhurst:#4f7a3a;
-  --martlock:#2f5d8a; --bridgewatch:#b07226; --caerleon:#9c3232;
-  --r:2px;
-}
-*{box-sizing:border-box}
-body{
-  margin:0; background:var(--paper); color:var(--ink);
-  font-family:Archivo,system-ui,sans-serif; font-size:14px; line-height:1.45;
-  font-variant-numeric:tabular-nums;
-}
-.wrap{max-width:1180px; margin:0 auto; padding:0 20px 60px}
-header{display:flex; gap:20px; align-items:baseline; padding:22px 0 14px; border-bottom:2px solid var(--ink)}
-.brand{font-size:19px; font-weight:700; letter-spacing:-.02em}
-.brand span{color:var(--bronze)}
-.facts{display:flex; gap:22px; margin-left:auto}
-.fact{display:flex; flex-direction:column; gap:1px; text-align:right}
-.fact b{font-size:14px; font-weight:600; line-height:1.2}
-.fact i{font-size:11px; font-style:normal; color:var(--ink-soft)}
-.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px}
-.live{background:var(--gain)} .dead{background:var(--warn)}
-
-.note{padding:14px 0 6px; font-size:12.5px; color:var(--ink-mid); max-width:76ch}
-table{width:100%; border-collapse:collapse; margin-top:10px}
-th{
-  text-align:right; font-size:11px; font-weight:600; color:var(--ink-soft);
-  padding:7px 10px; border-bottom:1px solid var(--ink); white-space:nowrap;
-}
-th:first-child,th:nth-child(2){text-align:left}
-td{padding:8px 10px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
-td:first-child,td:nth-child(2){text-align:left}
-tr:hover{background:var(--surface)}
-.city{display:flex; align-items:center; gap:6px; font-weight:500}
-.cdot{width:8px; height:8px; border-radius:50%; background:var(--c)}
-.price{font-weight:600; border-radius:var(--r); padding:2px 5px; margin:-2px -5px}
-.depth{font-size:11.5px; color:var(--ink-soft)}
-.age{font-size:11.5px; color:var(--ink-soft)}
-.sell{color:var(--ink)}
-.buy{color:var(--ink)}
-/* 价格跳动:涨绿跌红,和整套设计语言一致 */
-@keyframes up   { from{background:color-mix(in oklab,var(--gain),transparent 62%)} to{background:transparent} }
-@keyframes down { from{background:color-mix(in oklab,var(--warn),transparent 62%)} to{background:transparent} }
-.flash-up{animation:up .7s ease-out}
-.flash-down{animation:down .7s ease-out}
-@media (prefers-reduced-motion:reduce){ .flash-up,.flash-down{animation:none} }
-.empty{padding:40px 0; color:var(--ink-soft)}
-</style>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand">albion <span>guild</span></div>
     <div class="facts">
-      <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i>推送通道</i></div>
+      <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i>推送</i></div>
       <div class="fact"><b id="clients">—</b><i>在线客户端</i></div>
-      <div class="fact"><b id="ticks">0</b><i>收到的行情</i></div>
+      <div class="fact"><b id="items">—</b><i>物品目录</i></div>
+      <div class="fact"><b id="scan-age">—</b><i>行情</i></div>
     </div>
   </header>
 
-  <p class="note">
-    价格由公会成员在游戏里翻市场时上传,服务端去重后实时推给所有在线的人。
-    <b>不需要刷新页面</b>——数值变化时会自己跳动,涨绿跌红。
-  </p>
+  <nav>
+    <button data-view="desk" aria-current="page">总览</button>
+    <button data-view="ideas">机会</button>
+    <button data-view="lookup">查价</button>
+    <button data-view="rank">销量榜</button>
+    <button data-view="book">记账</button>
+    <button data-view="live">实时</button>
+  </nav>
 
-  <table>
-    <thead><tr>
-      <th>物品</th><th>城市</th>
-      <th>卖单最低</th><th>深度</th>
-      <th>买单最高</th><th>深度</th>
-      <th>更新</th>
-    </tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
-  <div id="empty" class="empty">等待行情…先跑一下 <code>cmd/simulate</code> 灌点数据。</div>
+  <!-- ═══════════ 总览:这笔钱怎么分 ═══════════ -->
+  <section class="view" id="v-desk">
+    <div class="bar">
+      <label class="f">本金 <input type="number" id="p-capital" value="10000000" step="1000000" min="100000"></label>
+      <label class="f">单条上限
+        <select id="p-cap">
+          <option value="0.15">15%</option>
+          <option value="0.25" selected>25%</option>
+          <option value="0.4">40%</option>
+          <option value="1">不限</option>
+        </select>
+      </label>
+      <label class="f">风险厌恶
+        <select id="p-risk">
+          <option value="0">0・只看收益</option>
+          <option value="0.5" selected>0.5・适中</option>
+          <option value="1.5">1.5・偏好稳的</option>
+        </select>
+      </label>
+      <button class="act" id="rescan">重新扫描</button>
+      <span class="sub" id="scan-meta"></span>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+    <p class="note" id="p-note"></p>
+
+    <div class="split">
+      <div>
+        <h3>资金怎么分</h3>
+        <table class="tight">
+          <thead><tr>
+            <th class="l">标的</th><th class="l">类型</th>
+            <th>数量</th><th>占用本金</th><th>日收益</th><th>回报率</th><th>波动</th>
+          </tr></thead>
+          <tbody id="p-rows"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>边际收益</h3>
+        <div id="curve"></div>
+        <p class="sub" id="curve-note"></p>
+      </div>
+    </div>
+
+    <h3>数据覆盖率</h3>
+    <p class="sub">亚服的真瓶颈是有没有数据,不是算法。条越短,这座城的报价越旧。</p>
+    <div class="cov" id="cov"></div>
+
+    <h3>模型校准</h3>
+    <div id="calib"></div>
+  </section>
+
+  <!-- ═══════════ 机会:同城 + 跨城 ═══════════ -->
+  <section class="view" id="v-ideas" hidden>
+    <div class="bar">
+      <div class="seg" id="kind-seg">
+        <button data-kind="all" aria-pressed="true">全部</button>
+        <button data-kind="flip">同城</button>
+        <button data-kind="arb">跨城</button>
+      </div>
+      <label class="f">只看可信度
+        <select id="i-conf">
+          <option value="">全部</option><option value="high">高</option>
+          <option value="medium">中及以上</option>
+        </select>
+      </label>
+      <span class="sub" id="ideas-meta"></span>
+    </div>
+    <p class="note">
+      点开任意一行看<b>四种执行方式</b>的报价。秒买秒卖只收 4% 市场税,没有挂单费;
+      挂买挂卖价格最好但摩擦 9%,而且两头都要等成交。哪种划算取决于盘口宽度。
+    </p>
+    <table>
+      <thead><tr>
+        <th class="l s" data-k="item_name">物品</th>
+        <th class="l">路线</th>
+        <th class="l">执行</th>
+        <th class="s" data-k="buy_price">买</th>
+        <th class="s" data-k="sell_price">卖</th>
+        <th class="s" data-k="profit_per_unit">单件</th>
+        <th class="s" data-k="margin">毛利</th>
+        <th class="s" data-k="qty">可吃量</th>
+        <th class="s" data-k="capital_used">占用</th>
+        <th class="s" data-k="daily_profit" data-dir="desc">日收益</th>
+        <th class="s" data-k="z_score">z</th>
+        <th class="s" data-k="volatility">波动</th>
+        <th class="s" data-k="max_age_hours">年龄</th>
+        <th class="l">可信</th>
+      </tr></thead>
+      <tbody id="ideas-rows"></tbody>
+    </table>
+    <div class="empty" id="ideas-empty">还没扫过。</div>
+    <p class="note" id="rejects"></p>
+  </section>
+
+  <!-- ═══════════ 查价 ═══════════ -->
+  <section class="view" id="v-lookup" hidden>
+    <div class="bar">
+      <div class="picker">
+        <button class="act ghost" id="menu-btn">按分类浏览 ▾</button>
+        <div class="menu bare" id="menu"></div>
+      </div>
+      <input type="search" id="search" placeholder="搜中文名 / 英文名 / 物品 ID" autocomplete="off">
+      <label class="f">吃单量 <input type="number" id="d-qty" value="1000" step="100" min="1"></label>
+      <span class="sub" id="lookup-title"></span>
+    </div>
+    <div class="results" id="results" hidden></div>
+    <p class="note">
+      <b>数量</b>和<b>实际均价</b>只有抓包拿得到。AODP 的接口不返回挂单数量,
+      所以"最低价 1000"可能只对应 1 件货——这正是 troll 挂单能骗人的原因。
+      实际均价那一列是走完盘口吃到目标数量后的加权价,和最优价的差就是滑点。
+    </p>
+    <table>
+      <thead><tr>
+        <th class="l">城市</th><th class="l">品质</th>
+        <th>卖单最低</th><th>数量</th><th>实际买入均价</th>
+        <th>买单最高</th><th>数量</th><th>实际卖出均价</th>
+        <th>同城价差</th><th>年龄</th><th class="l">来源</th>
+      </tr></thead>
+      <tbody id="lookup-rows"></tbody>
+    </table>
+    <div class="empty" id="lookup-empty">先在上面挑一件物品。</div>
+  </section>
+
+  <!-- ═══════════ 销量榜 ═══════════ -->
+  <section class="view" id="v-rank" hidden>
+    <div class="bar">
+      <label class="f">城市 <select id="r-city"></select></label>
+      <label class="f">窗口 <select id="r-window">
+        <option value="7">7 天</option><option value="14">14 天</option><option value="30">30 天</option>
+      </select></label>
+      <label class="f">品质 <select id="r-quality">
+        <option value="1">普通</option><option value="2">优秀</option><option value="3">杰出</option>
+        <option value="4">卓越</option><option value="5">大师</option>
+      </select></label>
+      <label class="f">分类 <select id="r-category"><option value="">全部</option></select></label>
+      <span class="sub" id="rank-meta"></span>
+    </div>
+    <p class="note">
+      成交量<b>只统计卖单成交</b>,买单那边拿不到,所以这里偏保守,真实流动性只会更高。
+      当天那根还没走完,不参与统计。
+    </p>
+    <table>
+      <thead><tr>
+        <th class="l s" data-k="item_name">物品</th>
+        <th class="l s" data-k="city">城市</th>
+        <th class="s" data-k="daily_qty">日均件数</th>
+        <th class="s" data-k="daily_silver" data-dir="desc">日均流水</th>
+        <th class="s" data-k="avg_price">加权均价</th>
+        <th class="s" data-k="price_min">最低</th>
+        <th class="s" data-k="price_median">中位</th>
+        <th class="s" data-k="price_max">最高</th>
+        <th class="s" data-k="volatility">波动率</th>
+        <th class="s" data-k="trend_pct">趋势</th>
+        <th class="l">走势</th>
+        <th class="s" data-k="days_with_data">有数据</th>
+      </tr></thead>
+      <tbody id="rank-rows"></tbody>
+    </table>
+    <div class="empty" id="rank-empty">还没有历史数据。</div>
+  </section>
+
+  <!-- ═══════════ 记账 ═══════════ -->
+  <section class="view" id="v-book" hidden>
+    <p class="note">
+      记下实际挂了什么、成交了多少。这张表是整套工具里<b>唯一能自我修正</b>的部分——
+      所有估算里最虚的那个数是 <code>absorb_ratio</code>(敢吃日成交量的多大比例),
+      现在是拍脑袋的 0.20,只有真实成交记录能把它校准过来。
+    </p>
+    <div class="bar">
+      <label class="f">记账人 <input type="text" id="t-owner" placeholder="你的角色名" autocomplete="off"></label>
+      <label class="f">状态 <select id="t-status">
+        <option value="">全部</option><option value="open">未收口</option>
+        <option value="filled">已成交</option><option value="partial">部分成交</option>
+        <option value="abandoned">放弃</option>
+      </select></label>
+      <span class="sub" id="book-meta"></span>
+    </div>
+    <table class="tight">
+      <thead><tr>
+        <th class="l">物品</th><th class="l">路线</th><th class="l">执行</th>
+        <th>计划量</th><th>计划买</th><th>计划卖</th>
+        <th>成交量</th><th>实际净利</th><th class="l">状态</th><th class="l">操作</th>
+      </tr></thead>
+      <tbody id="book-rows"></tbody>
+    </table>
+    <div class="empty" id="book-empty">还没有记录。去「机会」页点任意一行的<b>记一笔</b>。</div>
+  </section>
+
+  <!-- ═══════════ 实时 ═══════════ -->
+  <section class="view" id="v-live" hidden>
+    <p class="note">
+      成员在游戏里翻市场时数据实时传上来。<b>不需要刷新页面</b>,数值变化时会自己跳动,涨绿跌红。
+    </p>
+    <table>
+      <thead><tr>
+        <th class="l">物品</th><th class="l">城市</th>
+        <th>卖单最低</th><th>深度</th><th>买单最高</th><th>深度</th><th>更新</th>
+      </tr></thead>
+      <tbody id="live-rows"></tbody>
+    </table>
+    <div class="empty" id="live-empty">等待行情…需要有成员开着客户端在游戏里翻市场。</div>
+  </section>
 </div>
 
-<script>
-const CITY_VAR = {
-  "Thetford":"--thetford","Fort Sterling":"--fort-sterling","Lymhurst":"--lymhurst",
-  "Martlock":"--martlock","Bridgewatch":"--bridgewatch","Caerleon":"--caerleon",
-};
-const WATCH_ITEMS  = ["T4_METALBAR","T5_METALBAR","T6_METALBAR","T5_CLOTH","T5_PLANKS"];
-const WATCH_CITIES = ["Martlock","Lymhurst","Bridgewatch","Thetford"];
+<dialog id="trade-dialog">
+  <form method="dialog" id="trade-form">
+    <h3 id="td-title">记一笔</h3>
+    <p class="sub" id="td-sub"></p>
+    <label class="f">记账人 <input type="text" name="owner" required autocomplete="off"></label>
+    <label class="f">计划数量 <input type="number" name="qty" required min="1"></label>
+    <label class="f">备注 <input type="text" name="note" autocomplete="off"></label>
+    <div class="row">
+      <button value="cancel" class="act ghost">取消</button>
+      <button value="ok" class="act">记下</button>
+    </div>
+  </form>
+</dialog>
 
-const keys = [];
-for (const it of WATCH_ITEMS)
-  for (const c of WATCH_CITIES)
-    for (const side of [0, 1]) keys.push(`${it}|${c}|1|${side}`);
+<dialog id="close-dialog">
+  <form method="dialog" id="close-form">
+    <h3>收口</h3>
+    <p class="sub" id="cd-sub"></p>
+    <label class="f">实际买入件数 <input type="number" name="buy_qty" min="0" required></label>
+    <label class="f">实际买入均价 <input type="number" name="buy_price" min="0" required></label>
+    <label class="f">实际卖出件数 <input type="number" name="sell_qty" min="0" required></label>
+    <label class="f">实际卖出均价 <input type="number" name="sell_price" min="0" required></label>
+    <p class="sub" id="cd-calc">净利会按 4% 市场税自动算。</p>
+    <div class="row">
+      <button value="cancel" class="act ghost">取消</button>
+      <button value="ok" class="act">保存</button>
+    </div>
+  </form>
+</dialog>
 
-const state = new Map();   // "item|city|quality" -> {sell, buy, at}
-let received = 0;
-
-const $ = id => document.getElementById(id);
-const num = n => n.toLocaleString();
-
-function rowKey(k) { const p = k.split("|"); return `${p[0]}|${p[1]}|${p[2]}`; }
-
-function render() {
-  const rows = [...state.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  $("empty").style.display = rows.length ? "none" : "";
-  $("rows").innerHTML = rows.map(([rk, v]) => {
-    const [item, city] = rk.split("|");
-    return `<tr data-rk="${rk}">
-      <td>${item}</td>
-      <td><span class="city"><i class="cdot" style="--c:var(${CITY_VAR[city] || "--ink-soft"})"></i>${city}</span></td>
-      <td><span class="price sell" data-f="sell">${v.sell ? num(v.sell.p) : "—"}</span></td>
-      <td class="depth">${v.sell ? num(v.sell.d) : ""}</td>
-      <td><span class="price buy" data-f="buy">${v.buy ? num(v.buy.p) : "—"}</span></td>
-      <td class="depth">${v.buy ? num(v.buy.d) : ""}</td>
-      <td class="age">${v.at ? new Date(v.at).toLocaleTimeString("zh-CN") : ""}</td>
-    </tr>`;
-  }).join("");
-}
-
-// 只改变化的那个单元格并让它闪一下,不整表重绘
-function patch(rk, field, q, dir) {
-  const tr = document.querySelector(`tr[data-rk="${CSS.escape(rk)}"]`);
-  if (!tr) { render(); return; }
-  const el = tr.querySelector(`[data-f="${field}"]`);
-  if (!el) return;
-  el.textContent = num(q.p);
-  // 深度在下一个 td 里,不是 span 的兄弟 —— span 是这个 td 里唯一的元素
-  const depthCell = el.closest("td").nextElementSibling;
-  if (depthCell) depthCell.textContent = num(q.d);
-  tr.lastElementChild.textContent = new Date(q.t).toLocaleTimeString("zh-CN");
-  if (dir) {
-    el.classList.remove("flash-up", "flash-down");
-    void el.offsetWidth;                    // 强制重排,让同一元素能连续播动画
-    el.classList.add("flash-" + dir);
-  }
-}
-
-function applyQuote(q) {
-  const rk = rowKey(q.k);
-  const side = q.k.split("|")[3] === "0" ? "sell" : "buy";
-  const cur = state.get(rk) || {};
-  const prev = cur[side];
-  const isNew = !prev;
-  const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : "") : "";
-  cur[side] = {p: q.p, d: q.d};
-  cur.at = q.t;
-  state.set(rk, cur);
-  if (isNew) render(); else patch(rk, side, {p: q.p, d: q.d, t: q.t}, dir);
-}
-
-let ws, backoff = 500;
-function connect() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
-
-  ws.onopen = async () => {
-    backoff = 500;
-    $("conn").innerHTML = '<span class="dot live"></span>已连接';
-    // ① 重新订阅:新连接(可能是另一个实例)完全不知道你要看什么
-    ws.send(JSON.stringify({op: "sub", keys}));
-    // ② 拉快照:补上断线期间错过的变化。少了这步界面会停在旧值上,
-    //    却看起来"一切正常"——这是这类系统最常见的 bug
-    try {
-      const snap = await (await fetch("/api/quotes?keys=" + keys.join(","))).json();
-      snap.forEach(applyQuote);
-    } catch (e) { /* 拉不到就等推送 */ }
-  };
-
-  ws.onmessage = e => {
-    received++;
-    $("ticks").textContent = received;
-    applyQuote(JSON.parse(e.data));
-  };
-
-  ws.onclose = () => {
-    $("conn").innerHTML = '<span class="dot dead"></span>重连中…';
-    setTimeout(connect, backoff);
-    backoff = Math.min(backoff * 2, 30000);   // 指数退避
-  };
-}
-connect();
-
-setInterval(async () => {
-  try {
-    const s = await (await fetch("/api/stats")).json();
-    $("clients").textContent = s.clients;
-  } catch (e) { /* 服务端不在就先空着 */ }
-}, 3000);
-</script>
+<script src="app.js"></script>
 </body>
 </html>

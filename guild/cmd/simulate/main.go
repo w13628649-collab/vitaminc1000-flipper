@@ -36,7 +36,7 @@ type order struct {
 
 func main() {
 	var (
-		server   = flag.String("server", "http://127.0.0.1:8080", "服务端地址")
+		server   = flag.String("server", "http://127.0.0.1:18420", "服务端地址")
 		interval = flag.Duration("interval", 700*time.Millisecond, "上传间隔")
 		orders   = flag.Int("orders", 240, "模拟市场里有多少张活跃挂单")
 		churn    = flag.Float64("churn", 0.06, "每轮有多大比例的挂单发生变化")

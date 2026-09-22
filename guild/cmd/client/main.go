@@ -32,7 +32,7 @@ import (
 // 发给成员的构建直接带上服务端地址,他们双击就行,不用敲参数
 var (
 	version       = "dev"
-	defaultServer = "http://127.0.0.1:8080"
+	defaultServer = "http://127.0.0.1:18420"
 )
 
 func main() {

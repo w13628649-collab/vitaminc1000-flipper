@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"albion-guild/internal/api"
+	"albion-guild/internal/conf"
+	"albion-guild/internal/flip"
 	"albion-guild/internal/hub"
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/store"
@@ -20,7 +22,7 @@ import (
 
 func main() {
 	var (
-		addr = flag.String("addr", ":8080", "监听地址")
+		addr = flag.String("addr", ":18420", "监听地址")
 		dsn  = flag.String("dsn", envOr("FLIPPER_DSN",
 			"postgres://postgres:dev@127.0.0.1:55432/flipper"), "PostgreSQL DSN")
 		tick    = flag.Duration("tick", 200*time.Millisecond, "行情合并推送间隔")
@@ -28,6 +30,8 @@ func main() {
 		cacheSz = flag.Int("cache", 500_000, "去重用的活跃挂单缓存条数")
 		natsURL = flag.String("nats", os.Getenv("FLIPPER_NATS"),
 			"NATS 地址;留空走单实例的本地扇出")
+		cfgPath  = flag.String("config", os.Getenv("FLIPPER_CONFIG"), "扫描器配置 YAML;留空用内置默认值")
+		scanTick = flag.Duration("scan", 30*time.Minute, "自动扫描间隔;0 表示不自动扫")
 	)
 	flag.Parse()
 
@@ -44,6 +48,21 @@ func main() {
 		os.Exit(1)
 	}
 	defer st.Close()
+
+	// 建表和加字段都编进二进制了,发版不用再手工跑 SQL
+	if err := st.Migrate(ctx); err != nil {
+		slog.Error("执行数据库迁移失败", "err", err)
+		os.Exit(1)
+	}
+
+	cfg := conf.Default()
+	if *cfgPath != "" {
+		cfg, err = conf.Load(*cfgPath)
+		if err != nil {
+			slog.Error("读取配置失败", "path", *cfgPath, "err", err)
+			os.Exit(1)
+		}
+	}
 
 	h := hub.NewHub()
 
@@ -74,9 +93,18 @@ func main() {
 	go ing.Run(ctx)
 	go conflator.Run(ctx, *tick)
 
+	flipper := flip.New(st, cfg)
+	// 目录拉不动不该拦住服务端启动——行情中转本身不依赖它
+	if err := flipper.LoadCatalog(ctx); err != nil {
+		slog.Warn("载入物品目录失败,倒爷相关接口会返回 503", "err", err)
+	}
+	if *scanTick > 0 {
+		go flipper.Run(ctx, *scanTick)
+	}
+
 	srv := &http.Server{
 		Addr:              *addr,
-		Handler:           api.New(st, ing, h, *fresh).Routes(),
+		Handler:           api.New(st, ing, h, *fresh, flipper).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

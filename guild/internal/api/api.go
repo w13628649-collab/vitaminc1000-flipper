@@ -2,6 +2,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"albion-guild/internal/flip"
 	"albion-guild/internal/hub"
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
@@ -29,12 +31,15 @@ type Server struct {
 	Ingestor *ingest.Ingestor
 	Hub      *hub.Hub
 	Fresh    time.Duration // 多久没再看到的挂单不算数
+	// Flip 是倒爷工具那一套(目录/扫描/榜单)。为 nil 时那组接口不注册。
+	Flip     *flip.Service
 	upgrader websocket.Upgrader
 }
 
-func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub, fresh time.Duration) *Server {
+func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub,
+	fresh time.Duration, fl *flip.Service) *Server {
 	return &Server{
-		Store: st, Ingestor: ing, Hub: h, Fresh: fresh,
+		Store: st, Ingestor: ing, Hub: h, Fresh: fresh, Flip: fl,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 4096,
@@ -54,6 +59,7 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/quotes", s.handleQuotes)
 	mux.HandleFunc("GET /api/stats", s.handleStats)
 	mux.HandleFunc("GET /ws", s.handleWS)
+	s.registerFlip(mux)
 	mux.Handle("GET /", http.FileServer(http.Dir("web")))
 	return mux
 }
@@ -288,6 +294,12 @@ func orDefault(v, def string) string {
 		return def
 	}
 	return v
+}
+
+// contextWithTimeout 给慢接口一个自己的期限,
+// 同时保留请求被取消时的传播。
+func contextWithTimeout(r *http.Request, d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(r.Context(), d)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
