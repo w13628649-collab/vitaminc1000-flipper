@@ -1,0 +1,18 @@
+本项目包含来自以下开源项目的代码:
+
+---
+
+albiondata-client
+https://github.com/ao-data/albiondata-client
+MIT License — Copyright (c) 2017 The Albion Data Project
+
+迁移进来的部分:
+
+  guild/internal/photon/       Photon Protocol18 的传输层与序列化层解析
+  guild/internal/pcapdriver/   Windows 上的 Npcap / WinPcap 驱动状态检测
+  guild/internal/capture/      抓包循环(基于其 client/listener.go 改写)
+
+改动:去掉了原项目的 dashboard 与自有 log 封装,改用标准库 log/slog;
+包路径改为本项目;数据出口改为本项目的服务端而非 AODP。
+
+MIT 许可证全文见 licenses/albiondata-client-LICENSE。

@@ -1,0 +1,61 @@
+# Albion 价差扫描器配置。阈值全部可调 —— 按实盘反馈改这里,不要改代码。
+
+server: east
+cities:
+  - Thetford
+  - Fort Sterling
+  - Lymhurst
+  - Martlock
+  - Bridgewatch
+  - Caerleon
+
+capital: 10_000_000       # 银币
+qualities: [1]            # 1 普通 / 2 优秀 / 3 杰出 / 4 卓越 / 5 大师
+
+freshness:
+  max_hours: 6.0          # 超过这个时间的报价直接丢弃
+  high_confidence_hours: 2.0
+
+filters:
+  deviation_min: 0.4      # 价格 / 7 日均价 的合理区间,区间外视为 troll 挂单
+  deviation_max: 2.5
+  min_daily_volume_silver: 500_000
+  reject_crossed_book: true
+  max_history_gap_days: 3
+  min_days_with_data_7d: 3
+  max_margin: 1.0         # 毛利率 > 100% 基本是两边同时挂了 troll 单
+
+economics:
+  market_tax: 0.04        # 高级会员 4%,非会员 8%
+  setup_fee: 0.025        # 挂单手续费,不退
+  buy_order_setup_fee: true   # 已确认收费(游戏内文本:买单也有"创建费"),见 CLAUDE.md
+  outbid_silver: 1        # 挂买单要压过现有最高买单才排得到队首
+  undercut_silver: 1      # 挂卖单同理
+
+sizing:
+  absorb_ratio: 0.20      # 敢吃日成交量的比例。第二阶段用实盘成交率校准这个数
+  baseline_days: 7
+  history_days: 30
+
+api:
+  max_url_length: 3500    # 官方 4096,留余量
+  rate_per_minute: 170    # 官方 180
+  rate_per_5min: 280      # 官方 300 —— 这条才是真约束(等效 56/分钟)
+  timeout_seconds: 30.0
+  max_retries: 4
+
+# 物品清单:模式展开后对 ao-bin-dumps 的 items.txt 校验,不手写长串 ID。
+# 起步只碰高流动性、低单价的品类 —— 单价高 = 占用本金多 = 周转慢。
+items:
+  patterns:
+    # 精炼材料:全游戏成交量最大的品类
+    - "T{4,5,6}_{CLOTH,METALBAR,PLANKS,LEATHER,STONEBLOCK}"
+    # 原料:用于对比"卖原料 vs 卖半成品"
+    - "T{4,5,6}_{FIBER,ORE,WOOD,HIDE,ROCK}"
+    # 布甲三件套(学者/法师/神秘)
+    - "T{4,5,6}_{HEAD,ARMOR,SHOES}_CLOTH_{SET1,SET2,SET3}"
+    # 火法杖系
+    - "T{4,5,6}_{MAIN_FIRESTAFF,2H_FIRESTAFF,2H_INFERNOSTAFF}"
+  exclude: []
+
+data_dir: data
