@@ -34,10 +34,12 @@ type Ingestor struct {
 	dirty DirtyMarker
 	seen  *lru.Cache[int64, orderState]
 
-	mu       sync.Mutex
-	pending  []model.MarketOrder // 状态变了的,要写两张表
-	touches  []int64             // 状态没变的,只刷 last_seen
-	reporter string
+	mu sync.Mutex
+	// pending 按上报人分组。**不能只记一个 reporter**:两次 flush 之间
+	// 会有好几个成员提交,后来者会把整批待写订单都算到自己头上,
+	// 库里 reporter 那列就全是最后一个上传的人
+	pending map[string][]model.MarketOrder // 状态变了的,要写两张表
+	touches []int64                        // 状态没变的,只刷 last_seen
 
 	flushSize int
 	flushWait time.Duration
@@ -52,6 +54,7 @@ func New(st *store.Store, dirty DirtyMarker, cacheSize int) (*Ingestor, error) {
 		store:     st,
 		dirty:     dirty,
 		seen:      c,
+		pending:   map[string][]model.MarketOrder{},
 		flushSize: 500,
 		flushWait: 2 * time.Second,
 	}, nil
@@ -65,7 +68,9 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	i.reporter = batch.Reporter
+	if i.pending == nil {
+		i.pending = map[string][]model.MarketOrder{}
+	}
 	for _, o := range batch.Orders {
 		prev, ok := i.seen.Get(o.OrderID)
 		if ok && prev.price == o.UnitPrice && prev.amount == o.Amount {
@@ -74,11 +79,22 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 			continue
 		}
 		i.seen.Add(o.OrderID, orderState{price: o.UnitPrice, amount: o.Amount})
-		i.pending = append(i.pending, o)
+		i.pending[batch.Reporter] = append(i.pending[batch.Reporter], o)
 		i.dirty.MarkDirty(o.Key())
 		changed++
 	}
 	return changed, touched
+}
+
+// PendingCount 是待写订单总数(各上报人加起来)。
+func (i *Ingestor) PendingCount() int {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	n := 0
+	for _, orders := range i.pending {
+		n += len(orders)
+	}
+	return n
 }
 
 // Run 定时把攒下的批次刷进库。
@@ -98,13 +114,18 @@ func (i *Ingestor) Run(ctx context.Context) {
 
 func (i *Ingestor) flush(ctx context.Context) {
 	i.mu.Lock()
-	orders, touches, reporter := i.pending, i.touches, i.reporter
-	i.pending, i.touches = nil, nil
+	byReporter, touches := i.pending, i.touches
+	i.pending, i.touches = map[string][]model.MarketOrder{}, nil
 	i.mu.Unlock()
 
-	if len(orders) > 0 {
+	// 一个上报人一次写入。两次 flush 之间通常只有几个人在传,
+	// 分组的代价远小于把归属记错的代价
+	for reporter, orders := range byReporter {
+		if len(orders) == 0 {
+			continue
+		}
 		if err := i.store.WriteOrders(ctx, reporter, orders); err != nil {
-			slog.Error("写入挂单失败", "count", len(orders), "err", err)
+			slog.Error("写入挂单失败", "reporter", reporter, "count", len(orders), "err", err)
 			// 这里应该进重试队列而不是丢掉,第一版先记日志
 		}
 	}

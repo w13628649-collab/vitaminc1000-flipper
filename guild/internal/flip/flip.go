@@ -33,12 +33,17 @@ type Service struct {
 	last     atomic.Pointer[scan.Result]
 	scanning atomic.Bool
 	icons    *http.Client
+	// aodp 是**共用一个**。限流器的状态在 Client 里,每次调用新建一个
+	// 就等于各限各的,几个查价请求并撞上定时扫描,合起来直接击穿
+	// AODP 那 300 次/5 分钟的配额
+	aodp *aodp.Client
 }
 
 func New(st *store.Store, cfg conf.Config) *Service {
 	return &Service{
 		Store: st, Cfg: cfg,
 		icons: &http.Client{Timeout: 30 * time.Second},
+		aodp:  aodp.New(cfg.BaseURL(), cfg.API),
 	}
 }
 
@@ -91,8 +96,7 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	}
 	defer s.scanning.Store(false)
 
-	client := aodp.New(s.Cfg.BaseURL(), s.Cfg.API)
-	res, err := scan.Run(ctx, client, s.Cfg, cat, time.Now().UTC())
+	res, err := scan.Run(ctx, s.aodp, s.Cfg, cat, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -255,8 +259,7 @@ func (s *Service) Lookup(ctx context.Context, itemID string, fresh time.Duration
 	}
 
 	// AODP 兜底。一个物品 × 所有城市 × 五档品质,一次请求就够
-	client := aodp.New(s.Cfg.BaseURL(), s.Cfg.API)
-	prices, err := client.FetchPrices(ctx, []string{itemID}, s.Cfg.Cities, []int{1, 2, 3, 4, 5})
+	prices, err := s.aodp.FetchPrices(ctx, []string{itemID}, s.Cfg.Cities, []int{1, 2, 3, 4, 5})
 	if err != nil {
 		slog.Warn("AODP 兜底查价失败", "item", itemID, "err", err)
 	}

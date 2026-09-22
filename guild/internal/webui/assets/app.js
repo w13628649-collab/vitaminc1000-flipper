@@ -29,7 +29,15 @@ const itemCell = (id, name) =>
 
 async function getJSON(url, opts) {
   const resp = await fetch(url, opts);
-  if (!resp.ok) throw new Error((await resp.text()).trim() || resp.statusText);
+  if (!resp.ok) {
+    const body = (await resp.text()).trim();
+    // 服务端的错误体是 JSON,直接当文本显示会把一串大括号糊到界面上
+    let msg = body;
+    try { msg = JSON.parse(body).error || body; } catch (e) { /* 不是 JSON 就照原样 */ }
+    const err = new Error(msg || resp.statusText);
+    err.status = resp.status;   // 调用方要靠它区分"没这个接口"和"网络抖了一下"
+    throw err;
+  }
   return resp.json();
 }
 
@@ -786,6 +794,8 @@ async function pollLocal() {
     $("who").textContent = s.character || "—";
     $("who-sub").textContent = s.location ? s.location : "角色";
 
+    $("quit").hidden = !s.fallback;
+
     const warn = $("driver-warn");
     if (s.driver_warning) {
       warn.innerHTML = `<b>抓不到数据:</b>${esc(s.driver_warning)}`;
@@ -797,12 +807,25 @@ async function pollLocal() {
       warn.hidden = true;
     }
   } catch (e) {
-    // 404 说明不是在客户端窗口里跑,别再问了
-    localOK = false;
-    for (const id of ["capture", "who"]) $(id).closest(".fact").hidden = true;
+    // 只有 404 才说明"不是在客户端窗口里跑"。网络抖一下、代理超时
+    // 都不该永久关掉这块——Npcap 的警告就挂在这里,关掉了成员
+    // 就再也看不到"为什么收不到数据"
+    if (e.status === 404) {
+      localOK = false;
+      for (const id of ["capture", "who"]) $(id).closest(".fact").hidden = true;
+    }
   }
 }
 setInterval(pollLocal, 3000);
 pollLocal();
+
+// 退出按钮只在"开不出窗口、退回浏览器"时出现。那种情况下没有窗口
+// 可关,发布版又没有控制台,不给个出口就只能去任务管理器杀进程
+$("quit").addEventListener("click", async () => {
+  if (!confirm("退出程序?抓包会一起停,关掉之后就不再上传数据了。")) return;
+  try { await fetch("/local/quit", { method: "POST" }); } catch (e) { /* 它正在退,连接断了是正常的 */ }
+  $("quit").textContent = "已退出";
+  $("quit").disabled = true;
+});
 
 boot();

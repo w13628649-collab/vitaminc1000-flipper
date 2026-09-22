@@ -89,10 +89,32 @@ func TestSubmit_待写队列按变化与否分流(t *testing.T) {
 		order(2, 900, 10),  // 新单 → 要写两张表
 	}})
 
-	if len(ing.pending) != 2 {
-		t.Fatalf("待写队列应有 2 条(首次 + 新单),得到 %d", len(ing.pending))
+	if n := ing.PendingCount(); n != 2 {
+		t.Fatalf("待写队列应有 2 条(首次 + 新单),得到 %d", n)
 	}
 	if len(ing.touches) != 1 {
 		t.Fatalf("待刷新队列应有 1 条,得到 %d", len(ing.touches))
+	}
+}
+
+// 两次 flush 之间会有好几个成员提交,归属不能串。
+// 串了的话库里 reporter 那列全是最后一个上传的人,
+// 想知道"谁在传数据"就永远查不准。
+func TestSubmit_多人上传各归各的(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{order(1, 1000, 50)}})
+	ing.Submit(model.UploadBatch{Reporter: "乙", Orders: []model.MarketOrder{order(2, 900, 10)}})
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{order(3, 800, 5)}})
+
+	ing.mu.Lock()
+	defer ing.mu.Unlock()
+	if len(ing.pending) != 2 {
+		t.Fatalf("应该分成 2 个上报人,得到 %d", len(ing.pending))
+	}
+	if n := len(ing.pending["甲"]); n != 2 {
+		t.Fatalf("甲应该有 2 条,得到 %d", n)
+	}
+	if n := len(ing.pending["乙"]); n != 1 {
+		t.Fatalf("乙应该有 1 条,得到 %d", n)
 	}
 }

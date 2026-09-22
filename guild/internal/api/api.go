@@ -191,7 +191,7 @@ func (s *Server) handleQuotes(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"clients": s.Hub.ClientCount(),
-		"dropped": s.Hub.Dropped,
+		"dropped": s.Hub.DroppedCount(), // 不能直接读字段,Fanout 在并发改它
 	})
 }
 
@@ -247,10 +247,9 @@ func (s *Server) wsWriter(conn *websocket.Conn, client *hub.Client) {
 	}()
 	for {
 		select {
-		case msg, ok := <-client.Out():
-			if !ok {
-				return // Hub 把这个客户端摘掉了
-			}
+		case <-client.Closed():
+			return // Hub 把这个客户端摘掉了
+		case msg := <-client.Out():
 			_ = conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 			if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return

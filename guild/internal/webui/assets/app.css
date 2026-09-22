@@ -64,6 +64,8 @@ header{display:flex; gap:20px; align-items:baseline; padding:20px 0 12px;
 /* [hidden] 只是 UA 样式里的 display:none,被上面这条同权重的规则盖掉了。
    和 .menu.bare 是同一个坑:后写的赢,所以这条必须在 .fact 之后 */
 .fact[hidden]{display:none}
+#quit{align-self:center; margin-left:4px}
+#quit[hidden]{display:none}
 .fact b{font-size:14px; font-weight:600; line-height:1.2}
 .fact i{font-size:11px; font-style:normal; color:var(--ink-soft)}
 .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px}

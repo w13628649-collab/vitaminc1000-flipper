@@ -20,6 +20,7 @@ package clientui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -48,6 +49,10 @@ type Status struct {
 	// 这是唯一一个"不解决就完全没用"的问题,必须显眼
 	DriverWarning string `json:"driver_warning"`
 
+	// Fallback 为 true 表示界面跑在浏览器里,没有程序窗口。
+	// 界面据此显示"退出"按钮
+	Fallback bool `json:"fallback"`
+
 	OrdersSeen     int64  `json:"orders_seen"`
 	OrdersUploaded int64  `json:"orders_uploaded"`
 	Pending        int    `json:"pending"`
@@ -65,9 +70,23 @@ type Server struct {
 	// Token 是 CDK 换来的访问令牌,反代时加到请求头上。暂时可以为空。
 	Token  string
 	Status StatusFunc
+	// Quit 由主程序提供,界面点"退出"时调用。
+	Quit func()
+
+	mu       sync.Mutex
+	fallback bool
 
 	once  sync.Once
 	proxy *httputil.ReverseProxy
+}
+
+// SetFallback 标记"没开出窗口,用的是浏览器"。
+// 这种情况下界面要多显示一个退出按钮——没有窗口可关,
+// 而发布版没有控制台,Ctrl+C 也发不出来。
+func (s *Server) SetFallback(v bool) {
+	s.mu.Lock()
+	s.fallback = v
+	s.mu.Unlock()
 }
 
 // Listen 在本机回环上挑一个空闲端口起服务,返回窗口该访问的地址。
@@ -100,12 +119,54 @@ func (s *Server) Listen(ctx context.Context) (string, error) {
 func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", s.handleStatus)
+	mux.HandleFunc("POST /local/quit", s.handleQuit)
 	mux.Handle("/api/", s.reverse())
 	mux.Handle("/ws", s.reverse())
 	// 这条不能写成 "GET /":Go 1.22 的 ServeMux 会判它和 "/api/" 冲突
 	// ——路径更泛、方法却更窄,它认为这是注册错误而不是兜底
 	mux.Handle("/", http.FileServerFS(webui.FS()))
-	return mux
+	// 本地端口谁都能打:成员随便访问一个网站,那个页面的 JS 就能
+	// 扫到这个端口,然后借着代理往公会服务端塞假数据、或者读走行情。
+	// WebSocket 握手不受同源策略约束,更是直接能连。
+	// 所以在最外层卡一道:Host 必须是回环地址,Origin 要么没有
+	// (我们自己的页面是同源请求,不带 Origin),要么就是我们自己
+	return guard(mux)
+}
+
+// guard 挡掉浏览器里其他网页对这个本地端口的访问。
+//
+// 两条:
+//   - Host 头必须是 127.0.0.1 / localhost。挡 DNS rebinding——
+//     攻击者把自己的域名解析到 127.0.0.1,浏览器就会带着他的 Host 打过来
+//   - 有 Origin 的话必须是我们自己。浏览器对跨站请求一定带 Origin,
+//     而我们自己页面里的同源 fetch 不带,WebSocket 带的是自己的地址
+func guard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		if host != "127.0.0.1" && host != "localhost" && host != "::1" {
+			http.Error(w, "只接受本机访问", http.StatusForbidden)
+			return
+		}
+		if origin := r.Header.Get("Origin"); origin != "" {
+			u, err := url.Parse(origin)
+			if err != nil || u.Host != r.Host {
+				http.Error(w, "跨站访问被拒绝", http.StatusForbidden)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+	if s.Quit != nil {
+		// 先把响应发出去再退,否则界面看到的是连接被掐断
+		go s.Quit()
+	}
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +174,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if s.Status != nil {
 		st = s.Status()
 	}
+	s.mu.Lock()
+	st.Fallback = s.fallback
+	s.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(st)
@@ -120,9 +184,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) reverse() http.Handler {
 	s.once.Do(func() {
+		// url.Parse 对 "10.30.31.30:18420" 这种不报错——它会当成
+		// scheme "10.30.31.30"。少写 http:// 是最常见的配错,必须显式挡
 		target, err := url.Parse(strings.TrimRight(s.Upstream, "/"))
-		if err != nil {
-			slog.Error("服务端地址不合法", "server", s.Upstream, "err", err)
+		if err != nil || (target.Scheme != "http" && target.Scheme != "https") || target.Host == "" {
+			slog.Error("服务端地址不合法,要带 http:// 前缀", "server", s.Upstream, "err", err)
 			return
 		}
 		s.proxy = &httputil.ReverseProxy{
@@ -137,6 +203,11 @@ func (s *Server) reverse() http.Handler {
 			// 服务端连不上时给一句人话。默认的 502 页面是空的,
 			// 界面上只会看到一片空白表格,成员根本不知道发生了什么
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+				// 界面切页时会取消还没跑完的请求,那不是故障。
+				// 当成故障的话会刷 warn 日志,还顺着诊断通道报到服务端去
+				if errors.Is(err, context.Canceled) || r.Context().Err() != nil {
+					return
+				}
 				slog.Warn("连不上公会服务端", "path", r.URL.Path, "err", err)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusBadGateway)

@@ -12,6 +12,7 @@ package protocol
 import (
 	"encoding/json"
 	"log/slog"
+	"sync"
 	"time"
 
 	"albion-guild/internal/model"
@@ -71,6 +72,10 @@ type rawOrder struct {
 type Parser struct {
 	Codes OpCodes
 
+	// 客户端给每张网卡起一个抓包 goroutine,但只有一个 Parser——
+	// 这几个字段是被并发读写的。加锁不是为了性能,是为了正确:
+	// 没有它,城市归属可能读到一半更新过的值
+	mu            sync.Mutex
 	location      string
 	characterID   string
 	characterName string
@@ -85,8 +90,15 @@ func New() *Parser {
 	return &Parser{Codes: DefaultOpCodes()}
 }
 
-func (p *Parser) Location() string { return p.location }
+func (p *Parser) Location() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.location
+}
+
 func (p *Parser) Character() (id, name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.characterID, p.characterName
 }
 
@@ -137,7 +149,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 		if loc == "" {
 			// 城市挂单的 LocationId 是空的,用当前所在地补。
 			// 走私贩巢穴/休息区自带(形如 xxxx@yyyy),不受影响。
-			loc = p.location
+			loc = p.Location()
 		}
 		if loc == "" {
 			continue // 还不知道自己在哪,这批先丢掉,切次区就好了
@@ -160,6 +172,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 }
 
 func (p *Parser) handleJoin(params map[byte]any) {
+	p.mu.Lock()
 	if v, ok := params[1].(string); ok {
 		p.characterID = v
 	}
@@ -169,18 +182,28 @@ func (p *Parser) handleJoin(params map[byte]any) {
 	if v, ok := params[8].(string); ok && v != "" {
 		p.location = v
 	}
+	id, name, loc := p.characterID, p.characterName, p.location
+	p.mu.Unlock()
+
+	// 回调在锁外调:调用方会去动它自己的状态,持锁调外部代码
+	// 是死锁的经典配方
 	if p.OnIdentity != nil {
-		p.OnIdentity(p.characterID, p.characterName, p.location)
+		p.OnIdentity(id, name, loc)
 	}
 }
 
 func (p *Parser) setLocation(loc string) {
+	p.mu.Lock()
 	if p.location == loc {
+		p.mu.Unlock()
 		return
 	}
 	p.location = loc
+	id, name := p.characterID, p.characterName
+	p.mu.Unlock()
+
 	if p.OnIdentity != nil {
-		p.OnIdentity(p.characterID, p.characterName, p.location)
+		p.OnIdentity(id, name, loc)
 	}
 }
 

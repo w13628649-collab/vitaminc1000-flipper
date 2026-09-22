@@ -3,6 +3,8 @@ package hub
 import (
 	"context"
 	"encoding/json"
+	"runtime"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -160,7 +162,7 @@ func TestFanout_慢客户端丢消息而不是阻塞(t *testing.T) {
 	}
 }
 
-func TestRemove_关闭后不再收到(t *testing.T) {
+func TestRemove_摘掉后写循环收到退出信号(t *testing.T) {
 	h := NewHub()
 	c := NewClient(4)
 	c.Subscribe([]string{"k"})
@@ -170,8 +172,47 @@ func TestRemove_关闭后不再收到(t *testing.T) {
 	if h.ClientCount() != 0 {
 		t.Fatal("摘掉后计数应归零")
 	}
-	if _, ok := <-c.Out(); ok {
-		t.Fatal("通道应该已关闭")
+	// 退出信号走 Closed(),**不是**关掉 send。
+	// 关 send 的话 Fanout 那边会往已关闭的通道发送而 panic,见下一个用例
+	select {
+	case <-c.Closed():
+	default:
+		t.Fatal("摘掉后 Closed() 应该已经关闭")
+	}
+}
+
+// 这是能把整个服务端打挂的那条:Fanout 在**锁外**往 send 发,
+// 同一时刻另一个 goroutine 正好把这个客户端摘掉。
+// 以前 Remove 会 close(send),于是向已关闭通道发送 → panic,
+// 而 select 加 default 根本挡不住(向已关闭通道发送必 panic,不看缓冲)。
+//
+// 要让这个用例真的有牙,两点必须做对:
+//   - 缓冲**不能**填满。满了就走 default 分支,压根执行不到发送
+//   - 解锁和发送之间要有活干。Fanout 拿完客户端快照就解锁,
+//     然后才序列化;报文越多,Remove 越容易挤进这个窗口
+func TestFanout_与Remove并发不会panic(t *testing.T) {
+	const keys = 400
+	keyList := make([]string, keys)
+	for i := range keyList {
+		keyList[i] = "k" + strconv.Itoa(i)
+	}
+
+	for round := range 60 {
+		h := NewHub()
+		c := NewClient(keys * 2) // 留足缓冲,确保走发送而不是 default
+		c.Subscribe(keyList)
+		h.Add(c)
+
+		quotes := make([]model.Quote, keys)
+		for i := range quotes {
+			quotes[i] = model.Quote{Key: keyList[i], Price: int64(round*1000 + i), At: time.Now()}
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); h.Fanout(quotes) }()
+		go func() { defer wg.Done(); runtime.Gosched(); h.Remove(c) }()
+		wg.Wait()
 	}
 }
 

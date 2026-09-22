@@ -108,6 +108,7 @@ func main() {
 	local := &clientui.Server{
 		Upstream: *server,
 		Token:    *token,
+		Quit:     stop, // 界面上的"退出"按钮,只在开不出窗口时显示
 		Status: func() clientui.Status {
 			st := up.snapshot()
 			st.Version = version
@@ -173,7 +174,17 @@ func main() {
 		if showWindow(ctx, "Albion 行情终端", uiURL) {
 			stop()
 		} else {
-			// 没有 WebView2 就退回默认浏览器,功能一样,只是多一个窗口
+			// 开不出窗口(没装 WebView2)就退回默认浏览器。
+			//
+			// 这时候没有窗口可关,而发布版又没有控制台,Ctrl+C 根本发不出来——
+			// 光等 ctx.Done() 的话进程会永远留在后台,只能去任务管理器杀。
+			// 所以界面上给一个"退出"按钮,走 /local/quit
+			local.SetFallback(true)
+			alert("Albion 行情终端 — 开不出程序窗口",
+				"这台电脑没有 WebView2 运行时,已经改用默认浏览器打开界面。\n\n"+
+					"功能完全一样,只是多一个窗口。想要独立窗口的话,"+
+					"装一下 Microsoft Edge WebView2 Runtime 再重开。\n\n"+
+					"退出程序请点界面右上角的「退出」。")
 			openBrowser(uiURL)
 			<-ctx.Done()
 		}
@@ -216,7 +227,22 @@ func logWriter() io.Writer {
 	if err != nil {
 		return os.Stderr
 	}
-	return io.MultiWriter(os.Stderr, f)
+	return tolerantWriter{f, os.Stderr}
+}
+
+// tolerantWriter 写所有目标,一个写失败不影响其他的。
+//
+// **不能用 io.MultiWriter**:它遇到第一个错误就返回。发布版是
+// -H windowsgui 编的,没有控制台,os.Stderr 是个无效句柄,写它必然失败——
+// 于是日志文件一个字都写不进去,而那正是出问题时唯一的现场。
+// 顺序也有讲究:文件在前,终端在后。
+type tolerantWriter []io.Writer
+
+func (w tolerantWriter) Write(p []byte) (int, error) {
+	for _, target := range w {
+		_, _ = target.Write(p)
+	}
+	return len(p), nil // 日志写不出去不该让调用方误以为出了别的事
 }
 
 func waitOrTimeout(wg *sync.WaitGroup, d time.Duration) {

@@ -30,18 +30,30 @@ func (b *LocalBroadcaster) Publish(_ context.Context, quotes []model.Quote) erro
 // Client 是一条 WS 连接。
 type Client struct {
 	send chan []byte
-	subs map[string]struct{}
-	mu   sync.RWMutex
+	// closed 代替"关掉 send"来通知写循环退出。
+	//
+	// 绝对不能 close(send):Fanout 是在**锁外**往 send 发的,
+	// 同一时刻另一个 goroutine 可能正好把这个客户端摘掉。
+	// 向已关闭的 channel 发送会 panic,而且 select 加 default 挡不住——
+	// 一个成员断线就能把整个服务端打挂。
+	closed    chan struct{}
+	closeOnce sync.Once
+	subs      map[string]struct{}
+	mu        sync.RWMutex
 }
 
 func NewClient(buffer int) *Client {
 	return &Client{
-		send: make(chan []byte, buffer),
-		subs: make(map[string]struct{}),
+		send:   make(chan []byte, buffer),
+		closed: make(chan struct{}),
+		subs:   make(map[string]struct{}),
 	}
 }
 
 func (c *Client) Out() <-chan []byte { return c.send }
+
+// Closed 在这个客户端被摘掉时关闭。写循环用它退出。
+func (c *Client) Closed() <-chan struct{} { return c.closed }
 
 func (c *Client) Subscribe(keys []string) {
 	c.mu.Lock()
@@ -92,11 +104,10 @@ func (h *Hub) Add(c *Client) {
 
 func (h *Hub) Remove(c *Client) {
 	h.mu.Lock()
-	if _, ok := h.clients[c]; ok {
-		delete(h.clients, c)
-		close(c.send)
-	}
+	delete(h.clients, c)
 	h.mu.Unlock()
+	// 只关 closed,不关 send。send 里剩下的消息随客户端一起被回收
+	c.closeOnce.Do(func() { close(c.closed) })
 }
 
 func (h *Hub) ClientCount() int {
@@ -106,6 +117,14 @@ func (h *Hub) ClientCount() int {
 }
 
 // Fanout 把行情发给订阅了对应 key 的本地连接。
+// DroppedCount 读丢弃计数。Fanout 在持锁的情况下改它,
+// 直接读字段是数据竞争。
+func (h *Hub) DroppedCount() uint64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.Dropped
+}
+
 func (h *Hub) Fanout(quotes []model.Quote) {
 	h.mu.Lock()
 	fresh := quotes[:0]
@@ -140,6 +159,8 @@ func (h *Hub) Fanout(quotes []model.Quote) {
 				continue
 			}
 			select {
+			case <-c.closed:
+				// 这个客户端已经走了,剩下的都别发了
 			case c.send <- payload:
 			default:
 				// 客户端处理不过来:丢掉这条,不阻塞扇出循环。

@@ -38,9 +38,12 @@ func main() {
 			"NATS 地址;留空走单实例的本地扇出")
 		cfgPath  = flag.String("config", os.Getenv("FLIPPER_CONFIG"), "扫描器配置 YAML;留空用内置默认值")
 		scanTick = flag.Duration("scan", 30*time.Minute, "自动扫描间隔;0 表示不自动扫")
-		relDir   = flag.String("release-dir", "release", "客户端二进制目录;留空则不提供下载")
-		relVer   = flag.String("release-version", "", "发布目录里客户端的版本号")
-		minVer   = flag.String("min-client", "", "接受的最低客户端版本")
+		// 默认留空。给个 "release" 这种相对路径的话,工作目录一换
+		// 路由照常注册、接口却全部 404,排查起来很费劲——
+		// webui 那边刚踩过一模一样的坑
+		relDir = flag.String("release-dir", "", "客户端二进制目录(绝对路径);留空则不提供下载")
+		relVer = flag.String("release-version", "", "发布目录里客户端的版本号")
+		minVer = flag.String("min-client", "", "接受的最低客户端版本")
 	)
 	flag.Parse()
 
