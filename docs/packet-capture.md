@@ -35,13 +35,46 @@ Protocol18 下,Photon 自己的 `EventData.Code` 只用两个值(OR,实测):
 | 项 | 说明 |
 |---|---|
 | 货币/定点数 | **协议里一律 ×10000 的整数**(SA 的 `FixPoint.InternalFactor = 10000`)。银币、金币、学习点、重置点都按这个换算。ADC 邮件解析里的 `price / 10000` 就是这个;但它的挂单 JSON 直接反序列化**没有除** |
-| `LocationId` | 城市挂单在包里是**空的**,由客户端用当前所在地补;走私贩巢穴/休息区自带,形如 `xxxx@yyyy` |
-| `QualityLevel` | 1 普通 / 2 优秀 / 3 杰出 / 4 卓越 / 5 大师 |
+| `LocationId` | 城市挂单在包里是**空的**,由客户端用当前所在地补;走私贩巢穴/休息区自带,形如 `xxxx@yyyy`。补进来的是**市场自己的 id**,不是城市本体,见下面那节 |
+| `QualityLevel` | 1 普通 / 2 良好 / 3 优秀 / 4 杰出 / 5 不凡(照游戏内中文客户端的品质下拉逐字核对过,别写成"卓越/大师") |
 | `AuctionType` | `offer` = 卖单,`request` = 买单 |
 | `Timescale` | 0 = Hours(24 小时) / 1 = Days(7 天) / 2 = Weeks(4 周) |
 | 时间戳 | 邮件/金价是 Unix 秒;市场历史是 C# ticks |
 | 抓包过滤 | `tcp port 5056 || udp port 5056` |
 | 服务器判定 | 按源 IP:东 `5.45.187.*` / 西 `5.188.125.*` / 欧 `193.169.238.*` |
+
+### ⚠ 市场有独立于城市本体的 location id,不归一化两路数据永远对不上
+
+抓包补进来的是**市场**那个 id,而 AODP 用的是城市本体的名字。
+`ao-bin-dumps` 的 `formatted/world.json`(`[{Index, UniqueName}]`,1,427 条)里
+它们是不同的条目:
+
+```
+0000  Thetford              ← AODP 用这个
+0006  Bank of Thetford
+0007  Thetford Market       ← 抓包拿到的是这个
+0301  Thetford Portal
+
+1000 Lymhurst / 1002 Lymhurst Market
+2000 Bridgewatch / 2004 Bridgewatch Market
+3004 Martlock  / 3008 Martlock Market
+4000 Fort Sterling / 4002 Fort Sterling Market
+3003 Caerleon  / 3005 Caerleon Market / 3013-Auction2 Caerleon Market
+5000,5001 Brecilien / 5003 Brecilien Market
+```
+
+不收敛的话 `(T5_CLOTH, "Thetford Market")` 和 AODP 的 `(T5_CLOTH, "Thetford")`
+永远是两个 key,融合一次都不会发生,查价页上同一座城会出现两行。
+
+实测确认:抓到的 `location_id` 就是 `"0007"`,解析出来是 `Thetford Market`。
+
+收敛规则建议**数据驱动**而不是硬编码:剥掉 `" Market"` / `" Portal"` 后缀和
+`"Bank of "` 前缀,**只有剥完的结果本身也是个已知地点名时才采纳**。
+这样 `Black Market` 不会被砍成 `Black`(world.json 里没有叫 Black 的地方),
+黑市保持原样。另外 `3013-Auction2` 这种带后缀的要先按 `-` 切一刀。
+
+落库时**把原始 `location_id` 一起存着**。收敛规则将来改了,有原始值才能重算;
+只存归一化结果的话,老数据和新数据会分裂成两个 key。
 
 ---
 
@@ -167,6 +200,62 @@ params[1] = QUANTITY | UNIQUE_ITEM_NAME | TOTAL_PRICE | UNIT_PRICE
 | `QualityLevel` | |
 | `Timescale` | |
 | `MarketHistories` | 数组,每项 `{ItemAmount, SilverAmount, Timestamp}` |
+
+### 实测核对过的三件事
+
+拿一份真实上报的报文对过(`AlbionId 1162`,`LocationId "0007"`,`Timescale 1`):
+
+```
+均价 = SilverAmount / ItemAmount / 10000
+    = 493,987,560,000 / 65 / 10000 = 759,981
+```
+
+游戏内那个物品的「市场历史」面板显示的就是「平均价格 759,981,已售项目 65」,
+**分毫不差**。挂单价那边同样 `/10000`:实测 45 个可比物品,自抓价 / AODP 价的
+中位比值 **1.000**;金价 `133,347,494 / 10000 = 13,334.7` 对上 AODP 的 `13,334`。
+
+均价要**先除成浮点再四舍五入**。连做两次整除会丢精度:
+`493987560000 // 65 // 10000 = 759,980`,比游戏显示少 1。
+
+### ⚠ Timescale 必须进主键,否则不同粒度的桶会互相污染
+
+响应里没有 timescale,但**上报的 JSON 里有**。它决定桶宽:
+
+| Timescale | 桶宽 | 游戏里对应的页签 |
+|---|---|---|
+| 0 | 小时 | 24 小时 |
+| 1 | 6 小时 | 7 天 |
+| 2 | 天 | 4 周 |
+
+玩家在「市场历史」里切一下页签,同一段时间就会以**两种粒度**各来一份。
+如果落库主键只到 `(item, location, quality, bucket)`,粗粒度那条只会覆盖掉
+细粒度里时间戳相同的那一个桶,其余的原样留着 —— 同一段时间被重复计数。
+
+实测复现:先按 6h 粒度上报某天 4×1000 件(合计 4000),再按 24h 粒度上报
+同一天 4000 件,桶变成 `[00:00→4000, 06:00→1000, 12:00→1000, 18:00→1000]`,
+合计 7000,**虚增 75%**。而这个数直接喂日均成交量,也就是吃单量估算的分母。
+
+两种修法二选一:把 timescale 放进主键、读的时候只取一种粒度;或者入库时
+检测时间区间重叠,重叠就用更细的那份替掉粗的。
+
+注意 `store.WriteHistory` 现在**硬写 `timescale=1`** 且 `ON CONFLICT` 是
+`DO UPDATE SET item_count = EXCLUDED.item_count`(覆盖不是累加),
+一旦有人改成拉 `time-scale=1`(小时),24 个小时点会撞同一个主键,
+一天的成交量只剩最后进来的那一个小时。抓包这一路接上之前先把这里定死。
+
+### AlbionId → item_id 靠 `formatted/items.txt`
+
+响应里的 `AlbionId` 是 int32 数值,落库要的是字符串 id。`ao-bin-dumps` 的
+`formatted/items.txt` 就是这张表,12,237 行,格式:
+
+```
+   1116: T4_METALBAR                          : Steel Bar
+   1162: T8_LEATHER_LEVEL3@3                  : Exceptional Fortified Leather
+   1171: T5_CLOTH                             : Ornate Cloth
+```
+
+正则 `^\s*(\d+):\s*(\S+)\s*:` 就能解。翻不出来的要**明确报出来**,
+别静默丢 —— 游戏更新加了新物品时,你需要知道是哪些。
 
 ---
 

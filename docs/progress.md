@@ -188,6 +188,20 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
   城市订单的 `LocationId` 在包里是空的、靠它补。我们的 `protocol` 包同样是单例,
   一台机器开多个游戏客户端时要留意
 
+## 还没查的两处可疑(对抗审查挖出来,未修)
+
+都在抓包主链路上,症状都是"日志一切正常、库里没数据",很难从现象反推。
+
+- **`photon.dispatchResponse` 的 `[]string` 分支解出来的挂单可能被静默丢弃。**
+  `parser.go` 命中 `[]string` 时构造 `params={0: v}` 就回调并 return,
+  里面**没有 253**;而 `protocol.HandleResponse` 第一件事就是 `byteParam(params, 253)`,
+  取不到直接 return。两条路径必有一条是死的。这个分支零测试覆盖。
+  真要走这条路的话,`protocol` 层应该对"只有 `params[0]` 是 `[]string`"兜底 ——
+  `AuctionType` 本来就能判方向,offers/requests 两个 op 不必靠 253 区分
+- **分片重组用累加判完成。** `bytesWritten += fragLen` 不做区间去重,
+  重传/重复分片会让它提前 `>= totalLength`,于是把还带空洞(全零)的 payload
+  当完整消息解析;`fragmentCount` / `fragmentNumber` 读出来后直接丢弃、不校验
+
 ## 相关文档
 
 - [倒爷工具口径](flipper.md) —— 为什么这么算,而不是怎么用
