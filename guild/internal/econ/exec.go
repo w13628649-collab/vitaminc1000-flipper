@@ -60,6 +60,9 @@ func (m Mode) Label() string {
 
 // Friction 是这个模式的总摩擦比例,用来排序和显示。
 // 真正算钱走 Quote,这里只是个概览数字。
+//
+// 注意它**偏小**:几个比例直接相加,而实际上买侧的费乘在 my_bid 上、
+// 卖侧的费乘在 my_ask 上,基数根本不同。要判"价差够不够"用 Breakeven。
 func (m Mode) Friction(cfg conf.Economics) float64 {
 	f := 0.0
 	if m.Buy == Maker && cfg.BuyOrderSetupFee {
@@ -70,6 +73,46 @@ func (m Mode) Friction(cfg conf.Economics) float64 {
 	}
 	f += cfg.MarketTax // 卖出永远要交税,不管是挂的还是秒的
 	return f
+}
+
+// buyMul 是买入侧的费用系数:成本 = 我的买价 × 它。
+// 吃单不收买方任何费用;挂买单收 2.5% 创建费——下单当场扣,不成交也不退。
+func (m Mode) buyMul(cfg conf.Economics) float64 {
+	if m.Buy == Maker && cfg.BuyOrderSetupFee {
+		return 1 + cfg.SetupFee
+	}
+	return 1
+}
+
+// sellMul 是卖出侧的到手系数:收入 = 我的卖价 × 它。
+// 卖出永远交市场税;挂卖单另收创建费。
+//
+// 游戏内挂卖单界面核对过(T6_METALBAR_LEVEL4@4,56 件 × 357,978):
+// 总额 20,046,768,4% 尊享税率 801,871,2.5% 创建费 501,169。
+// 界面上那个"合计 19,244,897"**只扣了税**,创建费是下单当场单独扣的,
+// 真正到手 18,743,728 = 总额 × 0.935。差 0 银。
+func (m Mode) sellMul(cfg conf.Economics) float64 {
+	if m.Sell == Maker {
+		return 1 - cfg.MarketTax - cfg.SetupFee
+	}
+	return 1 - cfg.MarketTax
+}
+
+// Breakeven 是这个执行方式下,卖价 / 买价至少要到多少才不亏(返回超出部分)。
+//
+// 为什么不能用 Friction:名义摩擦是几个比例相加,但两侧基数不同。
+// 挂买挂卖名义 9.0%,真实门槛是 1.025/0.935 − 1 = **9.63%** ——
+// 中间那 0.63 个百分点的价差会被说成"摩擦 9%,够了",实际每件亏钱。
+//
+// 更要命的是秒买挂卖和挂买秒卖**名义都是 6.5%**,真实门槛却分别是
+// 6.95% 和 6.77%。光看名义数字根本分不开这两个模式。
+func (m Mode) Breakeven(cfg conf.Economics) float64 {
+	sell := m.sellMul(cfg)
+	if sell <= 0 {
+		// 税费加起来吃光卖价,怎么都不可能打平
+		return math.Inf(1)
+	}
+	return m.buyMul(cfg)/sell - 1
 }
 
 // Book 是一侧市场的两个价:别人的最低卖价和最高买价。
@@ -89,24 +132,21 @@ func Quote(buy, sell Book, m Mode, cfg conf.Economics) Unit {
 	var myBid, myAsk int64
 	cost, revenue := 0.0, 0.0
 
+	// 费用系数和 Breakeven 共用 buyMul/sellMul,税费逻辑只此一份。
+	// 分成两份写过一次,改税率时漏掉一边就会让"盈亏平衡"和"实际算账"对不上。
 	if m.Buy == Taker {
 		myBid = buy.SellMin
-		cost = float64(myBid) // 吃单不收买方任何费用
 	} else {
 		myBid = buy.BuyMax + cfg.OutbidSilver
-		cost = float64(myBid)
-		if cfg.BuyOrderSetupFee {
-			cost *= 1 + cfg.SetupFee
-		}
 	}
+	cost = float64(myBid) * m.buyMul(cfg)
 
 	if m.Sell == Taker {
 		myAsk = sell.BuyMax
-		revenue = float64(myAsk) * (1 - cfg.MarketTax)
 	} else {
 		myAsk = sell.SellMin - cfg.UndercutSilver
-		revenue = float64(myAsk) * (1 - cfg.MarketTax - cfg.SetupFee)
 	}
+	revenue = float64(myAsk) * m.sellMul(cfg)
 
 	profit := revenue - cost
 	margin := 0.0

@@ -114,8 +114,11 @@ type ModeQuote struct {
 	SellPrice     int64   `json:"sell_price"`
 	ProfitPerUnit float64 `json:"profit_per_unit"`
 	Margin        float64 `json:"margin"`
-	Friction      float64 `json:"friction"`
-	HoursPerTurn  float64 `json:"hours_per_turn"`
+	// Friction 是名义摩擦(几个比例相加),Breakeven 是真实要跨过的价差。
+	// 后者总是更高,而且能分开名义都是 6.5% 的秒买挂卖(6.95%)和挂买秒卖(6.77%)
+	Friction     float64 `json:"friction"`
+	Breakeven    float64 `json:"breakeven"`
+	HoursPerTurn float64 `json:"hours_per_turn"`
 	TurnsPerDay   float64 `json:"turns_per_day"`
 	DailyProfit   float64 `json:"daily_profit"`
 }
@@ -164,6 +167,13 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 	buyAge, okBuy := rec.BuyPriceMaxDate.AgeHours(now)
 	if !okSell || !okBuy {
 		return reject("no_timestamp", "价格有值但时间戳缺失")
+	}
+	// 本机时钟慢、或上游时间戳超前,都会算出负的数据龄。不拦的话它不但
+	// 通过下面这道新鲜度闸门,还会因为 maxAge <= HighConfidenceHours 直接
+	// 拿到 high —— 越离谱越可信,恰好反了。
+	if sellAge < 0 || buyAge < 0 {
+		return reject("future_timestamp",
+			fmt.Sprintf("数据龄为负(%.1fh),对一下本机和服务端时钟", math.Min(sellAge, buyAge)))
 	}
 	maxAge := math.Max(sellAge, buyAge)
 	if maxAge > cfg.Freshness.MaxHours {
@@ -251,6 +261,7 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 			BuyPrice: u.MyBid, SellPrice: u.MyAsk,
 			ProfitPerUnit: u.ProfitPerUnit, Margin: u.Margin,
 			Friction:     m.Friction(cfg.Economics),
+			Breakeven:    m.Breakeven(cfg.Economics),
 			HoursPerTurn: hours, TurnsPerDay: turns, DailyProfit: daily,
 		}
 		modes = append(modes, q)
@@ -261,10 +272,18 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 	sort.SliceStable(modes, func(i, j int) bool { return modes[i].DailyProfit > modes[j].DailyProfit })
 
 	if len(profitable) == 0 {
-		// 四种方式没一种赚钱。报最保守那种的亏损,让人看得懂为什么被拒
-		u := econ.Quote(book, book, econ.Mode{Buy: econ.Maker, Sell: econ.Maker}, cfg.Economics)
-		return reject("unprofitable", fmt.Sprintf("税后亏 %.1f 银/件(摩擦 %.1f%%)",
-			u.ProfitPerUnit, cfg.Economics.RoundTripFriction()*100))
+		// 四种方式没一种赚钱。报最保守那种的亏损,让人看得懂为什么被拒。
+		//
+		// 门槛报**真实盈亏平衡**而不是名义摩擦:名义是几个比例直接相加,
+		// 而买侧的费乘在 my_bid 上、卖侧的费乘在 my_ask 上,基数不同。
+		// 挂买挂卖名义 9.0%、真实要 9.63% —— 中间那 0.63 个百分点的价差
+		// 会被"摩擦 9%"这句话说成够用,实际每件都在亏。
+		mm := econ.Mode{Buy: econ.Maker, Sell: econ.Maker}
+		u := econ.Quote(book, book, mm, cfg.Economics)
+		spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1
+		return reject("unprofitable", fmt.Sprintf(
+			"税后亏 %.1f 银/件:买卖价差 %.2f%%,%s 要 %.2f%% 才打平",
+			u.ProfitPerUnit, spread*100, mm.Label(), mm.Breakeven(cfg.Economics)*100))
 	}
 	// 按日收益挑。量不足时日收益全是 0,退回按单件利润挑——
 	// 这时候要报的是"吃不下"而不是"不赚钱",两者的处置完全不同

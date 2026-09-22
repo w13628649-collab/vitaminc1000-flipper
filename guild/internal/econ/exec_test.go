@@ -25,6 +25,89 @@ func TestFrictionDiffersByExecutionMode(t *testing.T) {
 	}
 }
 
+// 名义摩擦偏小,真实盈亏平衡才是"价差够不够"的判据。
+// 两侧费用基数不同(买侧乘 my_bid、卖侧乘 my_ask),相加得到的数不是门槛。
+func TestBreakevenIsHigherThanNominalFriction(t *testing.T) {
+	cfg := conf.Default().Economics
+	cases := []struct {
+		mode Mode
+		want float64 // 真实门槛
+	}{
+		{Mode{Taker, Taker}, 1/0.96 - 1},      // 4.167%,名义 4.0%
+		{Mode{Taker, Maker}, 1/0.935 - 1},     // 6.952%,名义 6.5%
+		{Mode{Maker, Taker}, 1.025/0.96 - 1},  // 6.771%,名义 6.5%
+		{Mode{Maker, Maker}, 1.025/0.935 - 1}, // 9.626%,名义 9.0%
+	}
+	for _, c := range cases {
+		got := c.mode.Breakeven(cfg)
+		if !near(got, c.want) {
+			t.Fatalf("%s 盈亏平衡 = %.6f,想要 %.6f", c.mode.Label(), got, c.want)
+		}
+		if got <= c.mode.Friction(cfg) {
+			t.Fatalf("%s:真实门槛 %.4f 应当高于名义摩擦 %.4f",
+				c.mode.Label(), got, c.mode.Friction(cfg))
+		}
+	}
+
+	// 名义摩擦分不开的两个模式,真实门槛能分开
+	tm, mt := Mode{Taker, Maker}, Mode{Maker, Taker}
+	if tm.Friction(cfg) != mt.Friction(cfg) {
+		t.Fatal("前提变了:这两个模式的名义摩擦本来应该相等")
+	}
+	if near(tm.Breakeven(cfg), mt.Breakeven(cfg)) {
+		t.Fatal("秒买挂卖和挂买秒卖的真实门槛应当不同(6.95% vs 6.77%)")
+	}
+}
+
+// Breakeven 必须和 Quote 算出来的盈亏点一致,否则界面报的门槛是假的。
+func TestBreakevenAgreesWithQuote(t *testing.T) {
+	cfg := conf.Default().Economics
+	for _, m := range Modes {
+		be := m.Breakeven(cfg)
+		// 构造一对刚好在门槛上的价:挂单腿会被 outbid/undercut 各让 1 银,
+		// 所以取大基数把那 1 银的影响压到可忽略
+		const bid = 10_000_000
+		ask := int64(float64(bid) * (1 + be))
+
+		// 刚好打平附近:低 1% 必亏,高 1% 必赚
+		lo := Quote(Book{SellMin: bid, BuyMax: bid}, Book{SellMin: int64(float64(ask) * 0.99), BuyMax: int64(float64(ask) * 0.99)}, m, cfg)
+		hi := Quote(Book{SellMin: bid, BuyMax: bid}, Book{SellMin: int64(float64(ask) * 1.01), BuyMax: int64(float64(ask) * 1.01)}, m, cfg)
+		if lo.ProfitPerUnit >= 0 {
+			t.Fatalf("%s:低于门槛 1%% 还赚钱(%.2f),Breakeven 偏高", m.Label(), lo.ProfitPerUnit)
+		}
+		if hi.ProfitPerUnit <= 0 {
+			t.Fatalf("%s:高于门槛 1%% 还亏钱(%.2f),Breakeven 偏低", m.Label(), hi.ProfitPerUnit)
+		}
+	}
+}
+
+// 挂卖腿的到手比例要能复现游戏内挂单界面那笔账。
+func TestSellLegMatchesInGameOrderScreen(t *testing.T) {
+	cfg := conf.Default().Economics
+	// T6_METALBAR_LEVEL4@4,56 件 × 357,978
+	const qty, price = 56, 357_978
+	gross := float64(qty * price)
+
+	tax := gross * cfg.MarketTax  // 游戏显示 4% 尊享税率 801,871
+	setup := gross * cfg.SetupFee // 游戏显示 2.5% 创建费 501,169
+	subtotal := gross - tax       // 游戏显示"合计" 19,244,897 —— 只扣了税
+	net := gross * Mode{Maker, Maker}.sellMul(cfg)
+
+	if int64(tax+0.5) != 801_871 {
+		t.Fatalf("市场税 %.0f,游戏显示 801871", tax)
+	}
+	if int64(setup+0.5) != 501_169 {
+		t.Fatalf("创建费 %.0f,游戏显示 501169", setup)
+	}
+	if int64(subtotal+0.5) != 19_244_897 {
+		t.Fatalf("合计 %.0f,游戏显示 19244897", subtotal)
+	}
+	// 创建费是下单当场单独扣的,不在"合计"里 —— 真正到手要再减掉它
+	if int64(net+0.5) != int64(subtotal-setup+0.5) {
+		t.Fatalf("到手 %.0f,应为 合计−创建费 = %.0f", net, subtotal-setup)
+	}
+}
+
 // 两条腿用的价格基准不同,这是最容易算错的地方。
 func TestEachLegUsesItsOwnPriceBasis(t *testing.T) {
 	cfg := conf.Default().Economics

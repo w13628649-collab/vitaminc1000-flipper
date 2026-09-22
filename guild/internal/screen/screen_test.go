@@ -186,6 +186,66 @@ func TestSpreadBelowFrictionIsUnprofitable(t *testing.T) {
 	}
 }
 
+// 名义摩擦 9.0% 和真实门槛 9.63% 之间那条缝。价差落在里面时,
+// 光看"摩擦 9%"会以为够了,实际每件都在亏 —— 拒绝理由必须报真实门槛。
+func TestSpreadInsideTheNominalFrictionGapStillLoses(t *testing.T) {
+	cfg := config()
+	// 9.2% 价差:高于名义 9.0%,低于真实 9.626%
+	rec := makePrice(priceOpt{buy: 100000, sell: 109200})
+	stats := makeStats(statsOpt{avg7d: 104000, dailyQty: 500})
+
+	opp, rej := Evaluate(rec, stats, cfg, names, now)
+	if rej == nil {
+		t.Fatalf("9.2%% 价差不该赚钱(真实门槛 9.63%%),却通过了: %+v", opp)
+	}
+	if rej.Reason != "unprofitable" {
+		t.Fatalf("拒绝原因 = %s,想要 unprofitable", rej.Reason)
+	}
+	// 理由里报的必须是真实门槛,不能是那个偏小的名义摩擦
+	if !strings.Contains(rej.Detail, "9.63%") {
+		t.Fatalf("拒绝理由应当写明真实门槛 9.63%%,实际是 %q", rej.Detail)
+	}
+	if strings.Contains(rej.Detail, "9.0%") {
+		t.Fatalf("拒绝理由不该再报名义摩擦 9.0%%: %q", rej.Detail)
+	}
+}
+
+// 本机时钟慢的话数据龄会是负的。不拦的话它不但通过新鲜度这关,
+// 还会因为 maxAge <= HighConfidenceHours 直接拿到 high —— 越离谱越可信。
+func TestNegativeAgeRejectedInsteadOfScoringHigh(t *testing.T) {
+	rec := makePrice(priceOpt{buyAgeH: -48, sellAgeH: -48})
+	if got := reason(t, rec, makeStats(statsOpt{}), config()); got != "future_timestamp" {
+		t.Fatalf("拒绝原因 = %s,想要 future_timestamp", got)
+	}
+	// 只有一侧超前也要拦住
+	one := makePrice(priceOpt{sellAgeH: -1})
+	if got := reason(t, one, makeStats(statsOpt{}), config()); got != "future_timestamp" {
+		t.Fatalf("单侧负龄:拒绝原因 = %s,想要 future_timestamp", got)
+	}
+}
+
+// 四种执行方式都要带上自己的真实门槛,而且名义摩擦相同的两个模式要能分开。
+func TestModeQuotesCarryRealBreakeven(t *testing.T) {
+	opp, rej := Evaluate(makePrice(priceOpt{}), makeStats(statsOpt{}), config(), names, now)
+	if rej != nil {
+		t.Fatalf("本该通过,却被 %s 拒了", rej.Reason)
+	}
+	byKey := map[string]ModeQuote{}
+	for _, m := range opp.Modes {
+		byKey[m.Mode] = m
+		if m.Breakeven <= m.Friction {
+			t.Fatalf("%s:真实门槛 %.4f 应当高于名义摩擦 %.4f", m.Label, m.Breakeven, m.Friction)
+		}
+	}
+	tm, mt := byKey["taker-maker"], byKey["maker-taker"]
+	if tm.Friction != mt.Friction {
+		t.Fatal("前提变了:这两个模式的名义摩擦本来相等")
+	}
+	if tm.Breakeven == mt.Breakeven {
+		t.Fatal("秒买挂卖和挂买秒卖的真实门槛应当不同")
+	}
+}
+
 func TestThinHistoryRejected(t *testing.T) {
 	stats := makeStats(statsOpt{days: 2})
 	if got := reason(t, makePrice(priceOpt{}), stats, config()); got != "thin_history" {
