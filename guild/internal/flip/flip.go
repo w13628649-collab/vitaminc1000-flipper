@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -309,34 +310,50 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 		return portfolio.Plan{Note: "还没扫过"}
 	}
 
+	absorb := s.Cfg.Sizing.AbsorbRatio
+	// 流动性桶的键是 (物品, 城市, 品质)。同一个桶里的货只有那么多,
+	// 谁先排上谁先吃——不这么记的话,从同一座城发往三个方向的路线
+	// 会各吃一份完整额度,累计收益里三分之二是同一批货
+	poolKey := func(itemID, city string, quality int) string {
+		return itemID + "|" + city + "|" + strconv.Itoa(quality)
+	}
+
 	var pool []portfolio.Candidate
 	for _, o := range res.Opportunities {
-		// MaxQty 是市场吃得下的上限,和本金无关——
-		// 本金约束由 portfolio 统一处理,这里给它原始的流动性上限
-		maxQty := int64(o.AbsorbableQty)
-		if maxQty < 1 {
+		if o.AbsorbableQty < 1 {
 			continue
 		}
+		// 同城买卖两端在同一个市场里,只占一个桶
 		pool = append(pool, portfolio.Candidate{
 			Key:         "flip:" + o.ItemID + "|" + o.City,
 			Label:       o.ItemName + " · " + o.City,
 			Kind:        "flip",
 			CostPerUnit: o.CostPerUnit, ProfitPerUnit: o.ProfitPerUnit,
-			MaxQty: maxQty, Volatility: o.Volatility,
-			Payload: o,
+			HoursPerRound: o.HoursPerTurn,
+			Pools: []portfolio.Pool{
+				{Key: poolKey(o.ItemID, o.City, o.Quality), Capacity: o.AbsorbableQty},
+			},
+			Volatility: o.Volatility,
+			Payload:    o,
 		})
 	}
 	for _, r := range res.Routes {
 		if r.Qty < 1 {
 			continue
 		}
+		// 跨城要占产地和销地两个桶:进得去还得出得来
 		pool = append(pool, portfolio.Candidate{
 			Key:         "arb:" + r.ItemID + "|" + r.FromCity + "->" + r.ToCity,
 			Label:       r.ItemName + " · " + r.FromCity + " → " + r.ToCity,
 			Kind:        "arb",
 			CostPerUnit: r.CostPerUnit, ProfitPerUnit: r.ProfitPerUnit,
-			MaxQty: r.Qty, Volatility: r.Volatility,
-			Payload: r,
+			HoursPerRound: r.HoursPerTrip,
+			Pools: []portfolio.Pool{
+				{Key: poolKey(r.ItemID, r.FromCity, r.Quality), Capacity: r.SourceDaily * absorb},
+				{Key: poolKey(r.ItemID, r.ToCity, r.Quality), Capacity: r.DestDaily * absorb},
+			},
+			Volatility: r.Volatility,
+			Payload:    r,
 		})
 	}
 	return portfolio.Build(pool, opt)

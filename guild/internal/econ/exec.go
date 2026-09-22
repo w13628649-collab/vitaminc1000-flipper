@@ -160,22 +160,30 @@ func (m Mode) HoursPerRound(travel, fill float64) float64 {
 
 // Turnover 算一轮带多少、一天转几轮、一天总共赚多少。
 //
-// 两个约束:一轮不会超过市场一整天能吃下的量;转几轮取
-// "把当天容量搬完需要几轮"和"这种执行方式一天最多转几轮"的较小值。
+// 硬约束只有一条:**一天实际搬的量不能超过市场一天吃得下的量**
+// (absorbable,也就是日成交量 × absorb_ratio)。轮数是这条约束
+// 除出来的结果,不是先算轮数再乘。
 //
-// 由此得出一个容易想反的结论:**周转速度只在本金撑不满市场容量时
+// 反过来写(先 ceil 出轮数再乘)会破两件事:一天的量能超上限近一倍;
+// 而且对本金非单调——本金略多一点让一轮正好装满,轮数从 2 掉到 1,
+// 报出来的日收益反而砍半。
+//
+// 由此还得出一个容易想反的结论:**周转速度只在本金撑不满市场容量时
 // 才影响日收益**。本金够一轮吃下一整天的量,转得再快也没有更多货给你做。
 func Turnover(u Unit, absorbable float64, capital int64, hoursPerRound float64) (qty int64, turns, dailyProfit float64) {
 	byCapital := 0.0
 	if u.CostPerUnit > 0 {
 		byCapital = float64(capital) / u.CostPerUnit
 	}
+	// 一轮带多少:本金买得起的量,但一轮也不会超过市场一整天的容量
 	qty = int64(math.Floor(math.Min(absorbable, byCapital)))
 	if qty < 1 {
 		return 0, 0, 0
 	}
 	possible := 24 / hoursPerRound
-	needed := math.Ceil(absorbable / float64(qty))
-	turns = math.Min(needed, possible)
-	return qty, turns, u.ProfitPerUnit * float64(qty) * turns
+	dailyQty := math.Min(float64(qty)*possible, absorbable)
+	// 轮数是结果不是前提。允许小数:半轮就是那一轮只装了一半的货,
+	// 对应的量已经在 dailyQty 里算准了
+	turns = dailyQty / float64(qty)
+	return qty, turns, u.ProfitPerUnit * dailyQty
 }

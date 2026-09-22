@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"sort"
 	"time"
 
@@ -99,7 +100,7 @@ type Result struct {
 //
 // 用的是和同城完全一样的那批价格数据——跨城不需要额外请求,
 // 只是换个角度看同一份快照。
-func findRoutes(prices []aodp.PriceRecord, stats map[histagg.Key]histagg.Stats,
+func findRoutes(prices []aodp.PriceRecord, stats map[histagg.QualityKey]histagg.Stats,
 	cat *catalog.Catalog, cfg conf.Config, now time.Time) []arb.Route {
 
 	type group struct {
@@ -111,19 +112,20 @@ func findRoutes(prices []aodp.PriceRecord, stats map[histagg.Key]histagg.Stats,
 		if rec.SellPriceMin <= 0 && rec.BuyPriceMax <= 0 {
 			continue
 		}
-		age := 0.0
-		if a, ok := rec.SellPriceMinDate.AgeHours(now); ok {
-			age = a
-		}
-		if a, ok := rec.BuyPriceMaxDate.AgeHours(now); ok && a > age {
-			age = a
+		// 时间戳缺失不能当成"刚刚更新"。同城口径是直接 reject("no_timestamp"),
+		// 这里把它记成超龄,后面的新鲜度检查会把它挡掉
+		age, ok := freshness(rec, now)
+		if !ok {
+			continue
 		}
 		m := arb.Market{
 			City:     rec.City,
 			Book:     econ.Book{SellMin: rec.SellPriceMin, BuyMax: rec.BuyPriceMax},
 			AgeHours: age,
 		}
-		if s, ok := stats[histagg.Key{ItemID: rec.ItemID, City: rec.City}]; ok {
+		if s, ok := stats[histagg.QualityKey{
+			ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality,
+		}]; ok {
 			m.Stats = &s
 		}
 		k := group{rec.ItemID, rec.Quality}
@@ -137,10 +139,28 @@ func findRoutes(prices []aodp.PriceRecord, stats map[histagg.Key]histagg.Stats,
 			continue // 只有一个城市有数据,没得比
 		}
 		out = append(out, arb.Find(k.itemID, cat.NameOf(k.itemID), k.quality,
-			markets, cfg.Economics, opt)...)
+			markets, cfg.Economics, opt, now)...)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].DailyProfit > out[j].DailyProfit })
 	return out
+}
+
+// freshness 返回这条报价里更旧的那一侧有多旧。
+// 任何一侧缺时间戳就判不可用——价格有值但不知道什么时候的,
+// 比没有价格更危险。
+func freshness(rec aodp.PriceRecord, now time.Time) (float64, bool) {
+	sell, okSell := rec.SellPriceMinDate.AgeHours(now)
+	buy, okBuy := rec.BuyPriceMaxDate.AgeHours(now)
+	switch {
+	case okSell && okBuy:
+		return math.Max(sell, buy), true
+	case okSell && rec.BuyPriceMax == 0:
+		return sell, true // 这一侧本来就没挂单,不算缺时间戳
+	case okBuy && rec.SellPriceMin == 0:
+		return buy, true
+	default:
+		return 0, false
+	}
 }
 
 func (r Result) ElapsedNote() string {
@@ -178,14 +198,17 @@ func Run(ctx context.Context, client *aodp.Client, cfg conf.Config,
 		return nil, fmt.Errorf("拉历史: %w", err)
 	}
 
-	stats := histagg.Aggregate(history, now, cfg.Sizing.BaselineDays, cfg.Sizing.HistoryDays)
+	// 必须按品质分开。合并的话,qualities 填成 [1,2,3] 时同一份成交量
+	// 会被三档各领一次,资金池里三行各分一份钱,一天买走三倍于实际
+	// 容量的货;偏离度基准也被混合品质的均价带偏
+	stats := histagg.AggregateByQuality(history, now, cfg.Sizing.BaselineDays, cfg.Sizing.HistoryDays)
 
 	var opportunities []screen.Opportunity
 	var rejected []screen.Rejected
 	counts := map[string]int{}
 	for _, rec := range prices {
 		var st *histagg.Stats
-		if s, ok := stats[histagg.Key{ItemID: rec.ItemID, City: rec.City}]; ok {
+		if s, ok := stats[histagg.QualityKey{ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality}]; ok {
 			st = &s
 		}
 		opp, rej := screen.Evaluate(rec, st, cfg, cat, now)

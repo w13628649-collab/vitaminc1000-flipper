@@ -300,7 +300,9 @@ function renderPlan(p) {
     <td>${num(s.capital)}</td>
     <td><b>${num(s.daily_profit)}</b></td>
     <td>${pct(s.roi)}</td>
+    <td class="sub" title="风险调整后,排序按这个">${s.risk_adj_roi ? pct(s.risk_adj_roi) : "—"}</td>
     <td class="sub">${s.volatility ? s.volatility.toFixed(2) : "—"}</td>
+    <td class="sub">${s.turns_per_day ? s.turns_per_day.toFixed(1) : "—"}</td>
   </tr>`).join("");
 
   renderCurve(p);
@@ -335,10 +337,15 @@ function renderCurve(p) {
     <text x="${pad.l}" y="${H - 8}" font-size="10" fill="var(--ink-soft)">0</text>
     <text x="${W - pad.r}" y="${H - 8}" font-size="10" fill="var(--ink-soft)" text-anchor="end">${num(maxCap)} 银</text>
   </svg>`;
+  // 说明必须和排序口径一致:排序用的是风险调整后的回报率,
+  // 所以单调递减的是它,原始回报率不保证——波动大但账面高的
+  // 品种被压到后面,它的原始 ROI 可能反而更高
   $("curve-note").textContent =
     `实线是实际累计收益,虚线是"回报率一直维持第一条水平"的理想情况。` +
     `两者岔开得越早,说明好机会越集中在前几条——` +
-    `组合回报率从 ${pct(pts[0].roi, 1)} 摊薄到 ${pct(p.daily_roi, 2)}。`;
+    `组合回报率从 ${pct(pts[0].roi, 1)} 摊薄到 ${pct(p.daily_roi, 2)}。` +
+    `排序按风险调整后的回报率,所以那一列是递减的;` +
+    `原始回报率可能有起伏(波动大的品种被往后压了)。`;
 }
 
 // ── 校准 ───────────────────────────────────────────────────

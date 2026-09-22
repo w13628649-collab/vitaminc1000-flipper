@@ -236,59 +236,19 @@ func withTimestamp(points []aodp.HistoryPoint) []aodp.HistoryPoint {
 
 // Aggregate 按 (物品, 城市) 聚合。
 // AODP 同一组合可能返回多条 series(按品质拆),这里合并。
+//
+// 只在"不区分品质"确实成立时才用它——扫描路径用的是
+// AggregateByQuality,因为合并会让同一份成交量被每档品质各领一次。
 func Aggregate(seriesList []aodp.HistorySeries, now time.Time, baselineDays, historyDays int) map[Key]Stats {
 	merged := map[Key][]aodp.HistoryPoint{}
 	for _, s := range seriesList {
 		k := Key{s.ItemID, s.Location}
 		merged[k] = append(merged[k], s.Data...)
 	}
-
 	out := make(map[Key]Stats, len(merged))
 	for k, points := range merged {
-		points = withTimestamp(points)
-		if len(points) == 0 {
-			continue
-		}
-		sortByTime(points)
-
-		short := window(points, now, baselineDays)
-		long := window(points, now, historyDays)
-
-		daysShort := distinctDays(short)
-		daysLong := distinctDays(long)
-
-		qtyShort, qtyLong := 0.0, 0.0
-		if daysShort > 0 {
-			qtyShort = sumQty(short) / float64(daysShort)
-		}
-		if daysLong > 0 {
-			qtyLong = sumQty(long) / float64(daysLong)
-		}
-		avgShort := weightedAvgPrice(short)
-
-		avgLong := weightedAvgPrice(long)
-		sd := stdDev(long, avgLong)
-		cv := 0.0
-		if avgLong > 0 {
-			cv = sd / avgLong
-		}
-		change, fit := trendOf(long)
-
-		out[k] = Stats{
-			ItemID:            k.ItemID,
-			City:              k.City,
-			AvgPrice7d:        avgShort,
-			AvgPrice30d:       avgLong,
-			StdDev30d:         sd,
-			CV:                cv,
-			TrendPct30d:       change,
-			TrendFit:          fit,
-			DailyVolumeQty:    qtyShort,
-			DailyVolumeQty30d: qtyLong,
-			DailyVolumeSilver: qtyShort * avgShort,
-			DaysWithData7d:    daysShort,
-			DaysWithData30d:   daysLong,
-			LastPoint:         points[len(points)-1].Timestamp.T,
+		if st, ok := summarize(k.ItemID, k.City, points, now, baselineDays, historyDays); ok {
+			out[k] = st
 		}
 	}
 	return out
@@ -296,43 +256,74 @@ func Aggregate(seriesList []aodp.HistorySeries, now time.Time, baselineDays, his
 
 // AggregateByQuality 按 (物品, 城市, 品质) 聚合。
 //
-// 查价界面要按品质分开看——卓越品质的成交量和普通品质差一个数量级,
-// 混在一起的均价对哪一档都不准。
-func AggregateByQuality(seriesList []aodp.HistorySeries, now time.Time, baselineDays int) map[QualityKey]Stats {
+// 卓越品质的成交量和普通品质差一个数量级,混在一起的均价对哪一档都不准;
+// 更要命的是资金分配那边会把同一份流动性按品质数量重复计算。
+// 指标和 Aggregate 完全一致,只是分组更细。
+func AggregateByQuality(seriesList []aodp.HistorySeries, now time.Time, baselineDays, historyDays int) map[QualityKey]Stats {
 	merged := map[QualityKey][]aodp.HistoryPoint{}
 	for _, s := range seriesList {
 		k := QualityKey{s.ItemID, s.Location, s.Quality}
 		merged[k] = append(merged[k], s.Data...)
 	}
-
 	out := make(map[QualityKey]Stats, len(merged))
 	for k, points := range merged {
-		points = withTimestamp(points)
-		if len(points) == 0 {
-			continue
-		}
-		sortByTime(points)
-
-		win := window(points, now, baselineDays)
-		days := distinctDays(win)
-		qty := 0.0
-		if days > 0 {
-			qty = sumQty(win) / float64(days)
-		}
-		avg := weightedAvgPrice(win)
-
-		out[k] = Stats{
-			ItemID:            k.ItemID,
-			City:              k.City,
-			AvgPrice7d:        avg,
-			AvgPrice30d:       avg,
-			DailyVolumeQty:    qty,
-			DailyVolumeQty30d: qty,
-			DailyVolumeSilver: qty * avg,
-			DaysWithData7d:    days,
-			DaysWithData30d:   days,
-			LastPoint:         points[len(points)-1].Timestamp.T,
+		if st, ok := summarize(k.ItemID, k.City, points, now, baselineDays, historyDays); ok {
+			out[k] = st
 		}
 	}
 	return out
+}
+
+// summarize 是两个聚合口径共用的那套计算。
+//
+// 抽出来不是为了少写几行,是为了**保证两条路径给出的指标一致**:
+// 以前按品质聚合那份只算了 7 日窗口,没有标准差、变异系数和趋势,
+// 换过去用就等于悄悄丢掉了全部风险指标。
+func summarize(itemID, city string, points []aodp.HistoryPoint,
+	now time.Time, baselineDays, historyDays int) (Stats, bool) {
+
+	points = withTimestamp(points)
+	if len(points) == 0 {
+		return Stats{}, false
+	}
+	sortByTime(points)
+
+	short := window(points, now, baselineDays)
+	long := window(points, now, historyDays)
+
+	daysShort := distinctDays(short)
+	daysLong := distinctDays(long)
+
+	qtyShort, qtyLong := 0.0, 0.0
+	if daysShort > 0 {
+		qtyShort = sumQty(short) / float64(daysShort)
+	}
+	if daysLong > 0 {
+		qtyLong = sumQty(long) / float64(daysLong)
+	}
+	avgShort := weightedAvgPrice(short)
+	avgLong := weightedAvgPrice(long)
+	sd := stdDev(long, avgLong)
+	cv := 0.0
+	if avgLong > 0 {
+		cv = sd / avgLong
+	}
+	change, fit := trendOf(long)
+
+	return Stats{
+		ItemID:            itemID,
+		City:              city,
+		AvgPrice7d:        avgShort,
+		AvgPrice30d:       avgLong,
+		StdDev30d:         sd,
+		CV:                cv,
+		TrendPct30d:       change,
+		TrendFit:          fit,
+		DailyVolumeQty:    qtyShort,
+		DailyVolumeQty30d: qtyLong,
+		DailyVolumeSilver: qtyShort * avgShort,
+		DaysWithData7d:    daysShort,
+		DaysWithData30d:   daysLong,
+		LastPoint:         points[len(points)-1].Timestamp.T,
+	}, true
 }

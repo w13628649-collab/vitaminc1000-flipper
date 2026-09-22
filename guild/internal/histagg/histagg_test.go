@@ -157,3 +157,62 @@ func TestZScoreFlagsCheapAndExpensive(t *testing.T) {
 		t.Fatal("σ 为 0 时不该给出 z-score")
 	}
 }
+
+// 两个聚合口径必须给出完全一致的指标,只是分组粒度不同。
+//
+// 以前按品质聚合那份只算 7 日窗口,没有标准差、变异系数和趋势。
+// 扫描路径换过去用的时候,风险指标会被悄悄丢掉——z-score 和波动率
+// 全变成 0,而界面上照样显示。
+func TestBothAggregationsProduceTheSameMetrics(t *testing.T) {
+	s := series()
+	for i := 1; i <= 20; i++ {
+		day := now.AddDate(0, 0, -i).Format("2006-01-02T00:00:00")
+		s.Data = append(s.Data, aodp.HistoryPoint{
+			ItemCount: int64(1000 + i*10), AvgPrice: int64(1000 + (i%3)*120),
+			Timestamp: aodp.Stamp{T: aodp.ParseTime(day)},
+		})
+	}
+	byCity := Aggregate([]aodp.HistorySeries{s}, now, 7, 30)[Key{"T5_CLOTH", "Lymhurst"}]
+	byQual := AggregateByQuality([]aodp.HistorySeries{s}, now, 7, 30)[QualityKey{"T5_CLOTH", "Lymhurst", 1}]
+
+	if byCity != byQual {
+		t.Fatalf("两条路径结果不一致:\n  按城市 %+v\n  按品质 %+v", byCity, byQual)
+	}
+	// 而且风险指标真的算出来了,不是恰好都为 0
+	if byQual.StdDev30d <= 0 || byQual.CV <= 0 {
+		t.Fatalf("风险指标没算出来:σ=%v CV=%v", byQual.StdDev30d, byQual.CV)
+	}
+}
+
+// 品质必须分开。合并的话同一份成交量会被每档品质各领一次,
+// 资金分配那边就会按品质数量成倍超配。
+func TestQualitiesDoNotShareVolume(t *testing.T) {
+	var all []aodp.HistorySeries
+	for q := 1; q <= 3; q++ {
+		s := series()
+		s.Quality = q
+		for i := 1; i <= 5; i++ {
+			day := now.AddDate(0, 0, -i).Format("2006-01-02T00:00:00")
+			s.Data = append(s.Data, aodp.HistoryPoint{
+				ItemCount: 1000, AvgPrice: 1000,
+				Timestamp: aodp.Stamp{T: aodp.ParseTime(day)},
+			})
+		}
+		all = append(all, s)
+	}
+	byQual := AggregateByQuality(all, now, 7, 30)
+	if len(byQual) != 3 {
+		t.Fatalf("应该分成 3 档,得到 %d", len(byQual))
+	}
+	for q := 1; q <= 3; q++ {
+		st := byQual[QualityKey{"T5_CLOTH", "Lymhurst", q}]
+		if !near(st.DailyVolumeQty, 1000) {
+			t.Fatalf("品质 %d 的日均件数 = %v,应该是它自己那 1000 件", q, st.DailyVolumeQty)
+		}
+	}
+	// 合并口径会把三档加起来,正是要避免的
+	merged := Aggregate(all, now, 7, 30)[Key{"T5_CLOTH", "Lymhurst"}]
+	if !near(merged.DailyVolumeQty, 3000) {
+		t.Fatalf("合并口径应该是 3000(这正是不能用它的原因),得到 %v", merged.DailyVolumeQty)
+	}
+}

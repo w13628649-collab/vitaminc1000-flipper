@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
@@ -126,6 +127,14 @@ type Options struct {
 	// 用毛利率来判会漏:同一对价格,不同执行方式算出的毛利差一截,
 	// 挑最赚的那个模式反而最容易撞上限,整条路线就被误杀了
 	MaxPriceRatio float64
+
+	// 下面这几层同城早就有了,跨城一直没做。两种玩法混在同一张榜、
+	// 同一个资金池里排名,只有一边做过滤等于没做——薄流动性品种的
+	// 回报率往往最高,会排在最前面把钱拿走
+	RejectCrossedBook    bool
+	MinDailyVolumeSilver float64
+	MinDaysWithData      int
+	MaxHistoryGapDays    float64
 }
 
 // roundTripHours 是这种执行方式跑完一趟来回要多久。同城没有路程,
@@ -136,14 +145,18 @@ func (o Options) roundTripHours(m econ.Mode) float64 {
 
 func DefaultOptions(cfg conf.Config) Options {
 	return Options{
-		Capital:          cfg.Capital,
-		TravelHours:      cfg.Sizing.TravelHours,
-		FillHours:        cfg.Sizing.FillHours,
-		MinProfitPerUnit: 5,
-		MaxAgeHours:      cfg.Freshness.MaxHours,
-		AbsorbRatio:      cfg.Sizing.AbsorbRatio,
-		MinMargin:        0.03,
-		MaxPriceRatio:    3.0,
+		Capital:              cfg.Capital,
+		TravelHours:          cfg.Sizing.TravelHours,
+		FillHours:            cfg.Sizing.FillHours,
+		MinProfitPerUnit:     5,
+		MaxAgeHours:          cfg.Freshness.MaxHours,
+		AbsorbRatio:          cfg.Sizing.AbsorbRatio,
+		MinMargin:            0.03,
+		MaxPriceRatio:        3.0,
+		RejectCrossedBook:    cfg.Filters.RejectCrossedBook,
+		MinDailyVolumeSilver: cfg.Filters.MinDailyVolumeSilver,
+		MinDaysWithData:      cfg.Filters.MinDaysWithData7d,
+		MaxHistoryGapDays:    cfg.Filters.MaxHistoryGapDays,
 	}
 }
 
@@ -152,7 +165,7 @@ func DefaultOptions(cfg conf.Config) Options {
 // n 个城市是 n×(n-1) 个有向对。六个皇家城市就是 30 对,
 // 乘上物品数也还是小数量级,直接全算,不用剪枝。
 func Find(itemID, itemName string, quality int, markets []Market,
-	cfg conf.Economics, opt Options) []Route {
+	cfg conf.Economics, opt Options, now time.Time) []Route {
 
 	var out []Route
 	for _, from := range markets {
@@ -160,7 +173,7 @@ func Find(itemID, itemName string, quality int, markets []Market,
 			if from.City == to.City {
 				continue
 			}
-			if r, ok := evaluate(itemID, itemName, quality, from, to, cfg, opt); ok {
+			if r, ok := evaluate(itemID, itemName, quality, from, to, cfg, opt, now); ok {
 				out = append(out, r)
 			}
 		}
@@ -170,7 +183,7 @@ func Find(itemID, itemName string, quality int, markets []Market,
 }
 
 func evaluate(itemID, itemName string, quality int, from, to Market,
-	cfg conf.Economics, opt Options) (Route, bool) {
+	cfg conf.Economics, opt Options, now time.Time) (Route, bool) {
 
 	// 产地要有人卖给我,销地要有人接我的货
 	if from.Book.SellMin <= 0 && from.Book.BuyMax <= 0 {
@@ -184,12 +197,28 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		return Route{}, false
 	}
 
-	// Troll 兜底看原始价格比,不看毛利率
-	if opt.MaxPriceRatio > 0 {
-		a, b := mid(from.Book), mid(to.Book)
-		if a <= 0 || b <= 0 || b/a > opt.MaxPriceRatio {
+	// 交叉盘(买一 >= 卖一)在真实市场不可能持续存在,出现说明
+	// 那一侧的两个价来自不同时间点。**这一层必须在算价格比之前**:
+	// 一条陈旧的低价卖单会把中价拉下来,比值看着正常,却能造出
+	// 10000% 毛利的路线还标成高可信
+	if opt.RejectCrossedBook {
+		if crossed(from.Book) || crossed(to.Book) {
 			return Route{}, false
 		}
+	}
+
+	// Troll 兜底看原始价格比,不看毛利率。
+	// 用**同侧口径**比(产地卖一 vs 销地卖一),不用中价——
+	// 中价会把交叉盘平均成一个看着正常的数
+	if opt.MaxPriceRatio > 0 {
+		if !ratioSane(from.Book, to.Book, opt.MaxPriceRatio) {
+			return Route{}, false
+		}
+	}
+
+	// 两端的历史都要能用。同城这几层早就有,跨城之前一层都没有
+	if !usable(from.Stats, opt, now) || !usable(to.Stats, opt, now) {
+		return Route{}, false
 	}
 
 	// 两端都要有量:产地进得去,销地也得出得来
@@ -276,7 +305,8 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 	}
 	if to.Stats != nil {
 		r.Volatility = to.Stats.CV
-		if z, ok := to.Stats.ZScore(mid(to.Book)); ok {
+		// 到这里已经排除过交叉盘,中价是可信的
+		if z, ok := to.Stats.ZScore(float64(to.Book.SellMin+to.Book.BuyMax) / 2); ok {
 			r.ZScore, r.HasZ = z, true
 		}
 	}
@@ -302,17 +332,55 @@ func playable(m econ.Mode, from, to econ.Book) bool {
 	return true
 }
 
-// mid 是盘口中价。只有一边有价时就用那一边——
-// 用它做 troll 判断比用单边价稳。
-func mid(b econ.Book) float64 {
-	switch {
-	case b.SellMin > 0 && b.BuyMax > 0:
-		return float64(b.SellMin+b.BuyMax) / 2
-	case b.SellMin > 0:
-		return float64(b.SellMin)
-	default:
-		return float64(b.BuyMax)
+// crossed 判断这一侧是不是交叉盘:有人出价比卖家要价还高。
+// 真实市场会立刻自己成交掉,所以这是两侧快照时间不一致的强信号。
+func crossed(b econ.Book) bool {
+	return b.SellMin > 0 && b.BuyMax > 0 && b.BuyMax >= b.SellMin
+}
+
+// ratioSane 用同侧口径比两地价格。
+//
+// 卖一对卖一、买一对买一,两组都要落在合理区间。用中价比的话,
+// 一条离谱的低价卖单会被同侧的正常买单平均掉,兜底就失效了。
+func ratioSane(from, to econ.Book, maxRatio float64) bool {
+	ok := false
+	for _, pair := range [][2]int64{
+		{from.SellMin, to.SellMin},
+		{from.BuyMax, to.BuyMax},
+	} {
+		a, b := pair[0], pair[1]
+		if a <= 0 || b <= 0 {
+			continue
+		}
+		r := float64(b) / float64(a)
+		if r > maxRatio || r < 1/maxRatio {
+			return false
+		}
+		ok = true
 	}
+	// 一组可比的都没有(两边各缺一侧),没法判,保守起见不出这条路线
+	return ok
+}
+
+// usable 判断这一端的成交历史够不够支撑一条路线。
+// 和同城 screen 那几层对齐:流水下限、样本天数、历史新鲜度。
+func usable(s *histagg.Stats, opt Options, now time.Time) bool {
+	if s == nil {
+		return false
+	}
+	if opt.MinDailyVolumeSilver > 0 && s.DailyVolumeSilver < opt.MinDailyVolumeSilver {
+		return false
+	}
+	if opt.MinDaysWithData > 0 && s.DaysWithData7d < opt.MinDaysWithData {
+		return false
+	}
+	if opt.MaxHistoryGapDays > 0 {
+		age, ok := s.HistoryAgeDays(now)
+		if !ok || age > opt.MaxHistoryGapDays {
+			return false
+		}
+	}
+	return true
 }
 
 func dailyQty(s *histagg.Stats) float64 {

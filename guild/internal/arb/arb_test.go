@@ -2,6 +2,7 @@ package arb
 
 import (
 	"testing"
+	"time"
 
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
@@ -14,14 +15,19 @@ func market(city string, sellMin, buyMax int64, dailyQty float64) Market {
 		City: city,
 		Book: econ.Book{SellMin: sellMin, BuyMax: buyMax},
 		Stats: &histagg.Stats{
-			DailyVolumeQty: dailyQty,
-			AvgPrice30d:    float64(sellMin+buyMax) / 2,
-			StdDev30d:      float64(sellMin+buyMax) / 2 * 0.05,
-			CV:             0.05,
+			DailyVolumeQty:    dailyQty,
+			DailyVolumeSilver: dailyQty * float64(sellMin+buyMax) / 2,
+			DaysWithData7d:    7,
+			LastPoint:         now.Add(-12 * time.Hour),
+			AvgPrice30d:       float64(sellMin+buyMax) / 2,
+			StdDev30d:         float64(sellMin+buyMax) / 2 * 0.05,
+			CV:                0.05,
 		},
 		AgeHours: 1,
 	}
 }
+
+var now = time.Date(2026, 9, 21, 12, 0, 0, 0, time.UTC)
 
 func opts() Options {
 	o := DefaultOptions(conf.Default())
@@ -30,7 +36,7 @@ func opts() Options {
 }
 
 func find(markets ...Market) []Route {
-	return Find("T5_CLOTH", "精布", 1, markets, conf.Default().Economics, opts())
+	return Find("T5_CLOTH", "精布", 1, markets, conf.Default().Economics, opts(), now)
 }
 
 func TestRoutesAreDirectional(t *testing.T) {
@@ -74,7 +80,7 @@ func TestQuantityIsLimitedByBothEnds(t *testing.T) {
 
 func TestSourceCanAlsoBeTheBottleneck(t *testing.T) {
 	routes := find(
-		market("Lymhurst", 1000, 950, 400),      // 产地量小
+		market("Lymhurst", 1000, 950, 800),      // 产地量小(但仍过得了流水下限)
 		market("Martlock", 1600, 1500, 100_000), // 销地量大
 	)
 	if routes[0].Bottleneck != "source" {
@@ -109,9 +115,12 @@ func TestTripTimeMattersOnlyWhenCapitalBound(t *testing.T) {
 	fast, slow := opts(), opts()
 	fast.TravelHours, fast.FillHours = 0.25, 1
 	slow.TravelHours, slow.FillHours = 3, 6
+	// 这个用例只测周转,不测流水下限。下面第二个场景故意用很小的市场,
+	// 会撞上流水闸门,和要验证的东西无关
+	fast.MinDailyVolumeSilver, slow.MinDailyVolumeSilver = 0, 0
 
-	f := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, fast)[0]
-	s := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, slow)[0]
+	f := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, fast, now)[0]
+	s := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, slow, now)[0]
 	if !(f.DailyProfit > s.DailyProfit) {
 		t.Fatalf("本金受限时,跑得快 %v 应该高于跑得慢 %v", f.DailyProfit, s.DailyProfit)
 	}
@@ -121,8 +130,8 @@ func TestTripTimeMattersOnlyWhenCapitalBound(t *testing.T) {
 		market("Lymhurst", 1000, 950, 300),
 		market("Martlock", 1600, 1500, 300),
 	}
-	f2 := Find("T5_CLOTH", "精布", 1, small, conf.Default().Economics, fast)[0]
-	s2 := Find("T5_CLOTH", "精布", 1, small, conf.Default().Economics, slow)[0]
+	f2 := Find("T5_CLOTH", "精布", 1, small, conf.Default().Economics, fast, now)[0]
+	s2 := Find("T5_CLOTH", "精布", 1, small, conf.Default().Economics, slow, now)[0]
 	if f2.DailyProfit != s2.DailyProfit {
 		t.Fatalf("市场受限时速度不该有影响:%v vs %v", f2.DailyProfit, s2.DailyProfit)
 	}
@@ -157,7 +166,7 @@ func TestModeChosenByDailyProfitNotUnitProfit(t *testing.T) {
 	}
 	o := opts()
 	o.TravelHours, o.FillHours = 0.25, 8 // 挂单等得久,秒单几乎不用等
-	r := Find("T5_CLOTH", "精布", 1, markets, conf.Default().Economics, o)[0]
+	r := Find("T5_CLOTH", "精布", 1, markets, conf.Default().Economics, o, now)[0]
 
 	for _, m := range r.Modes {
 		t.Logf("  %s: 单件%.0f 一趟%.1fh %.1f趟/天 日收益%.0f",
@@ -221,5 +230,82 @@ func TestStaleSnapshotsAreRejected(t *testing.T) {
 	to.AgeHours = 12
 	if len(find(from, to)) != 0 {
 		t.Fatal("12 小时前的快照不该出路线")
+	}
+}
+
+// 交叉盘(买一 >= 卖一)在真实市场不可能持续存在,是两侧快照
+// 时间不一致的强信号。同城早就拦了,跨城以前一点都不拦——
+// 产地一条陈旧的低价卖单就能造出 10000% 毛利的路线还标成高可信。
+func TestCrossedBookAtEitherEndIsRejected(t *testing.T) {
+	good := market("Caerleon", 1100, 1000, 5000)
+
+	// 产地交叉:卖一 10 远低于买一 1000
+	bad := market("Martlock", 10, 1000, 5000)
+	if r := find(bad, good); len(r) != 0 {
+		t.Fatalf("产地交叉盘不该出路线,却出了 %d 条(毛利 %.0f%%)", len(r), r[0].Margin*100)
+	}
+	// 销地交叉
+	if r := find(good, market("Martlock", 10, 1000, 5000)); len(r) != 0 {
+		t.Fatalf("销地交叉盘不该出路线,却出了 %d 条", len(r))
+	}
+	// 关掉这层就该放行,证明确实是它拦的
+	o := opts()
+	o.RejectCrossedBook = false
+	o.MaxPriceRatio = 0
+	if r := Find("T5_CLOTH", "精布", 1, []Market{bad, good},
+		conf.Default().Economics, o, now); len(r) == 0 {
+		t.Fatal("关掉交叉盘拦截后应该能出路线,否则是别的地方拦的")
+	}
+}
+
+// 价格比要用同侧口径比。中价会把交叉盘平均成一个看着正常的数,
+// 兜底就失效了。
+func TestPriceRatioUsesSameSidePrices(t *testing.T) {
+	o := opts()
+	o.RejectCrossedBook = false // 单独测比值这一层
+	cheap := market("Lymhurst", 100, 90, 5000)
+	rich := market("Caerleon", 9000, 8000, 5000)
+	if r := Find("T5_CLOTH", "精布", 1, []Market{cheap, rich},
+		conf.Default().Economics, o, now); len(r) != 0 {
+		t.Fatalf("90 倍价差应该被比值兜底拦掉,却出了 %d 条", len(r))
+	}
+}
+
+// 同城有流水下限、样本天数、历史新鲜度三层,跨城以前一层都没有。
+// 两种玩法混在同一张榜、同一个资金池里排名,只有一边做过滤等于没做——
+// 薄流动性品种的回报率往往最高,会排在最前面把钱拿走。
+func TestCrossCityHasTheSameHistoryGates(t *testing.T) {
+	base := func() []Market {
+		return []Market{
+			market("Lymhurst", 1000, 950, 5000),
+			market("Martlock", 1600, 1500, 5000),
+		}
+	}
+	if len(find(base()...)) == 0 {
+		t.Fatal("基准场景本来应该有路线")
+	}
+
+	cases := []struct {
+		name string
+		mut  func(*histagg.Stats)
+	}{
+		{"日流水不足", func(s *histagg.Stats) { s.DailyVolumeSilver = 1000 }},
+		{"7 日样本太少", func(s *histagg.Stats) { s.DaysWithData7d = 1 }},
+		{"历史太旧", func(s *histagg.Stats) { s.LastPoint = now.AddDate(0, 0, -20) }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := base()
+			c.mut(m[0].Stats) // 只污染产地那一端
+			if r := find(m...); len(r) != 0 {
+				t.Fatalf("产地%s时不该出路线,却出了 %d 条", c.name, len(r))
+			}
+		})
+	}
+	// 完全没有历史也不行
+	m := base()
+	m[1].Stats = nil
+	if r := find(m...); len(r) != 0 {
+		t.Fatalf("销地没有历史时不该出路线,却出了 %d 条", len(r))
 	}
 }

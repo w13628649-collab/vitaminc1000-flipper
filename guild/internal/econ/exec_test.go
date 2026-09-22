@@ -87,3 +87,63 @@ func TestBestPicksHighestProfitMode(t *testing.T) {
 		}
 	}
 }
+
+// 一天搬的量绝不能超过市场吃得下的量。
+//
+// 原来用 ceil(absorbable/qty) 算轮数再乘回去,qty 略小于 absorbable 时
+// 轮数直接跳到 2,一天实际成交量接近上限的两倍,日收益跟着虚增近 100%。
+func TestTurnoverNeverExceedsMarketCapacity(t *testing.T) {
+	cfg := conf.Default().Economics
+	u := Quote(Book{SellMin: 1200, BuyMax: 1000}, Book{SellMin: 1200, BuyMax: 1000},
+		Mode{Maker, Maker}, cfg)
+
+	const absorbable = 10_000
+	for _, capital := range []int64{1_000_000, 9_000_000, 10_000_000, 10_260_250, 50_000_000} {
+		qty, turns, daily := Turnover(u, absorbable, capital, 8)
+		moved := float64(qty) * turns
+		if moved > absorbable+1e-6 {
+			t.Fatalf("本金 %d:一天搬了 %.0f 件,超过市场容量 %d", capital, moved, absorbable)
+		}
+		if want := u.ProfitPerUnit * moved; daily > want+1e-6 {
+			t.Fatalf("本金 %d:日收益 %v 对不上搬运量 %v", capital, daily, want)
+		}
+	}
+}
+
+// 本金越多日收益只能升不能降。原来 ceil 的写法会出现
+// "本金多 26 万,日收益砍一半"这种说不通的结果。
+func TestTurnoverIsMonotonicInCapital(t *testing.T) {
+	cfg := conf.Default().Economics
+	u := Quote(Book{SellMin: 1200, BuyMax: 1000}, Book{SellMin: 1200, BuyMax: 1000},
+		Mode{Maker, Maker}, cfg)
+
+	prev := -1.0
+	for capital := int64(500_000); capital <= 30_000_000; capital += 137_000 {
+		_, _, daily := Turnover(u, 10_000, capital, 8)
+		if daily < prev-1e-6 {
+			t.Fatalf("本金涨到 %d 时日收益从 %v 掉到 %v", capital, prev, daily)
+		}
+		prev = daily
+	}
+}
+
+// 市场撑得住时,转得快就该赚得多;市场是瓶颈时,转多快都一样。
+func TestTurnoverSpeedOnlyMattersWhenCapitalBound(t *testing.T) {
+	cfg := conf.Default().Economics
+	u := Quote(Book{SellMin: 1200, BuyMax: 1000}, Book{SellMin: 1200, BuyMax: 1000},
+		Mode{Maker, Maker}, cfg)
+
+	// 市场很大、本金很小 → 多转几轮就多赚
+	_, _, fast := Turnover(u, 1_000_000, 1_000_000, 2)
+	_, _, slow := Turnover(u, 1_000_000, 1_000_000, 12)
+	if !(fast > slow) {
+		t.Fatalf("本金受限时快的 %v 应该高于慢的 %v", fast, slow)
+	}
+
+	// 市场很小、本金充裕 → 一轮就搬完,速度无关
+	_, _, f2 := Turnover(u, 100, 50_000_000, 2)
+	_, _, s2 := Turnover(u, 100, 50_000_000, 12)
+	if f2 != s2 {
+		t.Fatalf("市场受限时速度不该有影响:%v vs %v", f2, s2)
+	}
+}
