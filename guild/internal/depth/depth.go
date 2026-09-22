@@ -77,6 +77,127 @@ func Walk(levels []Level, want int64) Fill {
 	return f
 }
 
+// Support 回答一个 Walk 回答不了的问题:**这个最优价背后到底有没有人**。
+//
+// Walk 问的是"我要买 N 件、实际要付多少",是吃单方的视角。挂单方的问题
+// 反过来:我挂个买单在这儿,会不会有人砸给我?两者需要的判据完全不同。
+//
+// 判据是最优价**附近**的件数,不是总件数——挂单簿底下永远躺着一堆
+// 1 银的占位单。实测 T6_METALBAR_LEVEL4@4 @ Martlock 的买单阶梯:
+//
+//	260,066   -0.00%      1 件
+//	260,065   -0.00%      2 件
+//	260,064   -0.00%      1 件
+//	 ...(前 7 档合计 11 件)
+//	 53,001  -79.62%     15 件   ← 断崖
+//	      1 -100.00%   2,000+ 件  ← 占位单
+//
+// 买方总件数 2,890,但最优价 5% 以内只有 11 件(0.4%)。对照同城的大宗
+// T4_METALBAR @ Thetford:285(3,116 件)/ 284(1,999)/ 283(4,927)… 是连续
+// 阶梯,5% 以内 37,379 件(35%)。**只有近价件数分得开这两种形态。**
+//
+// tier 越高买方越薄、断崖越深;而纸面毛利恰恰是那些最诱人的。
+type Support struct {
+	Best      int64 `json:"best"`
+	QtyAtBest int64 `json:"qty_at_best"`
+	// QtyNear 是最优价 NearPct 以内的件数合计 —— 判"有没有人在收"就看它
+	QtyNear int64 `json:"qty_near"`
+	// QtyTotal 含 1 银那种占位单,只适合当参考,别拿它当深度
+	QtyTotal   int64 `json:"qty_total"`
+	LevelsNear int   `json:"levels_near"`
+	// GapAfterNear 是从最优价到**近价窗口之外第一档**的落差。
+	// 不是"到下一档":顶上那几档常常只差 1 银,测下一档永远是 0。
+	// 要测的是"顶上这一小撮吃完之后,下一笔流动性在多远"
+	GapAfterNear float64 `json:"gap_after_near"`
+	NearPct      float64 `json:"near_pct"`
+}
+
+// Analyze 统计最优价附近的支撑。levels 的顺序约定和 Walk 一致:从优到劣
+// (买单降序、卖单升序),levels[0] 是最优价。
+func Analyze(levels []Level, nearPct float64) Support {
+	s := Support{NearPct: nearPct}
+	if len(levels) == 0 {
+		return s
+	}
+	if nearPct <= 0 {
+		nearPct = 0.05
+		s.NearPct = nearPct
+	}
+	// 跳过空档再定锚,否则 Best 会锚在一个没有货的价上
+	first := -1
+	for i, l := range levels {
+		if l.Qty > 0 {
+			first = i
+			break
+		}
+	}
+	if first < 0 {
+		return s
+	}
+	s.Best = levels[first].Price
+
+	// 方向由数据本身定:买单降序、卖单升序
+	descending := false
+	for _, l := range levels[first+1:] {
+		if l.Qty > 0 && l.Price != s.Best {
+			descending = l.Price < s.Best
+			break
+		}
+	}
+	within := func(p int64) bool {
+		if descending {
+			return float64(p) >= float64(s.Best)*(1-nearPct)
+		}
+		return float64(p) <= float64(s.Best)*(1+nearPct)
+	}
+
+	outside := int64(0)
+	hasOutside := false
+	for _, l := range levels {
+		if l.Qty <= 0 {
+			continue
+		}
+		s.QtyTotal += l.Qty
+		switch {
+		case l.Price == s.Best:
+			s.QtyAtBest += l.Qty
+			s.QtyNear += l.Qty
+			s.LevelsNear++
+		case within(l.Price):
+			s.QtyNear += l.Qty
+			s.LevelsNear++
+		case !hasOutside:
+			outside, hasOutside = l.Price, true
+		}
+	}
+	if hasOutside && s.Best > 0 {
+		s.GapAfterNear = float64(outside)/float64(s.Best) - 1
+		if s.GapAfterNear < 0 {
+			s.GapAfterNear = -s.GapAfterNear
+		}
+	}
+	return s
+}
+
+// FillPosition 是成交均价落在买卖价之间的什么位置。
+//
+//	→ 1  成交都贴着卖价,货是被人**按卖价买走**的,没人肯砸到买价上;
+//	     挂买单进去大概率一直挂着,而创建费是下单当场扣、不成交也不退
+//	→ 0  成交贴着买价,买单容易成交,难的是把货挂出去
+//	→ 0.5 两侧都在成交,双挂说得通
+//
+// 实测两个高价附魔材料都是 0.96~0.97(游戏内「市场历史」的平均价紧贴
+// 最低卖价),而它们的纸面价差是 38% —— 光看价差会以为是天大的机会。
+//
+// 注意口径限制:AODP 的 history item_count 只统计卖单成交,拿它算出来的
+// 均价天生偏向卖价一侧。抓包的 markethistories 才是完整的。
+func FillPosition(bid, ask int64, avg float64) (float64, bool) {
+	if bid <= 0 || ask <= bid || avg <= 0 {
+		return 0, false
+	}
+	return (avg - float64(bid)) / float64(ask-bid), true
+}
+
 // MaxQtyWithin 是"不超过这个价的前提下最多能吃多少"。
 //
 // 另一个问法:与其问"5000 件要多少钱",不如问"我只接受到 1100 为止,

@@ -119,8 +119,8 @@ type ModeQuote struct {
 	Friction     float64 `json:"friction"`
 	Breakeven    float64 `json:"breakeven"`
 	HoursPerTurn float64 `json:"hours_per_turn"`
-	TurnsPerDay   float64 `json:"turns_per_day"`
-	DailyProfit   float64 `json:"daily_profit"`
+	TurnsPerDay  float64 `json:"turns_per_day"`
+	DailyProfit  float64 `json:"daily_profit"`
 }
 
 // Notes 是警告加提示,报告里一起显示。
