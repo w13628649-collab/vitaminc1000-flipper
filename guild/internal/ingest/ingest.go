@@ -9,8 +9,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 
-	"github.com/ludy/albion-guild/internal/model"
-	"github.com/ludy/albion-guild/internal/store"
+	"albion-guild/internal/model"
+	"albion-guild/internal/store"
 )
 
 // DirtyMarker 告诉行情层"这个盘口变了,该重算最优价了"。

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 func key(item string, side model.Side) model.QuoteKey {
@@ -145,7 +145,7 @@ func TestFanout_慢客户端丢消息而不是阻塞(t *testing.T) {
 		for i := range 20 {
 			h.Fanout([]model.Quote{{
 				Key: "k", Price: int64(i),
-				At:  time.Now().Add(time.Duration(i) * time.Millisecond),
+				At: time.Now().Add(time.Duration(i) * time.Millisecond),
 			}})
 		}
 	}()

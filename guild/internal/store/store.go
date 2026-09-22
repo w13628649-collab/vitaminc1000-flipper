@@ -3,13 +3,14 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 type Store struct{ pool *pgxpool.Pool }
@@ -226,4 +227,74 @@ func (s *Store) ItemName(ctx context.Context, itemID string) (string, error) {
 		return en, nil
 	}
 	return itemID, nil
+}
+
+// WriteDiag 存客户端报上来的诊断记录。
+func (s *Store) WriteDiag(ctx context.Context, b model.DiagBatch) error {
+	if len(b.Entries) == 0 {
+		return nil
+	}
+	rows := make([][]any, 0, len(b.Entries))
+	for _, e := range b.Entries {
+		attrs := []byte("null")
+		if len(e.Attrs) > 0 {
+			if raw, err := json.Marshal(e.Attrs); err == nil {
+				attrs = raw
+			}
+		}
+		ts := e.Timestamp
+		if ts.IsZero() {
+			ts = time.Now()
+		}
+		rows = append(rows, []any{ts, b.ClientID, b.Character, b.Version, b.OS,
+			e.Level, e.Message, attrs})
+	}
+	_, err := s.pool.CopyFrom(ctx, pgx.Identifier{"client_diag"},
+		[]string{"reported_at", "client_id", "character", "version", "os",
+			"level", "message", "attrs"},
+		pgx.CopyFromRows(rows))
+	return err
+}
+
+// DiagRow 是查出来的一条诊断记录。
+type DiagRow struct {
+	ReportedAt time.Time      `json:"reported_at"`
+	ClientID   string         `json:"client_id"`
+	Character  string         `json:"character"`
+	Version    string         `json:"version"`
+	OS         string         `json:"os"`
+	Level      string         `json:"level"`
+	Message    string         `json:"message"`
+	Attrs      map[string]any `json:"attrs,omitempty"`
+}
+
+// RecentDiag 按时间倒序取最近的诊断,level 为空表示不筛。
+func (s *Store) RecentDiag(ctx context.Context, level string, limit int) ([]DiagRow, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT reported_at, client_id, character, version, os, level, message, attrs
+		FROM client_diag
+		WHERE ($1 = '' OR level = $1)
+		ORDER BY reported_at DESC LIMIT $2`, level, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []DiagRow
+	for rows.Next() {
+		var d DiagRow
+		var attrs []byte
+		if err := rows.Scan(&d.ReportedAt, &d.ClientID, &d.Character, &d.Version,
+			&d.OS, &d.Level, &d.Message, &attrs); err != nil {
+			return nil, err
+		}
+		if len(attrs) > 0 {
+			_ = json.Unmarshal(attrs, &d.Attrs)
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }

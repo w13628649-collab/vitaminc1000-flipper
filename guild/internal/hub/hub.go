@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 // Broadcaster 把一批行情送到所有该收到的客户端,不管它们连在哪个实例。

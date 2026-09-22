@@ -6,7 +6,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 type fakeDirty struct{ keys []model.QuoteKey }

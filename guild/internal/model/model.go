@@ -26,16 +26,16 @@ const PriceScale = 10000
 // 关键字段是 Amount —— AODP 的 REST 接口给不了数量,
 // 这是本地抓包相对它最大的优势。
 type MarketOrder struct {
-	OrderID    int64     `json:"order_id"`
-	ItemID     string    `json:"item_id"`
-	LocationID string    `json:"location_id"`
-	Quality    int16     `json:"quality"`
-	Enchant    int16     `json:"enchant"`
-	Side       Side      `json:"side"`
-	UnitPrice  int64     `json:"unit_price"`
-	Amount     int32     `json:"amount"`
+	OrderID    int64      `json:"order_id"`
+	ItemID     string     `json:"item_id"`
+	LocationID string     `json:"location_id"`
+	Quality    int16      `json:"quality"`
+	Enchant    int16      `json:"enchant"`
+	Side       Side       `json:"side"`
+	UnitPrice  int64      `json:"unit_price"`
+	Amount     int32      `json:"amount"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
-	ObservedAt time.Time `json:"observed_at"`
+	ObservedAt time.Time  `json:"observed_at"`
 }
 
 // Key 是这张挂单所属的行情键:同一个物品+城市+品质+方向算一个盘口。
@@ -71,9 +71,9 @@ func (k QuoteKey) String() string {
 // Quote 是推给前端的一条行情。字段名压到最短,高频推送下省的带宽很可观。
 type Quote struct {
 	Key    string    `json:"k"`
-	Price  int64     `json:"p"`           // 该盘口的最优价:卖单取最低,买单取最高
-	Depth  int64     `json:"d"`           // 该价位上的挂单量合计
-	Orders int32     `json:"n"`           // 该价位上有几张单
+	Price  int64     `json:"p"` // 该盘口的最优价:卖单取最低,买单取最高
+	Depth  int64     `json:"d"` // 该价位上的挂单量合计
+	Orders int32     `json:"n"` // 该价位上有几张单
 	At     time.Time `json:"t"`
 }
 
@@ -97,4 +97,23 @@ func itoa(n int) string {
 		b[i] = '-'
 	}
 	return string(b[i:])
+}
+
+// DiagEntry 是客户端报上来的一条诊断记录。
+//
+// 200 人规模下没法一个个远程看屏幕,客户端把警告和错误传回来才有的查。
+type DiagEntry struct {
+	Level     string         `json:"level"` // info | warn | error
+	Message   string         `json:"message"`
+	Attrs     map[string]any `json:"attrs,omitempty"`
+	Timestamp time.Time      `json:"ts"`
+}
+
+// DiagBatch 是一次诊断上报。
+type DiagBatch struct {
+	ClientID  string      `json:"client_id"`
+	Character string      `json:"character"`
+	Version   string      `json:"version"`
+	OS        string      `json:"os"`
+	Entries   []DiagEntry `json:"entries"`
 }

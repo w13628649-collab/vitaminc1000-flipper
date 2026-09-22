@@ -15,13 +15,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 var (
 	items  = []string{"T4_METALBAR", "T5_METALBAR", "T6_METALBAR", "T5_CLOTH", "T5_PLANKS"}
 	cities = []string{"Martlock", "Lymhurst", "Bridgewatch", "Thetford"}
-	names  = []string{"Ludy", "Bruno313", "Mitch77", "Apolo540"}
+	names  = []string{"Tessaria", "Bruno313", "Mitch77", "Apolo540"}
 )
 
 // order 是模拟市场里的一张挂单

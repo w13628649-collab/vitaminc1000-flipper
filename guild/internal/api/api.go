@@ -11,10 +11,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/ludy/albion-guild/internal/hub"
-	"github.com/ludy/albion-guild/internal/ingest"
-	"github.com/ludy/albion-guild/internal/model"
-	"github.com/ludy/albion-guild/internal/store"
+	"albion-guild/internal/hub"
+	"albion-guild/internal/ingest"
+	"albion-guild/internal/model"
+	"albion-guild/internal/store"
 )
 
 const (
@@ -25,11 +25,11 @@ const (
 )
 
 type Server struct {
-	Store     *store.Store
-	Ingestor  *ingest.Ingestor
-	Hub       *hub.Hub
-	Fresh     time.Duration // 多久没再看到的挂单不算数
-	upgrader  websocket.Upgrader
+	Store    *store.Store
+	Ingestor *ingest.Ingestor
+	Hub      *hub.Hub
+	Fresh    time.Duration // 多久没再看到的挂单不算数
+	upgrader websocket.Upgrader
 }
 
 func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub, fresh time.Duration) *Server {
@@ -48,6 +48,8 @@ func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub, fresh time.Duration)
 func (s *Server) Routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/upload", s.handleUpload)
+	mux.HandleFunc("POST /api/diag", s.handleDiagUpload)
+	mux.HandleFunc("GET /api/diag", s.handleDiagList)
 	mux.HandleFunc("GET /api/book", s.handleBook)
 	mux.HandleFunc("GET /api/quotes", s.handleQuotes)
 	mux.HandleFunc("GET /api/stats", s.handleStats)
@@ -70,6 +72,54 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	changed, touched := s.Ingestor.Submit(batch)
 	writeJSON(w, map[string]int{"changed": changed, "touched": touched})
+}
+
+// handleDiagUpload 收客户端报上来的警告和错误。
+//
+// 这是远程排查的唯一通道:成员在自己家里的 Windows 上跑,
+// 出了问题不可能一个个去看屏幕。
+func (s *Server) handleDiagUpload(w http.ResponseWriter, r *http.Request) {
+	var batch model.DiagBatch
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&batch); err != nil {
+		http.Error(w, "请求体解析失败: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := s.Store.WriteDiag(r.Context(), batch); err != nil {
+		slog.Error("写入诊断失败", "err", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, e := range batch.Entries {
+		// 同时打到服务端日志,这样 tail -f 就能实时看到客户端在报什么
+		slog.Log(r.Context(), levelOf(e.Level), "[客户端] "+e.Message,
+			"client", batch.ClientID, "character", batch.Character,
+			"version", batch.Version, "os", batch.OS)
+	}
+	writeJSON(w, map[string]int{"accepted": len(batch.Entries)})
+}
+
+func (s *Server) handleDiagList(w http.ResponseWriter, r *http.Request) {
+	limit, _ := strconv.Atoi(orDefault(r.URL.Query().Get("limit"), "100"))
+	rows, err := s.Store.RecentDiag(r.Context(), r.URL.Query().Get("level"), limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if rows == nil {
+		rows = []store.DiagRow{}
+	}
+	writeJSON(w, rows)
+}
+
+func levelOf(s string) slog.Level {
+	switch s {
+	case "error":
+		return slog.LevelError
+	case "warn":
+		return slog.LevelWarn
+	default:
+		return slog.LevelInfo
+	}
 }
 
 func (s *Server) handleBook(w http.ResponseWriter, r *http.Request) {

@@ -12,20 +12,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ludy/albion-guild/internal/api"
-	"github.com/ludy/albion-guild/internal/hub"
-	"github.com/ludy/albion-guild/internal/ingest"
-	"github.com/ludy/albion-guild/internal/store"
+	"albion-guild/internal/api"
+	"albion-guild/internal/hub"
+	"albion-guild/internal/ingest"
+	"albion-guild/internal/store"
 )
 
 func main() {
 	var (
-		addr     = flag.String("addr", ":8080", "监听地址")
-		dsn      = flag.String("dsn", envOr("FLIPPER_DSN",
+		addr = flag.String("addr", ":8080", "监听地址")
+		dsn  = flag.String("dsn", envOr("FLIPPER_DSN",
 			"postgres://postgres:dev@127.0.0.1:55432/flipper"), "PostgreSQL DSN")
-		tick     = flag.Duration("tick", 200*time.Millisecond, "行情合并推送间隔")
-		fresh    = flag.Duration("fresh", 30*time.Minute, "挂单多久没再看到就不算数")
-		cacheSz  = flag.Int("cache", 500_000, "去重用的活跃挂单缓存条数")
+		tick    = flag.Duration("tick", 200*time.Millisecond, "行情合并推送间隔")
+		fresh   = flag.Duration("fresh", 30*time.Minute, "挂单多久没再看到就不算数")
+		cacheSz = flag.Int("cache", 500_000, "去重用的活跃挂单缓存条数")
+		natsURL = flag.String("nats", os.Getenv("FLIPPER_NATS"),
+			"NATS 地址;留空走单实例的本地扇出")
 	)
 	flag.Parse()
 
@@ -44,9 +46,23 @@ func main() {
 	defer st.Close()
 
 	h := hub.NewHub()
-	// 单实例:直接扇给本进程的连接。要多实例时把这里换成 NATS 实现,
-	// Hub.Fanout 那一侧一行都不用动。
+
+	// 单实例就在进程内扇出;给了 -nats 才走消息总线。
+	// 两条路最后都落到同一个 Hub.Fanout,行为一致。
 	var bc hub.Broadcaster = &hub.LocalBroadcaster{Hub: h}
+	if *natsURL != "" {
+		nb, err := hub.DialNats(*natsURL, h, "")
+		if err != nil {
+			slog.Error("连接 NATS 失败", "err", err)
+			os.Exit(1)
+		}
+		bc = nb
+		go func() {
+			if err := nb.Run(ctx); err != nil {
+				slog.Error("NATS 订阅退出", "err", err)
+			}
+		}()
+	}
 
 	conflator := hub.NewConflator(st, bc, *fresh)
 	ing, err := ingest.New(st, conflator, *cacheSz)

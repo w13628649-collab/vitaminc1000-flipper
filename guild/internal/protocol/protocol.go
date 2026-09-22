@@ -14,7 +14,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 // Protocol18 下真实的 opcode 不在 Photon 的 Code 字节里:
@@ -26,9 +26,9 @@ const (
 
 // OpCodes 是当前版本的操作码。发现对不上时改这里,不用动解析逻辑。
 type OpCodes struct {
-	AuctionGetOffers   byte // 卖单列表
-	AuctionGetRequests byte // 买单列表
-	Join               byte // 登录/切区,带角色和位置
+	AuctionGetOffers       byte // 卖单列表
+	AuctionGetRequests     byte // 买单列表
+	Join                   byte // 登录/切区,带角色和位置
 	GetGameServerByCluster byte // 切区
 }
 

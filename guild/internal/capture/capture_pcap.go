@@ -5,15 +5,25 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 
-	"github.com/ludy/albion-guild/internal/photon"
+	"albion-guild/internal/photon"
 )
+
+// readTimeout 决定没有包时多久醒一次。
+//
+// 不能用 pcap.BlockForever:那样读操作一直卡在驱动里,退出时
+// handle.Close() 拿不到锁,整个进程挂死在那儿不退。
+// 醒得勤一点只是多几次空转,换来的是能干净地关掉。
+const readTimeout = 500 * time.Millisecond
 
 // Devices 枚举可抓的网卡。
 func Devices() ([]string, error) {
@@ -43,7 +53,7 @@ func Listen(ctx context.Context, opt Options, h Handler) error {
 		port = DefaultPort
 	}
 
-	handle, err := pcap.OpenLive(opt.Device, 2048, false, pcap.BlockForever)
+	handle, err := open(opt.Device)
 	if err != nil {
 		return fmt.Errorf("打开 %s 抓包失败: %w", opt.Device, err)
 	}
@@ -59,21 +69,63 @@ func Listen(ctx context.Context, opt Options, h Handler) error {
 		parser.OnEncrypted = h.OnEncrypted
 	}
 
-	src := gopacket.NewPacketSource(handle, handle.LinkType())
-	packets := src.Packets()
+	linkType := handle.LinkType()
 	slog.Info("开始抓包", "device", opt.Device, "port", port)
 
+	// 自己读,不用 gopacket.PacketSource。PacketSource 会另起一个
+	// goroutine 读包往 channel 里塞,ctx 取消后那个 goroutine 还卡在
+	// 读操作上,Close() 就永远等不到——这是退出挂死的根因。
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case pkt, ok := <-packets:
-			if !ok {
-				return nil // 离线 pcap 读完了
-			}
-			feed(parser, pkt)
+		default:
 		}
+
+		data, _, err := handle.ReadPacketData()
+		switch {
+		case err == nil:
+		case errors.Is(err, pcap.NextErrorTimeoutExpired):
+			continue // 这段时间没包,正常
+		case errors.Is(err, io.EOF), errors.Is(err, pcap.NextErrorNoMorePackets):
+			return nil // 离线 pcap 读完了
+		default:
+			// 网卡被拔掉、驱动被卸载之类。报上去,别静默死掉
+			return fmt.Errorf("%s 读包失败: %w", opt.Device, err)
+		}
+
+		// ReadPacketData 每次返回新切片,NoCopy 是安全的
+		feed(parser, gopacket.NewPacket(data, linkType,
+			gopacket.DecodeOptions{Lazy: true, NoCopy: true}))
 	}
+}
+
+// open 打开网卡。
+//
+// 不用 pcap.OpenLive,因为它没法开 immediate mode。不开的话
+// libpcap 会攒够一缓冲区才把包交上来,读超时在没流量时根本不触发
+// (Linux 上尤其明显),退出就卡在读操作里出不来。
+func open(device string) (*pcap.Handle, error) {
+	inactive, err := pcap.NewInactiveHandle(device)
+	if err != nil {
+		return nil, err
+	}
+	defer inactive.CleanUp()
+
+	if err := inactive.SetSnapLen(2048); err != nil {
+		return nil, err
+	}
+	if err := inactive.SetPromisc(false); err != nil {
+		return nil, err
+	}
+	if err := inactive.SetTimeout(readTimeout); err != nil {
+		return nil, err
+	}
+	// 来一个包交一个包。行情要的就是这个即时性,顺带让读超时真的生效
+	if err := inactive.SetImmediateMode(true); err != nil {
+		return nil, err
+	}
+	return inactive.Activate()
 }
 
 func feed(parser *photon.PhotonParser, pkt gopacket.Packet) {

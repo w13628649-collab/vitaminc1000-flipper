@@ -3,7 +3,7 @@ package protocol
 import (
 	"testing"
 
-	"github.com/ludy/albion-guild/internal/model"
+	"albion-guild/internal/model"
 )
 
 const offerJSON = `{"Id":123,"ItemTypeId":"T5_METALBAR","LocationId":"",` +
@@ -24,7 +24,7 @@ func collect(t *testing.T, p *Parser) *[]model.MarketOrder {
 func TestHandleResponse_解析挂单(t *testing.T) {
 	p := New()
 	got := collect(t, p)
-	p.HandleResponse(1, map[byte]any{8: "Martlock", 1: "guid", 2: "Ludy",
+	p.HandleResponse(1, map[byte]any{8: "Martlock", 1: "guid", 2: "Tessaria",
 		paramOperationCode: byte(p.Codes.Join)})
 	p.HandleResponse(1, map[byte]any{
 		paramOperationCode: byte(p.Codes.AuctionGetOffers),
