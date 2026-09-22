@@ -24,6 +24,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -64,7 +65,8 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	go reporter.Run(ctx, 10*time.Second)
+	diagDone := make(chan struct{})
+	go func() { defer close(diagDone); reporter.Run(ctx, 10*time.Second) }()
 
 	// Windows 上先看驱动装没装。这个检查每次启动都要做,
 	// 而不是只在安装时做一次——用户可能事后卸了 Npcap。
@@ -97,6 +99,11 @@ func main() {
 		slog.Info("将监听多张网卡", "count", len(devices))
 	}
 
+	// 界面上"抓包中"要反映**真的打开了几张网卡**,不是枚举到几张。
+	// 枚举到 11 张但一张都打不开(Npcap 装成仅管理员模式最常见),
+	// 显示"抓包中"就是在骗人,而那恰恰是最需要被看见的故障
+	var live atomic.Int32
+
 	up := &uploader{
 		server: *server,
 		token:  *token,
@@ -114,8 +121,8 @@ func main() {
 			st.Version = version
 			st.ClientID = reporter.ClientID()
 			st.Server = *server
-			st.Devices = len(devices)
-			st.Capturing = len(devices) > 0 && driverMsg == ""
+			st.Devices = int(live.Load())
+			st.Capturing = live.Load() > 0
 			st.DriverWarning = driverMsg
 			return st
 		},
@@ -147,6 +154,8 @@ func main() {
 		wg.Add(1)
 		go func(dev string) {
 			defer wg.Done()
+			live.Add(1)
+			defer live.Add(-1)
 			// 一张网卡打不开不该影响其他网卡(Windows 上基于 Wintun 的
 			// VPN 适配器经常打不开,这是正常的)
 			if err := capture.Listen(ctx, capture.Options{Device: dev, Port: *port}, h); err != nil {
@@ -196,7 +205,18 @@ func main() {
 
 	shutdown := context.WithoutCancel(ctx)
 	up.flush(shutdown)
+
+	// 等诊断上报把它手上那批发完,再补发收尾过程中新产生的
+	waitOrTimeoutChan(diagDone, 5*time.Second, "诊断上报没能按时发完")
 	reporter.Flush(shutdown)
+}
+
+func waitOrTimeoutChan(done <-chan struct{}, d time.Duration, msg string) {
+	select {
+	case <-done:
+	case <-time.After(d):
+		slog.Warn(msg)
+	}
 }
 
 // fail 是"不解决就完全没用"的启动失败。
@@ -304,6 +324,15 @@ func (u *uploader) add(orders []model.MarketOrder) {
 	u.mu.Unlock()
 }
 
+// requeue 把发失败的一批退回队列头部,并记下错误给界面看。
+func (u *uploader) requeue(orders []model.MarketOrder, err error) {
+	u.mu.Lock()
+	u.pending = append(orders, u.pending...)
+	u.trimLocked()
+	u.lastErr = err.Error()
+	u.mu.Unlock()
+}
+
 // trimLocked 超上限就丢最旧的。调用方必须持锁。
 func (u *uploader) trimLocked() {
 	if n := len(u.pending) - maxPending; n > 0 {
@@ -348,6 +377,10 @@ func (u *uploader) flush(ctx context.Context) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		u.server+"/api/upload", bytes.NewReader(body))
 	if err != nil {
+		// 服务端地址配错会走到这。以前这里直接 return,整批挂单
+		// 连同后面每一批都被静默吞掉,界面上还一直显示"抓包中"
+		u.requeue(batch.Orders, err)
+		slog.Error("构造上传请求失败,检查 -server 地址", "server", u.server, "err", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -359,11 +392,9 @@ func (u *uploader) flush(ctx context.Context) {
 	if err != nil {
 		// 网络不好就把这批退回队列,下次一起发。
 		// 断网期间数据堆在内存里,连上自动补——这是 HTTP 比 WS 省事的地方。
-		u.mu.Lock()
-		u.pending = append(batch.Orders, u.pending...)
-		u.trimLocked()
-		u.lastErr = err.Error()
-		u.mu.Unlock()
+		// 网络不好就把这批退回队列,下次一起发。
+		// 断网期间数据堆在内存里,连上自动补——这是 HTTP 比 WS 省事的地方
+		u.requeue(batch.Orders, err)
 		slog.Warn("上传失败,已退回队列", "count", len(batch.Orders), "err", err)
 		return
 	}

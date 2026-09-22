@@ -74,6 +74,12 @@ func (r *Reporter) Hello(ctx context.Context, attrs map[string]any) {
 	r.Flush(ctx)
 }
 
+// Run 定时上报,直到 ctx 取消。
+//
+// **返回之前会把队列里剩下的发完,调用方必须等它返回再退出进程。**
+// 不等的话:ctx 一取消,这个 goroutine 就把队列取走了,主流程再调
+// Flush 只是空转,而这边的 POST 还没发出去进程就没了——
+// 丢掉的恰恰是崩溃前最后那批日志,也就是最想看的那批。
 func (r *Reporter) Run(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()

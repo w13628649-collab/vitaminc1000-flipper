@@ -196,8 +196,13 @@ func (s *Server) reverse() http.Handler {
 				pr.SetURL(target)
 				// 保留原始 Host 会让服务端拿到 127.0.0.1,日志里没法区分来源
 				pr.Out.Host = target.Host
+				// 无论有没有 token 都要覆盖掉入站的 Authorization。
+				// 只在非空时 Set 的话,页面侧自带的凭据会原样穿过去,
+				// 等于把这个本地端口变成一个可以冒充任何人的跳板
 				if s.Token != "" {
 					pr.Out.Header.Set("Authorization", "Bearer "+s.Token)
+				} else {
+					pr.Out.Header.Del("Authorization")
 				}
 			},
 			// 服务端连不上时给一句人话。默认的 502 页面是空的,
