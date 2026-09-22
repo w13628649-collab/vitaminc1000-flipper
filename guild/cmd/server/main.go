@@ -20,6 +20,12 @@ import (
 	"albion-guild/internal/store"
 )
 
+// version 由构建时 -ldflags "-X main.version=..." 注入。
+//
+// 注意:Go 链接器对不存在的符号**静默忽略** -X,所以这个变量必须真的存在,
+// 否则构建命令看着对、版本号永远是 dev。
+var version = "dev"
+
 func main() {
 	var (
 		addr = flag.String("addr", ":18420", "监听地址")
@@ -32,6 +38,9 @@ func main() {
 			"NATS 地址;留空走单实例的本地扇出")
 		cfgPath  = flag.String("config", os.Getenv("FLIPPER_CONFIG"), "扫描器配置 YAML;留空用内置默认值")
 		scanTick = flag.Duration("scan", 30*time.Minute, "自动扫描间隔;0 表示不自动扫")
+		relDir   = flag.String("release-dir", "release", "客户端二进制目录;留空则不提供下载")
+		relVer   = flag.String("release-version", "", "发布目录里客户端的版本号")
+		minVer   = flag.String("min-client", "", "接受的最低客户端版本")
 	)
 	flag.Parse()
 
@@ -102,14 +111,19 @@ func main() {
 		go flipper.Run(ctx, *scanTick)
 	}
 
+	apiSrv := api.New(st, ing, h, *fresh, flipper)
+	apiSrv.ReleaseDir = *relDir
+	apiSrv.ReleaseVersion = *relVer
+	apiSrv.MinClientVersion = *minVer
+
 	srv := &http.Server{
 		Addr:              *addr,
-		Handler:           api.New(st, ing, h, *fresh, flipper).Routes(),
+		Handler:           apiSrv.Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		slog.Info("服务端已启动", "addr", *addr, "tick", *tick, "fresh", *fresh)
+		slog.Info("服务端已启动", "version", version, "addr", *addr, "tick", *tick, "fresh", *fresh)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("监听失败", "err", err)
 			stop()

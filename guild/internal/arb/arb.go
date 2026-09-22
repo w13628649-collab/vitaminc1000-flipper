@@ -63,11 +63,12 @@ type Route struct {
 	Qty         int64   `json:"qty"`
 	Bottleneck  string  `json:"bottleneck"` // capital | source | dest
 
-	CapitalUsed float64 `json:"capital_used"`
-	TripProfit  float64 `json:"trip_profit"`
-	DailyProfit float64 `json:"daily_profit"`
-	CapitalROI  float64 `json:"capital_roi"`
-	TripsPerDay float64 `json:"trips_per_day"`
+	CapitalUsed  float64 `json:"capital_used"`
+	TripProfit   float64 `json:"trip_profit"`
+	DailyProfit  float64 `json:"daily_profit"`
+	CapitalROI   float64 `json:"capital_roi"`
+	TripsPerDay  float64 `json:"trips_per_day"`
+	HoursPerTrip float64 `json:"hours_per_trip"`
 
 	// Volatility 是销地的变异系数,ZScore 是销地当前价相对 30 日常态的位置。
 	// 两个合起来回答"这个价差是结构性的,还是我赶上了一次抽风"
@@ -93,16 +94,27 @@ type ModeQuote struct {
 	ProfitPerUnit float64 `json:"profit_per_unit"`
 	Margin        float64 `json:"margin"`
 	Friction      float64 `json:"friction"`
+	// 下面三个是把周转算进去之后的结果。**选哪个模式要看 DailyProfit,
+	// 不是 ProfitPerUnit**——单件赚得少但一天能转八趟的,总量可能高得多
+	HoursPerTrip float64 `json:"hours_per_trip"`
+	TripsPerDay  float64 `json:"trips_per_day"`
+	DailyProfit  float64 `json:"daily_profit"`
 
 	unit econ.Unit
+	qty  int64
 }
 
 // Options 控制路线怎么算。
 type Options struct {
 	Capital int64
-	// RoundTripHours 是一趟来回的耗时。默认 1.0——皇家城市之间骑马
-	// 加上挂单等待大致是这个量级。跑黑区或者带满载重会更久
-	RoundTripHours float64
+	// TravelHours 是单程路上的时间,一趟来回按两倍算。
+	TravelHours float64
+	// FillHours 是**一条挂单腿**平均要等多久才成交。
+	//
+	// 秒买秒卖不用等,所以这个数只对挂单的腿生效。用同一个周转时间
+	// 套所有执行方式是错的:挂买挂卖要等两次成交,是最慢的那个,
+	// 却会凭空拿到和秒买秒卖一样的周转次数
+	FillHours float64
 	// MinProfitPerUnit 过滤掉单件赚不到几个银的路线,它们的运输时间不值
 	MinProfitPerUnit float64
 	MaxAgeHours      float64
@@ -116,10 +128,17 @@ type Options struct {
 	MaxPriceRatio float64
 }
 
+// roundTripHours 是这种执行方式跑完一趟来回要多久。同城没有路程,
+// 所以这个模型抽在 econ 里两边共用,免得同城跨城两套口径互相打架。
+func (o Options) roundTripHours(m econ.Mode) float64 {
+	return m.HoursPerRound(o.TravelHours, o.FillHours)
+}
+
 func DefaultOptions(cfg conf.Config) Options {
 	return Options{
 		Capital:          cfg.Capital,
-		RoundTripHours:   1.0,
+		TravelHours:      cfg.Sizing.TravelHours,
+		FillHours:        cfg.Sizing.FillHours,
 		MinProfitPerUnit: 5,
 		MaxAgeHours:      cfg.Freshness.MaxHours,
 		AbsorbRatio:      cfg.Sizing.AbsorbRatio,
@@ -173,8 +192,19 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		}
 	}
 
-	// 四种执行方式各算一遍,只在**通过约束的**里面挑最优。
-	// 先挑最赚的再检查约束,会因为最赚那个不合规就把整条路线扔掉
+	// 两端都要有量:产地进得去,销地也得出得来
+	sourceDaily, destDaily := dailyQty(from.Stats), dailyQty(to.Stats)
+	sourceCap := sourceDaily * opt.AbsorbRatio
+	destCap := destDaily * opt.AbsorbRatio
+	byMarket := math.Min(sourceCap, destCap)
+
+	// 四种执行方式各算一遍完整的账,只在**通过约束的**里面挑最优。
+	//
+	// 两个关键点:
+	//  1. 先挑最赚的再检查约束,会因为最赚那个不合规就把整条路线扔掉
+	//  2. 挑的标准是**日收益**不是单件利润。挂买挂卖单件赚得最多,
+	//     但要等两次成交,一天转不了几趟;秒买秒卖单件少一半,
+	//     周转快起来总量可能反超
 	var viable []ModeQuote
 	for _, m := range econ.Modes {
 		if !playable(m, from.Book, to.Book) {
@@ -184,37 +214,34 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		if u.ProfitPerUnit < opt.MinProfitPerUnit || u.Margin < opt.MinMargin {
 			continue
 		}
+		q, trips, daily := econ.Turnover(u, byMarket, opt.Capital, opt.roundTripHours(m))
+		if q < 1 {
+			continue
+		}
 		viable = append(viable, ModeQuote{
 			Mode: m.Key(), Label: m.Label(),
 			BuyPrice: u.MyBid, SellPrice: u.MyAsk,
 			ProfitPerUnit: u.ProfitPerUnit, Margin: u.Margin,
-			Friction: m.Friction(cfg),
-			unit:     u,
+			Friction:     m.Friction(cfg),
+			HoursPerTrip: opt.roundTripHours(m),
+			TripsPerDay:  trips,
+			DailyProfit:  daily,
+			unit:         u, qty: q,
 		})
 	}
 	if len(viable) == 0 {
 		return Route{}, false
 	}
 	sort.SliceStable(viable, func(i, j int) bool {
-		return viable[i].ProfitPerUnit > viable[j].ProfitPerUnit
+		return viable[i].DailyProfit > viable[j].DailyProfit
 	})
 	best := viable[0]
 	unit := best.unit
-
-	// 两端都要有量:产地进得去,销地也得出得来
-	sourceDaily, destDaily := dailyQty(from.Stats), dailyQty(to.Stats)
-	sourceCap := sourceDaily * opt.AbsorbRatio
-	destCap := destDaily * opt.AbsorbRatio
-	byMarket := math.Min(sourceCap, destCap)
+	qty := best.qty
 
 	byCapital := 0.0
 	if unit.CostPerUnit > 0 {
 		byCapital = float64(opt.Capital) / unit.CostPerUnit
-	}
-	// 一趟带多少:本金买得起的量,但一趟也不会超过市场一整天的容量
-	qty := int64(math.Floor(math.Min(byMarket, byCapital)))
-	if qty < 1 {
-		return Route{}, false
 	}
 
 	bottleneck := "capital"
@@ -225,20 +252,7 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		bottleneck = "dest"
 	}
 
-	// 跑几趟:把市场一天的容量搬完需要几趟,和一天最多能跑几趟,取小的。
-	//
-	// 这里有个容易搞混的点:**运输时间只在本金撑不满市场容量时才影响日收益**。
-	// 本金够一趟吃下一整天的量,跑得再快也没有更多货给你搬;
-	// 本金只够吃一小口,跑得快就能多周转几轮——这才是速度值钱的场景
-	tripsPossible := 24.0
-	if opt.RoundTripHours > 0 {
-		tripsPossible = 24 / opt.RoundTripHours
-	}
-	tripsNeeded := math.Ceil(byMarket / float64(qty))
-	trips := math.Min(tripsNeeded, tripsPossible)
-
 	tripProfit := unit.ProfitPerUnit * float64(qty)
-	dailyProfit := tripProfit * trips
 
 	r := Route{
 		ItemID: itemID, ItemName: itemName, Quality: quality,
@@ -249,15 +263,16 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		ProfitPerUnit: unit.ProfitPerUnit, Margin: unit.Margin,
 		SourceDaily: sourceDaily, DestDaily: destDaily,
 		Qty: qty, Bottleneck: bottleneck,
-		CapitalUsed: float64(qty) * unit.CostPerUnit,
-		TripProfit:  tripProfit,
-		DailyProfit: dailyProfit,
-		TripsPerDay: trips,
-		MaxAgeHours: maxAge,
-		Modes:       viable,
+		CapitalUsed:  float64(qty) * unit.CostPerUnit,
+		TripProfit:   tripProfit,
+		DailyProfit:  best.DailyProfit,
+		TripsPerDay:  best.TripsPerDay,
+		HoursPerTrip: best.HoursPerTrip,
+		MaxAgeHours:  maxAge,
+		Modes:        viable,
 	}
 	if opt.Capital > 0 {
-		r.CapitalROI = dailyProfit / float64(opt.Capital)
+		r.CapitalROI = best.DailyProfit / float64(opt.Capital)
 	}
 	if to.Stats != nil {
 		r.Volatility = to.Stats.CV

@@ -89,14 +89,14 @@ function unify(res) {
     out.push({
       kind: "flip", item_id: o.item_id, item_name: o.item_name, quality: o.quality,
       from_city: o.city, to_city: o.city,
-      mode: "maker-maker", mode_label: "挂买挂卖",
+      mode: o.mode, mode_label: o.mode_label,
       buy_price: o.my_bid, sell_price: o.my_ask,
       cost_per_unit: o.cost_per_unit, profit_per_unit: o.profit_per_unit, margin: o.margin,
       qty: o.qty, capital_used: o.capital_used, daily_profit: o.daily_profit,
       z_score: o.has_z ? o.z_score : null, volatility: o.volatility,
       max_age_hours: o.data_age_hours, confidence: o.confidence,
       warnings: (o.warnings || []).concat(o.hints || []), modes: o.modes || [],
-      bottleneck: null, trips: null,
+      bottleneck: null, trips: o.turns_per_day, hours: o.hours_per_turn,
     });
   }
   for (const r of res.routes || []) {
@@ -110,7 +110,7 @@ function unify(res) {
       z_score: r.has_z ? r.z_score : null, volatility: r.volatility,
       max_age_hours: r.max_age_hours, confidence: r.confidence,
       warnings: r.warnings || [], modes: r.modes || [],
-      bottleneck: r.bottleneck, trips: r.trips_per_day,
+      bottleneck: r.bottleneck, trips: r.trips_per_day, hours: r.hours_per_trip,
     });
   }
   return out;
@@ -143,6 +143,7 @@ function renderIdeas(rows) {
       <td>${pct(r.margin)}</td>
       <td>${num(r.qty)}${r.bottleneck ? `<span class="sub"> ${BOTTLENECK[r.bottleneck]}</span>` : ""}</td>
       <td>${num(r.capital_used)}</td>
+      <td class="sub">${r.trips ? r.trips.toFixed(1) : "—"}</td>
       <td><b>${num(r.daily_profit)}</b></td>
       <td>${z}</td>
       <td>${r.volatility ? r.volatility.toFixed(2) : "—"}</td>
@@ -166,22 +167,31 @@ $("ideas-rows").addEventListener("click", e => {
   const modes = r.modes.length ? r.modes : [];
   const warn = r.warnings.length
     ? `<p class="note">${r.warnings.map(esc).join("・")}</p>` : "";
-  tr.insertAdjacentHTML("afterend", `<tr class="detail"><td colspan="14">
+  tr.insertAdjacentHTML("afterend", `<tr class="detail"><td colspan="15">
     <table class="tight"><thead><tr>
       <th class="l">执行方式</th><th>买入价</th><th>卖出价</th>
-      <th>单件利润</th><th>毛利率</th><th>摩擦</th><th class="l">说明</th>
+      <th>单件利润</th><th>毛利率</th><th>摩擦</th>
+      <th>一轮耗时</th><th>轮/天</th><th>日收益</th><th class="l">说明</th>
     </tr></thead><tbody>
-    ${modes.map(m => `<tr>
+    ${modes.map(m => {
+      const hours = m.hours_per_trip ?? m.hours_per_turn;
+      const turns = m.trips_per_day ?? m.turns_per_day;
+      return `<tr>
       <td class="l"><b>${esc(m.label)}</b>${m.mode === r.mode ? ' <span class="tag high">选用</span>' : ""}</td>
       <td>${num(m.buy_price)}</td><td>${num(m.sell_price)}</td>
       <td class="${m.profit_per_unit > 0 ? "pos" : "neg"}">${num(m.profit_per_unit)}</td>
       <td>${pct(m.margin)}</td><td>${pct(m.friction, 1)}</td>
+      <td class="sub">${hours ? hours.toFixed(1) + "h" : "—"}</td>
+      <td class="sub">${turns ? turns.toFixed(1) : "—"}</td>
+      <td class="${m.daily_profit > 0 ? "pos" : "neg"}"><b>${m.daily_profit != null ? num(m.daily_profit) : "—"}</b></td>
       <td class="l sub">${MODE_NOTE[m.mode] || ""}</td>
-    </tr>`).join("")}
+    </tr>`}).join("")}
     </tbody></table>
     ${warn}
     <p class="note">
-      ${r.trips ? `一天可跑 ${r.trips.toFixed(0)} 趟・` : ""}
+      <b>选用的是日收益最高的那个,不是单件利润最高的。</b>挂单腿要等成交,
+      一天转不了几轮;秒买秒卖单件少,周转快起来总量可能反超。<br>
+      ${r.trips ? `一轮 ${(r.hours || 0).toFixed(1)} 小时,一天 ${r.trips.toFixed(1)} 轮・` : ""}
       占用本金 ${num(r.capital_used)}・日收益 ${num(r.daily_profit)}
       <button class="mini" data-log="${+tr.dataset.i}">记一笔</button>
     </p>
@@ -749,7 +759,6 @@ async function boot() {
   loadCalibration();
   try {
     const cov = await getJSON("/api/coverage");
-    $("items").textContent = (cov.items || 0).toLocaleString("zh-CN");
     $("r-city").innerHTML = `<option value="__all__">全服</option>` +
       (cov.cities || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   } catch (e) { /* 服务端还没起来就先空着 */ }
@@ -760,8 +769,40 @@ async function boot() {
   } catch (e) { /* 目录还没同步 */ }
 }
 
-setInterval(async () => {
-  try { $("clients").textContent = (await getJSON("/api/stats")).clients; } catch (e) { }
-}, 5000);
+// 客户端自身状态。这些服务端不知道——它只看得到"有数据传上来",
+// 看不到本机抓包到底转没转、Npcap 装没装。
+// 在浏览器里直连服务端时 /local/status 是 404,整块就安静地不显示
+let localOK = true;
+async function pollLocal() {
+  if (!localOK) return;
+  try {
+    const s = await getJSON("/local/status");
+    $("capture").innerHTML = s.capturing
+      ? '<span class="dot live"></span>抓包中'
+      : '<span class="dot dead"></span>未抓包';
+    $("capture-sub").textContent = s.orders_uploaded
+      ? `已传 ${s.orders_uploaded.toLocaleString("zh-CN")} 条`
+      : (s.devices ? `${s.devices} 张网卡` : "本机");
+    $("who").textContent = s.character || "—";
+    $("who-sub").textContent = s.location ? s.location : "角色";
+
+    const warn = $("driver-warn");
+    if (s.driver_warning) {
+      warn.innerHTML = `<b>抓不到数据:</b>${esc(s.driver_warning)}`;
+      warn.hidden = false;
+    } else if (s.last_error) {
+      warn.innerHTML = `<b>传不上去:</b>${esc(s.last_error)}`;
+      warn.hidden = false;
+    } else {
+      warn.hidden = true;
+    }
+  } catch (e) {
+    // 404 说明不是在客户端窗口里跑,别再问了
+    localOK = false;
+    for (const id of ["capture", "who"]) $(id).closest(".fact").hidden = true;
+  }
+}
+setInterval(pollLocal, 3000);
+pollLocal();
 
 boot();

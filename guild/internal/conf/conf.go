@@ -82,6 +82,12 @@ type Sizing struct {
 	BaselineDays int `yaml:"baseline_days"`
 	// HistoryDays 拉多少天历史。同时给出 7 日和 30 日口径。
 	HistoryDays int `yaml:"history_days"`
+
+	// FillHours 是一条**挂单**腿平均等多久才成交。吃单腿不用等。
+	// 同城跨城共用这一个数,否则两边周转口径不一致,组合排名就没意义了
+	FillHours float64 `yaml:"fill_hours"`
+	// TravelHours 是跨城单程路上的时间,同城为 0。
+	TravelHours float64 `yaml:"travel_hours"`
 }
 
 // API 是 AODP 的调用约束。
@@ -162,8 +168,11 @@ func Default() Config {
 			OutbidSilver:     1,
 			UndercutSilver:   1,
 		},
-		Sizing: Sizing{AbsorbRatio: 0.20, BaselineDays: 7, HistoryDays: 30},
-		Items:  Items{Patterns: append([]string(nil), DefaultPatterns...)},
+		Sizing: Sizing{
+			AbsorbRatio: 0.20, BaselineDays: 7, HistoryDays: 30,
+			FillHours: 4.0, TravelHours: 0.5,
+		},
+		Items: Items{Patterns: append([]string(nil), DefaultPatterns...)},
 		API: API{
 			MaxURLLength:   3500,
 			RatePerMinute:  170,

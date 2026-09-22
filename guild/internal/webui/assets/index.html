@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>albion guild</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -14,12 +11,15 @@
   <header>
     <div class="brand">albion <span>guild</span></div>
     <div class="facts">
+      <div class="fact"><b id="capture"><span class="dot dead"></span>未抓包</b><i id="capture-sub">本机</i></div>
+      <div class="fact"><b id="who">—</b><i id="who-sub">角色</i></div>
       <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i>推送</i></div>
-      <div class="fact"><b id="clients">—</b><i>在线客户端</i></div>
-      <div class="fact"><b id="items">—</b><i>物品目录</i></div>
       <div class="fact"><b id="scan-age">—</b><i>行情</i></div>
     </div>
   </header>
+
+  <!-- 驱动没装就完全收不到数据,这是唯一值得占一整条的警告 -->
+  <div id="driver-warn" class="banner" hidden></div>
 
   <nav>
     <button data-view="desk" aria-current="page">总览</button>

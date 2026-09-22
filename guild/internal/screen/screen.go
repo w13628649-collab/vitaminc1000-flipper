@@ -18,6 +18,7 @@ package screen
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"albion-guild/internal/aodp"
@@ -88,6 +89,12 @@ type Opportunity struct {
 	// Modes 是四种执行方式各自的报价。Demo 只算「挂买挂卖」一种,
 	// 但秒买秒卖只收 4% 税,盘口宽的时候未必更差
 	Modes []ModeQuote `json:"modes"`
+	// Mode 是选用的那个。同城的答案几乎总是挂买挂卖——
+	// 秒买秒卖在同城等于"按卖一买、按买一卖",必亏
+	Mode         string  `json:"mode"`
+	ModeLabel    string  `json:"mode_label"`
+	TurnsPerDay  float64 `json:"turns_per_day"`
+	HoursPerTurn float64 `json:"hours_per_turn"`
 
 	BuyAgeHours  float64    `json:"buy_age_hours"`
 	SellAgeHours float64    `json:"sell_age_hours"`
@@ -108,6 +115,9 @@ type ModeQuote struct {
 	ProfitPerUnit float64 `json:"profit_per_unit"`
 	Margin        float64 `json:"margin"`
 	Friction      float64 `json:"friction"`
+	HoursPerTurn  float64 `json:"hours_per_turn"`
+	TurnsPerDay   float64 `json:"turns_per_day"`
+	DailyProfit   float64 `json:"daily_profit"`
 }
 
 // Notes 是警告加提示,报告里一起显示。
@@ -218,19 +228,61 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		warnings = append(warnings, fmt.Sprintf("交叉盘(%s),两侧快照时间不一致", detail))
 	}
 
-	// ---- 利润 -------------------------------------------------------------
-	unit := econ.UnitEconomics(rec.BuyPriceMax, rec.SellPriceMin, cfg.Economics)
-	if unit.ProfitPerUnit <= 0 {
-		return reject("unprofitable", fmt.Sprintf("税后亏 %.1f 银/件(摩擦 %.1f%%)",
-			unit.ProfitPerUnit, cfg.Economics.RoundTripFriction()*100))
+	// ---- 利润与周转 -------------------------------------------------------
+	// 四种执行方式各算一遍完整的账,按**日收益**挑,不是按单件利润。
+	// 同城没有路程,但挂单腿一样要等成交——用 econ 里那套和跨城
+	// 共用的周转模型,否则组合页把同城跨城混排时口径不一致
+	book := econ.Book{SellMin: rec.SellPriceMin, BuyMax: rec.BuyPriceMax}
+	absorbable := stats.DailyVolumeQty * cfg.Sizing.AbsorbRatio
+
+	var modes []ModeQuote
+	type sized struct {
+		q    ModeQuote
+		unit econ.Unit
+		qty  int64
 	}
+	var profitable []sized
+	for _, m := range econ.Modes {
+		u := econ.Quote(book, book, m, cfg.Economics)
+		hours := m.HoursPerRound(0, cfg.Sizing.FillHours) // 同城 travel = 0
+		qty, turns, daily := econ.Turnover(u, absorbable, cfg.Capital, hours)
+		q := ModeQuote{
+			Mode: m.Key(), Label: m.Label(),
+			BuyPrice: u.MyBid, SellPrice: u.MyAsk,
+			ProfitPerUnit: u.ProfitPerUnit, Margin: u.Margin,
+			Friction:     m.Friction(cfg.Economics),
+			HoursPerTurn: hours, TurnsPerDay: turns, DailyProfit: daily,
+		}
+		modes = append(modes, q)
+		if u.ProfitPerUnit > 0 {
+			profitable = append(profitable, sized{q, u, qty})
+		}
+	}
+	sort.SliceStable(modes, func(i, j int) bool { return modes[i].DailyProfit > modes[j].DailyProfit })
+
+	if len(profitable) == 0 {
+		// 四种方式没一种赚钱。报最保守那种的亏损,让人看得懂为什么被拒
+		u := econ.Quote(book, book, econ.Mode{Buy: econ.Maker, Sell: econ.Maker}, cfg.Economics)
+		return reject("unprofitable", fmt.Sprintf("税后亏 %.1f 银/件(摩擦 %.1f%%)",
+			u.ProfitPerUnit, cfg.Economics.RoundTripFriction()*100))
+	}
+	// 按日收益挑。量不足时日收益全是 0,退回按单件利润挑——
+	// 这时候要报的是"吃不下"而不是"不赚钱",两者的处置完全不同
+	sort.SliceStable(profitable, func(i, j int) bool {
+		if profitable[i].q.DailyProfit != profitable[j].q.DailyProfit {
+			return profitable[i].q.DailyProfit > profitable[j].q.DailyProfit
+		}
+		return profitable[i].q.ProfitPerUnit > profitable[j].q.ProfitPerUnit
+	})
+	best, unit, bestQty := profitable[0].q, profitable[0].unit, profitable[0].qty
+
 	if unit.Margin > f.MaxMargin {
 		return reject("implausible_margin", fmt.Sprintf("毛利率 %.0f%% 高得不真实", unit.Margin*100))
 	}
 
 	// ---- 吃单量 -----------------------------------------------------------
 	pos := econ.SizePosition(unit, stats.DailyVolumeQty, cfg.Capital, cfg.Sizing)
-	if pos.Qty < 1 {
+	if bestQty < 1 {
 		return reject("too_thin", fmt.Sprintf("可吃量不足 1 件(%.2f)", pos.AbsorbableQty))
 	}
 	if pos.CapitalBound {
@@ -249,19 +301,6 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 	name := rec.ItemID
 	if names != nil {
 		name = names.NameOf(rec.ItemID)
-	}
-
-	// 同城的盘口两边都在同一个市场里
-	book := econ.Book{SellMin: rec.SellPriceMin, BuyMax: rec.BuyPriceMax}
-	var modes []ModeQuote
-	for _, m := range econ.Modes {
-		q := econ.Quote(book, book, m, cfg.Economics)
-		modes = append(modes, ModeQuote{
-			Mode: m.Key(), Label: m.Label(),
-			BuyPrice: q.MyBid, SellPrice: q.MyAsk,
-			ProfitPerUnit: q.ProfitPerUnit, Margin: q.Margin,
-			Friction: m.Friction(cfg.Economics),
-		})
 	}
 
 	zscore, hasZ := stats.ZScore(float64(rec.SellPriceMin+rec.BuyPriceMax) / 2)
@@ -291,11 +330,15 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		AvgPrice7d:        stats.AvgPrice7d,
 		AvgPrice30d:       stats.AvgPrice30d,
 		AbsorbableQty:     pos.AbsorbableQty,
-		Qty:               pos.Qty,
-		CapitalUsed:       pos.CapitalUsed,
-		DailyProfit:       pos.DailyProfit,
-		DailyROI:          pos.DailyROI,
-		CapitalROI:        pos.CapitalROI,
+		Qty:               bestQty,
+		CapitalUsed:       float64(bestQty) * unit.CostPerUnit,
+		DailyProfit:       best.DailyProfit,
+		DailyROI:          unit.Margin,
+		CapitalROI:        best.DailyProfit / float64(cfg.Capital),
+		Mode:              best.Mode,
+		ModeLabel:         best.Label,
+		TurnsPerDay:       best.TurnsPerDay,
+		HoursPerTurn:      best.HoursPerTurn,
 		BuyAgeHours:       buyAge,
 		SellAgeHours:      sellAge,
 		DataAgeHours:      maxAge,

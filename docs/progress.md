@@ -4,16 +4,36 @@
 
 ## 当前状态
 
-**全 Go**,Python 已全部删除。抓包 → 服务端 → PostgreSQL → 浏览器这条链路
-端到端通了。交易模型比第一版的 Python demo 宽得多:执行方式、跨城套利、
+**全 Go**,Python 已全部删除。抓包 → 服务端 → PostgreSQL → 客户端窗口
+这条链路端到端通了。交易模型比第一版的 Python demo 宽得多:执行方式、跨城套利、
 风险指标、吃深度、资金分配、实盘记账——详见 [flipper.md](flipper.md)。
 137 个测试。
 
+**成员只开两个窗口:游戏,和我们的程序。没有浏览器。**
+
 ```
-Windows 客户端(抓包)──HTTP──> Go 服务端 ──> PostgreSQL/TimescaleDB
-                                    │
-                                    └──WS──> 浏览器(行情跳动)
+客户端 exe(一个窗口)                     服务端(纯后端)
+┌──────────────────────────────┐        ┌──────────────────────┐
+│ WebView2 窗口                 │        │ 收数据 / 去重 / 入库   │
+│   ↓ http://127.0.0.1:随机端口  │        │ 扫描·套利·组合运算     │
+│ 内置本地 HTTP                  │        │ PostgreSQL/Timescale │
+│   /        → 编进 exe 的界面   │        └──────────┬───────────┘
+│   /api/*   → 反向代理 ─────────┼───────────────────┤
+│   /ws      → 反向代理 ─────────┼───────────────────┘
+│   /local/* → 抓包状态(本地)   │
+│ 抓包线程(后台)                │
+└──────────────────────────────┘
 ```
+
+为什么要在客户端里套一层反向代理,而不是让前端直接打服务端地址:
+
+- **前端代码一个字不用改。** 同源,没有 CORS,WebSocket 也不用换 host
+- **CDK 令牌在这一层注入。** 成员永远不需要知道 token 长什么样
+- **服务端挂了窗口照样开得起来**,能给出一句人话的错误而不是一片白屏
+
+界面资源(HTML/CSS/JS + 两个可变字体)编在客户端二进制里,
+不依赖任何外部 CDN——公司网络挡掉 Google Fonts 也不影响。
+服务端也留了一份同样的界面,那是给开发和排查用的。
 
 ## 已经能跑的
 
@@ -39,7 +59,11 @@ Windows 客户端(抓包)──HTTP──> Go 服务端 ──> PostgreSQL/Times
 | 吃深度 | 走盘口算真实均价和滑点 | `guild/internal/depth/` |
 | 资金分配 | 风险调整贪心 + 边际收益曲线 | `guild/internal/portfolio/` |
 | 交易记账 | 反推 `absorb_ratio` 和模型准确度 | `guild/internal/store/journal.go` |
-| Web 界面 | 总览 / 机会 / 查价 / 销量榜 / 记账 / 实时 | `guild/web/` |
+| 界面 | 总览 / 机会 / 查价 / 销量榜 / 记账 / 实时 | `guild/internal/webui/assets/` |
+| 客户端窗口 | WebView2,纯 Go 无 cgo,可交叉编译 | `guild/cmd/client/ui_windows.go` |
+| 本地反向代理 | 同源、注入令牌、服务端挂了给人话 | `guild/internal/clientui/` |
+| 周转模型 | 按执行方式算一轮耗时,同城跨城共用 | `guild/internal/econ/exec.go` |
+| 发布与下载 | manifest + 白名单 + Range 续传 | `guild/internal/api/release.go` |
 
 ### 测试服务端
 
@@ -63,6 +87,8 @@ GET  /api/trades       交易记录
 POST /api/trades       记一笔
 POST /api/trades/{id}/close  收口
 GET  /api/calibration  实测的 absorb_ratio 和模型准确度
+GET  /api/release      更新 manifest(版本、sha256、大小)
+GET  /download/{name}  客户端二进制(白名单,支持 Range 续传)
 GET  /api/rank         销量榜
 GET  /api/lookup       一个物品在所有城市所有品质的价格
 GET  /api/menu         三级分类菜单
@@ -78,7 +104,9 @@ POST /api/catalog/sync 重新同步物品目录
 cd /opt/albion-guild
 pkill -x guild-server
 nohup ./guild-server -addr 0.0.0.0:18420 \
-  -dsn "postgres://postgres:dev@127.0.0.1:55432/flipper" > server.log 2>&1 &
+  -dsn "postgres://postgres:dev@127.0.0.1:55432/flipper" \
+  -release-dir /opt/albion-guild/release -release-version "$(date +%Y%m%d)-010" \
+  > server.log 2>&1 &
 ```
 
 建表不用管,迁移编在二进制里,启动时自己跑。常用参数:
@@ -99,12 +127,19 @@ cd guild
 go build -tags pcap ./...                      # 本机(需要 libpcap-dev)
 go test ./...
 
-# Windows 客户端。不需要 cgo/mingw:gopacket 在 Windows 上是运行时
-# 动态加载 wpcap.dll 的,所以交叉编译直接过
+# Windows 客户端。两个依赖都不需要 cgo:
+#   gopacket 在 Windows 上运行时动态加载 wpcap.dll
+#   go-webview2 是纯 Go 的(用 go-winloader 加载 WebView2 loader)
+# 所以从 Linux 交叉编译直接过,不用装 mingw。
+# -H windowsgui 藏掉控制台窗口,它是个真程序不是脚本
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
-  -ldflags "-X main.version=$(date +%Y%m%d) -X main.defaultServer=http://10.30.31.30:18420" \
-  -o flipper-client.exe ./cmd/client
+  -ldflags "-H windowsgui -X main.version=$(date +%Y%m%d)-010 \
+            -X main.defaultServer=http://10.30.31.30:18420" \
+  -o ../dist/flipper-client.exe ./cmd/client
 ```
+
+**版本号补零成三位**(`20260922-010`)。不补的话 `20260922-10`
+的字典序小于 `20260922-7`,版本比较只能做"不相等 = 有新版",没法排序。
 
 `defaultServer` 用 ldflags 注入,发给成员的构建自带服务端地址,他们双击就行。
 
@@ -116,8 +151,9 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
    记账的 owner 也只是个输入框,没有真身份
 2. **抓包侧的成交历史** —— `markethistories` 包还没解析,`market_history` 里
    目前只有 AODP 那一路。融合逻辑(同桶优先取抓包)已经写好了,等数据
-3. **Wails 界面** —— 客户端现在是纯命令行的,双击只有一个黑窗口
-4. **自更新** —— 单 exe 自更新,manifest 接口自建 + 二进制放 OSS
+3. **自更新** —— manifest 接口(`/api/release`)已经有了,客户端那半边还没接:
+   下载、校验 sha256、minio/selfupdate 改名替换、重启
+4. **`server_min_version` 强制对齐** —— 字段留好了,服务端还没在上传接口拦
 5. **实时行情页的物品是写死的** —— 应该跟着用户在查价页看的东西走
 6. **跨城的历史价差没存** —— 看不出一条路线是长期存在还是今天才出现
 
@@ -141,6 +177,13 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
   症状是 JSON 解析报 `invalid character '\x1f'`
 - **`toggleAttribute` 设出来的属性值是空串**,CSS 里 `[aria-current=page]` 匹配不上。
   要用 `setAttribute` / `removeAttribute`
+- **Go 1.22 的 ServeMux 会拒绝"路径更泛但方法更窄"的组合**:
+  `GET /` 和 `/api/` 同时注册会 panic,说 "matches fewer methods but has a
+  more general path pattern"。兜底路由不要写方法限定
+- **`go:embed` 够不到包目录外面**,所以界面资源必须放在自己的包里
+  (`internal/webui/assets/`),不能留在仓库根的 `web/`
+- **Go 链接器对不存在的符号静默忽略 `-X`**。服务端之前压根没有 `version`
+  变量,构建命令看着对、版本号永远是 dev
 - **多客户端并行抓包城市会串**:ADC 整个进程只有一个 `albionState`,
   城市订单的 `LocationId` 在包里是空的、靠它补。我们的 `protocol` 包同样是单例,
   一台机器开多个游戏客户端时要留意

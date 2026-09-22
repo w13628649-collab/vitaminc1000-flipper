@@ -17,6 +17,7 @@ import (
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
 	"albion-guild/internal/store"
+	"albion-guild/internal/webui"
 )
 
 const (
@@ -32,7 +33,16 @@ type Server struct {
 	Hub      *hub.Hub
 	Fresh    time.Duration // 多久没再看到的挂单不算数
 	// Flip 是倒爷工具那一套(目录/扫描/榜单)。为 nil 时那组接口不注册。
-	Flip     *flip.Service
+	Flip *flip.Service
+
+	// ReleaseDir 是客户端二进制放哪。空字符串则不提供下载和更新检查。
+	ReleaseDir string
+	// ReleaseVersion 是发布目录里那个客户端的版本号。
+	ReleaseVersion string
+	// MinClientVersion 是服务端接受的最低客户端版本,低于它就必须更新。
+	MinClientVersion string
+
+	releases releaseCache
 	upgrader websocket.Upgrader
 }
 
@@ -60,7 +70,10 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/stats", s.handleStats)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	s.registerFlip(mux)
-	mux.Handle("GET /", http.FileServer(http.Dir("web")))
+	s.registerRelease(mux)
+	// 界面主要由客户端本地伺服(资源编在客户端里)。服务端这份是给
+	// 开发和排查用的:浏览器直接打开就能看,不用起客户端
+	mux.Handle("GET /", http.FileServerFS(webui.FS()))
 	return mux
 }
 

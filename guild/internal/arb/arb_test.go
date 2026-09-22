@@ -98,16 +98,17 @@ func TestInstantExecutionIsViableCrossCity(t *testing.T) {
 	}
 }
 
-// 运输时间只在本金撑不满市场容量时才影响日收益。
+// 运输和等待时间只在本金撑不满市场容量时才影响日收益。
 // 这是跨城和同城最大的模型差别,值得单独钉住。
-func TestRoundTripTimeMattersOnlyWhenCapitalBound(t *testing.T) {
+func TestTripTimeMattersOnlyWhenCapitalBound(t *testing.T) {
 	// 场景一:市场很大、本金很小 → 必须多跑几趟,跑得快就赚得多
 	big := []Market{
 		market("Lymhurst", 1000, 950, 500_000),
 		market("Martlock", 1600, 1500, 500_000),
 	}
 	fast, slow := opts(), opts()
-	fast.RoundTripHours, slow.RoundTripHours = 0.5, 6
+	fast.TravelHours, fast.FillHours = 0.25, 1
+	slow.TravelHours, slow.FillHours = 3, 6
 
 	f := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, fast)[0]
 	s := Find("T5_CLOTH", "精布", 1, big, conf.Default().Economics, slow)[0]
@@ -128,6 +129,52 @@ func TestRoundTripTimeMattersOnlyWhenCapitalBound(t *testing.T) {
 	// 而且不能超过市场一天能吃下的总量
 	if limit := f2.ProfitPerUnit * 300 * 0.2; f2.DailyProfit > limit+1 {
 		t.Fatalf("日收益 %v 超过市场容量 %v", f2.DailyProfit, limit)
+	}
+}
+
+// 挂单腿要等成交,所以挂买挂卖一趟最久、秒买秒卖最快。
+// 用同一个周转时间套所有模式,会让最慢的那个凭空多出几倍周转。
+func TestMakerLegsCostTime(t *testing.T) {
+	o := opts()
+	o.TravelHours, o.FillHours = 0.5, 4
+	want := map[string]float64{
+		"taker-taker": 1, "taker-maker": 5, "maker-taker": 5, "maker-maker": 9,
+	}
+	for _, m := range econ.Modes {
+		if got := o.roundTripHours(m); got != want[m.Key()] {
+			t.Fatalf("%s 一趟 %v 小时,想要 %v", m.Label(), got, want[m.Key()])
+		}
+	}
+}
+
+// 选哪个执行方式看的是日收益,不是单件利润。
+// 单件赚得少但周转快的,总量可能反超。
+func TestModeChosenByDailyProfitNotUnitProfit(t *testing.T) {
+	// 市场极大(本金才是瓶颈)→ 周转次数直接决定日收益
+	markets := []Market{
+		market("Lymhurst", 1000, 900, 10_000_000),
+		market("Martlock", 1600, 1500, 10_000_000),
+	}
+	o := opts()
+	o.TravelHours, o.FillHours = 0.25, 8 // 挂单等得久,秒单几乎不用等
+	r := Find("T5_CLOTH", "精布", 1, markets, conf.Default().Economics, o)[0]
+
+	for _, m := range r.Modes {
+		t.Logf("  %s: 单件%.0f 一趟%.1fh %.1f趟/天 日收益%.0f",
+			m.Label, m.ProfitPerUnit, m.HoursPerTrip, m.TripsPerDay, m.DailyProfit)
+	}
+	// Modes 已按日收益降序,选用的必须是第一个
+	if r.Mode != r.Modes[0].Mode {
+		t.Fatalf("选用了 %s,但日收益最高的是 %s", r.Mode, r.Modes[0].Mode)
+	}
+	for _, m := range r.Modes {
+		if m.DailyProfit > r.DailyProfit+1e-6 {
+			t.Fatalf("%s 日收益 %v 高于选用的 %v", m.Label, m.DailyProfit, r.DailyProfit)
+		}
+	}
+	// 这个场景下慢工出细活的挂买挂卖不该赢
+	if r.Mode == "maker-maker" {
+		t.Errorf("等 8 小时一条腿还选挂买挂卖?日收益 %v", r.DailyProfit)
 	}
 }
 

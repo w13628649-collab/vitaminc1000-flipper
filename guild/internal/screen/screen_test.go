@@ -277,3 +277,32 @@ func TestMissingTimestampOnEitherSideStaysOffTheBoard(t *testing.T) {
 		})
 	}
 }
+
+// 同城也按周转挑执行方式,口径必须和跨城一致——
+// 组合页把两者混在一起排名,一边"一天一轮"一边"按模式算",排出来的顺序没意义。
+func TestSameCityUsesTheSharedTurnoverModel(t *testing.T) {
+	opp, rej := Evaluate(makePrice(priceOpt{}), makeStats(statsOpt{}), config(), names, now)
+	if rej != nil {
+		t.Fatalf("本该通过,却被 %s 拒了", rej.Reason)
+	}
+	if opp.Mode == "" || opp.TurnsPerDay <= 0 || opp.HoursPerTurn <= 0 {
+		t.Fatalf("没给出执行方式和周转:%+v", opp)
+	}
+	for _, m := range opp.Modes {
+		t.Logf("  %s: 单件%.0f 一轮%.1fh %.1f轮/天 日收益%.0f",
+			m.Label, m.ProfitPerUnit, m.HoursPerTurn, m.TurnsPerDay, m.DailyProfit)
+	}
+	// 同城秒买秒卖 = 按卖一买、按买一卖,必亏,不可能被选中
+	if opp.Mode == "taker-taker" {
+		t.Fatalf("同城选了秒买秒卖?那是按卖一买按买一卖,必亏")
+	}
+	// 选用的那个必须是日收益最高的
+	if opp.DailyProfit+1e-6 < opp.Modes[0].DailyProfit {
+		t.Fatalf("选用日收益 %v,但榜首是 %v", opp.DailyProfit, opp.Modes[0].DailyProfit)
+	}
+	// 日收益不能超过市场一天吃得下的量
+	limit := opp.ProfitPerUnit * opp.AbsorbableQty
+	if opp.DailyProfit > limit+1 {
+		t.Fatalf("日收益 %v 超过市场容量 %v", opp.DailyProfit, limit)
+	}
+}

@@ -1,6 +1,10 @@
 package econ
 
-import "albion-guild/internal/conf"
+import (
+	"math"
+
+	"albion-guild/internal/conf"
+)
 
 // Leg 是一条腿的执行方式。摩擦成本完全由它决定,差别很大:
 //
@@ -129,4 +133,49 @@ func Best(buy, sell Book, cfg conf.Economics) (Unit, Mode) {
 		}
 	}
 	return best, bestMode
+}
+
+// HoursPerRound 是这种执行方式跑完一轮要多久。
+//
+// travel 是单程路上的时间(同城为 0),一轮按来回两趟算;
+// fill 是**一条挂单腿**平均等多久成交,吃单腿不用等。
+//
+// 用同一个周转时间套所有模式是错的:挂买挂卖要等两次成交,
+// 是最慢的那个,却会凭空拿到和秒买秒卖一样的周转次数。
+func (m Mode) HoursPerRound(travel, fill float64) float64 {
+	h := travel * 2
+	if m.Buy == Maker {
+		h += fill
+	}
+	if m.Sell == Maker {
+		h += fill
+	}
+	if h <= 0 {
+		// 同城秒买秒卖没有任何等待。给个下限,否则周转次数无穷大——
+		// 实际上限是市场一天吃得下多少,由 Turnover 里的 absorbable 兜住
+		h = 0.25
+	}
+	return h
+}
+
+// Turnover 算一轮带多少、一天转几轮、一天总共赚多少。
+//
+// 两个约束:一轮不会超过市场一整天能吃下的量;转几轮取
+// "把当天容量搬完需要几轮"和"这种执行方式一天最多转几轮"的较小值。
+//
+// 由此得出一个容易想反的结论:**周转速度只在本金撑不满市场容量时
+// 才影响日收益**。本金够一轮吃下一整天的量,转得再快也没有更多货给你做。
+func Turnover(u Unit, absorbable float64, capital int64, hoursPerRound float64) (qty int64, turns, dailyProfit float64) {
+	byCapital := 0.0
+	if u.CostPerUnit > 0 {
+		byCapital = float64(capital) / u.CostPerUnit
+	}
+	qty = int64(math.Floor(math.Min(absorbable, byCapital)))
+	if qty < 1 {
+		return 0, 0, 0
+	}
+	possible := 24 / hoursPerRound
+	needed := math.Ceil(absorbable / float64(qty))
+	turns = math.Min(needed, possible)
+	return qty, turns, u.ProfitPerUnit * float64(qty) * turns
 }
