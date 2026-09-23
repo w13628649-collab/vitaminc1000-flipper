@@ -6,12 +6,13 @@ import (
 	"albion-guild/internal/model"
 )
 
+// UnitPriceSilver 在包里是 ×10000 的定点数,11200000 就是 1120 银
 const offerJSON = `{"Id":123,"ItemTypeId":"T5_METALBAR","LocationId":"",` +
-	`"QualityLevel":1,"EnchantmentLevel":0,"UnitPriceSilver":1120,"Amount":50,` +
+	`"QualityLevel":1,"EnchantmentLevel":0,"UnitPriceSilver":11200000,"Amount":50,` +
 	`"AuctionType":"offer","Expires":"2026-09-30T00:00:00"}`
 
 const requestJSON = `{"Id":124,"ItemTypeId":"T5_METALBAR","LocationId":"",` +
-	`"QualityLevel":1,"EnchantmentLevel":0,"UnitPriceSilver":1100,"Amount":30,` +
+	`"QualityLevel":1,"EnchantmentLevel":0,"UnitPriceSilver":11000000,"Amount":30,` +
 	`"AuctionType":"request","Expires":"2026-09-30T00:00:00"}`
 
 func collect(t *testing.T, p *Parser) *[]model.MarketOrder {
@@ -40,6 +41,27 @@ func TestHandleResponse_解析挂单(t *testing.T) {
 	}
 	if o.Side != model.SideOffer || (*got)[1].Side != model.SideRequest {
 		t.Fatal("AuctionType 没映射成正确的方向")
+	}
+}
+
+// 真实抓包的一条挂单原文。游戏挂单界面显示 329,997 银,包里是 3,299,970,000。
+// 以前按 albiondata-client 的行为不除(它把原文传给 AODP、由 AODP 服务端除),
+// 抓包价就比 AODP 高一万倍
+func TestHandleResponse_挂单价从定点数还原成银币(t *testing.T) {
+	const real = `{"Id":17316457311,"ItemTypeId":"T6_METALBAR_LEVEL4@4","LocationId":"",` +
+		`"QualityLevel":1,"EnchantmentLevel":4,"UnitPriceSilver":3299970000,"Amount":36,` +
+		`"AuctionType":"offer","Expires":"2026-10-21T08:00:00"}`
+	p := New()
+	got := collect(t, p)
+	p.HandleResponse(1, map[byte]any{paramOperationCode: byte(p.Codes.Join), 8: "0007"})
+	p.HandleResponse(1, map[byte]any{
+		paramOperationCode: byte(p.Codes.AuctionGetOffers), 0: []string{real}})
+
+	if len(*got) != 1 {
+		t.Fatalf("应解析出 1 张挂单,得到 %d", len(*got))
+	}
+	if o := (*got)[0]; o.UnitPrice != 329997 || o.Amount != 36 {
+		t.Fatalf("应该是 329,997 银 × 36 件,得到 %d × %d", o.UnitPrice, o.Amount)
 	}
 }
 

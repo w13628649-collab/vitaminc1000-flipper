@@ -11,6 +11,7 @@ import (
 
 	"albion-guild/internal/model"
 	"albion-guild/internal/store"
+	"albion-guild/internal/world"
 )
 
 // DirtyMarker 告诉行情层"这个盘口变了,该重算最优价了"。
@@ -72,6 +73,13 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 		i.pending = map[string][]model.MarketOrder{}
 	}
 	for _, o := range batch.Orders {
+		// 先收敛地点再做别的:盘口键、落库、推送全都要用城市名,
+		// 否则抓包数据和 AODP 永远是两个 key(0007 vs Thetford)
+		if o.RawLocationID == "" {
+			o.RawLocationID = o.LocationID
+		}
+		o.LocationID = world.City(o.LocationID)
+
 		prev, ok := i.seen.Get(o.OrderID)
 		if ok && prev.price == o.UnitPrice && prev.amount == o.Amount {
 			i.touches = append(i.touches, o.OrderID)

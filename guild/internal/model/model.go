@@ -36,6 +36,10 @@ type MarketOrder struct {
 	Amount     int32      `json:"amount"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	ObservedAt time.Time  `json:"observed_at"`
+
+	// RawLocationID 是收敛成城市名之前包里的原始地点 id(0007 这种)。
+	// 服务端入库时填,客户端留空。收敛规则将来改了,有原始值才能重算
+	RawLocationID string `json:"raw_location_id,omitempty"`
 }
 
 // Key 是这张挂单所属的行情键:同一个物品+城市+品质+方向算一个盘口。

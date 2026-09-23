@@ -43,14 +43,14 @@ func DefaultOpCodes() OpCodes {
 	}
 }
 
-// PriceDivisor 是挂单价的换算除数。
+// PriceDivisor 是挂单价的换算除数:包里的 UnitPriceSilver 是 ×10000 的定点数。
 //
-// **待实测确认。** 游戏协议里货币是 ×10000 的定点整数
-// (SA 的 FixPoint.InternalFactor),邮件解析里确实除了 10000;
-// 但 albiondata-client 对挂单 JSON 是直接反序列化、没有除。
-// 两条路径是否同单位代码里看不出来,先按 ADC 的行为(不除),
-// 抓一条真实数据对照游戏内显示后再定。
-var PriceDivisor int64 = 1
+// 已实测(2026-09-21 抓包):T6_METALBAR_LEVEL4@4 @ Thetford 原文
+// 3,299,970,000,游戏里显示 329,997。albiondata-client 不除,是因为它把原文
+// 原样传给 AODP(我们截到的上传里就是 3,299,970,000),除法在 AODP 服务端做。
+// 我们的服务端只认银币(见 market_order_live.unit_price 的注释),所以在这里除。
+// 不除的话,抓包价比 AODP 高一万倍,两路一合并就是满屏假机会
+var PriceDivisor int64 = model.PriceScale
 
 // rawOrder 是包里那段 JSON 的原样结构。
 //
@@ -178,7 +178,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 			Quality:    r.QualityLevel,
 			Enchant:    r.EnchantmentLevel,
 			Side:       side,
-			UnitPrice:  r.UnitPriceSilver / PriceDivisor,
+			UnitPrice:  toSilver(r.UnitPriceSilver),
 			Amount:     r.Amount,
 			ObservedAt: now,
 		})
@@ -222,6 +222,15 @@ func (p *Parser) setLocation(loc string) {
 	if p.OnIdentity != nil {
 		p.OnIdentity(id, name, loc)
 	}
+}
+
+// toSilver 定点数还原成银币,四舍五入。挂单原文都是整银 ×10000,
+// 截断和四舍五入结果一样;留着是防将来出现非整银的价
+func toSilver(raw int64) int64 {
+	if PriceDivisor <= 1 {
+		return raw
+	}
+	return (raw + PriceDivisor/2) / PriceDivisor
 }
 
 // byteParam 取一个数值参数。Photon 反序列化出来的整数类型不固定

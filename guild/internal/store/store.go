@@ -56,10 +56,11 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 		liveRows = append(liveRows, []any{
 			o.OrderID, o.ItemID, o.LocationID, o.Quality, o.Enchant, int16(o.Side),
 			o.UnitPrice, o.Amount, o.ExpiresAt, o.ObservedAt, o.ObservedAt, reporter,
+			o.RawLocationID,
 		})
 		evtRows = append(evtRows, []any{
 			o.OrderID, o.ObservedAt, o.ItemID, o.LocationID, o.Quality, o.Enchant,
-			int16(o.Side), o.UnitPrice, o.Amount, reporter,
+			int16(o.Side), o.UnitPrice, o.Amount, reporter, o.RawLocationID,
 		})
 	}
 
@@ -70,7 +71,8 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 	}
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"tmp_live"},
 		[]string{"order_id", "item_id", "location_id", "quality", "enchant", "side",
-			"unit_price", "amount", "expires_at", "first_seen", "last_seen", "reporter"},
+			"unit_price", "amount", "expires_at", "first_seen", "last_seen", "reporter",
+			"raw_location"},
 		pgx.CopyFromRows(liveRows)); err != nil {
 		return fmt.Errorf("拷入临时表: %w", err)
 	}
@@ -90,13 +92,14 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 			amount      = EXCLUDED.amount,
 			expires_at  = EXCLUDED.expires_at,
 			last_seen   = GREATEST(market_order_live.last_seen, EXCLUDED.last_seen),
-			reporter    = EXCLUDED.reporter`); err != nil {
+			reporter    = EXCLUDED.reporter,
+			raw_location = EXCLUDED.raw_location`); err != nil {
 		return fmt.Errorf("合并 live: %w", err)
 	}
 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"market_order_event"},
 		[]string{"order_id", "observed_at", "item_id", "location_id", "quality", "enchant",
-			"side", "unit_price", "amount", "reporter"},
+			"side", "unit_price", "amount", "reporter", "raw_location"},
 		pgx.CopyFromRows(evtRows)); err != nil {
 		return fmt.Errorf("写入 event: %w", err)
 	}

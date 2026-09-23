@@ -68,13 +68,18 @@ Protocol18 下,Photon 自己的 `EventData.Code` 只用两个值(OR,实测):
 
 实测确认:抓到的 `location_id` 就是 `"0007"`,解析出来是 `Thetford Market`。
 
-收敛规则建议**数据驱动**而不是硬编码:剥掉 `" Market"` / `" Portal"` 后缀和
-`"Bank of "` 前缀,**只有剥完的结果本身也是个已知地点名时才采纳**。
-这样 `Black Market` 不会被砍成 `Black`(world.json 里没有叫 Black 的地方),
-黑市保持原样。另外 `3013-Auction2` 这种带后缀的要先按 `-` 切一刀。
+**已实现**(`internal/world`,服务端 ingest 入库前收敛,老客户端也生效):
+静态表,只收上面列出的**市场** id,认不出的原样放行。原始值存在
+`market_order_live.raw_location` / `market_order_event.raw_location`(迁移 0006),
+收敛规则将来改了可以重算。
 
-落库时**把原始 `location_id` 一起存着**。收敛规则将来改了,有原始值才能重算;
-只存归一化结果的话,老数据和新数据会分裂成两个 key。
+最初的设想是数据驱动(剥 `" Market"` 后缀,剥完仍是已知地点名才采纳)。
+没这么做,是因为它会把**城市本体** id 也收进来,而这里有个拿不准的地方:
+`3003` 在 world.json 里叫 `Caerleon`,但黑市 NPC 就在 Caerleon 城里、不在
+Caerleon Market 里,开黑市时报上来的位置很可能就是 3003。并进 Caerleon 的话,
+黑市求购会冒充 Caerleon 的买单——黑市买价常年高于城市卖价,扫描器会把它
+当成满屏的套利机会。实抓数据里从没出现过城市本体 id,所以宁可不收:
+合不上 AODP 只是少一路数据,错并是污染数据。等抓到黑市的真实 location_id 再定。
 
 ---
 

@@ -97,6 +97,24 @@ func TestSubmit_待写队列按变化与否分流(t *testing.T) {
 	}
 }
 
+// 抓包报上来的是市场 id(0007),AODP 和界面用城市名。盘口键必须在
+// 标脏之前就收敛,否则推送的 key 和界面订阅的 key 对不上,
+// 实时页上抓到的数据一条都不会出现
+func TestSubmit_市场id收敛成城市名并保留原值(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	o := order(1, 1000, 50)
+	o.LocationID = "3008"
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{o}})
+
+	if len(dirty.keys) != 1 || dirty.keys[0].LocationID != "Martlock" {
+		t.Fatalf("脏盘口该按城市名标,得到 %+v", dirty.keys)
+	}
+	got := ing.pending["甲"][0]
+	if got.LocationID != "Martlock" || got.RawLocationID != "3008" {
+		t.Fatalf("落库应为 Martlock 且保留原值 3008,得到 %q / %q", got.LocationID, got.RawLocationID)
+	}
+}
+
 // 两次 flush 之间会有好几个成员提交,归属不能串。
 // 串了的话库里 reporter 那列全是最后一个上传的人,
 // 想知道"谁在传数据"就永远查不准。
