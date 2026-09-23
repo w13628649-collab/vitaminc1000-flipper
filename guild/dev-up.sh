@@ -49,7 +49,15 @@ CGO_ENABLED=0 go build -ldflags "-X main.version=$VERSION" -o "$DEPLOY/guild-ser
 # 都不需要 cgo。defaultServer 写死成本机,双击就能连上
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
   -ldflags "-H windowsgui -X main.version=$VERSION -X main.defaultServer=$SERVER_ADDR" \
-  -o ../dist/flipper-client.exe ./cmd/client
+  -o ../dist/flipper-client.exe.new ./cmd/client
+# 客户端开着的时候 exe 被 Windows 锁住,直接覆盖会失败、脚本停在这里、
+# 服务端也不重启。Windows 允许给运行中的 exe 改名(只是不许覆盖和删除),
+# 所以先把旧的挪开再换上新的:正在跑的那个不受影响,重开就是新版
+rm -f ../dist/flipper-client.exe.old 2>/dev/null || true
+if [ -e ../dist/flipper-client.exe ]; then
+  mv -f ../dist/flipper-client.exe ../dist/flipper-client.exe.old
+fi
+mv -f ../dist/flipper-client.exe.new ../dist/flipper-client.exe
 cp ../dist/flipper-client.exe "$DEPLOY/release/flipper-client.exe"
 
 echo "→ 重启服务端 :$PORT"

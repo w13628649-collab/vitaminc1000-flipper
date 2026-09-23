@@ -606,7 +606,16 @@ function renderMenu(columns) {
 $("menu").addEventListener("mouseover", e => {
   const li = e.target.closest("li");
   if (!li) return;
+  // 已经选中的不重绘。重绘会把鼠标底下的元素整个换掉,从文字挪到右边计数
+  // 那一下就会触发;按下和松开落在两个不同的元素上,浏览器不派发 click ——
+  // 最内层物品族"点了没反应"就是这么来的
+  if (li.hasAttribute("aria-selected")) return;
   const depth = +li.dataset.depth;
+  if (depth === 2) {   // 最内层没有下一级,只挪高亮
+    li.parentElement.querySelector("[aria-selected]")?.removeAttribute("aria-selected");
+    li.setAttribute("aria-selected", "true");
+    return;
+  }
   const cols = $("menu")._columns;
   const picked = cols[depth].find(x => x.id === li.dataset.id);
   const kept = cols.slice(0, depth + 1);
