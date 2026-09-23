@@ -132,8 +132,11 @@ func median(values []float64) (float64, bool) {
 }
 
 type Result struct {
-	StartedAt      time.Time            `json:"started_at"`
-	ItemIDs        []string             `json:"item_ids"`
+	StartedAt time.Time `json:"started_at"`
+	// ItemIDs 是这次扫描的全部物品:配置清单展开的,加上抓包并进来的
+	ItemIDs []string `json:"item_ids"`
+	// ExtraItemIDs 是 ItemIDs 里因为抓包窗口里有挂单才并进来的那部分
+	ExtraItemIDs   []string             `json:"extra_item_ids"`
 	MissingItemIDs []string             `json:"missing_item_ids"`
 	Opportunities  []screen.Opportunity `json:"opportunities"`
 	Rejected       []screen.Rejected    `json:"rejected"`
@@ -253,14 +256,19 @@ func RunWithCapture(ctx context.Context, client *aodp.Client, cfg conf.Config,
 		return nil, fmt.Errorf("展开后没有任何有效物品 ID,检查 items.patterns")
 	}
 
-	slog.Info("拉取当前挂单价", "items", len(itemIDs), "cities", len(cfg.Cities))
-	prices, err := client.FetchPrices(ctx, itemIDs, cfg.Cities, cfg.Qualities)
+	// 配置清单外、成员翻市场翻到的物品也并进来。它们和清单里的物品塞进同一批
+	// URL 拉 AODP——troll 过滤要 7 日均价、可吃量要成交量,只有抓包价是判不了的
+	extra, extraDropped, extraErr := captureExtras(ctx, cfg, cat, books, itemIDs, now)
+	all := append(itemIDs[:len(itemIDs):len(itemIDs)], extra...)
+
+	slog.Info("拉取当前挂单价", "items", len(all), "extra", len(extra), "cities", len(cfg.Cities))
+	prices, err := client.FetchPrices(ctx, all, cfg.Cities, cfg.Qualities)
 	if err != nil {
 		return nil, fmt.Errorf("拉价格: %w", err)
 	}
 
 	slog.Info("拉取成交历史", "days", cfg.Sizing.HistoryDays)
-	history, err := client.FetchHistory(ctx, itemIDs, cfg.Cities, cfg.Qualities,
+	history, err := client.FetchHistory(ctx, all, cfg.Cities, cfg.Qualities,
 		cfg.Sizing.HistoryDays, 24)
 	if err != nil {
 		return nil, fmt.Errorf("拉历史: %w", err)
@@ -271,11 +279,37 @@ func RunWithCapture(ctx context.Context, client *aodp.Client, cfg conf.Config,
 	// 容量的货;偏离度基准也被混合品质的均价带偏
 	stats := histagg.AggregateByQuality(history, now, cfg.Sizing.BaselineDays, cfg.Sizing.HistoryDays)
 
-	res := evaluate(ctx, prices, stats, itemIDs, cfg, cat, books, now)
+	res := evaluate(ctx, prices, stats, all, cfg, cat, books, now)
 	res.MissingItemIDs = missing
+	res.ExtraItemIDs = extra
+	res.Capture.ExtraItems, res.Capture.ExtraDropped = len(extra), extraDropped
+	res.Capture.addError(extraErr)
 	res.RequestCount = client.Requests() - before
 	res.History = history
 	return res, nil
+}
+
+// captureExtras 列出这次扫描要并进来的抓包物品。开关关着、没有来源、
+// 上限为 0 时什么都不做(也不查库)。列表失败只告警:扫配置清单照样有用
+func captureExtras(ctx context.Context, cfg conf.Config, cat *catalog.Catalog, books BookSource,
+	base []string, now time.Time) (extra []string, dropped int, err error) {
+	if !cfg.Capture.Enabled || books == nil || cfg.Capture.MaxExtraItems <= 0 {
+		return nil, 0, nil
+	}
+	captured, err := books.CapturedItems(ctx, cfg.Cities, cfg.Qualities, now.Add(-cfg.CaptureWindow()))
+	if err != nil {
+		slog.Warn("列抓包物品失败,这次只扫配置清单", "err", err)
+		return nil, 0, fmt.Errorf("列抓包物品: %w", err)
+	}
+	extra, dropped, unknown := extraItems(captured, base, cat, cfg.Capture.MaxExtraItems)
+	if unknown > 0 {
+		slog.Info("抓到的物品里有目录查不到的 id,跳过", "count", unknown)
+	}
+	if dropped > 0 {
+		slog.Warn("抓到的物品超过 capture.max_extra_items,按件数截断",
+			"kept", len(extra), "dropped", dropped, "limit", cfg.Capture.MaxExtraItems)
+	}
+	return extra, dropped, nil
 }
 
 // evaluate 是扫描里不打 AODP 的那一半:读抓包盘口、逐边融合、过滤、算账、排序。
@@ -300,9 +334,7 @@ func evaluate(ctx context.Context, raw []aodp.PriceRecord, stats map[histagg.Qua
 		}
 		prices, sides, sum = overlay(raw, got, cfg, now)
 		sum.Enabled, sum.RequestedKeys = true, len(keys)
-		if err != nil {
-			sum.Error = err.Error()
-		}
+		sum.addError(err)
 	}
 
 	var opportunities []screen.Opportunity

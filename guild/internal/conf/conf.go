@@ -105,6 +105,12 @@ type Capture struct {
 	PreferSlackMinutes float64 `yaml:"prefer_slack_minutes"`
 	// BookLevels 是每个盘口最多读多少档
 	BookLevels int `yaml:"book_levels"`
+	// MaxExtraItems 是扫描最多并入多少个"配置清单外、但抓包窗口里有挂单"的物品。
+	// 成员翻市场翻的是自己关心的货(T7/T8 精炼材料、附魔资源……),配置清单
+	// 盖不全;不并进来的话抓得再多机会板也看不见。这些物品也要向 AODP 拉价和
+	// 历史(troll 过滤和成交量离不开),所以要有上限:超出时按抓包件数从多到少截断。
+	// 0 = 不并入
+	MaxExtraItems int `yaml:"max_extra_items"`
 }
 
 // Economics 是交易经济学。默认值对应亚服 + 高级会员。
@@ -220,6 +226,9 @@ func Default() Config {
 			SnapshotSlackSeconds: 120,
 			PreferSlackMinutes:   10,
 			BookLevels:           128,
+			// id 批量塞进 URL:300 个 id 约 6.6k 字符,按 3500 的 URL 预算每个端点
+			// 多两三次请求,prices + history 合计多 4~6 次,280 次/5 分钟的配额里不算什么
+			MaxExtraItems: 300,
 		},
 		Filters: Filters{
 			DeviationMin:         0.4,
@@ -331,6 +340,9 @@ func (c Config) Validate() error {
 	}
 	if cp.PreferSlackMinutes < 0 {
 		return fmt.Errorf("capture.prefer_slack_minutes 不能为负,得到 %g", cp.PreferSlackMinutes)
+	}
+	if cp.MaxExtraItems < 0 {
+		return fmt.Errorf("capture.max_extra_items 不能为负(0 = 不并入抓包物品),得到 %d", cp.MaxExtraItems)
 	}
 	return nil
 }

@@ -16,15 +16,17 @@ type ConflictSource interface {
 	ConflictedSince(keys []model.QuoteKey, since time.Time) map[model.QuoteKey]time.Time
 }
 
-// ladderReader 是读簿那一步,线上是 *store.Store。
-type ladderReader interface {
+// captureReader 是读抓包那两步,线上是 *store.Store。
+type captureReader interface {
 	BookSides(ctx context.Context, keys []model.QuoteKey, since time.Time,
 		slack time.Duration, maxLevels int) (map[model.QuoteKey]store.BookSide, error)
+	CapturedItems(ctx context.Context, cities []string, qualities []int,
+		since time.Time) ([]store.CapturedItem, error)
 }
 
-// storeBooks 把 store.BookSides 包成 scan.BookSource。
+// storeBooks 把 store 的两个抓包查询包成 scan.BookSource。
 type storeBooks struct {
-	st        ladderReader
+	st        captureReader
 	conflicts ConflictSource // 可以为 nil:没接 ingest 时就不做串城处理
 	slack     time.Duration  // "同一眼"的宽容度
 	window    time.Duration  // 抓包窗口;串城的 key 把 slack 放到这么大
@@ -82,6 +84,20 @@ func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 	}
 	if err := read(risky, wide, true); err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+// CapturedItems 列出抓包窗口里有挂单的物品,给扫描扩物品集。
+func (b *storeBooks) CapturedItems(ctx context.Context, cities []string, qualities []int,
+	since time.Time) ([]scan.CapturedItem, error) {
+	rows, err := b.st.CapturedItems(ctx, cities, qualities, since)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]scan.CapturedItem, len(rows))
+	for i, r := range rows {
+		out[i] = scan.CapturedItem{ItemID: r.ItemID, Qty: r.Qty}
 	}
 	return out, nil
 }

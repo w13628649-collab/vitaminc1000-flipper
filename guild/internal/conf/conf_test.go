@@ -25,6 +25,7 @@ func TestDefault_深度阈值与抓包段(t *testing.T) {
 	if c.Capture != (Capture{
 		Enabled: false, MaxHours: 0, DepthMaxHours: 2.0,
 		SnapshotSlackSeconds: 120, PreferSlackMinutes: 10, BookLevels: 128,
+		MaxExtraItems: 300,
 	}) {
 		t.Fatalf("capture 默认值不对: %+v", c.Capture)
 	}
@@ -94,6 +95,7 @@ func TestValidate_深度与抓包段的边界(t *testing.T) {
 		{"深度窗口超过抓包窗口", func(c *Config) { c.Capture.MaxHours = 1 }, "depth_max_hours"},
 		{"同一眼宽容度为负", func(c *Config) { c.Capture.SnapshotSlackSeconds = -1 }, "snapshot_slack_seconds"},
 		{"优先宽容度为负", func(c *Config) { c.Capture.PreferSlackMinutes = -1 }, "prefer_slack_minutes"},
+		{"并入物品上限为负", func(c *Config) { c.Capture.MaxExtraItems = -1 }, "max_extra_items"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

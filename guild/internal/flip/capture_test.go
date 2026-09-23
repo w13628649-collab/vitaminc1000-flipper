@@ -40,6 +40,14 @@ func (f *fakeLadder) BookSides(_ context.Context, keys []model.QuoteKey, since t
 	return out, nil
 }
 
+func (f *fakeLadder) CapturedItems(_ context.Context, cities []string, qualities []int,
+	since time.Time) ([]store.CapturedItem, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return []store.CapturedItem{{ItemID: "T7_LEATHER", Qty: 60, Orders: 3, LastSeen: since}}, nil
+}
+
 type fakeConflicts map[model.QuoteKey]time.Time
 
 func (f fakeConflicts) ConflictedSince(keys []model.QuoteKey, since time.Time) map[model.QuoteKey]time.Time {
@@ -152,6 +160,14 @@ func TestStoreBooks_读簿出错原样返回(t *testing.T) {
 	sb := &storeBooks{st: &fakeLadder{err: errors.New("boom")}, slack: time.Minute, window: time.Hour, levels: 8}
 	if _, err := sb.CaptureBooks(context.Background(), []model.QuoteKey{a}, capT); err == nil {
 		t.Fatal("读簿出错应返回错误,扫描那边据此退回纯 AODP")
+	}
+}
+
+func TestStoreBooks_列抓包物品转换形状(t *testing.T) {
+	sb := &storeBooks{st: &fakeLadder{}}
+	got, err := sb.CapturedItems(context.Background(), []string{"Martlock"}, []int{1}, capT)
+	if err != nil || len(got) != 1 || got[0].ItemID != "T7_LEATHER" || got[0].Qty != 60 {
+		t.Fatalf("应转成 scan.CapturedItem,得到 %+v / %v", got, err)
 	}
 }
 

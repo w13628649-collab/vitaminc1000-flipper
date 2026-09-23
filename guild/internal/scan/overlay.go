@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"albion-guild/internal/aodp"
+	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/depth"
 	"albion-guild/internal/histagg"
@@ -50,12 +51,20 @@ func (cs CapturedSide) seenAt(i int) time.Time {
 	return cs.Newest
 }
 
-// BookSource 给扫描提供抓包盘口。仿照 hub.QuoteSource:scan 不 import store,
+// CapturedItem 是抓包窗口里有挂单的一个物品,Qty 是件数合计。
+type CapturedItem struct {
+	ItemID string
+	Qty    int64
+}
+
+// BookSource 给扫描提供抓包数据。仿照 hub.QuoteSource:scan 不 import store,
 // 测试可以直接喂假数据。
-//
-// 请求了但窗口内没有挂单的 key 不出现在结果里,当成"没有抓包"。
 type BookSource interface {
+	// CaptureBooks 读一批盘口边。请求了但窗口内没有挂单的 key 不出现在结果里,
+	// 当成"没有抓包"
 	CaptureBooks(ctx context.Context, keys []model.QuoteKey, since time.Time) (map[model.QuoteKey]CapturedSide, error)
+	// CapturedItems 列出 since 之后在 cities × qualities 里有挂单的物品,件数从多到少
+	CapturedItems(ctx context.Context, cities []string, qualities []int, since time.Time) ([]CapturedItem, error)
 }
 
 // CaptureSummary 是一次评估里抓包参与了多少。
@@ -77,8 +86,64 @@ type CaptureSummary struct {
 	Ghosts int `json:"ghosts"`
 	// ConflictKeys 是因为最近有多开串城、暂停了幽灵剔除的盘口边数
 	ConflictKeys int `json:"conflict_keys"`
-	// Error 非空说明读簿失败,这次评估退回了纯 AODP
+	// ExtraItems 是配置清单外、因为抓包窗口里有挂单才并进扫描的物品数;
+	// ExtraDropped 是超出 capture.max_extra_items、按件数截掉的个数
+	ExtraItems   int `json:"extra_items"`
+	ExtraDropped int `json:"extra_dropped"`
+	// Error 非空说明读抓包失败(读簿失败时这次评估退回了纯 AODP;
+	// 列抓包物品失败时只扫配置清单)。几处错误用 "; " 连起来
 	Error string `json:"error,omitempty"`
+}
+
+func (s *CaptureSummary) addError(err error) {
+	if err == nil {
+		return
+	}
+	if s.Error != "" {
+		s.Error += "; "
+	}
+	s.Error += err.Error()
+}
+
+// extraItems 从抓到的物品里挑出要并进扫描的:不在 base 里、目录里查得到,
+// 按件数从多到少(同件数按 id)截到 limit 个。
+//
+// 目录里查不到的跳过:多半是游戏更新后的新物品还没同步目录,或者客户端
+// 解析出了怪 id,拿去问 AODP 只会白占 URL 预算。
+func extraItems(captured []CapturedItem, base []string, cat *catalog.Catalog,
+	limit int) (extra []string, dropped, unknown int) {
+	if limit <= 0 {
+		return nil, 0, 0
+	}
+	have := make(map[string]bool, len(base)+len(captured))
+	for _, id := range base {
+		have[id] = true
+	}
+	sorted := append([]CapturedItem(nil), captured...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].Qty != sorted[j].Qty {
+			return sorted[i].Qty > sorted[j].Qty
+		}
+		return sorted[i].ItemID < sorted[j].ItemID
+	})
+	for _, c := range sorted {
+		if c.ItemID == "" || have[c.ItemID] {
+			continue
+		}
+		have[c.ItemID] = true
+		if cat != nil {
+			if _, ok := cat.Get(c.ItemID); !ok {
+				unknown++
+				continue
+			}
+		}
+		if len(extra) >= limit {
+			dropped++
+			continue
+		}
+		extra = append(extra, c.ItemID)
+	}
+	return extra, dropped, unknown
 }
 
 // captureKeys 拼出要读的盘口边。城市只取 cfg.Cities:3003(黑市)、Brecilien、
