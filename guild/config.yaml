@@ -24,6 +24,24 @@ filters:
   max_history_gap_days: 3
   min_days_with_data_7d: 3
   max_margin: 1.0         # 毛利率 > 100% 基本是两边同时挂了 troll 单
+  # ↓ 深度判据:只对来自自建抓包的那一边生效(AODP 不给件数)。都没校准过。
+  #   件数都指"最优价 near_pct 以内的件数",不是 Python 版的"卖一那一档"/"买方总件数"
+  near_pct: 0.05          # 近价窗口:卖一往上 / 买一往下 5% 以内
+  min_book_qty: 3         # 挂卖腿依托的卖方近价件数低于它 → thin_book。0 = 关闭
+  thin_book_edge_qty: 10  # 低于它 → 降为 low 置信
+  min_bid_depth: 20       # 挂买腿依托的买方近价件数低于它 → no_bid_side。0 = 关闭
+  thin_bid_edge_qty: 100  # 低于它 → 降为 low 置信
+  bid_cliff_edge_pct: 0.20  # 买方近价窗口外第一档落差达到它 → 降为 low。0 = 关闭
+  max_spread_pct: 0.0     # 卖一/买一 − 1 超过它 → wide_spread。0 = 关闭
+
+# 自建抓包的盘口怎么参与扫描。enabled 故意不写:用内置默认值(现在是关),
+# 要试融合就在这里加一行 enabled: true。四个件数阈值都不能超过 book_levels
+capture:
+  max_hours: 0            # 扫描读抓包的窗口;0 = 跟 freshness.max_hours 一致
+  depth_max_hours: 2.0    # 深度只信这么近的档,更旧的不参与判据
+  snapshot_slack_seconds: 120   # 多宽算"同一眼";设成 ≥ 窗口 = 关掉幽灵单剔除
+  prefer_slack_minutes: 10      # 抓包比 AODP 旧不超过这么多,仍用抓包
+  book_levels: 128        # 每个盘口最多读多少档
 
 economics:
   market_tax: 0.04        # 高级会员 4%,非会员 8%
@@ -57,5 +75,3 @@ items:
     # 火法杖系
     - "T{4,5,6}_{MAIN_FIRESTAFF,2H_FIRESTAFF,2H_INFERNOSTAFF}"
   exclude: []
-
-data_dir: data

@@ -2,8 +2,13 @@
 package conf
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -47,6 +52,59 @@ type Filters struct {
 	// 买价偏离 0.45、卖价偏离 2.4 各自都"合规",组合起来却是 5 倍价差——
 	// 两边同时是 troll 挂单。真实的同城价差极少超过 100%。
 	MaxMargin float64 `yaml:"max_margin"`
+
+	// ── 深度判据:只对来自自建抓包的那一边生效(AODP 给不了件数)──
+	// 纯价格过滤挡不住盈亏平衡(ask/bid≈1.096)到 max_margin(≈2.19)之间那一整段,
+	// 真机会和假机会都在里面,只有件数分得开。下面的件数阈值都没校准过,
+	// 照 CLAUDE.md 里那几组实测拍的,等记账数据攒够再调。
+
+	// NearPct 是"最优价附近"的窗口:卖一往上 / 买一往下这么多以内的档算近价。
+	// 判据看近价件数而不是总件数:挂单簿底下永远躺着一堆 1 银的占位单
+	NearPct float64 `yaml:"near_pct"`
+	// MinBookQty:挂卖腿依托的卖方近价件数低于它 → thin_book 拒绝。0 = 关闭。
+	// **口径和 Python 版不同**:Python 里是"卖一那一档的件数",这里是
+	// "卖一往上 near_pct 以内的件数"。T5_METALBAR_LEVEL4@4 卖一只有 4 件、
+	// 近价有 230 件,按旧口径会被误降级
+	MinBookQty int64 `yaml:"min_book_qty"`
+	// ThinBookEdgeQty:卖方近价件数低于它 → 降为 low 置信,不拒
+	ThinBookEdgeQty int64 `yaml:"thin_book_edge_qty"`
+	// MinBidDepth:挂买腿依托的买方近价件数低于它 → no_bid_side 拒绝,
+	// 挂买单进去大概率收不到货,还白付创建费。0 = 关闭。
+	// 口径同样从 Python 的"买方总件数"改成近价件数。默认 20 能拦下
+	// T6_METALBAR_LEVEL4@4 的 11 件,放过 T4@4 的 60 件和 T5@4 的 40 件
+	MinBidDepth int64 `yaml:"min_bid_depth"`
+	// ThinBidEdgeQty:买方近价件数低于它 → 降为 low 置信
+	ThinBidEdgeQty int64 `yaml:"thin_bid_edge_qty"`
+	// BidCliffEdgePct:买方近价窗口外第一档的落差(depth.Support.GapAfterNear)
+	// 达到它 → 降为 low。顶上一小撮吃完就断崖,说明没人在持续收。0 = 关闭
+	BidCliffEdgePct float64 `yaml:"bid_cliff_edge_pct"`
+	// MaxSpreadPct:卖一/买一 − 1 超过它 → wide_spread 拒绝,不分数据来源。0 = 关闭
+	MaxSpreadPct float64 `yaml:"max_spread_pct"`
+}
+
+// Capture 是自建抓包盘口怎么参与扫描。键名沿用 Python 版能对上的那几个。
+//
+// 注意:上级目录旧 Python 版的 config.yaml 里写着 capture.enabled: true,
+// 拿它当 -config 会直接打开融合,不管这里默认值是什么。
+// 它的 capture.max_age_hours、freshness.capture_max_hours 这里不认,
+// 加载时会告警并忽略。
+type Capture struct {
+	// Enabled 是融合总开关。false 时扫描就是纯 AODP,抓到的数据照样入库,
+	// 只是不参与机会板
+	Enabled bool `yaml:"enabled"`
+	// MaxHours 是扫描读抓包的窗口,0 表示跟 freshness.max_hours 一致。
+	// 和服务端的 -fresh(默认 30m)是两回事:那个只管 WS、/api/book、/api/quotes
+	MaxHours float64 `yaml:"max_hours"`
+	// DepthMaxHours 是深度的可信窗口。幽灵单规则只能验证"最近一眼"覆盖到的
+	// 价段,更旧的档可能早就没了,不拿来做深度判据
+	DepthMaxHours float64 `yaml:"depth_max_hours"`
+	// SnapshotSlackSeconds 是多宽的时间范围算"同一眼":要盖住翻页、客户端 3s 攒批、
+	// 服务端 2s flush。设成 ≥ 窗口就等于关掉幽灵单剔除,是规则前提不成立时的逃生口
+	SnapshotSlackSeconds float64 `yaml:"snapshot_slack_seconds"`
+	// PreferSlackMinutes:抓包比 AODP 旧不超过这么多,仍然用抓包
+	PreferSlackMinutes float64 `yaml:"prefer_slack_minutes"`
+	// BookLevels 是每个盘口最多读多少档
+	BookLevels int `yaml:"book_levels"`
 }
 
 // Economics 是交易经济学。默认值对应亚服 + 高级会员。
@@ -117,6 +175,7 @@ type Config struct {
 	Capital   int64     `yaml:"capital"`
 	Qualities []int     `yaml:"qualities"`
 	Freshness Freshness `yaml:"freshness"`
+	Capture   Capture   `yaml:"capture"`
 	Filters   Filters   `yaml:"filters"`
 	Economics Economics `yaml:"economics"`
 	Sizing    Sizing    `yaml:"sizing"`
@@ -152,6 +211,16 @@ func Default() Config {
 		Capital:   10_000_000,
 		Qualities: []int{1},
 		Freshness: Freshness{MaxHours: 6.0, HighConfidenceHours: 2.0},
+		Capture: Capture{
+			// 先关着:深度闸门接进 screen 之前打开,抓包价会在没有件数判据的
+			// 情况下直接盖到机会板上
+			Enabled:              false,
+			MaxHours:             0,
+			DepthMaxHours:        2.0,
+			SnapshotSlackSeconds: 120,
+			PreferSlackMinutes:   10,
+			BookLevels:           128,
+		},
 		Filters: Filters{
 			DeviationMin:         0.4,
 			DeviationMax:         2.5,
@@ -160,6 +229,13 @@ func Default() Config {
 			MaxHistoryGapDays:    3,
 			MinDaysWithData7d:    3,
 			MaxMargin:            1.0,
+			NearPct:              0.05,
+			MinBookQty:           3,
+			ThinBookEdgeQty:      10,
+			MinBidDepth:          20,
+			ThinBidEdgeQty:       100,
+			BidCliffEdgePct:      0.20,
+			MaxSpreadPct:         0,
 		},
 		Economics: Economics{
 			MarketTax:        0.04,
@@ -185,12 +261,76 @@ func Default() Config {
 
 func (c Config) BaseURL() string { return ServerBaseURL[c.Server] }
 
+// CaptureWindow 是扫描读抓包的时间窗口。capture.max_hours 为 0 时
+// 跟 freshness.max_hours 走:抓包和 AODP 用同一条过期线,两边才好比
+func (c Config) CaptureWindow() time.Duration {
+	h := c.Capture.MaxHours
+	if h == 0 {
+		h = c.Freshness.MaxHours
+	}
+	return hours(h)
+}
+
+// DepthWindow 是深度判据只信多近的档。
+func (c Config) DepthWindow() time.Duration { return hours(c.Capture.DepthMaxHours) }
+
+// SnapshotSlack 是"同一眼"的时间宽容度。
+func (c Config) SnapshotSlack() time.Duration {
+	return time.Duration(c.Capture.SnapshotSlackSeconds * float64(time.Second))
+}
+
+// PreferSlack 是抓包比 AODP 旧多少以内仍优先用抓包。
+func (c Config) PreferSlack() time.Duration {
+	return time.Duration(c.Capture.PreferSlackMinutes * float64(time.Minute))
+}
+
+func hours(h float64) time.Duration { return time.Duration(h * float64(time.Hour)) }
+
 func (c Config) Validate() error {
 	if _, ok := ServerBaseURL[c.Server]; !ok {
 		return fmt.Errorf("未知 server: %s", c.Server)
 	}
 	if len(c.Cities) == 0 {
 		return fmt.Errorf("cities 不能为空")
+	}
+
+	f, cp := c.Filters, c.Capture
+	if !(f.NearPct > 0 && f.NearPct <= 0.5) {
+		return fmt.Errorf("filters.near_pct 要在 (0, 0.5] 内,得到 %g", f.NearPct)
+	}
+	if cp.BookLevels < 1 {
+		return fmt.Errorf("capture.book_levels 至少为 1,得到 %d", cp.BookLevels)
+	}
+	// 件数阈值不能超过 book_levels。阶梯在 book_levels 档处被截断时,
+	// 如果读到的档全在近价窗口内,近价件数至少是 book_levels(每档至少 1 件);
+	// 阈值不超过它,截断就永远不会造成误拒
+	for _, q := range []struct {
+		key string
+		v   int64
+	}{
+		{"min_book_qty", f.MinBookQty},
+		{"thin_book_edge_qty", f.ThinBookEdgeQty},
+		{"min_bid_depth", f.MinBidDepth},
+		{"thin_bid_edge_qty", f.ThinBidEdgeQty},
+	} {
+		if q.v > int64(cp.BookLevels) {
+			return fmt.Errorf("filters.%s=%d 大于 capture.book_levels=%d:阶梯截断后可能误拒,"+
+				"要么调低阈值,要么调高 book_levels", q.key, q.v, cp.BookLevels)
+		}
+	}
+	if cp.MaxHours < 0 || cp.MaxHours > c.Freshness.MaxHours {
+		return fmt.Errorf("capture.max_hours 要在 [0, freshness.max_hours=%g] 内,得到 %g:"+
+			"比 AODP 的过期线还宽,抓包就能拿更旧的价盖掉 AODP", c.Freshness.MaxHours, cp.MaxHours)
+	}
+	if !(cp.DepthMaxHours > 0) || hours(cp.DepthMaxHours) > c.CaptureWindow() {
+		return fmt.Errorf("capture.depth_max_hours 要在 (0, 抓包窗口 %v] 内,得到 %g",
+			c.CaptureWindow(), cp.DepthMaxHours)
+	}
+	if cp.SnapshotSlackSeconds < 0 {
+		return fmt.Errorf("capture.snapshot_slack_seconds 不能为负,得到 %g", cp.SnapshotSlackSeconds)
+	}
+	if cp.PreferSlackMinutes < 0 {
+		return fmt.Errorf("capture.prefer_slack_minutes 不能为负,得到 %g", cp.PreferSlackMinutes)
 	}
 	return nil
 }
@@ -205,5 +345,21 @@ func Load(path string) (Config, error) {
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
 		return cfg, fmt.Errorf("解析 %s: %w", path, err)
 	}
+	warnUnknownKeys(path, raw)
 	return cfg, cfg.Validate()
+}
+
+// warnUnknownKeys 用严格模式再解一遍,只为把写错/不认识的键报出来。
+//
+// 宽松解码会静默吞掉未知键:min_bid_dpeth 这种笔误,阈值就悄悄用了默认值,
+// 实盘里根本察觉不到。但也不能直接拒绝加载——旧 Python 版的配置里有一堆
+// Go 不认的键(data_dir、capture.max_age_hours……),拿来就用是常见操作。
+// 所以只告警,加载成败的语义不变。解到临时副本里,不影响真正的结果
+func warnUnknownKeys(path string, raw []byte) {
+	probe := Default()
+	dec := yaml.NewDecoder(bytes.NewReader(raw))
+	dec.KnownFields(true)
+	if err := dec.Decode(&probe); err != nil && !errors.Is(err, io.EOF) {
+		slog.Warn("配置里有不认识的键", "path", path, "err", err)
+	}
 }

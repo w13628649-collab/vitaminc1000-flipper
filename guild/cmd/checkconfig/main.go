@@ -19,6 +19,14 @@ func main() {
 	fmt.Printf("filters: dev=[%g,%g] minVol=%g maxMargin=%g crossed=%v gap=%g days=%d\n",
 		c.Filters.DeviationMin, c.Filters.DeviationMax, c.Filters.MinDailyVolumeSilver,
 		c.Filters.MaxMargin, c.Filters.RejectCrossedBook, c.Filters.MaxHistoryGapDays, c.Filters.MinDaysWithData7d)
+	// 深度阈值和抓包窗口单独打一行:这几项的口径和 Python 版不同,
+	// 拿旧配置来用时最容易看走眼
+	fmt.Printf("depth: near=%g minBook=%d thinBook=%d minBid=%d thinBid=%d cliff=%g maxSpread=%g\n",
+		c.Filters.NearPct, c.Filters.MinBookQty, c.Filters.ThinBookEdgeQty,
+		c.Filters.MinBidDepth, c.Filters.ThinBidEdgeQty, c.Filters.BidCliffEdgePct, c.Filters.MaxSpreadPct)
+	fmt.Printf("capture: enabled=%v window=%v depth=%v slack=%v prefer=%v levels=%d\n",
+		c.Capture.Enabled, c.CaptureWindow(), c.DepthWindow(), c.SnapshotSlack(), c.PreferSlack(),
+		c.Capture.BookLevels)
 	fmt.Printf("econ: tax=%g fee=%g buyFee=%v 摩擦=%.1f%%\n",
 		c.Economics.MarketTax, c.Economics.SetupFee, c.Economics.BuyOrderSetupFee, c.Economics.RoundTripFriction()*100)
 	fmt.Printf("api: url=%d rate=%d/%d  sizing: absorb=%g base=%d hist=%d\n",
