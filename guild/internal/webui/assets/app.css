@@ -203,10 +203,199 @@ dialog h3{margin-top:0; border-bottom:0; padding-bottom:0; font-size:14px}
 dialog label.f{display:flex; justify-content:space-between; gap:14px; margin:9px 0}
 dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 
-.results{margin-top:6px; max-height:300px; overflow:auto;
-         border:1px solid var(--rule); border-radius:var(--r); background:var(--surface)}
-.results div{padding:6px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px}
-.results div:hover{background:var(--surface-2)}
-.results img{width:24px; height:24px; background:var(--surface-2); border-radius:var(--r)}
-@media (max-width:1100px){ .split{grid-template-columns:1fr} }
-@media (max-width:920px){ .kpis{grid-auto-flow:row; grid-template-columns:1fr 1fr} }
+/* ══ 查价 ════════════════════════════════════════════════
+   旧版 web 端的三栏布局:左物品列表 | 中间 城市 × 品质 价格矩阵 | 右侧固定挂单簿。
+   规则都挂在 #v-lookup 下面:旧版的 .dot/.tag/.q/.empty 和这边同名不同义 */
+#v-lookup .browse{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end;
+  padding:18px 0; border-bottom:1px solid var(--rule)}
+#v-lookup .ctrl{display:flex; flex-direction:column; gap:4px}
+#v-lookup .ctrl label{font-size:11px; color:var(--ink-soft); font-weight:500}
+#v-lookup .ctrl select{min-width:96px}
+#v-lookup .grow{flex:1 1 240px}
+#v-lookup .grow input{width:100%; min-width:0; font-size:14px; padding:5px 9px}
+#menu-btn{
+  font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  background:var(--surface); color:var(--ink); border:1px solid var(--rule); border-radius:var(--r);
+  padding:5px 12px; min-width:220px; max-width:420px; text-align:left;
+  display:flex; align-items:center; gap:8px;
+}
+#menu-btn span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#menu-btn::after{content:"▾"; margin-left:auto; color:var(--ink-soft); font-size:10px}
+#menu-btn:hover:not(:disabled){background:var(--surface-2); border-color:var(--ink)}
+#menu-btn[aria-expanded=true]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+#menu-btn[aria-expanded=true]::after{color:var(--paper)}
+#menu-btn:disabled{opacity:.45; cursor:default}
+
+.lookup-body{display:grid; grid-template-columns:302px minmax(0,1fr); gap:24px;
+  padding-top:18px; align-items:start}
+/* 开着挂单簿时挤出第三栏。右侧本来就是空的,不用牺牲价格矩阵。
+   上限封在 480px:只按 32vw 走的话大屏上右栏比中栏还宽 */
+.lookup-body.with-book{grid-template-columns:302px minmax(0,1fr) minmax(360px,min(32vw,480px))}
+
+.itemlist{border-right:1px solid var(--rule); padding-right:18px; min-height:320px; min-width:0}
+.itemlist-head{font-size:11.5px; color:var(--ink-soft); padding-bottom:8px; border-bottom:1px solid var(--rule-soft)}
+#list{max-height:70vh; overflow-y:auto}
+#list button{
+  display:flex; width:100%; gap:9px; align-items:center; text-align:left;
+  font:inherit; cursor:pointer; background:transparent; color:var(--ink);
+  border:none; border-radius:0; border-bottom:1px solid var(--rule-soft); padding:6px 4px; font-weight:400;
+}
+#list button:hover{background:var(--surface)}
+#list button.on{background:var(--ink); color:var(--paper)}
+#list button.on .en,#list button.on .tierbadge{color:var(--paper); opacity:.72}
+#list button.on .tierbadge{border-color:currentColor}
+#list img{width:28px; height:28px; flex:none; background:var(--surface-2); border-radius:var(--r)}
+#list .names{display:flex; flex-direction:column; min-width:0}
+#list .zh{font-weight:600; font-size:13px; line-height:1.3}
+#list .en{font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#list .empty{padding:18px 0}
+.tierbadge{flex:none; width:25px; text-align:center; font-size:10.5px; font-weight:700;
+  color:var(--bronze); border:1px solid var(--rule); border-radius:var(--r); padding:1px 0}
+
+.pricepanel{min-width:0}
+#v-lookup .empty{padding:26px 0 40px; max-width:62ch; color:inherit}
+#v-lookup .empty h2{font-size:20px; font-weight:700; margin:0 0 8px; letter-spacing:-.02em}
+#v-lookup .empty p{margin:0 0 18px; color:var(--ink-mid)}
+
+.lookup-head{display:flex; gap:14px; align-items:center; padding:2px 0 14px; flex-wrap:wrap}
+.lookup-head img{width:52px; height:52px; border-radius:var(--r); background:var(--surface-2)}
+.lookup-head h2{margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em}
+.lookup-head .sub{font-size:12px}
+.verdict{display:flex; gap:34px; flex-wrap:wrap; margin-left:auto; text-align:right}
+.verdict div{display:flex; flex-direction:column; gap:1px}
+.verdict b{font-size:15px; font-weight:700}
+.verdict i{font-style:normal; font-size:11px; color:var(--ink-soft)}
+
+/* 五档品质都有数据时表比中栏宽,只让表自己横向滚,标题和说明照常折行 */
+.matrix-wrap{overflow-x:auto}
+#v-lookup .matrix{width:100%; border-collapse:collapse; margin-top:4px}
+#v-lookup .matrix th{font-size:11px; font-weight:600; color:var(--ink-soft); padding:7px 8px;
+  border-bottom:1px solid var(--ink); text-align:center; white-space:nowrap}
+#v-lookup .matrix th:first-child{text-align:left; width:112px}
+#v-lookup .matrix th .qdot{display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--q); margin-right:5px}
+#v-lookup .matrix th.q{color:var(--q); border-bottom-color:var(--q)}
+#v-lookup .matrix th.flex,#v-lookup .matrix td.flex{width:auto; border-bottom-color:transparent}
+#v-lookup .matrix th:not(:first-child):not(.flex),
+#v-lookup .matrix td:not(:first-child):not(.flex){width:176px; min-width:176px}
+#v-lookup .matrix td{border-bottom:1px solid var(--rule-soft); padding:6px; vertical-align:top;
+  text-align:left; white-space:normal}
+#v-lookup .matrix td:first-child{font-weight:600; font-size:13px; padding:12px 6px 6px 0; white-space:nowrap}
+#v-lookup .matrix tbody tr:hover{background:transparent}
+
+.cell{border:1px solid var(--rule-soft); border-radius:var(--r); padding:6px 8px;
+  background:var(--surface); line-height:1.35}
+.cell.void{background:transparent; border-style:dashed; color:var(--ink-soft);
+  text-align:center; padding:12px 8px; font-size:12px}
+.cell .ln{display:grid; grid-template-columns:auto 1fr auto; gap:7px; align-items:baseline; font-size:12.5px}
+.cell .ln u{text-decoration:none; color:var(--ink-soft); font-size:10.5px}
+.cell .ln b{font-weight:600; text-align:right}
+.cell .ln s{text-decoration:none; font-size:10px; color:var(--ink-soft)}
+.cell .ln s.stale{color:var(--warn); opacity:.75}
+.cell .ln2{font-size:10.5px; color:var(--ink-soft); text-align:right; margin:-1px 0 3px}
+.cell .meta{font-size:10.5px; color:var(--ink-soft); margin-top:4px; padding-top:4px;
+  border-top:1px solid var(--rule-soft)}
+.cell .spread{font-weight:600}
+.cell .spread.up{color:var(--gain)}
+.cell .spread.down{color:var(--ink-soft)}
+.cell .spread.suspect{color:var(--warn); background:color-mix(in oklab, var(--warn), transparent 90%);
+  padding:0 3px; border-radius:var(--r)}
+.cell.best-buy{border-color:var(--gain); box-shadow:inset 0 0 0 1px var(--gain)}
+.cell.best-sell{border-color:var(--bronze); box-shadow:inset 0 0 0 1px var(--bronze)}
+.cell .ctag{font-size:10px; font-weight:600; margin-top:3px}
+.best-buy .ctag{color:var(--gain)}
+.best-sell .ctag{color:var(--bronze)}
+.best-buy.best-sell .ctag{color:var(--ink)}
+.cell .ctag.warn{color:var(--warn); font-weight:500}
+.cell .ctag.warn b{font-weight:700}
+/* 来源徽标:绿底白字 = 这一侧用的是自建抓包 */
+.src{font-style:normal; font-size:9.5px; font-weight:700; margin-left:4px; padding:0 3px;
+  border-radius:var(--r); vertical-align:1px; background:var(--gain); color:#fff}
+.qty{font-style:normal; font-size:11px; color:var(--bronze); font-weight:600}
+.qty.dim{opacity:.55}
+.hsrc{font-style:normal; font-size:9.5px; font-weight:600; margin-left:4px; padding:0 3px;
+  border-radius:var(--r); background:var(--gain); color:#fff; vertical-align:1px}
+
+/* 格子整块是按钮。高亮打在里面的 .cell 上:按钮自己的底色会被 .cell 的不透明底盖住,
+   旧版就是这么"点了看不出开的是哪格"的 */
+.cellbtn{all:unset; display:block; width:100%; cursor:pointer; border-radius:var(--r)}
+.cellbtn:hover .cell{background:var(--surface-2)}
+.cellbtn:focus-visible{outline:2px solid var(--bronze); outline-offset:1px}
+.cellbtn.open .cell{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--bronze)}
+.cellbtn.open .cell.best-buy{box-shadow:inset 3px 0 0 var(--bronze), inset 0 0 0 1px var(--gain)}
+.cellbtn.open .cell.best-sell{box-shadow:inset 3px 0 0 var(--bronze), inset 0 0 0 1px var(--bronze)}
+
+.matrix-note{margin-top:14px; font-size:12px; color:var(--ink-soft); max-width:80ch}
+.matrix-note p{margin:0 0 7px}
+.matrix-note b{color:var(--ink-mid)}
+.matrix-note b.warnish{color:var(--warn)}
+
+.diagnosis{margin:0 0 14px; padding:11px 13px; background:var(--surface);
+  border-left:3px solid var(--bronze); font-size:12.5px; color:var(--ink-mid); max-width:80ch}
+.diagnosis b{color:var(--ink)}
+.diagnosis.warn{border-left-color:var(--warn)}
+
+/* ── 右侧挂单簿:sticky,点格子就出来,页面不用滚 ── */
+.bookside{position:sticky; top:14px; align-self:start; min-width:0;
+  max-height:calc(100vh - 28px); overflow-y:auto; overscroll-behavior:contain;
+  border-left:1px solid var(--rule); padding-left:18px}
+.bookwrap{padding:0 0 12px}
+.bookhead{display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;
+  position:sticky; top:0; background:var(--paper); padding:2px 0 8px; z-index:2}
+.bookhead b{font-size:14px; display:flex; align-items:center; gap:7px}
+.bookhead .spacer{margin-left:auto}
+.bookhead .bsub{flex-basis:100%; font-size:11.5px; color:var(--ink-soft)}
+.bstats{display:grid; grid-template-columns:repeat(auto-fit,minmax(104px,1fr));
+  gap:1px; background:var(--rule-soft); border:1px solid var(--rule-soft); margin-bottom:12px}
+.bstat{background:var(--paper); padding:7px 10px}
+.bstat b{display:block; font-size:13.5px; font-weight:700; line-height:1.25}
+.bstat span{font-size:10px; color:var(--ink-soft)}
+.fillrow{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; font-size:12px;
+  color:var(--ink-mid); margin:0 0 14px}
+.fillrow input[type=number]{width:96px; padding:3px 6px; font-size:12.5px}
+.fillrow b{color:var(--ink)}
+.ladders{display:grid; grid-template-columns:1fr; gap:18px}
+.ladders h4,.chh{font-size:12.5px; font-weight:600; margin:0 0 7px; display:flex; gap:8px; align-items:baseline}
+.ladders h4 em,.chh em{font-style:normal; font-weight:400; font-size:11px; color:var(--ink-soft)}
+.sellh{color:var(--warn)} .buyh{color:var(--gain)} .chh{margin-top:20px}
+table.ladder{width:100%; border-collapse:collapse; font-size:12px; margin:0}
+table.ladder th{font-size:10.5px; color:var(--ink-soft); font-weight:500; text-align:right;
+  padding:3px 6px; border-bottom:1px solid var(--rule)}
+table.ladder th:first-child{text-align:left}
+table.ladder td{padding:3px 6px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
+table.ladder td.p{text-align:left; font-weight:600}
+table.ladder td.p i{font-style:normal; font-size:10px; color:var(--ink-soft); margin-left:5px; font-weight:400}
+table.ladder td.qt{position:relative; min-width:86px}
+table.ladder td.qt b{position:relative; font-weight:600}
+table.ladder td.c,table.ladder td.t{color:var(--ink-soft); font-size:11px}
+table.ladder tr.cliff td{background:color-mix(in oklab,var(--warn),transparent 92%)}
+table.ladder tr.cliff td.p i{color:var(--warn); font-weight:600}
+table.ladder tr.stale td{opacity:.45}
+.qbar{position:absolute; right:6px; top:4px; bottom:4px; border-radius:1px; opacity:.24}
+.qbar.sell{background:var(--warn)} .qbar.buy{background:var(--gain)}
+.ladderfoot{font-size:11px; color:var(--ink-soft); padding-top:6px}
+.ladderfoot .warnish{color:var(--warn)}
+.tradechart{width:100%; height:auto; display:block}
+.tradechart .vbar{fill:var(--bronze); opacity:.3}
+.tradechart .vline{fill:none; stroke:var(--ink); stroke-width:1.5}
+.tradechart .vdot{fill:var(--ink)}
+.tradechart .ax{font-size:9.5px; fill:var(--ink-soft)}
+.void{color:var(--ink-soft); font-size:12px; padding:10px 0; text-align:center}
+
+/* 媒体查询一律写在基础规则之后。旧版把 1180 那条写在 .bookside 前面,
+   窄屏下 position/max-height 被后面的基础规则盖回去了 */
+@media (max-width:1180px){
+  .lookup-body.with-book{grid-template-columns:302px minmax(0,1fr)}
+  .bookside{grid-column:1/-1; position:static; max-height:none; border-left:0;
+    padding-left:0; border-top:1px solid var(--rule); padding-top:16px}
+  .bookside .ladders{grid-template-columns:1fr 1fr}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width:920px){
+  .lookup-body,.lookup-body.with-book{grid-template-columns:1fr; gap:16px}
+  .itemlist{border-right:none; border-bottom:1px solid var(--rule); padding-right:0; min-height:0}
+  #list{max-height:300px}
+  .verdict{margin-left:0; text-align:left}
+  .bookside .ladders{grid-template-columns:1fr}
+  .kpis{grid-auto-flow:row; grid-template-columns:1fr 1fr}
+}

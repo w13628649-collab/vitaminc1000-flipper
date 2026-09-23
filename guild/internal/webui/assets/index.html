@@ -127,33 +127,41 @@
     <p class="note" id="rejects"></p>
   </section>
 
-  <!-- ═══════════ 查价 ═══════════ -->
+  <!-- ═══════════ 查价 ═══════════
+       旧版 web 端的三栏:左物品列表 | 中间 城市 × 品质 价格矩阵 | 右侧固定挂单簿 -->
   <section class="view" id="v-lookup" hidden>
-    <div class="bar">
-      <div class="picker">
-        <button class="act ghost" id="menu-btn">按分类浏览 ▾</button>
-        <div class="menu bare" id="menu"></div>
+    <div class="browse">
+      <div class="ctrl picker">
+        <label id="menu-label">分类</label>
+        <button id="menu-btn" aria-haspopup="true" aria-expanded="false"
+                aria-labelledby="menu-label"><span id="menu-path">全部物品</span></button>
+        <div class="menu bare" id="menu" role="menu" aria-labelledby="menu-label"></div>
       </div>
-      <input type="search" id="search" placeholder="搜中文名 / 英文名 / 物品 ID" autocomplete="off">
-      <label class="f">吃单量 <input type="number" id="d-qty" value="1000" step="100" min="1"></label>
-      <span class="sub" id="lookup-title"></span>
+      <div class="ctrl"><label for="f-tier">等级</label>
+        <select id="f-tier"><option value="0">全部</option></select></div>
+      <div class="ctrl"><label for="f-ench">附魔</label>
+        <select id="f-ench"><option value="-1">全部</option></select></div>
+      <div class="ctrl"><label for="f-qual">品质</label>
+        <select id="f-qual"><option value="0">全部</option></select></div>
+      <div class="ctrl grow"><label for="search">搜索</label>
+        <input id="search" type="search" autocomplete="off" spellcheck="false"
+               placeholder="中文、英文或物品 ID —— 输入后忽略左边的分类"></div>
     </div>
-    <div class="results" id="results" hidden></div>
-    <p class="note">
-      <b>数量</b>和<b>实际均价</b>只有抓包拿得到。AODP 的接口不返回挂单数量,
-      所以"最低价 1000"可能只对应 1 件货——这正是 troll 挂单能骗人的原因。
-      实际均价那一列是走完盘口吃到目标数量后的加权价,和最优价的差就是滑点。
-    </p>
-    <table>
-      <thead><tr>
-        <th class="l">城市</th><th class="l">品质</th>
-        <th>卖单最低</th><th>数量</th><th>实际买入均价</th>
-        <th>买单最高</th><th>数量</th><th>实际卖出均价</th>
-        <th>同城价差</th><th>年龄</th><th class="l">来源</th>
-      </tr></thead>
-      <tbody id="lookup-rows"></tbody>
-    </table>
-    <div class="empty" id="lookup-empty">先在上面挑一件物品。</div>
+    <div class="lookup-body" id="lookup-body">
+      <aside class="itemlist">
+        <div class="itemlist-head" id="list-head">从上面的分类挑,或者直接搜</div>
+        <div id="list"></div>
+      </aside>
+      <div class="pricepanel">
+        <div id="lookup-empty" class="empty">
+          <p>游戏里一次只能看当前所在城市的一个品质。这里把所有城市 × 所有品质摊成一张表,
+             另外带上黑市、7 日 / 30 日均价和日均成交量。点任意一格,右边出来那一格的完整挂单簿和成交走势。</p>
+        </div>
+        <div id="lookup-result" hidden></div>
+      </div>
+      <!-- 挂单簿固定在右侧:点格子就出来,页面不用滚 -->
+      <aside class="bookside" id="bookpanel" hidden></aside>
+    </div>
   </section>
 
   <!-- ═══════════ 销量榜 ═══════════ -->

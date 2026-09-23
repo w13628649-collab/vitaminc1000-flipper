@@ -24,7 +24,6 @@ const num = n => Math.round(n).toLocaleString("zh-CN");
 const pct = (n, d = 1) => (n * 100).toFixed(d) + "%";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const cityDot = c => `<span class="city"><i class="cdot" style="--c:var(${CITY_VAR[c] || "--ink-soft"})"></i>${esc(c)}</span>`;
-const qualityCell = q => `<span class="q" style="--q:var(--q${q || 1})">${QUALITY[q] || q}</span>`;
 const itemCell = (id, name) =>
   `<span class="item"><img src="/api/icon/${encodeURIComponent(id)}" alt="" loading="lazy"
      onerror="this.style.visibility='hidden'"><a href="#lookup/${encodeURIComponent(id)}">${esc(name)}</a></span>`;
@@ -45,6 +44,7 @@ async function getJSON(url, opts) {
 
 // ── 视图切换 ───────────────────────────────────────────────
 const views = ["desk", "ideas", "lookup", "rank", "book", "live"];
+let currentView = null;
 function show(name, push = true) {
   if (!views.includes(name)) name = "desk";
   for (const v of views) $("v-" + v).hidden = v !== name;
@@ -52,7 +52,16 @@ function show(name, push = true) {
     if (b.dataset.view === name) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   }
-  if (push && location.hash.slice(1).split("/")[0] !== name) location.hash = name;
+  if (push) {
+    // 切回查价页时带上刚才看的那件,别让人重新找
+    const want = name === "lookup" && lookup.itemId
+      ? "lookup/" + encodeURIComponent(lookup.itemId) : name;
+    if (location.hash.slice(1) !== want) location.hash = want;
+  }
+  if (currentView !== name) {
+    currentView = name;
+    window.scrollTo(0, 0);   // 从机会表下面点物品名跳过来时,别停在半页
+  }
   if (name === "rank") loadRank();
   if (name === "book") loadBook();
 }
@@ -64,7 +73,13 @@ window.addEventListener("hashchange", route);
 function route() {
   const [view, arg] = location.hash.slice(1).split("/");
   show(view || "desk", false);
-  if (view === "lookup" && arg) loadLookup(decodeURIComponent(arg));
+  if (view === "lookup" && arg) {
+    let id = "";
+    try { id = decodeURIComponent(arg); } catch (e) { return; }
+    // selectItem 自己会改 hash,再触发一次 hashchange 到这里:同一件就跳过,
+    // 否则每点一次物品都要请求两遍
+    if (id && id !== lookup.itemId) selectItem(id);
+  }
 }
 
 // ── 点表头排序 ─────────────────────────────────────────────
@@ -493,113 +508,614 @@ $("close-form").addEventListener("submit", async e => {
 });
 
 // ── 查价 ───────────────────────────────────────────────────
-let lookupItem = null;
+// 旧版 web 端的三栏:左物品列表 | 中间 城市 × 品质 价格矩阵 | 右侧固定挂单簿。
+// 矩阵走 /api/lookup/grid,阶梯走 /api/lookup/book。右栏的成交统计和走势图
+// **直接用矩阵里同一格的 history 对象**,卡片和面板因此是同一份数、同一个来源。
+const lookup = {
+  itemId: null, seq: 0, data: null,          // seq:连点物品只认最后一次回来的
+  list: [], listSeq: 0, listTouched: false,
+  sel: { cat: "", sub: "", fam: "" },
+  timer: null,
+};
+// 右栏。和记账页的 loadBook/book-rows 是两回事,名字特意分开
+const ladder = { key: "", itemId: "", city: "", quality: 0, seq: 0, data: null };
 
-async function loadLookup(itemID) {
-  lookupItem = itemID;
-  $("lookup-empty").textContent = "查询中…";
-  $("lookup-empty").style.display = "";
-  $("lookup-rows").innerHTML = "";
-  $("results").hidden = true;
+const iconURL = id => `/api/icon/${encodeURIComponent(id)}`;
+const displayName = it => (it.name_zh || it.name_en || it.item_id) + (it.enchantment ? "." + it.enchantment : "");
+const silver = v => {
+  const a = Math.abs(v);
+  return a >= 1e6 ? (v / 1e6).toFixed(2) + "M" : a >= 1e3 ? (v / 1e3).toFixed(1) + "k" : num(v);
+};
+const ageText = h => h == null ? "" : h.toFixed(1) + "h";
+const spanText = h => h == null ? "" : h < 1 ? Math.max(1, Math.round(h * 60)) + "m"
+  : h < 48 ? Math.round(h) + "h" : Math.round(h / 24) + "d";
+const cityShort = c => c === "Fort Sterling" ? "Ft Sterling" : c;
+const cityMark = c => `<span class="city"><i class="cdot" style="--c:var(${CITY_VAR[c] || "--ink-soft"})"></i>${esc(cityShort(c))}</span>`;
+const lookupCell = (d, city, q) => (d?.cells || []).find(c => c.city === city && c.quality === q) || null;
+
+// 等级 / 附魔 / 品质三个下拉是固定的,不用等接口
+(function initLookupFilters() {
+  for (let t = 1; t <= 8; t++) $("f-tier").add(new Option(`T${t}`, String(t)));
+  for (let e = 0; e <= 4; e++) $("f-ench").add(new Option(e ? `.${e}` : "无附魔", String(e)));
+  for (let q = 1; q <= 5; q++) $("f-qual").add(new Option(QUALITY[q], String(q)));
+})();
+
+// ── 左栏:物品列表 ──
+async function refreshList() {
+  const seq = ++lookup.listSeq;
+  const q = $("search").value.trim();
+  // 搜索和分类是互斥的两条路,置灰比只写一句 placeholder 说得清楚。
+  // 品质不置灰:它只筛右边的矩阵
+  for (const id of ["menu-btn", "f-tier", "f-ench"]) $(id).disabled = !!q;
+  if (!menuTree) { try { menuTree = await getJSON("/api/menu"); } catch (e) { /* 目录还没同步 */ } }
+  $("menu-path").textContent = menuPath();
+  let rows = [], head;
   try {
-    const res = await getJSON("/api/lookup?item=" + encodeURIComponent(itemID));
-    const rows = res.rows || [];
-    $("lookup-title").textContent =
-      `${res.item.name_zh || res.item.item_id}${res.item.name_en ? "・" + res.item.name_en : ""}・${res.item.item_id}`;
-    $("lookup-empty").style.display = rows.length ? "none" : "";
-    if (!rows.length) $("lookup-empty").textContent = "这件东西目前没有任何城市有报价。";
-
-    $("lookup-rows").innerHTML = rows.map(r => {
-      const spread = r.sell_min && r.buy_max ? r.sell_min - r.buy_max : null;
-      return `<tr data-city="${esc(r.city)}" data-quality="${r.quality}">
-        <td class="l">${cityDot(r.city)}</td>
-        <td class="l">${qualityCell(r.quality)}</td>
-        <td>${r.sell_min ? num(r.sell_min) : "—"}</td>
-        <td class="depth">${r.source === "capture" ? num(r.sell_qty) : "—"}</td>
-        <td data-fill="0" class="sub">${r.source === "capture" ? "…" : "需要抓包"}</td>
-        <td>${r.buy_max ? num(r.buy_max) : "—"}</td>
-        <td class="depth">${r.source === "capture" ? num(r.buy_qty) : "—"}</td>
-        <td data-fill="1" class="sub">${r.source === "capture" ? "…" : "需要抓包"}</td>
-        <td class="${spread > 0 ? "pos" : spread < 0 ? "neg" : ""}">${spread === null ? "—" : num(spread)}</td>
-        <td class="age">${r.age_hours.toFixed(1)}h</td>
-        <td class="l sub">${r.source === "capture" ? "抓包" : "AODP"}</td>
-      </tr>`;
-    }).join("");
-    fillDepths(itemID, rows);
-  } catch (e) {
-    $("lookup-empty").textContent = String(e.message || e);
-  }
-}
-
-// 走盘口算实际成交均价。只有抓包覆盖到的格子才有数据,
-// 一个格子一个请求,慢慢填进去,不阻塞表格显示
-async function fillDepths(itemID, rows) {
-  const want = +$("d-qty").value || 1000;
-  for (const r of rows) {
-    if (r.source !== "capture") continue;
-    for (const side of [0, 1]) {
-      const q = new URLSearchParams({
-        item: itemID, city: r.city, quality: r.quality, side, qty: want,
+    if (q) {
+      rows = await getJSON(`/api/items?limit=200&q=${encodeURIComponent(q)}`);
+      head = `搜索「${q}」— ${rows.length} 个`;
+    } else if (lookup.sel.cat || $("f-tier").value !== "0" || $("f-ench").value !== "-1") {
+      const p = new URLSearchParams({
+        category: lookup.sel.cat, subcategory: lookup.sel.sub, family: lookup.sel.fam,
+        tier: $("f-tier").value, enchant: $("f-ench").value, limit: "300",
       });
-      try {
-        const f = await getJSON("/api/depth?" + q);
-        const tr = $("lookup-rows").querySelector(
-          `tr[data-city="${CSS.escape(r.city)}"][data-quality="${r.quality}"]`);
-        const cell = tr?.querySelector(`[data-fill="${side}"]`);
-        if (!cell) continue;
-        cell.innerHTML = f.got
-          ? `${num(f.vwap)} <span class="slip">滑点 ${pct(f.slippage)}${f.filled ? "" : `・只够 ${num(f.got)} 件`}</span>`
-          : "无挂单";
-      } catch (e) { /* 某个格子失败不影响其他格子 */ }
+      rows = await getJSON("/api/items?" + p);
+      head = `${menuPath()} — ${rows.length} 个${rows.length >= 300 ? "(已截断)" : ""}`;
+    } else {
+      head = "从上面的分类挑,或者直接搜";
     }
+  } catch (e) {
+    head = String(e.message || e);
+  }
+  if (seq !== lookup.listSeq) return;   // 打字快的时候,旧的搜索结果晚到不能盖掉新的
+  lookup.listTouched = !!(q || lookup.sel.cat || $("f-tier").value !== "0" || $("f-ench").value !== "-1");
+  lookup.list = rows;
+  $("list-head").textContent = head;
+  renderList();
+  $("list").scrollTop = 0;
+}
+
+function renderList() {
+  $("list").innerHTML = lookup.list.length
+    ? lookup.list.map(it => `<button data-id="${esc(it.item_id)}" class="${it.item_id === lookup.itemId ? "on" : ""}">
+        <img src="${iconURL(it.item_id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+        <span class="tierbadge">T${Number(it.tier) || "?"}</span>
+        <span class="names"><span class="zh">${esc(displayName(it))}</span><span class="en">${esc(it.name_en || it.item_id)}</span></span>
+      </button>`).join("")
+    : lookup.listTouched ? `<div class="empty"><p>没有匹配的物品。</p></div>` : "";
+}
+// 选中只挪高亮,不整列重绘:重绘会把一整列图标重新请求一遍
+function markListSelection() {
+  for (const b of $("list").querySelectorAll("button[data-id]"))
+    b.classList.toggle("on", b.dataset.id === lookup.itemId);
+}
+$("list").addEventListener("click", e => {
+  const b = e.target.closest("button[data-id]");
+  if (b) selectItem(b.dataset.id);
+});
+$("search").addEventListener("input", () => {
+  clearTimeout(lookup.timer);
+  lookup.timer = setTimeout(refreshList, 220);
+});
+for (const id of ["f-tier", "f-ench"]) $(id).addEventListener("change", refreshList);
+// 品质只在前端重画,不用再请求
+$("f-qual").addEventListener("change", () => { if (lookup.data) renderPrices(lookup.data); });
+
+// ── 中栏:价格矩阵 ──
+async function selectItem(itemId) {
+  if (!itemId) return;
+  const seq = ++lookup.seq;
+  lookup.itemId = itemId;
+  lookup.data = null;
+  markListSelection();
+  const h = "#lookup/" + encodeURIComponent(itemId);
+  if (location.hash !== h) location.hash = h;   // route() 看到是同一件会跳过
+  $("lookup-empty").hidden = true;
+  const box = $("lookup-result");
+  box.hidden = false;
+  box.innerHTML = `<div class="empty"><p>正在查 ${esc(itemId)} …</p></div>`;
+  // 旧右栏先留着,新数据回来、确认换了物品再收(renderPrices 里处理)
+  try {
+    const d = await getJSON("/api/lookup/grid?item=" + encodeURIComponent(itemId));
+    if (seq !== lookup.seq) return;   // 快速切物品时先发的请求可能晚到
+    lookup.data = d;
+    renderPrices(d);
+    // 从别的页面点物品名跳过来时左栏是空的:照这件物品的分类填上
+    if (!lookup.listTouched && !$("search").value.trim() && d.item?.category) {
+      lookup.sel = { cat: d.item.category, sub: d.item.subcategory || "", fam: d.item.family || "" };
+      refreshList();
+    }
+  } catch (err) {
+    if (seq !== lookup.seq) return;
+    box.innerHTML = `<div class="empty"><h2>查不到</h2><p>${esc(err.message || err)}</p></div>`;
+    closeLadder();
   }
 }
-$("d-qty").addEventListener("change", () => { if (lookupItem) loadLookup(lookupItem); });
 
-let searchTimer;
-$("search").addEventListener("input", e => {
-  clearTimeout(searchTimer);
-  const q = e.target.value.trim();
-  if (!q) { $("results").hidden = true; return; }
-  searchTimer = setTimeout(async () => {
-    showResults(await getJSON("/api/items?limit=40&q=" + encodeURIComponent(q)));
-  }, 200);
-});
+function renderPrices(d) {
+  const P = d.params || {};
+  const maxH = P.max_hours ?? 6;
+  const minBid = P.min_bid_depth ?? 20;
+  const qualities = d.qualities?.length ? d.qualities : [1];
+  const fresh = s => s && s.best > 0 && s.age_hours != null && s.age_hours <= maxH;
 
-function showResults(items) {
-  $("results").hidden = false;
-  $("results").innerHTML = items.length
-    ? items.map(i => `<div data-id="${esc(i.item_id)}">
-        <img src="/api/icon/${encodeURIComponent(i.item_id)}" alt="" loading="lazy"
-             onerror="this.style.visibility='hidden'">
-        <span>${esc(i.name_zh || i.name_en)}</span>
-        <span class="sub">T${i.tier}${i.enchantment ? "." + i.enchantment : ""}・${esc(i.item_id)}</span>
-      </div>`).join("")
-    : `<div class="sub">没有匹配的物品</div>`;
+  // 最优点按品质分别算。不同品质是不同的商品:杰出品质的长袍卖得比普通贵三倍,
+  // 那不是价差,那是另一件东西。只在新鲜数据里挑:30 小时前的低价没有意义
+  const best = {};
+  for (const q of qualities) {
+    const cells = d.cells.filter(c => c.quality === q);
+    const buyable = cells.filter(c => fresh(c.sell));
+    const sellable = cells.filter(c => fresh(c.buy));
+    best[q] = {
+      buy: buyable.length ? buyable.reduce((a, b) => (b.sell.best < a.sell.best ? b : a)) : null,
+      sell: sellable.length ? sellable.reduce((a, b) => (b.buy.best > a.buy.best ? b : a)) : null,
+    };
+  }
+
+  // 全空的品质列不画,否则大部分物品是一张 80% 空白的表
+  const single = (d.item.max_quality || 1) < 2 && qualities.length < 2;
+  $("f-qual").disabled = single;     // 材料只有普通一档,品质筛选没意义
+  if (single) $("f-qual").value = "0";
+  const only = Number($("f-qual").value || 0);
+  const pool = only ? [only] : qualities;
+  const live = pool.filter(q => d.cells.some(c => c.quality === q && (c.sell.best || c.buy.best)));
+  const shown = live.length ? live : pool.slice(0, 1);
+  const hidden = only ? [] : qualities.filter(q => !shown.includes(q));
+
+  const at = c => `${esc(cityShort(c.city))} · ${QUALITY[c.quality]}`;
+  // 顶栏只能报一个品质,挑新鲜数据最多的那档
+  const headline = qualities
+    .map(q => ({ q, n: d.cells.filter(c => c.quality === q && (fresh(c.sell) || fresh(c.buy))).length }))
+    .sort((a, b) => b.n - a.n)[0];
+  const hb = headline?.n ? best[headline.q].buy : null;
+  const hs = headline?.n ? best[headline.q].sell : null;
+
+  const head = `<div class="lookup-head">
+    <img src="${iconURL(d.item.item_id)}" alt="" onerror="this.style.visibility='hidden'">
+    <div>
+      <h2>${esc(displayName(d.item))}</h2>
+      <div class="sub">${d.item.name_en ? esc(d.item.name_en) + " · " : ""}${esc(d.item.item_id)}</div>
+    </div>
+    <div class="verdict">
+      <div><b>${hb ? num(hb.sell.best) : "—"}</b>
+           <i>全服最便宜,在这买 ${hb ? at(hb) : "— 无新鲜数据"}</i></div>
+      <div><b>${hs ? num(hs.buy.best) : "—"}</b>
+           <i>全服出价最高,在这卖 ${hs ? at(hs) : "— 无新鲜数据"}</i></div>
+    </div>
+  </div>`;
+
+  // 一侧的来源说明:两路都列出来,说清楚用的是哪一路、为什么
+  const srcHint = s => {
+    const lines = [];
+    if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${s.capture.orders_at_best} 单 · 5% 以内 ${num(s.capture.qty_near)} 件`);
+    if (s.aodp) lines.push(`AODP ${num(s.aodp.best)}(${s.aodp.age_hours == null ? "没有时间戳" : ageText(s.aodp.age_hours) + " 前"})`);
+    if (s.capture && s.aodp) lines.push(`用的是${s.pick === "capture" ? "抓包" : "AODP"}:两路谁新用谁,一样新用抓包`);
+    return lines.join("\n");
+  };
+  // 买卖两侧的时间戳常常差很远,各报各的龄。标签用游戏里市场那两个页签的说法
+  const side = (label, s, hint) => {
+    const stale = s.best && (s.age_hours == null || s.age_hours > maxH);
+    const src = srcHint(s);
+    return `<div class="ln" title="${esc(hint + (src ? "\n\n" + src : ""))}"><u>${label}</u><b>${s.best ? num(s.best) : "—"}</b>
+      <s class="${stale ? "stale" : ""}">${ageText(s.age_hours)}</s></div>`;
+  };
+  // 价格下面那一行:件数(只有抓包有)+ 这一侧最远的一档 + 来源徽标。
+  // 最优档 / 最优价 5% 以内两个数都给 —— 前者判"这个价是不是一件货",
+  // 后者判"我挂单进去有没有人接"
+  const extra = (s, kind) => {
+    const parts = [];
+    const cap = s.capture;
+    if (cap) {
+      const dim = s.pick !== "capture";
+      parts.push(`<em class="qty${dim ? " dim" : ""}" title="${esc(`最优档 ${num(cap.qty_at_best)} 件,最优价 5% 以内共 ${num(cap.qty_near)} 件` +
+        (dim ? "\n抓包比 AODP 旧,价格用的是 AODP,件数只作参考" : ""))}">×${num(cap.qty_at_best)}${cap.qty_near > cap.qty_at_best ? "/" + num(cap.qty_near) : ""}</em>`);
+    }
+    const far = s.pick === "capture" ? cap.far : s.pick === "aodp" ? s.aodp.far : 0;
+    if (far && far !== s.best) {
+      const word = kind === "sell" ? "最高" : "最低";
+      const cut = s.pick === "capture" && cap.truncated;
+      const t = s.pick === "capture"
+        ? `这一侧抓到的${word}一张挂单` + (cut ? "。游戏一页 50 单,没翻完的话实际还要更远" : "")
+        : `AODP 的 ${kind === "sell" ? "sell_price_max" : "buy_price_min,多半是 1 银那种占位单"}`;
+      parts.push(`<span title="${esc(t)}">${word} ${num(far)}${cut ? "…" : ""}</span>`);
+    }
+    const badge = s.pick === "capture" ? `<b class="src" title="这一侧来自自建抓包">抓</b>` : "";
+    return parts.length || badge ? `<div class="ln2">${parts.join(" · ")}${badge}</div>` : "";
+  };
+  // 成交那一段。口径和来源都写清楚:之前只写「均 xxx」,AODP 没历史的城市
+  // 显示「均 —」,点开挂单簿里却有走势图,两边对不上
+  const histLines = h => {
+    if (!h) return `<div title="这一格 AODP 没有成交历史,库里也没有。">7日成交 —</div>`;
+    const src = h.source === "capture" ? "自抓" : h.stored ? "库里存下的 AODP(这次没取到)" : "AODP";
+    const t = `成交量加权均价,不含今天(不是当天价)。7 日窗口 ${h.days_7d} 天有数据,30 日窗口 ${h.days_30d} 天。来源:${src}`;
+    // 7 天里一天成交都没有时,"日均 0 件"会被读成"没人买",其实是没人上传。
+    // 这时报 30 日口径,并写明是 30 日
+    const daily = h.days_7d ? `日均 ${num(h.daily_qty_7d)} 件` : `7 日无数据 · 30日日均 ${num(h.daily_qty_30d)} 件`;
+    return `<div title="${esc(t)}">7日均 ${h.avg_7d ? num(h.avg_7d) : "—"} · 30日 ${num(h.avg_30d)}</div>
+      <div title="${esc(t)}">${daily}${h.source === "capture" ? '<i class="hsrc">自抓</i>' : ""}</div>`;
+  };
+
+  const cellHTML = c => {
+    const pick = best[c.quality] || {};
+    const isBuy = pick.buy === c, isSell = pick.sell === c;
+    const cls = ["cell", isBuy ? "best-buy" : "", isSell ? "best-sell" : ""].join(" ");
+    const tags = [isBuy ? "本档最便宜" : "", isSell ? "本档出价最高" : ""].filter(Boolean).join(" · ");
+    // 价差大得不真实时别用绿色 —— 那等于在暗示"好机会"。扫描页有 troll 过滤
+    // 拦着这种数据,查价页展示原始值,就得靠标色提醒
+    let spread = "";
+    if (c.spread) {
+      const m = c.spread.margin, sus = c.spread.suspect;
+      const cls2 = sus ? "suspect" : m > 0 ? "up" : "down";
+      const hint = sus
+        ? `毛利率 ${pct(m)} 高得不真实,多半是某一侧挂了 troll 单(1 件货、价格离谱)。AODP 拿不到挂单数量,这种单看不出来只有一件`
+        : `在这座城挂买单收货、再挂卖单出货,一轮下来的税后净毛利率。挂 ${num(c.spread.my_bid)} 收、挂 ${num(c.spread.my_ask)} 卖,单件净赚 ${num(c.spread.profit_per_unit)}`;
+      spread = `<div><span class="spread ${cls2}" title="${esc(hint)}">同城价差 ${m > 0 ? "+" : ""}${(m * 100).toFixed(1)}%${sus ? " ⚠" : ""}</span></div>`;
+    }
+    const bc = c.buy.capture, sc = c.sell.capture;
+    const thin = bc && bc.qty_near < minBid;
+    const gap = bc && bc.gap_after_near >= 0.2;
+    // 只抓到卖单这一侧 = 在「从集市购买」列表页翻的。那个页面根本不发买单请求,
+    // 抓不到不等于没有。不说清楚的话,跟"真的没人收货"长得一样
+    const half = sc && !bc && c.city !== "Black Market";
+    const bidNote = half
+      ? `<div class="ctag warn">只抓到卖单这一侧 —— 进游戏<b>点进物品详情页</b>(左右两栏那个)才会同时抓到买单</div>`
+      : !bc ? ""
+      : thin ? `<div class="ctag warn">买方只有 ${num(bc.qty_near)} 件在收${gap ? `,再往下断崖 ${pct(bc.gap_after_near, 0)}` : ""} —— 挂买单多半收不到货</div>`
+      : gap ? `<div class="ctag warn">买一附近吃完,下一档就低 ${pct(bc.gap_after_near, 0)},最高买价没支撑</div>` : "";
+    return `<div class="${cls}">
+      ${side("卖单最低", c.sell, "市场上最便宜的那张卖单。你想马上买到货,就付这个价")}${extra(c.sell, "sell")}
+      ${side("买单最高", c.buy, "市场上出价最高的那张买单。你想马上出货,就拿这个价")}${extra(c.buy, "buy")}
+      <div class="meta">${spread}${histLines(c.history)}</div>
+      ${tags ? `<div class="ctag">${tags}</div>` : ""}
+      ${bidNote}
+    </div>`;
+  };
+
+  // 黑市就是最后一行。有数据的格子都能点:没抓到挂单也能看成交走势
+  const rows = d.cities.map(city => `<tr>
+    <td>${cityMark(city)}</td>
+    ${shown.map(q => {
+      const c = lookupCell(d, city, q);
+      if (!c) return `<td><div class="cell void">无数据</div></td>`;
+      return `<td><button class="cellbtn" data-city="${esc(city)}" data-q="${q}"
+               title="点开完整挂单簿和成交走势">${cellHTML(c)}</button></td>`;
+    }).join("")}
+    <td class="flex"></td>
+  </tr>`).join("");
+
+  const aodpWarn = d.aodp?.error
+    ? `<div class="diagnosis warn"><b>AODP 这次没取全:</b>${esc(d.aodp.error)}。表里的抓包数据不受影响。</div>` : "";
+  const others = Object.entries(d.capture?.other_locations || {});
+  const otherTxt = others.length
+    ? `抓包里另有 ${others.map(([k, v]) => `${esc(k)} ${Number(v)} 单`).join("、")} 来自没收敛成城市名的地点,没放进表里。` : "";
+
+  $("lookup-result").innerHTML = head + aodpWarn + `
+    <div class="matrix-wrap"><table class="matrix">
+      <thead><tr><th>城市</th>${shown.map(q =>
+        `<th class="q" style="--q:var(--q${q})"><i class="qdot"></i>${QUALITY[q] || q}</th>`
+      ).join("")}<th class="flex"></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="matrix-note">
+      <p><b>卖单最低</b>就是游戏里市场「销售订单」页签最上面那一行 —— 别人挂着卖的最低价,
+      你想马上买到货付的就是它。<b>买单最高</b>是「购买订单」页签最上面那一行 —— 别人挂着收的最高价,
+      你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 5% 以内的件数,只有自建抓包拿得到;
+      带 <b class="src" style="margin:0">抓</b> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
+      <p>所以<b>卖单价总是比买单价高</b>,这段差就是倒爷的利润空间。<b>同城价差</b>已经替你把
+      ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了(真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}):
+      在这座城挂买单收货、再挂卖单出货,一轮下来的净毛利率。为正才值得做。
+      标<b class="warnish">⚠</b> 的是超过 ${((P.max_margin ?? 1) * 100).toFixed(0)}% 的价差 —— 这种数字通常不是机会,
+      而是某一侧挂了 troll 单。</p>
+      <p>标红的时间是超过 ${maxH} 小时新鲜度上限的报价。最低/最高标记只在新鲜数据里选,
+      且只在同一品质内比 —— 不同品质是不同的商品。抓包只看最近 ${P.capture_window_hours ?? 6} 小时,
+      上一轮浏览留下、这一轮没再出现的单已经剔掉。
+      ${single ? "这类物品只有普通一档品质。"
+        : hidden.length ? `${hidden.map(q => QUALITY[q]).join("、")}品质全无数据,已隐藏。` : ""}
+      ${only ? `只显示${QUALITY[only]}品质。` : ""}
+      ${otherTxt}
+      查询于 ${new Date(d.fetched_at).toLocaleString("zh-CN")}。</p>
+    </div>`;
+
+  // 换物品了,右侧那份是上一个物品的,收掉;同一物品重画(切品质)就保持打开
+  if (ladder.itemId && ladder.itemId !== lookup.itemId) closeLadder();
+  else if (ladder.key) { markOpenCell(); if (ladder.data) renderLadder(); }
 }
-$("results").addEventListener("click", e => {
-  const row = e.target.closest("[data-id]");
-  if (row) { $("search").value = ""; location.hash = "lookup/" + encodeURIComponent(row.dataset.id); }
+$("lookup-result").addEventListener("click", e => {
+  const b = e.target.closest(".cellbtn");
+  if (b) openLadder(b.dataset.city, Number(b.dataset.q));
 });
 
-// ── 三级级联菜单 ───────────────────────────────────────────
+// ── 右栏:完整挂单簿 ──
+// 游戏里那两栏只显示塞得进屏幕的几行,这里给全,还带累计量、相对最优价的落差、
+// 每档挂了多久。放在右侧固定栏:那块地方本来一直空着,而且不用滚页面
+function markOpenCell() {
+  for (const b of $("lookup-result").querySelectorAll(".cellbtn"))
+    b.classList.toggle("open", !!ladder.key && `${b.dataset.city}/${b.dataset.q}` === ladder.key);
+}
+
+function closeLadder() {
+  ladder.seq++;   // 还在飞的请求回来也别往已经收起的栏里写
+  ladder.key = ""; ladder.itemId = ""; ladder.data = null;
+  $("bookpanel").innerHTML = "";
+  $("bookpanel").hidden = true;
+  $("lookup-body").classList.remove("with-book");
+  markOpenCell();
+}
+
+function ladderQty() {
+  let v = 1000;
+  try { v = +localStorage.getItem("lookupQty") || 1000; } catch (e) { /* 存储被禁用就用默认值 */ }
+  return Math.max(1, Math.round(v));
+}
+
+async function openLadder(city, quality) {
+  const key = `${city}/${quality}`;
+  if (ladder.key === key && ladder.itemId === lookup.itemId) { closeLadder(); return; }   // 再点一次 = 收起
+  Object.assign(ladder, { key, itemId: lookup.itemId, city, quality, data: null });
+  const seq = ++ladder.seq;   // 连点不同格子时只认最后一次
+  const panel = $("bookpanel");
+  panel.hidden = false;
+  $("lookup-body").classList.add("with-book");
+  markOpenCell();
+  panel.innerHTML = `<div class="bookwrap"><div class="void">读取中…</div></div>`;
+  await loadLadder(seq);
+}
+
+async function loadLadder(seq) {
+  const p = new URLSearchParams({
+    item: ladder.itemId, city: ladder.city, quality: ladder.quality, qty: ladderQty(),
+  });
+  try {
+    const d = await getJSON("/api/lookup/book?" + p);
+    if (seq !== ladder.seq) return;
+    ladder.data = d;
+    renderLadder();
+    $("bookpanel").scrollTop = 0;
+  } catch (err) {
+    if (seq !== ladder.seq) return;
+    $("bookpanel").innerHTML = `<div class="bookwrap"><div class="bookhead"><span class="spacer"></span>
+      <button class="mini" data-close>收起</button></div>
+      <div class="void" style="color:var(--warn)">${esc(err.message || err)}</div></div>`;
+  }
+}
+$("bookpanel").addEventListener("click", e => { if (e.target.closest("[data-close]")) closeLadder(); });
+$("bookpanel").addEventListener("change", e => {
+  if (e.target.id !== "ld-qty") return;
+  const v = Math.max(1, Math.round(+e.target.value || 1000));
+  try { localStorage.setItem("lookupQty", String(v)); } catch (err) { /* 只是记不住而已 */ }
+  if (ladder.key) loadLadder(++ladder.seq);
+});
+
+function ladderRows(levels, kind, cap) {
+  if (!levels.length) return `<tr><td colspan="5" class="void">没有挂单</td></tr>`;
+  return levels.map(l => {
+    const w = Math.min(100, l.qty / cap * 100).toFixed(1);
+    const off = l.off * 100;
+    // 断崖标红:这一档比最优价低/高 20% 以上,说明上面那几档没有支撑
+    const cliff = !l.stale && off >= 20;
+    const offTxt = off >= 0.005 ? (kind === "sell" ? "+" : "−") + off.toFixed(off < 10 ? 2 : 1) + "%" : "";
+    const t = `第一次看到是 ${l.standing_hours.toFixed(1)} 小时前,最后一次看到是 ${l.age_hours.toFixed(1)} 小时前` +
+      (l.stale ? "\n上一轮翻得更深才看到的单,这一轮没翻到这么深,不参与最优价和近价件数" : "");
+    return `<tr class="${cliff ? "cliff" : ""}${l.stale ? " stale" : ""}" title="${esc(t)}">
+      <td class="p">${num(l.price)}<i>${offTxt}</i></td>
+      <td class="qt"><span class="qbar ${kind}" style="width:${w}%"></span><b>${num(l.qty)}</b></td>
+      <td class="c">${Number(l.orders)}</td>
+      <td class="c">${num(l.cum_qty)}</td>
+      <td class="t">${spanText(l.standing_hours)}</td>
+    </tr>`;
+  }).join("");
+}
+
+// 成交量柱 + 均价折线,叠在一张图上 —— 跟游戏里「市场历史」同一个意思。
+// x 按真实日期排,缺数据的日子留出空档,不会被挤成等距
+function tradeChart(series) {
+  const pts = (series || []).filter(p => p[1] > 0 && p[2] > 0);
+  if (pts.length < 2) return `<div class="void">成交数据不足(${pts.length} 天)</div>`;
+  const W = 640, H = 164, pad = 26, padB = 32;
+  const xs = pts.map(p => Date.parse(p[0] + "T00:00:00Z"));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const qMax = Math.max(...pts.map(p => p[1])) || 1;
+  const ps = pts.map(p => p[2]);
+  const pMin = Math.min(...ps), pMax = Math.max(...ps);
+  const base = H - padB, top = pad;
+  const sx = x => x1 === x0 ? W / 2 : pad + (x - x0) / (x1 - x0) * (W - 2 * pad);
+  const sy = p => pMax === pMin ? (base + top) / 2 : base - (p - pMin) / (pMax - pMin) * (base - top);
+  const days = Math.max(1, Math.round((x1 - x0) / 86400000) + 1);
+  const bw = Math.max(2, (W - 2 * pad) / days * 0.6);
+
+  const bars = pts.map((p, i) => {
+    const h = p[1] / qMax * (base - top);
+    return `<rect x="${(sx(xs[i]) - bw / 2).toFixed(1)}" y="${(base - h).toFixed(1)}"
+      width="${bw.toFixed(1)}" height="${h.toFixed(1)}" class="vbar"><title>${esc(p[0])}
+成交 ${num(p[1])} 件
+均价 ${num(p[2])}</title></rect>`;
+  }).join("");
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${sx(xs[i]).toFixed(1)},${sy(p[2]).toFixed(1)}`).join("");
+  const dots = pts.map((p, i) => `<circle cx="${sx(xs[i]).toFixed(1)}" cy="${sy(p[2]).toFixed(1)}" r="2.4"
+      class="vdot"><title>${esc(p[0])} · 均价 ${num(p[2])} · 成交 ${num(p[1])} 件</title></circle>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="tradechart" role="img" aria-label="成交量与均价走势">
+    ${bars}<path d="${line}" class="vline"/>${dots}
+    <text x="2" y="12" class="ax">${num(pMax)}</text>
+    <text x="2" y="${base + 11}" class="ax">${num(pMin)}</text>
+    <text x="${W - 2}" y="12" class="ax" text-anchor="end">柱=成交量 峰值 ${num(qMax)} 件</text>
+    <text x="${pad}" y="${H - 4}" class="ax">${esc(pts[0][0].slice(5))}</text>
+    <text x="${W - pad}" y="${H - 4}" class="ax" text-anchor="end">${esc(pts[pts.length - 1][0].slice(5))}</text>
+  </svg>`;
+}
+
+function renderLadder() {
+  const d = ladder.data;
+  if (!d) return;
+  const { city, quality } = ladder;
+  // 价格和成交数据取矩阵里同一格:卡片上写什么,这里就是什么
+  const g = lookup.data && lookup.itemId === ladder.itemId ? lookup.data : null;
+  const cell = g ? lookupCell(g, city, quality) : null;
+  const P = g?.params || {};
+  const cs = cell?.sell || {}, cb = cell?.buy || {}, sp = cell?.spread, h = cell?.history;
+  const sell = d.sell, buy = d.buy;
+  const minBid = d.min_bid_depth ?? P.min_bid_depth ?? 20;
+
+  // 比例条按最优价 20% 以内那几档定刻度,不然一张 80 万件的 1 银占位单把其他条全压没
+  const nearQty = [...sell.levels, ...buy.levels].filter(l => !l.stale && l.off <= 0.2).map(l => l.qty);
+  const cap = Math.max(1, ...(nearQty.length ? nearQty : [...sell.levels, ...buy.levels].map(l => l.qty)));
+
+  const stat = (k, v, hint) => `<div class="bstat" title="${esc(hint || "")}"><b>${v}</b><span>${k}</span></div>`;
+  const srcOf = s => s.pick === "capture" ? `来源:抓包,${ageText(s.age_hours)} 前`
+    : s.pick === "aodp" ? `来源:AODP,${s.age_hours == null ? "没有时间戳" : ageText(s.age_hours) + " 前"}` : "";
+  const stats = [
+    stat("最低卖价", cs.best ? num(cs.best) : "—", `别人挂着卖的最低价。${srcOf(cs)}`),
+    stat("最高买价", cb.best ? num(cb.best) : "—", `别人挂着收的最高价。${srcOf(cb)}`),
+    stat("买卖价差", sp ? pct(sp.raw) : "—", "未扣税费的原始价差"),
+    stat("税后毛利", sp ? pct(sp.margin) : "—",
+      `挂买收货再挂卖出货,扣掉 ${pct(P.friction ?? 0.09)} 摩擦后的净毛利率;真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}`),
+    stat("挂买→挂卖", sp ? `${num(sp.my_bid)}→${num(sp.my_ask)}` : "—", "进游戏照抄的两个数(各让 1 银抢队首)"),
+    stat("单件净赚", sp ? num(sp.profit_per_unit) : "—", "税后"),
+    stat("7日 / 30日均价", h ? `${h.avg_7d ? num(h.avg_7d) : "—"} / ${num(h.avg_30d)}` : "—",
+      "成交量加权,不含今天。零星成交日和万笔成交日不等权"),
+    stat("成交区间", h?.price_min ? `${num(h.price_min)}~${num(h.price_max)}` : "—", "30 日窗口里各天均价的最低 ~ 最高"),
+    stat(h && !h.days_7d ? "日均成交(30日)" : "日均成交",
+      h ? num(h.days_7d ? h.daily_qty_7d : h.daily_qty_30d) + " 件" : "—",
+      h ? `7 日窗口 ${h.days_7d} 天有数据;30 日口径 ${num(h.daily_qty_30d)} 件/天` : ""),
+    stat(h && !h.days_7d ? "日均流水(30日)" : "日均流水",
+      h ? silver(h.days_7d ? h.daily_silver_7d : h.daily_qty_30d * h.avg_30d) : "—",
+      h && !h.days_7d ? "7 日内没有成交数据,按 30 日日均件数 × 30 日均价" : "7 日日均件数 × 7 日均价"),
+  ].join("");
+
+  // 吃单量:沿着最近一轮的阶梯吃到这么多件的真实均价。AODP 给不了这个
+  const fillTxt = (f, verb) => !f || !f.got ? `${verb}:没有挂单`
+    : `${verb}均价 <b>${num(f.vwap)}</b>(滑点 ${pct(f.slippage)}${f.filled ? "" : `,只够 ${num(f.got)} 件`})`;
+  const fillRow = `<div class="fillrow" title="沿着最近一轮的阶梯吃到这么多件的成交量加权均价;灰掉的旧档不算">
+    <label>吃单量 <input type="number" id="ld-qty" min="1" step="100" value="${ladderQty()}"> 件</label>
+    <span>${fillTxt(sell.fill, "买入")}</span><span>${fillTxt(buy.fill, "卖出")}</span>
+  </div>`;
+
+  const notes = [];
+  if (city === "Black Market") {
+    notes.push(`<div class="diagnosis">黑市只收不卖,卖侧天然是空的。黑市的挂单目前抓不进来
+      (那个地点 id 还没核实,服务端故意没并进任何城市),这里只有 AODP 的价。</div>`);
+  } else if (!sell.levels.length && !buy.levels.length) {
+    notes.push(`<div class="diagnosis warn"><b>最近 ${d.window_hours} 小时里这一格没抓到挂单。</b>
+      上面的价格来自 AODP,没有件数。进游戏在这座城的市场<b>点进物品详情页</b>
+      (「出售订单 / 购入订单」并排那个界面),两侧就都抓到了。</div>`);
+  } else if (!buy.levels.length) {
+    notes.push(`<div class="diagnosis warn"><b>买单这一侧一档都没抓到,不等于没人挂买单。</b>
+      游戏里的「从集市购买」<b>列表页只发卖单请求</b>,抓不到买单。要拿到买方深度,得<b>点进物品详情页</b>
+      —— 就是「出售订单 / 购入订单」并排那个界面,进去一次两侧就都抓到了。
+      ${sell.age_hours != null ? `这座城的卖单是 ${ageText(sell.age_hours)} 前抓的。` : ""}</div>`);
+  } else if (!sell.levels.length) {
+    notes.push(`<div class="diagnosis warn"><b>卖单这一侧没抓到。</b>最近一次只看到了买单,
+      进物品详情页翻一下「出售订单」就有了。</div>`);
+  }
+  // 成交价落在买卖价之间哪个位置 —— 贴着卖价说明成交都是"别人按卖价买走",
+  // 挂买单收不到货;落在中间说明两侧都在成交
+  const avg = h ? (h.avg_7d || h.avg_30d) : 0;
+  if (avg && cb.best && cs.best && cs.best > cb.best) {
+    const pos = (avg - cb.best) / (cs.best - cb.best);
+    const thinBid = buy.levels.length && buy.support.qty_near < minBid;
+    const where = pos < 0 ? "比最高买价还低" : pos > 1 ? "比最低卖价还高" : `落在买卖价之间的 ${(pos * 100).toFixed(0)}% 处`;
+    notes.push(`<div class="diagnosis"><b>成交均价${where}。</b>
+      ${pos > 0.8 ? `几乎所有成交都发生在<b>卖价</b>一侧 —— 货是被人按卖价买走的,没人肯砸到买价上。
+          你挂买单进去大概率一直挂着,而 2.5% 创建费下单就扣、不退。`
+        : pos < 0.2 ? `成交集中在<b>买价</b>一侧 —— 买单容易成交,难的是把货挂出去。`
+        : `买卖两侧都在成交,双挂(挂买收货 + 挂卖出货)在这个物品上说得通。`}
+      ${thinBid ? `<br>而且最高买价 5% 以内只有 ${num(buy.support.qty_near)} 件在收。` : ""}
+      <br><span class="sub">均价是 ${h.avg_7d ? 7 : 30} 日成交量加权均价(${h.source === "capture" ? "自抓" : "AODP"})。
+      AODP 的成交只统计卖单,天生偏向卖价一侧。</span></div>`);
+  }
+  const dropped = sell.dropped_orders + buy.dropped_orders;
+  const staleN = sell.stale_orders + buy.stale_orders;
+  if (dropped || staleN) {
+    notes.push(`<div class="diagnosis">${dropped ? `已剔除 ${dropped} 张上一轮翻到、这一轮没再出现的单(多半已成交或撤单)。` : ""}
+      ${staleN ? `灰掉的 ${staleN} 张是上一轮翻得更深才看到的,这一轮没翻到那么深,不参与最优价和近价件数。` : ""}</div>`);
+  }
+
+  const foot = (s, kind) => `这一侧 ${s.level_count} 档 · ${s.orders} 单 · 共 ${num(s.qty_total)} 件` +
+    (s.truncated ? ` · <span title="游戏一页最多 ${d.page_size} 单,只看到了翻到的那几页">可能没翻完,总数是下界</span>` : "") +
+    (kind === "buy" && s.qty_total ? ` <span class="warnish">(含 1 银那种占位单,别拿总数当深度)</span>` : "");
+  const histSrc = !h ? "" : h.source === "capture" ? "自抓" : h.stored ? "库里存下的 AODP(这次没取到)" : "AODP";
+
+  $("bookpanel").innerHTML = `<div class="bookwrap">
+    <div class="bookhead">
+      <b>${cityMark(city)} · <span class="q" style="--q:var(--q${quality})">${QUALITY[quality] || quality}</span> 完整挂单簿</b>
+      <span class="spacer"></span>
+      <button class="mini" data-close>收起</button>
+      <span class="bsub">${g ? esc(displayName(g.item)) + " · " : ""}自建抓包 · 卖 ${sell.level_count} 档 / 买 ${buy.level_count} 档 · 最近 ${d.window_hours} 小时</span>
+    </div>
+    <div class="bstats">${stats}</div>
+    ${fillRow}
+    ${notes.join("")}
+    <div class="ladders">
+      <div>
+        <h4 class="sellh">出售订单 <em>别人挂着卖的 · 从低到高</em></h4>
+        <table class="ladder"><thead><tr>
+          <th>价格</th><th>件数</th><th>单数</th><th>累计</th><th>挂了多久</th>
+        </tr></thead><tbody>${ladderRows(sell.levels, "sell", cap)}</tbody></table>
+        <div class="ladderfoot">${foot(sell, "sell")}</div>
+      </div>
+      <div>
+        <h4 class="buyh">购入订单 <em>别人挂着收的 · 从高到低</em></h4>
+        <table class="ladder"><thead><tr>
+          <th>价格</th><th>件数</th><th>单数</th><th>累计</th><th>挂了多久</th>
+        </tr></thead><tbody>${ladderRows(buy.levels, "buy", cap)}</tbody></table>
+        <div class="ladderfoot">${foot(buy, "buy")}</div>
+      </div>
+    </div>
+    <h4 class="chh">成交走势 <em>柱=成交件数,线=当天成交量加权均价</em></h4>
+    ${tradeChart(h?.series)}
+    <div class="ladderfoot">${h
+      ? `日线,不含今天 · 30 天里 ${h.days_30d} 天有数据 · 来源 ${histSrc}。和左边格子里的 7 日 / 30 日均价是同一份数据`
+      : "这一格没有成交历史。"}
+      <br>旧版画的是抓包的 6 小时桶;公会版服务端还不收抓包的成交历史,暂时只有 AODP 日线。</div>
+  </div>`;
+}
+
+// ── 三级级联菜单:大类 → 子类 → 物品族 ─────────────────────
 let menuTree = null;
 
-$("menu-btn").addEventListener("click", async () => {
-  const menu = $("menu");
-  if (!menu.classList.contains("bare")) { menu.classList.add("bare"); return; }
-  if (!menuTree) menuTree = await getJSON("/api/menu");
-  renderMenu([menuTree.map(c => ({ id: c.id, label: c.label, count: c.count, node: c }))]);
-  menu.classList.remove("bare");
+const menuCat = () => (menuTree || []).find(c => c.id === lookup.sel.cat);
+const menuSub = () => (menuCat()?.subs || []).find(s => s.id === lookup.sel.sub);
+const menuFam = () => (menuSub()?.families || []).find(f => f.key === lookup.sel.fam);
+function menuPath() {
+  const parts = [menuCat()?.label, menuSub()?.label, menuFam()?.label].filter(Boolean);
+  return parts.length ? parts.join(" › ") : "全部物品";
+}
+const catCol = () => menuTree.map(c => ({ id: c.id, label: c.label, count: c.count, node: c }));
+const subCol = cat => cat.subs.map(s => ({ id: s.id, label: s.label, count: s.count, node: s }));
+const famCol = sub => sub.families.map(f => ({ id: f.key, label: f.label, count: f.count, node: f }));
+
+// 打开时照当前选中的路径展开,选过的东西一眼看得见
+async function openMenu() {
+  if (!menuTree) {
+    try { menuTree = await getJSON("/api/menu"); } catch (e) {
+      $("list-head").textContent = String(e.message || e);
+      return;
+    }
+  }
+  const cols = [catCol()], trail = [];
+  const cat = menuCat(), sub = menuSub();
+  if (cat) { trail.push(cat.id); cols.push(subCol(cat)); }
+  if (cat && sub) { trail.push(sub.id); cols.push(famCol(sub)); }
+  if (cat && sub && menuFam()) trail.push(lookup.sel.fam);
+  renderMenu(cols);
+  trail.forEach((id, d) => $("menu").querySelector(`li[data-depth="${d}"][data-id="${CSS.escape(id)}"]`)
+    ?.setAttribute("aria-selected", "true"));
+  $("menu").classList.remove("bare");
+  $("menu-btn").setAttribute("aria-expanded", "true");
+}
+function closeMenu() {
+  $("menu").classList.add("bare");
+  $("menu-btn").setAttribute("aria-expanded", "false");
+}
+$("menu-btn").addEventListener("click", () => {
+  if ($("menu").classList.contains("bare")) openMenu(); else closeMenu();
 });
-document.addEventListener("click", e => {
-  if (!e.target.closest(".picker")) $("menu").classList.add("bare");
-});
+document.addEventListener("click", e => { if (!e.target.closest(".picker")) closeMenu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
 
 function renderMenu(columns) {
   $("menu").innerHTML = columns.map((col, depth) =>
     `<ul>` + col.map(x =>
-      `<li data-depth="${depth}" data-id="${esc(x.id)}">${esc(x.label)}<span>${x.count}</span></li>`
+      `<li data-depth="${depth}" data-id="${esc(x.id)}"${depth < 2 ? ' class="has"' : ""}>${esc(x.label)}<span>${Number(x.count) || 0}</span></li>`
     ).join("") + `</ul>`).join("");
   $("menu")._columns = columns;
 }
@@ -640,11 +1156,20 @@ $("menu").addEventListener("mouseover", e => {
   });
 });
 
-$("menu").addEventListener("click", async e => {
+// 三层都能点:点大类就列整个大类,点物品族就只列那一族。悬停只展开下一栏,
+// 不动筛选 —— 手划过去不该把左栏刷掉
+$("menu").addEventListener("click", e => {
   const li = e.target.closest("li");
-  if (!li || +li.dataset.depth !== 2) return;   // 只有最内层的物品族能点
-  $("menu").classList.add("bare");
-  showResults(await getJSON("/api/items?limit=60&family=" + encodeURIComponent(li.dataset.id)));
+  if (!li) return;
+  const depth = +li.dataset.depth;
+  const path = [];
+  for (let d = 0; d < depth; d++)
+    path.push($("menu").querySelector(`li[data-depth="${d}"][aria-selected]`)?.dataset.id || "");
+  path.push(li.dataset.id);
+  lookup.sel = { cat: path[0] || "", sub: path[1] || "", fam: path[2] || "" };
+  closeMenu();
+  $("search").value = "";
+  refreshList();
 });
 
 // ── 销量榜 ─────────────────────────────────────────────────
