@@ -161,6 +161,11 @@ func (s *Server) handleCoverage(w http.ResponseWriter, r *http.Request) {
 		out["items"] = cat.Len()
 		out["catalog_synced_at"] = cat.SyncedAt()
 	}
+	if s.Ingestor != nil {
+		// 串城冲突和时钟钳位是服务端唯一看得见的抓包污染信号,
+		// 放在覆盖率里一起看:覆盖率高但冲突在涨,说明数据多而不准
+		out["ingest"] = s.Ingestor.Stats()
+	}
 	if res := s.Flip.LastScan(); res != nil {
 		out["scan"] = map[string]any{
 			"started_at":    res.StartedAt,

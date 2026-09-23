@@ -115,6 +115,103 @@ func TestSubmit_市场id收敛成城市名并保留原值(t *testing.T) {
 	}
 }
 
+// 多开时客户端只有一个"当前位置",Martlock 的单会被记成 Thetford(或反过来)。
+// 以前 LRU 只比价格和数量,错归的单进了缓存后,正确城市的观测只会续命、
+// 永远改不回来;现在身份指纹变了就按"变了"处理并计数
+func TestSubmit_同一张单换了城市按变化处理并计数(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+
+	first := order(1, 1000, 50)
+	first.ObservedAt = t0.Add(-time.Minute)
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{first}})
+
+	moved := order(1, 1000, 50) // 同价同量,只有城市不同
+	moved.LocationID = "Thetford"
+	moved.ObservedAt = t0
+	changed, touched := ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{moved}})
+	if changed != 1 || touched != 0 {
+		t.Fatalf("换城市应该入库,得到 changed=%d touched=%d", changed, touched)
+	}
+
+	st := ing.Stats()
+	if st.LocationConflicts != 1 {
+		t.Fatalf("冲突计数应为 1,得到 %d", st.LocationConflicts)
+	}
+	if st.LastConflict == nil || st.LastConflict.OrderID != 1 || st.LastConflict.LocationID != "Thetford" {
+		t.Fatalf("最近一次冲突现场不对: %+v", st.LastConflict)
+	}
+	p := ing.pending["甲"]
+	if last := p[len(p)-1]; last.OrderID != 1 || last.LocationID != "Thetford" {
+		t.Fatalf("待写队列里这张单最后应是 Thetford,得到 %+v", last)
+	}
+	if n := len(dirty.keys); n != 2 || dirty.keys[1].LocationID != "Thetford" {
+		t.Fatalf("新盘口要标脏,得到 %+v", dirty.keys)
+	}
+
+	// 再报一次 Thetford:指纹已更新,这回才是真的"没变"
+	again := moved
+	again.ObservedAt = t0
+	if changed, touched := ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{again}}); changed != 0 || touched != 1 {
+		t.Fatalf("指纹更新后的重复观测应只 touch,得到 changed=%d touched=%d", changed, touched)
+	}
+	if ing.Stats().LocationConflicts != 1 {
+		t.Fatal("重复观测不该再计冲突")
+	}
+}
+
+// touch 记的是每张单最新的观测时间。乱序到达的旧观测不能把它往回拨,
+// 否则 last_seen 会忽早忽晚,"同一眼"的判断跟着抖
+func TestSubmit_同一张单多次touch取最晚观测(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
+
+	at := func(d time.Duration) model.MarketOrder {
+		o := order(1, 1000, 50)
+		o.ObservedAt = t0.Add(d)
+		return o
+	}
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(-time.Minute)}})
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(0)}})
+	if got := ing.touches[1]; !got.Equal(t0) {
+		t.Fatalf("touches[1] 应为 T,得到 %v", got)
+	}
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(-2 * time.Minute)}}) // 晚到的旧观测
+	if got := ing.touches[1]; !got.Equal(t0) {
+		t.Fatalf("旧观测不该把 touches[1] 往回拨,得到 %v", got)
+	}
+}
+
+// 钟快的老客户端:观测时间被钳到服务端 now,计数要能在 /api/coverage 上看到
+func TestSubmit_未来时间被钳位并计数(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+	o := order(1, 1000, 50)
+	o.ObservedAt = t0.Add(time.Hour)
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{o}})
+
+	if n := ing.Stats().ClampedFuture; n != 1 {
+		t.Fatalf("钳位计数应为 1,得到 %d", n)
+	}
+	if got := ing.pending["甲"][0].ObservedAt; !got.Equal(t0) {
+		t.Fatalf("落库的观测时间应被钳到 T,得到 %v", got)
+	}
+}
+
+func TestSubmit_附魔后缀在入库前补齐(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	o := order(1, 1000, 50)
+	o.ItemID, o.Enchant = "T5_2H_FIRESTAFF", 2
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{o}})
+	if got := ing.pending["甲"][0].ItemID; got != "T5_2H_FIRESTAFF@2" {
+		t.Fatalf("落库物品应为 T5_2H_FIRESTAFF@2,得到 %q", got)
+	}
+	if dirty.keys[0].ItemID != "T5_2H_FIRESTAFF@2" {
+		t.Fatalf("脏盘口也要用补齐后的 id,得到 %q", dirty.keys[0].ItemID)
+	}
+}
+
 // 两次 flush 之间会有好几个成员提交,归属不能串。
 // 串了的话库里 reporter 那列全是最后一个上传的人,
 // 想知道"谁在传数据"就永远查不准。

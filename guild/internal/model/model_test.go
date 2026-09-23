@@ -1,6 +1,35 @@
 package model
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+)
+
+// 新旧客户端要能混跑:老客户端不带 sent_at/client_version,解码后必须是零值
+// (服务端据此不纠偏);新客户端没填时也不能序列化出 0001-01-01 这种假时间
+func TestUploadBatch_新字段对老客户端兼容(t *testing.T) {
+	var b UploadBatch
+	if err := json.Unmarshal([]byte(`{"reporter":"甲","orders":[]}`), &b); err != nil {
+		t.Fatal(err)
+	}
+	if !b.SentAt.IsZero() || b.ClientVersion != "" {
+		t.Fatalf("老格式解码后应为零值,得到 %+v", b)
+	}
+	raw, err := json.Marshal(UploadBatch{Reporter: "甲"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(raw); strings.Contains(s, "sent_at") || strings.Contains(s, "client_version") {
+		t.Fatalf("零值不该序列化出来,得到 %s", s)
+	}
+	at := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
+	raw, _ = json.Marshal(UploadBatch{SentAt: at, ClientVersion: "1.2.0"})
+	if s := string(raw); !strings.Contains(s, `"sent_at":"2026-09-23T12:00:00Z"`) || !strings.Contains(s, `"client_version":"1.2.0"`) {
+		t.Fatalf("非零值要带上,得到 %s", s)
+	}
+}
 
 func TestQuoteKey_String(t *testing.T) {
 	k := QuoteKey{ItemID: "T5_METALBAR", LocationID: "Martlock", Quality: 1, Side: SideRequest}

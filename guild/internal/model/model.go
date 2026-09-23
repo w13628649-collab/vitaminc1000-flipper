@@ -57,6 +57,15 @@ func (o MarketOrder) Key() QuoteKey {
 type UploadBatch struct {
 	Reporter string        `json:"reporter"` // 哪个角色抓到的
 	Orders   []MarketOrder `json:"orders"`
+
+	// SentAt 是客户端发出这一批时自己的钟。服务端用 now−SentAt 得出这台机器
+	// 的时钟偏差,整批平移 ObservedAt:成员的 Windows 钟快几分钟很常见,
+	// 不纠正的话 last_seen 会跑到未来,"同一眼"的判断和新鲜度全都失真。
+	// 老客户端不带这个字段,解码后是零值,服务端就不纠偏。
+	// 用 omitzero 而不是 omitempty:后者对 time.Time 这种 struct 不起作用
+	SentAt time.Time `json:"sent_at,omitzero"`
+	// ClientVersion 是上传方的版本号,老客户端为空
+	ClientVersion string `json:"client_version,omitempty"`
 }
 
 // QuoteKey 唯一标识一个盘口。

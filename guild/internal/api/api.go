@@ -83,12 +83,8 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "请求体解析失败: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	now := time.Now()
-	for i := range batch.Orders {
-		if batch.Orders[i].ObservedAt.IsZero() {
-			batch.Orders[i].ObservedAt = now
-		}
-	}
+	// 观测时间的补零、纠偏、钳位都在 ingest.Normalize 里做,
+	// 这里不再各自补一套,免得两处口径漂移
 	changed, touched := s.Ingestor.Submit(batch)
 	writeJSON(w, map[string]int{"changed": changed, "touched": touched})
 }

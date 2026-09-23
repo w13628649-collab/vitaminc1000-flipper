@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -110,13 +111,29 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 //
 // 状态没变的重复观测走这条路——它不产生历史记录,但让我们知道这张单还活着。
 // 挂单从出现到消失的存活时长,是 AODP 给不了的东西。
-func (s *Store) TouchOrders(ctx context.Context, ids []int64, seen time.Time) error {
-	if len(ids) == 0 {
+//
+// seen 是每张单各自的观测时间(ingest 已统一到服务端时钟),不是 flush 时刻:
+// last_seen 要和 WriteOrders 同一套钟,读簿时"几张单是不是同一眼看到的"
+// 才判得准。只前进不后退——乱序到达的旧观测不能把 last_seen 往回拨。
+func (s *Store) TouchOrders(ctx context.Context, seen map[int64]time.Time) error {
+	if len(seen) == 0 {
 		return nil
 	}
+	ids := make([]int64, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+	// 按 id 排序再更新:多实例共用一个库时,两边以同样的顺序加行锁,
+	// 不会互相等成死锁
+	slices.Sort(ids)
+	ts := make([]time.Time, len(ids))
+	for i, id := range ids {
+		ts[i] = seen[id]
+	}
 	_, err := s.pool.Exec(ctx, `
-		UPDATE market_order_live SET last_seen = $2
-		WHERE order_id = ANY($1) AND last_seen < $2`, ids, seen)
+		UPDATE market_order_live m SET last_seen = t.seen
+		FROM unnest($1::bigint[], $2::timestamptz[]) AS t(order_id, seen)
+		WHERE m.order_id = t.order_id AND m.last_seen < t.seen`, ids, ts)
 	return err
 }
 
