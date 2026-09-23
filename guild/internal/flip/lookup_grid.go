@@ -142,6 +142,9 @@ type CaptureSide struct {
 	Truncated     bool    `json:"truncated"`
 	DroppedOrders int     `json:"dropped_orders"`
 	StaleOrders   int     `json:"stale_orders"`
+	// PrevPageOrders 见 BookSide.PrevPageOrders:>0 表示最近一轮是续页,
+	// 最优价那几档来自更早翻到的前一页,AgeHours 也就是那一页的龄
+	PrevPageOrders int `json:"prev_page_orders"`
 }
 
 // AODPSide 是 AODP 那一侧:最优价和最远价(sell_price_max / buy_price_min),各带龄。
@@ -183,8 +186,10 @@ type GridHistory struct {
 	PriceMax      int64   `json:"price_max"`
 	StdDev30d     float64 `json:"stddev_30d"`
 	CV            float64 `json:"cv"`
-	TrendPct30d   float64 `json:"trend_pct_30d"`
-	TrendFit      float64 `json:"trend_fit"`
+	// Trend30d 是 30 日回归涨跌幅,和本接口其他比例一样是**小数**(0.05 = 涨 5%)。
+	// histagg.TrendPct30d 是百分数,这里除过 100 了
+	Trend30d float64 `json:"trend_30d"`
+	TrendFit float64 `json:"trend_fit"`
 	// Series 是窗口内的完整日,升序,不含今天。每个点 [日期, 件数, 均价]
 	Series []SeriesPoint `json:"series"`
 }
@@ -254,6 +259,8 @@ func mergeSide(cb *BookSide, aodpBest int64, aodpDate aodp.Stamp, aodpFar int64,
 			Truncated:     cb.Truncated,
 			DroppedOrders: cb.DroppedOrders,
 			StaleOrders:   cb.StaleOrders,
+
+			PrevPageOrders: cb.PrevPageOrders,
 		}
 	}
 	if aodpBest > 0 {
@@ -371,7 +378,7 @@ func summarizeHistory(item string, k cellKey, points []aodp.HistoryPoint, source
 		DailySilver7d: stats.DailyVolumeSilver,
 		Days7d:        stats.DaysWithData7d, Days30d: stats.DaysWithData30d,
 		StdDev30d: stats.StdDev30d, CV: stats.CV,
-		TrendPct30d: stats.TrendPct30d, TrendFit: stats.TrendFit,
+		Trend30d: stats.TrendPct30d / 100, TrendFit: stats.TrendFit,
 		Series: series,
 	}
 	for _, p := range series {
@@ -449,8 +456,9 @@ func buildGrid(in gridInput) *LookupGrid {
 	}
 	out.Capture.Orders = len(kept)
 	books := map[bookKey]BookSide{}
+	resp := countResponses(in.Orders) // 跨品质数页,见 respKey
 	for k, orders := range splitOrders(kept) {
-		books[k] = buildSide(orders, k.Side, now, lookupSlack, lookupNearPct)
+		books[k] = buildSide(orders, k.Side, now, lookupSlack, lookupNearPct, resp)
 	}
 
 	// ② AODP 当前价。每个 物品×城市×品质 都回一行,没数据是 0

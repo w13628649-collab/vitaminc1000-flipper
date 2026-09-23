@@ -40,7 +40,7 @@ func TestBuildSideDropsGhostBetterThanLatestWorst(t *testing.T) {
 		sellAt(4920, 5, latest),
 		sellAt(5100, 7, latest),
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 	if s.Support.Best != 4909 {
 		t.Fatalf("最优价应是最近一轮的 4909,得到 %d", s.Support.Best)
 	}
@@ -69,7 +69,7 @@ func TestBuildSideKeepsDeeperOrdersAsStaleWhenTruncated(t *testing.T) {
 		sellAt(155, 4, prev), // 比这一页最差的 149 还远 → stale
 		sellAt(160, 6, prev),
 	)
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 	if !s.Truncated {
 		t.Fatal("50 单应判为截断")
 	}
@@ -101,6 +101,183 @@ func TestBuildSideKeepsDeeperOrdersAsStaleWhenTruncated(t *testing.T) {
 	}
 }
 
+// 续页晚到:第 1 页(100..149)10 分钟前到,第 2 页(150..199)刚到,间隔超过 slack。
+// 最近一轮只有第 2 页,但第 1 页是满页,说明第 2 页是它的续页 —— 真实最优价仍是 100。
+// 以前的规则把第 1 页整页当残单丢掉,卖单最低报成 150。
+func TestBuildSideKeepsEarlierPageWhenLatestIsContinuation(t *testing.T) {
+	p1 := t0.Add(-10 * time.Minute)
+	p2 := t0.Add(-10 * time.Second)
+	var orders []store.LiveOrder
+	for i := int64(0); i < lookupPageSize; i++ {
+		orders = append(orders, sellAt(100+i, 1, p1), sellAt(150+i, 2, p2))
+	}
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Support.Best != 100 || s.DroppedOrders != 0 || s.PrevPageOrders != 50 {
+		t.Fatalf("best=%d dropped=%d prev_page=%d", s.Support.Best, s.DroppedOrders, s.PrevPageOrders)
+	}
+	if s.Orders != 100 || s.QtyTotal != 150 || s.LevelCount != 100 || !s.Truncated || s.far != 199 {
+		t.Fatalf("orders=%d total=%d levels=%d truncated=%v far=%d",
+			s.Orders, s.QtyTotal, s.LevelCount, s.Truncated, s.far)
+	}
+	// 最优价那一档的龄是第 1 页的龄,不是第 2 页的
+	if !s.bestSeen.Equal(p1) || s.Levels[0].Price != 100 || s.Levels[0].Stale {
+		t.Fatalf("bestSeen=%v first=%+v", s.bestSeen, s.Levels[0])
+	}
+
+	// 第 2 页不满 = 翻到底了,不算截断
+	orders = orders[:0]
+	for i := int64(0); i < lookupPageSize; i++ {
+		orders = append(orders, sellAt(100+i, 1, p1))
+	}
+	for i := int64(0); i < 30; i++ {
+		orders = append(orders, sellAt(150+i, 1, p2))
+	}
+	s = buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Support.Best != 100 || s.Orders != 80 || s.Truncated || s.PrevPageOrders != 50 {
+		t.Fatalf("best=%d orders=%d truncated=%v prev=%d", s.Support.Best, s.Orders, s.Truncated, s.PrevPageOrders)
+	}
+}
+
+// 续页之前那一页照样按同一套规则清理:比第 1 页最优价还好、更早的零星单仍是残单。
+func TestBuildSideContinuationStillDropsGhostsAheadOfEarlierPage(t *testing.T) {
+	ghost := t0.Add(-40 * time.Minute)
+	p1 := t0.Add(-10 * time.Minute)
+	p2 := t0.Add(-10 * time.Second)
+	orders := []store.LiveOrder{sellAt(99, 7, ghost)}
+	for i := int64(0); i < lookupPageSize; i++ {
+		orders = append(orders, sellAt(100+i, 1, p1), sellAt(150+i, 1, p2))
+	}
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Support.Best != 100 || s.DroppedOrders != 1 || s.DroppedQty != 7 || s.Orders != 100 {
+		t.Fatalf("best=%d dropped=%d/%d orders=%d", s.Support.Best, s.DroppedOrders, s.DroppedQty, s.Orders)
+	}
+}
+
+// 比最近一轮最优价还好的旧单只有几张、不成一页 → 最近一轮是从第一页重新翻的,
+// 它们要是还在就一定会出现。零星几张不能被当成"前一页"留下来。
+func TestBuildSideFewOrdersAheadAreGhostsNotAPage(t *testing.T) {
+	prev := t0.Add(-30 * time.Minute)
+	latest := t0.Add(-time.Minute)
+	var orders []store.LiveOrder
+	for i := int64(0); i < 5; i++ {
+		orders = append(orders, sellAt(100+i, 1, prev)) // 两轮之间被买走的
+	}
+	for i := int64(0); i < lookupPageSize; i++ {
+		orders = append(orders, sellAt(105+i, 1, latest))
+	}
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Support.Best != 105 || s.DroppedOrders != 5 || s.PrevPageOrders != 0 {
+		t.Fatalf("best=%d dropped=%d prev=%d", s.Support.Best, s.DroppedOrders, s.PrevPageOrders)
+	}
+}
+
+// 满页最后一档的价上,更早看到的单可能只是排到了下一页:标 stale,不剔除。
+// 没截断时同样的单就是没了。
+func TestBuildSideOrderAtWorstOfFullPageIsStale(t *testing.T) {
+	latest := t0.Add(-time.Minute)
+	prev := t0.Add(-30 * time.Minute)
+	var orders []store.LiveOrder
+	for i := int64(0); i < lookupPageSize; i++ {
+		orders = append(orders, sellAt(100+i, 1, latest))
+	}
+	orders = append(orders, sellAt(149, 4, prev))
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if !s.Truncated || s.StaleOrders != 1 || s.DroppedOrders != 0 || s.QtyTotal != 50 {
+		t.Fatalf("truncated=%v stale=%d dropped=%d total=%d", s.Truncated, s.StaleOrders, s.DroppedOrders, s.QtyTotal)
+	}
+
+	orders = []store.LiveOrder{sellAt(100, 1, latest), sellAt(101, 1, latest), sellAt(101, 4, prev)}
+	s = buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Truncated || s.StaleOrders != 0 || s.DroppedOrders != 1 {
+		t.Fatalf("truncated=%v stale=%d dropped=%d", s.Truncated, s.StaleOrders, s.DroppedOrders)
+	}
+}
+
+// 装备不筛品质时一页 50 单横跨几个品质(实测 Brecilien T5_SHOES_LEATHER_HELL@2:
+// 一次 50 单里 q1 4 张、q2 22 张、q3 21 张、q4 3 张)。单个品质永远凑不到 50,
+// 以前的规则因此永远判"翻完了",更深的旧单直接丢、卖单最高当成完整值。
+func TestBuildSideTruncationCountsPageAcrossQualities(t *testing.T) {
+	page := t0.Add(-time.Minute)
+	prev := t0.Add(-30 * time.Minute)
+	var all []store.LiveOrder
+	add := func(q int, n int, price int64) {
+		for i := 0; i < n; i++ {
+			all = append(all, ord("Brecilien", q, model.SideOffer, price+int64(i), 1, page, page))
+		}
+	}
+	add(1, 4, 80_000)
+	add(2, 22, 81_000)
+	add(3, 21, 90_000)
+	add(4, 3, 110_000)
+	// 上一轮翻到第 2 页才看到的 q1 单
+	all = append(all, ord("Brecilien", 1, model.SideOffer, 120_000, 2, prev, prev))
+
+	var q1 []store.LiveOrder
+	for _, o := range all {
+		if o.Quality == 1 {
+			q1 = append(q1, o)
+		}
+	}
+	s := buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	if !s.Truncated || s.StaleOrders != 1 || s.DroppedOrders != 0 || s.Orders != 4 {
+		t.Fatalf("跨品质满页: truncated=%v stale=%d dropped=%d orders=%d",
+			s.Truncated, s.StaleOrders, s.DroppedOrders, s.Orders)
+	}
+	// buildBook 自己按全部品质数页
+	b := buildBook("T5_SHOES_LEATHER_HELL@2", "Brecilien", 1, all, t0, 6*time.Hour, 0, conf.Default().Economics)
+	if !b.Sell.Truncated || b.Sell.StaleOrders != 1 {
+		t.Fatalf("buildBook: truncated=%v stale=%d", b.Sell.Truncated, b.Sell.StaleOrders)
+	}
+	// 只按 q1 自己数(旧行为)就是 4 张、没截断
+	s = buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	if s.Truncated || s.DroppedOrders != 1 {
+		t.Fatalf("单品质口径: truncated=%v dropped=%d", s.Truncated, s.DroppedOrders)
+	}
+
+	// 整页不满(30 单)就是翻完了,更深的旧单照样剔除
+	all = all[:0]
+	add(1, 4, 80_000)
+	add(2, 26, 81_000)
+	all = append(all, ord("Brecilien", 1, model.SideOffer, 120_000, 2, prev, prev))
+	q1 = q1[:0]
+	for _, o := range all {
+		if o.Quality == 1 {
+			q1 = append(q1, o)
+		}
+	}
+	s = buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	if s.Truncated || s.DroppedOrders != 1 || s.StaleOrders != 0 {
+		t.Fatalf("不满页: truncated=%v dropped=%d stale=%d", s.Truncated, s.DroppedOrders, s.StaleOrders)
+	}
+}
+
+// 跨品质的续页:第 1 页(q1 10 张 + q2 40 张)10 分钟前,第 2 页刚到。
+// 对 q1 来说前一页只有 10 张,单看 q1 不像一页;整页是满的,所以仍按续页保留。
+func TestBuildSideContinuationAcrossQualities(t *testing.T) {
+	p1 := t0.Add(-10 * time.Minute)
+	p2 := t0.Add(-10 * time.Second)
+	var all []store.LiveOrder
+	for i := int64(0); i < 10; i++ {
+		all = append(all, ord("Martlock", 1, model.SideOffer, 1000+i, 1, p1, p1))
+	}
+	for i := int64(0); i < 40; i++ {
+		all = append(all, ord("Martlock", 2, model.SideOffer, 1000+i, 1, p1, p1))
+	}
+	for i := int64(0); i < 20; i++ {
+		all = append(all, ord("Martlock", 1, model.SideOffer, 1100+i, 1, p2, p2))
+	}
+	var q1 []store.LiveOrder
+	for _, o := range all {
+		if o.Quality == 1 {
+			q1 = append(q1, o)
+		}
+	}
+	s := buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	if s.Support.Best != 1000 || s.Orders != 30 || s.PrevPageOrders != 10 || s.DroppedOrders != 0 {
+		t.Fatalf("best=%d orders=%d prev=%d dropped=%d", s.Support.Best, s.Orders, s.PrevPageOrders, s.DroppedOrders)
+	}
+}
+
 func TestBuildSideDropsDeeperOrdersWhenNotTruncated(t *testing.T) {
 	latest := t0.Add(-1 * time.Minute)
 	prev := t0.Add(-40 * time.Minute)
@@ -108,7 +285,7 @@ func TestBuildSideDropsDeeperOrdersWhenNotTruncated(t *testing.T) {
 		sellAt(100, 1, latest), sellAt(101, 1, latest),
 		sellAt(500, 8, prev), // 整本簿都看到了,它不在里面
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 	if s.DroppedOrders != 1 || s.StaleOrders != 0 || len(s.Levels) != 2 {
 		t.Fatalf("dropped=%d stale=%d levels=%d", s.DroppedOrders, s.StaleOrders, len(s.Levels))
 	}
@@ -124,7 +301,7 @@ func TestBuildSideBuyLadder(t *testing.T) {
 		buyAt(269, 4, seen),
 		buyAt(200, 30, seen),
 	}
-	s := buildSide(orders, model.SideRequest, t0, lookupSlack, lookupNearPct)
+	s := buildSide(orders, model.SideRequest, t0, lookupSlack, lookupNearPct, nil)
 	want := []int64{269, 266, 260, 200, 1}
 	if len(s.Levels) != len(want) {
 		t.Fatalf("levels=%d", len(s.Levels))
@@ -160,7 +337,7 @@ func TestBuildSideAges(t *testing.T) {
 		ord("Martlock", 1, model.SideOffer, 100, 1, t0.Add(-3*time.Hour), t0.Add(-2*time.Minute)),
 		ord("Martlock", 1, model.SideOffer, 100, 1, t0.Add(-1*time.Hour), t0.Add(-1*time.Minute)),
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 	l := s.Levels[0]
 	if !near(l.StandingHours, 3) || !near(l.AgeHours, 1.0/60) {
 		t.Fatalf("standing=%v age=%v", l.StandingHours, l.AgeHours)
@@ -171,7 +348,7 @@ func TestBuildSideAges(t *testing.T) {
 }
 
 func TestBuildSideEmpty(t *testing.T) {
-	s := buildSide(nil, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	s := buildSide(nil, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 	if s.has() || s.Levels == nil || len(s.Levels) != 0 || s.AgeHours != nil {
 		t.Fatalf("空的一侧: %+v", s)
 	}

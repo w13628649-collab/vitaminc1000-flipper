@@ -71,6 +71,9 @@ type BookSide struct {
 	DroppedQty    int64 `json:"dropped_qty"`
 	StaleOrders   int   `json:"stale_orders"`
 	StaleQty      int64 `json:"stale_qty"`
+	// PrevPageOrders:最近一轮只是续页(第 2 页往后)时,前面那几页是更早翻到的,
+	// 这里是从那几页保留下来、算进当前盘口的单数。0 = 最近一轮从盘口第一页开始
+	PrevPageOrders int `json:"prev_page_orders"`
 
 	Support depth.Support `json:"support"`
 	// Fill 只在请求带了 qty 时出现:吃掉这么多件的真实均价
@@ -126,25 +129,94 @@ func aggregate(orders []store.LiveOrder, side model.Side) []levelAcc {
 	return out
 }
 
-// buildSide 把一侧的挂单(调用方已按 城市 × 品质 × 方向 过滤)整理成阶梯。
+// respKey 标识游戏的一次响应:同一 城市 × 方向、last_seen 完全相同的那批单。
 //
-// 「最近一轮」规则,专门对付上一轮浏览留下的幽灵单:
-//
-//   - newest = 所有单里最新的 last_seen;last_seen ≥ newest − slack 的算最近一轮
-//   - worst = 最近一轮里最差的价;单数是页大小的整数倍就算 truncated(可能没翻完)
-//   - 不在最近一轮里的单:价格优于或等于 worst → 丢弃。用户翻过的页里本该有它,
-//     没出现就是没了(实测 T6_LEATHER @ Martlock 上一轮有张 4906 的卖单,
-//     比最近一轮的最低价 4909 还便宜,它要是还在就一定会出现)
-//   - 比 worst 更差、且没截断 → 丢弃:整本簿都看到了,它不在里面
-//   - 比 worst 更差、且截断了 → 保留但标 stale,不进 best / qty_near / support
-func buildSide(orders []store.LiveOrder, side model.Side, now time.Time,
-	slack time.Duration, nearPct float64) BookSide {
+// 实测一次响应最多 50 单(24 小时里 149 组恰好 50 单,没有一组超过),
+// 而且**装备不筛品质时一页是跨品质的**(Brecilien 一次 50 单横跨 q1~q4)。
+// 所以"这一页满没满"必须跨品质数,在 城市 × 品质 里数永远凑不到 50。
+type respKey struct {
+	City string
+	Side model.Side
+	Seen int64 // UnixMicro:库里是微秒精度
+}
 
-	out := BookSide{Levels: []LadderLevel{}}
-	if len(orders) == 0 {
-		return out
+type respSizes map[respKey]int
+
+// countResponses 按响应数单。传进来的应是这个物品在各城市、**所有品质**上的单。
+func countResponses(orders []store.LiveOrder) respSizes {
+	out := respSizes{}
+	for _, o := range orders {
+		out[respKey{o.City, o.Side, o.LastSeen.UnixMicro()}]++
 	}
+	return out
+}
 
+// fullPage:这张单所在的那次响应是满页,后面多半还有下一页。
+func (r respSizes) fullPage(o store.LiveOrder) bool {
+	return r[respKey{o.City, o.Side, o.LastSeen.UnixMicro()}] >= lookupPageSize
+}
+
+// pageTruncated 判一轮是不是没翻完。两条满足一条就算:
+//
+//   - 这一轮的单数是页大小的整数倍。同一页里有几张单几秒后被详情页又看了一眼,
+//     last_seen 挪走了,按响应数就不满 50,按轮数还是 50
+//   - 这一轮最深那一档所在的响应是满页。装备一页跨品质,单个品质的单数凑不齐 50,
+//     只能看整页
+//
+// 第二条在"满页 + 不满的下一页"而这个品质恰好没落在下一页时会误报为截断,
+// 代价只是更深的旧单标成 stale(灰掉、不进统计)而不是直接剔掉。
+// 反过来,最深那一档要是来自另一次零星的响应(比如详情页只回了一张),就认不出截断。
+// 要分清得按响应先后和价格区间把页串成链,等看过协议、确认分页单位再做。
+func pageTruncated(latest []store.LiveOrder, worst int64, resp respSizes) bool {
+	if n := len(latest); n >= lookupPageSize && n%lookupPageSize == 0 {
+		return true
+	}
+	for _, o := range latest {
+		if o.Price == worst && resp.fullPage(o) {
+			return true
+		}
+	}
+	return false
+}
+
+// sideSplit 是 splitRounds 的结果:当前盘口、stale、剔除三份。
+type sideSplit struct {
+	cur, stale []store.LiveOrder
+	dropped    int
+	droppedQty int64
+	prevPage   int   // cur 里来自续页之前那几页的单数
+	truncated  bool  // 最近一轮(最深那一页)没翻完
+	worst      int64 // 最近一轮里最差的价
+}
+
+func (sp *sideSplit) drop(o store.LiveOrder) {
+	sp.dropped++
+	sp.droppedQty += o.Amount
+}
+
+// splitRounds 是「最近一轮」规则,专门对付上一轮浏览留下的幽灵单:
+//
+//   - newest = 所有单里最新的 last_seen;last_seen ≥ newest − slack 的算最近一轮,
+//     best / worst 是这一轮的最优 / 最差价
+//   - 旧单落在 (best, worst] 里 → 剔除。用户翻过的页里本该有它,没出现就是没了
+//   - 旧单比 worst 更差(或正好压在满页的 worst 上)→ 这一轮没翻到那么深:
+//     没截断就剔除(整本簿都看到了),截断了就保留但标 stale,不进 best / qty_near / support
+//   - 旧单不比 best 差 → 两种可能,看更早那几张单自己是不是满页:
+//     ① 不是满页:本轮是从第一页重新翻的,这些单要是还在就一定会出现 → 剔除
+//     (实测 T6_LEATHER @ Martlock 上一轮有张 4906 的卖单,比最近一轮的最低价 4909
+//     还便宜);② 是满页:本轮只是它的**续页**(第 2 页晚到了超过 slack),
+//     那一页仍是对盘口前半截最新的一眼 → 递归地照同一套规则整理后保留。
+//     唯一分不开的是"两轮之间有人一口气扫掉了整整一页",那种情况会按续页处理
+//
+// bounded:调用方是在整理续页之前的那几页,更深的那一截已经被续页盖住,
+// 比这一轮 worst 更差的旧单一律剔除,不会是 stale。
+func splitRounds(orders []store.LiveOrder, side model.Side, slack time.Duration,
+	resp respSizes, bounded bool) sideSplit {
+
+	var sp sideSplit
+	if len(orders) == 0 {
+		return sp
+	}
 	newest := orders[0].LastSeen
 	for _, o := range orders[1:] {
 		if o.LastSeen.After(newest) {
@@ -161,29 +233,80 @@ func buildSide(orders []store.LiveOrder, side model.Side, now time.Time,
 		}
 	}
 	// newest 取自 orders 本身,latest 至少有一张
-	worst := latest[0].Price
+	best, worst := latest[0].Price, latest[0].Price
 	for _, o := range latest[1:] {
+		if better(side, o.Price, best) {
+			best = o.Price
+		}
 		if better(side, worst, o.Price) {
 			worst = o.Price
 		}
 	}
-	out.Truncated = len(latest) >= lookupPageSize && len(latest)%lookupPageSize == 0
+	sp.cur, sp.worst = latest, worst
+	sp.truncated = pageTruncated(latest, worst, resp)
 
-	var stale []store.LiveOrder
+	var ahead []store.LiveOrder
 	for _, o := range older {
-		if !better(side, worst, o.Price) || !out.Truncated {
-			// o 不比 worst 差(在翻过的范围里却没再出现),或者整本簿都看过了
-			out.DroppedOrders++
-			out.DroppedQty += o.Amount
-			continue
+		switch {
+		case !better(side, best, o.Price):
+			ahead = append(ahead, o) // 不比本轮最优价差
+		case better(side, worst, o.Price) || (o.Price == worst && sp.truncated):
+			if sp.truncated && !bounded {
+				sp.stale = append(sp.stale, o)
+			} else {
+				sp.drop(o)
+			}
+		default:
+			sp.drop(o) // 落在本轮翻过的价格区间里却没再出现:已成交或撤单
 		}
-		stale = append(stale, o)
-		out.StaleOrders++
+	}
+	if len(ahead) == 0 {
+		return sp
+	}
+	prev := splitRounds(ahead, side, slack, resp, true)
+	if !prev.truncated {
+		for _, o := range ahead {
+			sp.drop(o)
+		}
+		return sp
+	}
+	sp.cur = append(sp.cur, prev.cur...)
+	sp.prevPage = len(prev.cur)
+	sp.dropped += prev.dropped
+	sp.droppedQty += prev.droppedQty
+	return sp
+}
+
+// buildSide 把一侧的挂单(调用方已按 城市 × 品质 × 方向 过滤)整理成阶梯,
+// 取舍规则见 splitRounds。resp 是跨品质的响应计数(countResponses);
+// nil 时就按 orders 自己数,只适合单品质的物品和单测。
+func buildSide(orders []store.LiveOrder, side model.Side, now time.Time,
+	slack time.Duration, nearPct float64, resp respSizes) BookSide {
+
+	out := BookSide{Levels: []LadderLevel{}}
+	if len(orders) == 0 {
+		return out
+	}
+	if resp == nil {
+		resp = countResponses(orders)
+	}
+	sp := splitRounds(orders, side, slack, resp, false)
+	out.Truncated = sp.truncated
+	out.DroppedOrders, out.DroppedQty = sp.dropped, sp.droppedQty
+	out.PrevPageOrders = sp.prevPage
+	out.StaleOrders = len(sp.stale)
+	for _, o := range sp.stale {
 		out.StaleQty += o.Amount
 	}
+	newest := orders[0].LastSeen
+	for _, o := range orders[1:] {
+		if o.LastSeen.After(newest) {
+			newest = o.LastSeen
+		}
+	}
 
-	fresh := aggregate(latest, side)
-	old := aggregate(stale, side)
+	fresh := aggregate(sp.cur, side)
+	old := aggregate(sp.stale, side)
 
 	best := fresh[0].price
 	hours := func(t time.Time) float64 { return math.Max(0, now.Sub(t).Hours()) }
@@ -213,7 +336,7 @@ func buildSide(orders []store.LiveOrder, side model.Side, now time.Time,
 	}
 	out.LevelCount = len(fresh)
 	out.Support = depth.Analyze(levels, nearPct)
-	out.far = worst
+	out.far = sp.worst
 	out.bestSeen = fresh[0].maxSeen
 	out.ordersAtBest = fresh[0].orders
 	nt := newest
@@ -332,8 +455,10 @@ func buildBook(itemID, city string, quality int, orders []store.LiveOrder,
 			sellOrders = append(sellOrders, o)
 		}
 	}
-	sell := buildSide(sellOrders, model.SideOffer, now, lookupSlack, lookupNearPct)
-	buy := buildSide(buyOrders, model.SideRequest, now, lookupSlack, lookupNearPct)
+	// 页满没满要跨品质数:orders 是这个物品所有品质的单
+	resp := countResponses(orders)
+	sell := buildSide(sellOrders, model.SideOffer, now, lookupSlack, lookupNearPct, resp)
+	buy := buildSide(buyOrders, model.SideRequest, now, lookupSlack, lookupNearPct, resp)
 	if want > lookupMaxWant {
 		want = lookupMaxWant
 	}

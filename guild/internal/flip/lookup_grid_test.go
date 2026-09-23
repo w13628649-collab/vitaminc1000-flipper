@@ -31,7 +31,7 @@ func TestLookupCities(t *testing.T) {
 
 func TestMergeSidePicksNewerSide(t *testing.T) {
 	seen := t0.Add(-10 * time.Minute)
-	cb := buildSide([]store.LiveOrder{sellAt(100, 5, seen)}, model.SideOffer, t0, lookupSlack, lookupNearPct)
+	cb := buildSide([]store.LiveOrder{sellAt(100, 5, seen)}, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
 
 	cases := []struct {
 		name string
