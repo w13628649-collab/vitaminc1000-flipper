@@ -48,7 +48,7 @@ header{display:flex; flex-wrap:wrap; gap:20px; align-items:baseline;
        padding:22px 0 16px; border-bottom:2px solid var(--ink)}
 .brand{font-size:19px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
 .brand span{color:var(--bronze)}
-.facts{display:flex; gap:22px; margin-left:auto; flex-wrap:wrap}
+.facts{display:flex; gap:22px; flex-wrap:wrap}
 .fact{display:flex; flex-direction:column; gap:1px; text-align:right}
 #quit{align-self:center; margin-left:4px}
 .fact b{font-size:14px; font-weight:600; line-height:1.2}
@@ -62,8 +62,8 @@ header{display:flex; flex-wrap:wrap; gap:20px; align-items:baseline;
   color:var(--ink-mid); font-size:12.5px; line-height:1.5; max-width:100ch}
 .banner b{color:var(--warn)}
 
-/* 页签:旧版的药丸式,当前页墨底纸字 */
-nav{display:flex; flex-wrap:wrap; gap:2px; padding:12px 0; border-bottom:1px solid var(--rule)}
+/* 页签:旧版的药丸式,当前页墨底纸字。和旧版一样放在顶栏里,把状态挤到最右 */
+nav{display:flex; flex-wrap:wrap; gap:2px; margin-right:auto}
 nav button{
   font:inherit; font-weight:600; font-size:13px; cursor:pointer;
   background:transparent; color:var(--ink-soft); border:1px solid transparent;
@@ -176,10 +176,19 @@ tr.detail tbody tr:hover{background:var(--surface-2)}
   background:var(--surface); border:1px solid var(--ink); border-radius:var(--r);
   box-shadow:0 10px 30px rgba(21,24,28,.18); max-width:min(92vw,780px); overflow-x:auto}
 .menu.bare{display:none}   /* 同权重后写的赢,这条必须在 .menu 之后 */
-.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto; min-width:190px}
+/* 旧版是固定的三栏并排(196 / 196 / 236),每栏顶上有列标题,还没展开的栏写一句提示 */
+.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto;
+         width:196px; flex:none}
+.menu ul:last-child{width:236px}
 .menu ul+ul{border-left:1px solid var(--rule-soft)}
+.menu ul:empty::before{content:"← 指向左边一栏"; display:block; padding:14px 12px;
+         font-size:11.5px; color:var(--ink-soft)}
 .menu li{padding:5px 11px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;
          display:flex; gap:10px; align-items:baseline}
+.menu li.menu-head,.menu li.menu-head:hover{padding:6px 11px 5px; margin-bottom:3px; cursor:default;
+         font-size:10.5px; font-weight:600; color:var(--ink-soft); background:transparent;
+         border-bottom:1px solid var(--rule-soft)}
+.menu li>b{font-weight:inherit; overflow:hidden; text-overflow:ellipsis; min-width:0}
 .menu li span{margin-left:auto; font-size:10.5px; color:var(--ink-soft); font-weight:400}
 .menu li.has::after{content:"›"; color:var(--ink-soft); font-size:12px}
 /* 悬停只是浅一层;已展开的那条路径是墨底纸字 —— 两个状态必须分开写 */
@@ -226,8 +235,9 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 #menu-btn[aria-expanded=true]::after{color:var(--paper)}
 #menu-btn:disabled{opacity:.45; cursor:default}
 
-.lookup-body{display:grid; grid-template-columns:302px minmax(0,1fr); gap:24px;
-  padding-top:18px; align-items:start}
+/* 不设 align-items:start —— 左栏要拉满整行,它的右边线才能贯穿整张价格表(旧版就是这样)。
+   右栏自己 align-self:start,sticky 不受影响 */
+.lookup-body{display:grid; grid-template-columns:302px minmax(0,1fr); gap:24px; padding-top:18px}
 /* 开着挂单簿时挤出第三栏。右侧本来就是空的,不用牺牲价格矩阵。
    上限封在 480px:只按 32vw 走的话大屏上右栏比中栏还宽 */
 .lookup-body.with-book{grid-template-columns:302px minmax(0,1fr) minmax(360px,min(32vw,480px))}
@@ -266,12 +276,20 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 .verdict b{font-size:15px; font-weight:700}
 .verdict i{font-style:normal; font-size:11px; color:var(--ink-soft)}
 
-/* 五档品质都有数据时表比中栏宽,只让表自己横向滚,标题和说明照常折行 */
+/* 五档品质都有数据时表比中栏宽,只让表自己横向滚,标题和说明照常折行。
+   表底下那条原生滚动条在很高的表的最下面、落在视口外,所以表头上面再放一条同步的
+   (.hbar,只在放不下时出现),城市列钉在左边,横着滚也知道是哪一行。
+   用 separate + 0 间距而不是 collapse:collapse 下钉住的格子带不走自己的边框 */
+.hbar{overflow-x:auto; overflow-y:hidden; margin-top:4px}
+.hbar div{height:1px}
+.hbar-note{font-size:11px; color:var(--ink-soft); margin-top:2px}
 .matrix-wrap{overflow-x:auto}
-#v-lookup .matrix{width:100%; border-collapse:collapse; margin-top:4px}
+#v-lookup .matrix{width:100%; border-collapse:separate; border-spacing:0; margin-top:4px}
 #v-lookup .matrix th{font-size:11px; font-weight:600; color:var(--ink-soft); padding:7px 8px;
   border-bottom:1px solid var(--ink); text-align:center; white-space:nowrap}
-#v-lookup .matrix th:first-child{text-align:left; width:112px}
+#v-lookup .matrix th:first-child{text-align:left; width:112px; min-width:112px}
+#v-lookup .matrix-wrap.hscroll th:first-child,
+#v-lookup .matrix-wrap.hscroll td:first-child{position:sticky; left:0; z-index:1; background:var(--paper)}
 #v-lookup .matrix th .qdot{display:inline-block; width:8px; height:8px; border-radius:50%;
   background:var(--q); margin-right:5px}
 #v-lookup .matrix th.q{color:var(--q); border-bottom-color:var(--q)}
@@ -329,16 +347,23 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 .matrix-note p{margin:0 0 7px}
 .matrix-note b{color:var(--ink-mid)}
 .matrix-note b.warnish{color:var(--warn)}
+/* 图例里的「抓」要和格子里的一样是绿底白字:.matrix-note b 的特异性比 .src 高,会把字染成深灰 */
+.matrix-note .src{color:#fff}
 
 .diagnosis{margin:0 0 14px; padding:11px 13px; background:var(--surface);
   border-left:3px solid var(--bronze); font-size:12.5px; color:var(--ink-mid); max-width:80ch}
 .diagnosis b{color:var(--ink)}
 .diagnosis.warn{border-left-color:var(--warn)}
 
-/* ── 右侧挂单簿:sticky,点格子就出来,页面不用滚 ── */
+/* ── 右侧挂单簿:sticky,点格子就出来,页面不用滚 ──
+   max-height 这里只是兜底。真正的高度由 app.js 的 fitLookup 按"查价区在视口里露出来的那一段"
+   实时算:页面在顶部时挂单簿从自己的位置到视口底;滚到底时不超过查价区的下沿 ——
+   写死 100vh 的话,前者底部的走势图落在视口外,后者标题和「收起」被顶出视口 */
 .bookside{position:sticky; top:14px; align-self:start; min-width:0;
   max-height:calc(100vh - 28px); overflow-y:auto; overscroll-behavior:contain;
   border-left:1px solid var(--rule); padding-left:18px}
+.bookhead .stalehint{flex-basis:100%; font-size:11.5px; color:var(--warn)}
+.bookhead .stalehint button{margin-left:6px}
 .bookwrap{padding:0 0 12px}
 .bookhead{display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;
   position:sticky; top:0; background:var(--paper); padding:2px 0 8px; z-index:2}
@@ -375,11 +400,13 @@ table.ladder tr.stale td{opacity:.45}
 .qbar.sell{background:var(--warn)} .qbar.buy{background:var(--gain)}
 .ladderfoot{font-size:11px; color:var(--ink-soft); padding-top:6px}
 .ladderfoot .warnish{color:var(--warn)}
+/* viewBox 宽度按画图那一刻右栏的实际像素宽取(见 tradeChart),1 个单位 ≈ 1px,
+   字号才是真的字号。以前 viewBox 固定 640 宽、被缩到 414px,9.5 的字实际只有 6px */
 .tradechart{width:100%; height:auto; display:block}
 .tradechart .vbar{fill:var(--bronze); opacity:.3}
 .tradechart .vline{fill:none; stroke:var(--ink); stroke-width:1.5}
 .tradechart .vdot{fill:var(--ink)}
-.tradechart .ax{font-size:9.5px; fill:var(--ink-soft)}
+.tradechart .ax{font-size:10.5px; fill:var(--ink-soft)}
 .void{color:var(--ink-soft); font-size:12px; padding:10px 0; text-align:center}
 
 /* 媒体查询一律写在基础规则之后。旧版把 1180 那条写在 .bookside 前面,

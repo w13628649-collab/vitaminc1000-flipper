@@ -8,8 +8,18 @@
 </head>
 <body>
 <div class="wrap">
+  <!-- 页签和旧版 web 端一样放在顶栏这一行里:品牌名 | 页签 | 状态。
+       拆成单独一行会让查价页整体下移一截,右侧挂单簿就更容易露到视口外 -->
   <header>
     <div class="brand">albion <span>guild</span></div>
+    <nav>
+      <button data-view="desk" aria-current="page">总览</button>
+      <button data-view="ideas">机会</button>
+      <button data-view="lookup">查价</button>
+      <button data-view="rank">销量榜</button>
+      <button data-view="book">记账</button>
+      <button data-view="live">实时</button>
+    </nav>
     <div class="facts">
       <div class="fact"><b id="capture"><span class="dot dead"></span>未抓包</b><i id="capture-sub">本机</i></div>
       <div class="fact"><b id="who">—</b><i id="who-sub">角色</i></div>
@@ -21,15 +31,6 @@
 
   <!-- 驱动没装就完全收不到数据,这是唯一值得占一整条的警告 -->
   <div id="driver-warn" class="banner" hidden></div>
-
-  <nav>
-    <button data-view="desk" aria-current="page">总览</button>
-    <button data-view="ideas">机会</button>
-    <button data-view="lookup">查价</button>
-    <button data-view="rank">销量榜</button>
-    <button data-view="book">记账</button>
-    <button data-view="live">实时</button>
-  </nav>
 
   <!-- ═══════════ 总览:这笔钱怎么分 ═══════════ -->
   <section class="view" id="v-desk">

@@ -62,6 +62,7 @@ function show(name, push = true) {
     currentView = name;
     window.scrollTo(0, 0);   // 从机会表下面点物品名跳过来时,别停在半页
   }
+  if (name === "lookup") queueFit();   // 隐藏时量不出尺寸,切回来补一次
   if (name === "rank") loadRank();
   if (name === "book") loadBook();
 }
@@ -76,9 +77,13 @@ function route() {
   if (view === "lookup" && arg) {
     let id = "";
     try { id = decodeURIComponent(arg); } catch (e) { return; }
-    // selectItem 自己会改 hash,再触发一次 hashchange 到这里:同一件就跳过,
-    // 否则每点一次物品都要请求两遍
-    if (id && id !== lookup.itemId) selectItem(id);
+    // selectItem 自己会改 hash,再触发一次 hashchange 到这里:那时请求还在飞,跳过,
+    // 否则每点一次物品都要请求两遍。已经有一份新鲜数据也跳过。
+    // 但上一次失败了、或者那份已经是一分钟前的,就重查 —— 只看 id 相同的话,
+    // 查失败之后从别的页点同一件、地址栏回车,都再也不会重试
+    const reuse = id === lookup.itemId &&
+      (lookup.pending || (lookup.data && Date.now() - lookup.loadedAt < LOOKUP_REUSE_MS));
+    if (id && !reuse) selectItem(id);
   }
 }
 
@@ -513,12 +518,19 @@ $("close-form").addEventListener("submit", async e => {
 // **直接用矩阵里同一格的 history 对象**,卡片和面板因此是同一份数、同一个来源。
 const lookup = {
   itemId: null, seq: 0, data: null,          // seq:连点物品只认最后一次回来的
+  pending: false, loadedAt: 0,               // 请求在飞 / data 是什么时候拿到的(本机时钟)
   list: [], listSeq: 0, listTouched: false,
   sel: { cat: "", sub: "", fam: "" },
   timer: null,
 };
-// 右栏。和记账页的 loadBook/book-rows 是两回事,名字特意分开
-const ladder = { key: "", itemId: "", city: "", quality: 0, seq: 0, data: null };
+// 同一件物品在这个时间内再被路由到,直接用手上那份,不重查
+const LOOKUP_REUSE_MS = 60000;
+// 点格子时价格表和阶梯一起重拉。表最多等这么久:AODP 缓存过期又撞上限流时
+// grid 要十几秒,右栏不能一直转圈 —— 等不到就先用手上那份画,回来再整体重画
+const GRID_WAIT_MS = 2500;
+// 右栏。和记账页的 loadBook/book-rows 是两回事,名字特意分开。
+// gridLate:这次跟着重拉的价格表还没回来,面板顶部的数暂时是旧的
+const ladder = { key: "", itemId: "", city: "", quality: 0, seq: 0, data: null, gridLate: false };
 
 const iconURL = id => `/api/icon/${encodeURIComponent(id)}`;
 const displayName = it => (it.name_zh || it.name_en || it.item_id) + (it.enchantment ? "." + it.enchantment : "");
@@ -541,7 +553,8 @@ const lookupCell = (d, city, q) => (d?.cells || []).find(c => c.city === city &&
 })();
 
 // ── 左栏:物品列表 ──
-async function refreshList() {
+// reveal:按当前物品的分类自动填的左栏,填完把选中那一项滚进列表的可见范围
+async function refreshList(opts = {}) {
   const seq = ++lookup.listSeq;
   const q = $("search").value.trim();
   // 搜索和分类是互斥的两条路,置灰比只写一句 placeholder 说得清楚。
@@ -572,7 +585,11 @@ async function refreshList() {
   lookup.list = rows;
   $("list-head").textContent = head;
   renderList();
-  $("list").scrollTop = 0;
+  const list = $("list");
+  list.scrollTop = 0;
+  const on = opts.reveal && list.querySelector("button.on");
+  // 只滚左栏自己,不用 scrollIntoView:那个会连带把整页也滚走
+  if (on) list.scrollTop = on.getBoundingClientRect().top - list.getBoundingClientRect().top - 40;
 }
 
 function renderList() {
@@ -605,28 +622,40 @@ $("f-qual").addEventListener("change", () => { if (lookup.data) renderPrices(loo
 async function selectItem(itemId) {
   if (!itemId) return;
   const seq = ++lookup.seq;
+  // 同一件重查(页面开久了、从别的页跳回来)时旧表先留着,新数据回来再换,别闪成"正在查"
+  const again = itemId === lookup.itemId && !!lookup.data;
   lookup.itemId = itemId;
-  lookup.data = null;
+  lookup.pending = true;
+  if (!again) lookup.data = null;
   markListSelection();
   const h = "#lookup/" + encodeURIComponent(itemId);
-  if (location.hash !== h) location.hash = h;   // route() 看到是同一件会跳过
+  if (location.hash !== h) location.hash = h;   // route() 看到请求在飞会跳过
   $("lookup-empty").hidden = true;
   const box = $("lookup-result");
   box.hidden = false;
-  box.innerHTML = `<div class="empty"><p>正在查 ${esc(itemId)} …</p></div>`;
+  if (!again) box.innerHTML = `<div class="empty"><p>正在查 ${esc(itemId)} …</p></div>`;
   // 旧右栏先留着,新数据回来、确认换了物品再收(renderPrices 里处理)
   try {
     const d = await getJSON("/api/lookup/grid?item=" + encodeURIComponent(itemId));
     if (seq !== lookup.seq) return;   // 快速切物品时先发的请求可能晚到
+    lookup.pending = false;
     lookup.data = d;
+    lookup.loadedAt = Date.now();
     renderPrices(d);
-    // 从别的页面点物品名跳过来时左栏是空的:照这件物品的分类填上
-    if (!lookup.listTouched && !$("search").value.trim() && d.item?.category) {
+    // 同一件重查过了,右栏的阶梯也得跟着换成这一刻的,不然面板上下两半是两个时间的数
+    if (ladder.key && ladder.itemId === itemId) loadLadder(++ladder.seq, { grid: false });
+    // 从别的页面点物品名跳过来、这件又不在左栏里:照它的分类重填左栏。
+    // 每次都要判断,不是只有第一次 —— 旧版 gotoItem 就是每次都重填。
+    // 用户自己在搜索框里搜着的时候不动
+    const inList = lookup.list.some(it => it.item_id === itemId);
+    if (!inList && !$("search").value.trim() && d.item?.category) {
       lookup.sel = { cat: d.item.category, sub: d.item.subcategory || "", fam: d.item.family || "" };
-      refreshList();
+      refreshList({ reveal: true });
     }
   } catch (err) {
     if (seq !== lookup.seq) return;
+    lookup.pending = false;
+    lookup.data = null;
     box.innerHTML = `<div class="empty"><h2>查不到</h2><p>${esc(err.message || err)}</p></div>`;
     closeLadder();
   }
@@ -687,7 +716,8 @@ function renderPrices(d) {
   // 一侧的来源说明:两路都列出来,说清楚用的是哪一路、为什么
   const srcHint = s => {
     const lines = [];
-    if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${s.capture.orders_at_best} 单 · 5% 以内 ${num(s.capture.qty_near)} 件`);
+    if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${Number(s.capture.orders_at_best)} 单 · 5% 以内 ${num(s.capture.qty_near)} 件`);
+    if (s.capture?.prev_page_orders) lines.push(`最近一次只翻到了后面的页,前面 ${Number(s.capture.prev_page_orders)} 张单是更早那一页看到的,照样算在内`);
     if (s.aodp) lines.push(`AODP ${num(s.aodp.best)}(${s.aodp.age_hours == null ? "没有时间戳" : ageText(s.aodp.age_hours) + " 前"})`);
     if (s.capture && s.aodp) lines.push(`用的是${s.pick === "capture" ? "抓包" : "AODP"}:两路谁新用谁,一样新用抓包`);
     return lines.join("\n");
@@ -789,7 +819,14 @@ function renderPrices(d) {
   const otherTxt = others.length
     ? `抓包里另有 ${others.map(([k, v]) => `${esc(k)} ${Number(v)} 单`).join("、")} 来自没收敛成城市名的地点,没放进表里。` : "";
 
+  // 整表重画会把横向滚动位置和焦点一起冲掉:点格子时价格表会跟着重拉、重画,
+  // 五档品质的装备点了"杰出"那列,重画完又滚回最左边就白点了
+  const oldWrap = $("lookup-result").querySelector(".matrix-wrap");
+  const keep = oldWrap ? { x: oldWrap.scrollLeft, focus: oldWrap.contains(document.activeElement) } : null;
+
   $("lookup-result").innerHTML = head + aodpWarn + `
+    <div class="hbar" hidden aria-hidden="true"><div></div></div>
+    <div class="hbar-note" hidden></div>
     <div class="matrix-wrap"><table class="matrix">
       <thead><tr><th>城市</th>${shown.map(q =>
         `<th class="q" style="--q:var(--q${q})"><i class="qdot"></i>${QUALITY[q] || q}</th>`
@@ -800,7 +837,7 @@ function renderPrices(d) {
       <p><b>卖单最低</b>就是游戏里市场「销售订单」页签最上面那一行 —— 别人挂着卖的最低价,
       你想马上买到货付的就是它。<b>买单最高</b>是「购买订单」页签最上面那一行 —— 别人挂着收的最高价,
       你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 5% 以内的件数,只有自建抓包拿得到;
-      带 <b class="src" style="margin:0">抓</b> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
+      带 <i class="src" style="margin:0">抓</i> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
       <p>所以<b>卖单价总是比买单价高</b>,这段差就是倒爷的利润空间。<b>同城价差</b>已经替你把
       ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了(真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}):
       在这座城挂买单收货、再挂卖单出货,一轮下来的净毛利率。为正才值得做。
@@ -816,14 +853,74 @@ function renderPrices(d) {
       查询于 ${new Date(d.fetched_at).toLocaleString("zh-CN")}。</p>
     </div>`;
 
-  // 换物品了,右侧那份是上一个物品的,收掉;同一物品重画(切品质)就保持打开
+  // 换物品了,右侧那份是上一个物品的,收掉;同一物品重画(切品质、重拉)就保持打开
   if (ladder.itemId && ladder.itemId !== lookup.itemId) closeLadder();
   else if (ladder.key) { markOpenCell(); if (ladder.data) renderLadder(); }
+
+  const wrap = $("lookup-result").querySelector(".matrix-wrap");
+  const bar = $("lookup-result").querySelector(".hbar");
+  // 两条滚动条互相跟。赋同一个值不会再触发 scroll,不会来回弹
+  bar.addEventListener("scroll", () => { wrap.scrollLeft = bar.scrollLeft; }, { passive: true });
+  wrap.addEventListener("scroll", () => { bar.scrollLeft = wrap.scrollLeft; }, { passive: true });
+  fitLookup();
+  if (keep) {
+    wrap.scrollLeft = keep.x;
+    if (keep.focus) wrap.querySelector(".cellbtn.open")?.focus({ preventScroll: true });
+  }
 }
 $("lookup-result").addEventListener("click", e => {
   const b = e.target.closest(".cellbtn");
-  if (b) openLadder(b.dataset.city, Number(b.dataset.q));
+  if (b) openLadder(b.dataset.city, Number(b.dataset.q), b);
 });
+
+// ── 查价页的尺寸:右栏高度、表格横向滚动条 ──
+// 挂单簿是 sticky 的,但高度不能写死 100vh:页面在顶部时它从自己的位置(离视口顶两百多 px)
+// 往下排,底部的走势图就落到视口外;滚到底时 sticky 被查价区下沿卡住,标题和「收起」
+// 又被顶出视口。这里按"查价区在视口里露出来的那一段"算,两头都放得下。
+function fitLookup() {
+  if (currentView !== "lookup") return;
+  const bp = $("bookpanel");
+  if (!bp.hidden && getComputedStyle(bp).position === "sticky") {
+    // 按查价区的内容框算(它有 padding-top),不然右栏底边会多出那 18px 落到视口外
+    const body = $("lookup-body"), lb = body.getBoundingClientRect(), cs = getComputedStyle(body);
+    const top = Math.max(14, lb.top + parseFloat(cs.paddingTop));
+    const bottom = Math.min(innerHeight - 14, lb.bottom - parseFloat(cs.paddingBottom));
+    bp.style.maxHeight = Math.max(240, Math.floor(bottom - top)) + "px";
+  } else {
+    bp.style.maxHeight = "";   // 窄屏下右栏排到下面,不 sticky,也不限高
+  }
+  // 右栏宽度变了(改窗口大小、滚动条出现)就按新宽度重画走势图,字号保持 1:1
+  const box = bp.querySelector(".chartbox");
+  if (box && !bp.hidden) {
+    const w = Math.floor(box.clientWidth);
+    const cur = +(box.querySelector("svg")?.viewBox.baseVal.width || 0);
+    if (cur && w > 0 && Math.abs(w - cur) > 2) box.innerHTML = tradeChart(ladder.series, w);
+  }
+  const wrap = $("lookup-result").querySelector(".matrix-wrap");
+  if (!wrap) return;
+  const over = wrap.scrollWidth - wrap.clientWidth;
+  const bar = $("lookup-result").querySelector(".hbar");
+  const note = $("lookup-result").querySelector(".hbar-note");
+  wrap.classList.toggle("hscroll", over > 1);
+  bar.hidden = note.hidden = over <= 1;
+  if (over > 1) {
+    bar.firstElementChild.style.width = wrap.scrollWidth + "px";
+    bar.scrollLeft = wrap.scrollLeft;
+    // 告诉人右边还藏着哪几列,不然五档品质只看得到两档半,也不知道要滚
+    const cut = wrap.getBoundingClientRect().right;
+    const hiddenQ = [...wrap.querySelectorAll("thead th.q")]
+      .filter(th => th.getBoundingClientRect().right > cut + 1).map(th => th.textContent.trim());
+    note.textContent = `表比这一栏宽${hiddenQ.length ? `,右边还有 ${hiddenQ.join("、")}` : ""}:拖上面这条横向滚动,或者用「品质」只看一档`;
+  }
+}
+let fitQueued = false;
+function queueFit() {
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(() => { fitQueued = false; fitLookup(); });
+}
+window.addEventListener("scroll", queueFit, { passive: true });
+window.addEventListener("resize", queueFit);
 
 // ── 右栏:完整挂单簿 ──
 // 游戏里那两栏只显示塞得进屏幕的几行,这里给全,还带累计量、相对最优价的落差、
@@ -835,11 +932,12 @@ function markOpenCell() {
 
 function closeLadder() {
   ladder.seq++;   // 还在飞的请求回来也别往已经收起的栏里写
-  ladder.key = ""; ladder.itemId = ""; ladder.data = null;
+  ladder.key = ""; ladder.itemId = ""; ladder.data = null; ladder.gridLate = false; ladder.series = [];
   $("bookpanel").innerHTML = "";
   $("bookpanel").hidden = true;
   $("lookup-body").classList.remove("with-book");
   markOpenCell();
+  fitLookup();
 }
 
 function ladderQty() {
@@ -848,42 +946,94 @@ function ladderQty() {
   return Math.max(1, Math.round(v));
 }
 
-async function openLadder(city, quality) {
+async function openLadder(city, quality, btn) {
   const key = `${city}/${quality}`;
   if (ladder.key === key && ladder.itemId === lookup.itemId) { closeLadder(); return; }   // 再点一次 = 收起
-  Object.assign(ladder, { key, itemId: lookup.itemId, city, quality, data: null });
+  Object.assign(ladder, { key, itemId: lookup.itemId, city, quality, data: null, gridLate: false });
   const seq = ++ladder.seq;   // 连点不同格子时只认最后一次
   const panel = $("bookpanel");
   panel.hidden = false;
   $("lookup-body").classList.add("with-book");
   markOpenCell();
   panel.innerHTML = `<div class="bookwrap"><div class="void">读取中…</div></div>`;
-  await loadLadder(seq);
+  fitLookup();
+  revealCellX(btn);
+  await loadLadder(seq, { grid: true, top: true });
 }
 
-async function loadLadder(seq) {
+// 右栏挤出来以后中栏变窄,点的那一格可能被挤到横向滚动区外面。只横着滚表自己:
+// scrollIntoView 会连带把整页竖着滚走,点一下格子页面跳一截
+function revealCellX(btn) {
+  const wrap = btn?.closest(".matrix-wrap");
+  if (!wrap) return;
+  const w = wrap.getBoundingClientRect(), c = btn.getBoundingClientRect();
+  const pinned = wrap.classList.contains("hscroll")
+    ? wrap.querySelector("tbody td:first-child")?.getBoundingClientRect().width || 0 : 0;
+  if (c.right > w.right) wrap.scrollLeft += c.right - w.right + 8;
+  else if (c.left < w.left + pinned) wrap.scrollLeft -= w.left + pinned - c.left + 8;
+}
+
+// 阶梯(/api/lookup/book)和价格表(/api/lookup/grid)**一起重拉**,两份都回来再画。
+// 面板顶部的最低卖价、最高买价、挂买→挂卖、成交位置诊断取的是表里同一格;
+// 表要是还是选物品那一刻拉的,成员一边在游戏里翻、一边开着这页,
+// 顶部照抄的价和下面阶梯的第一档就会对不上。
+// opts.grid:要不要跟着重拉价格表(selectItem 刚拉过就不用);opts.top:画完滚回顶部
+async function loadLadder(seq, opts = {}) {
+  const itemId = ladder.itemId;
   const p = new URLSearchParams({
-    item: ladder.itemId, city: ladder.city, quality: ladder.quality, qty: ladderQty(),
+    item: itemId, city: ladder.city, quality: ladder.quality, qty: ladderQty(),
   });
+  const bookP = getJSON("/api/lookup/book?" + p);
+  const gridP = opts.grid ? getJSON("/api/lookup/grid?item=" + encodeURIComponent(itemId)) : null;
+  gridP?.catch(() => { /* 表没拉到就用手上那份,面板里会标出时间差 */ });
+  let book;
   try {
-    const d = await getJSON("/api/lookup/book?" + p);
-    if (seq !== ladder.seq) return;
-    ladder.data = d;
-    renderLadder();
-    $("bookpanel").scrollTop = 0;
+    book = await bookP;
   } catch (err) {
     if (seq !== ladder.seq) return;
     $("bookpanel").innerHTML = `<div class="bookwrap"><div class="bookhead"><span class="spacer"></span>
       <button class="mini" data-close>收起</button></div>
       <div class="void" style="color:var(--warn)">${esc(err.message || err)}</div></div>`;
+    return;
+  }
+  let grid = null;
+  if (gridP) {
+    const timeout = new Promise(r => setTimeout(() => r("late"), GRID_WAIT_MS));
+    grid = await Promise.race([gridP.catch(() => null), timeout]);
+  }
+  if (seq !== ladder.seq) return;
+  ladder.data = book;
+  ladder.gridLate = grid === "late";
+  const useGrid = g => {
+    if (!g || g === "late" || lookup.itemId !== itemId) return false;
+    lookup.data = g;
+    lookup.loadedAt = Date.now();
+    return true;
+  };
+  if (useGrid(grid)) renderPrices(grid);   // renderPrices 会连右栏一起画
+  else renderLadder();
+  if (opts.top) $("bookpanel").scrollTop = 0;
+  if (ladder.gridLate) {
+    gridP.then(g => {
+      if (seq !== ladder.seq) return;
+      ladder.gridLate = false;
+      if (useGrid(g)) renderPrices(g); else renderLadder();
+    }, () => {
+      if (seq !== ladder.seq) return;
+      ladder.gridLate = false;
+      renderLadder();
+    });
   }
 }
-$("bookpanel").addEventListener("click", e => { if (e.target.closest("[data-close]")) closeLadder(); });
+$("bookpanel").addEventListener("click", e => {
+  if (e.target.closest("[data-close]")) closeLadder();
+  else if (e.target.closest("[data-reload]") && ladder.key) loadLadder(++ladder.seq, { grid: true });
+});
 $("bookpanel").addEventListener("change", e => {
   if (e.target.id !== "ld-qty") return;
   const v = Math.max(1, Math.round(+e.target.value || 1000));
   try { localStorage.setItem("lookupQty", String(v)); } catch (err) { /* 只是记不住而已 */ }
-  if (ladder.key) loadLadder(++ladder.seq);
+  if (ladder.key) loadLadder(++ladder.seq, { grid: true });
 });
 
 function ladderRows(levels, kind, cap) {
@@ -908,10 +1058,10 @@ function ladderRows(levels, kind, cap) {
 
 // 成交量柱 + 均价折线,叠在一张图上 —— 跟游戏里「市场历史」同一个意思。
 // x 按真实日期排,缺数据的日子留出空档,不会被挤成等距
-function tradeChart(series) {
+function tradeChart(series, W = 420) {
   const pts = (series || []).filter(p => p[1] > 0 && p[2] > 0);
   if (pts.length < 2) return `<div class="void">成交数据不足(${pts.length} 天)</div>`;
-  const W = 640, H = 164, pad = 26, padB = 32;
+  const H = 150, pad = 26, padB = 30;
   const xs = pts.map(p => Date.parse(p[0] + "T00:00:00Z"));
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const qMax = Math.max(...pts.map(p => p[1])) || 1;
@@ -1024,9 +1174,12 @@ function renderLadder() {
   }
   const dropped = sell.dropped_orders + buy.dropped_orders;
   const staleN = sell.stale_orders + buy.stale_orders;
-  if (dropped || staleN) {
-    notes.push(`<div class="diagnosis">${dropped ? `已剔除 ${dropped} 张上一轮翻到、这一轮没再出现的单(多半已成交或撤单)。` : ""}
-      ${staleN ? `灰掉的 ${staleN} 张是上一轮翻得更深才看到的,这一轮没翻到那么深,不参与最优价和近价件数。` : ""}</div>`);
+  const prevN = (sell.prev_page_orders || 0) + (buy.prev_page_orders || 0);
+  if (dropped || staleN || prevN) {
+    notes.push(`<div class="diagnosis">${dropped ? `已剔除 ${Number(dropped)} 张上一轮翻到、这一轮没再出现的单(多半已成交或撤单)。` : ""}
+      ${staleN ? `灰掉的 ${Number(staleN)} 张是上一轮翻得更深才看到的,这一轮没翻到那么深,不参与最优价和近价件数。` : ""}
+      ${prevN ? `最近一次只翻到了后面的页:前面 ${Number(prevN)} 张单是更早那一页看到的,照样算在盘口里
+        (那几档的「挂了多久」悬停能看到最后一次看到是多久前)。进游戏重新点开一次就全是新的了。` : ""}</div>`);
   }
 
   const foot = (s, kind) => `这一侧 ${s.level_count} 档 · ${s.orders} 单 · 共 ${num(s.qty_total)} 件` +
@@ -1034,12 +1187,29 @@ function renderLadder() {
     (kind === "buy" && s.qty_total ? ` <span class="warnish">(含 1 银那种占位单,别拿总数当深度)</span>` : "");
   const histSrc = !h ? "" : h.source === "capture" ? "自抓" : h.stored ? "库里存下的 AODP(这次没取到)" : "AODP";
 
+  // 走势图按右栏的内容宽度画,SVG 里 1 个单位就是 1px,坐标字不会被缩成 6px。
+  // 画完再量一次:内容一长右栏就出竖向滚动条,宽度会少十几 px(fitLookup 里重画)
+  const bp = $("bookpanel"), bcs = getComputedStyle(bp);
+  const chartW = Math.max(300, Math.floor(bp.clientWidth - parseFloat(bcs.paddingLeft) - parseFloat(bcs.paddingRight)));
+  ladder.series = h?.series || [];
+
+  // 面板顶部那几个数来自价格表,下面的阶梯来自挂单簿接口。正常情况两份是一起拉的;
+  // 表没拉到(或还在路上)时两份就差了一段时间,得说出来,不能让人照抄旧价
+  const gap = g ? (Date.parse(d.fetched_at) - Date.parse(g.fetched_at)) / 60000 : 0;
+  const gapText = m => m < 1 ? `${Math.max(1, Math.round(m * 60))} 秒` : `${Math.round(m)} 分钟`;
+  const staleHint = ladder.gridLate
+    ? `<span class="stalehint">价格表还在重拉(AODP 排队中),上面几个价暂时是 ${gapText(Math.max(0, gap))}前查的。</span>`
+    : Math.abs(gap) > 1
+      ? `<span class="stalehint">上面几个价(来自价格表)和下面的阶梯是隔了 ${gapText(Math.abs(gap))}分别拉的,可能对不上。<button class="mini" data-reload>一起刷新</button></span>`
+      : "";
+
   $("bookpanel").innerHTML = `<div class="bookwrap">
     <div class="bookhead">
       <b>${cityMark(city)} · <span class="q" style="--q:var(--q${quality})">${QUALITY[quality] || quality}</span> 完整挂单簿</b>
       <span class="spacer"></span>
       <button class="mini" data-close>收起</button>
-      <span class="bsub">${g ? esc(displayName(g.item)) + " · " : ""}自建抓包 · 卖 ${sell.level_count} 档 / 买 ${buy.level_count} 档 · 最近 ${d.window_hours} 小时</span>
+      <span class="bsub">${g ? esc(displayName(g.item)) + " · " : ""}自建抓包 · 卖 ${Number(sell.level_count)} 档 / 买 ${Number(buy.level_count)} 档 · 最近 ${Number(d.window_hours)} 小时</span>
+      ${staleHint}
     </div>
     <div class="bstats">${stats}</div>
     ${fillRow}
@@ -1061,12 +1231,13 @@ function renderLadder() {
       </div>
     </div>
     <h4 class="chh">成交走势 <em>柱=成交件数,线=当天成交量加权均价</em></h4>
-    ${tradeChart(h?.series)}
+    <div class="chartbox">${tradeChart(h?.series, chartW)}</div>
     <div class="ladderfoot">${h
       ? `日线,不含今天 · 30 天里 ${h.days_30d} 天有数据 · 来源 ${histSrc}。和左边格子里的 7 日 / 30 日均价是同一份数据`
       : "这一格没有成交历史。"}
       <br>旧版画的是抓包的 6 小时桶;公会版服务端还不收抓包的成交历史,暂时只有 AODP 日线。</div>
   </div>`;
+  fitLookup();
 }
 
 // ── 三级级联菜单:大类 → 子类 → 物品族 ─────────────────────
@@ -1112,17 +1283,23 @@ $("menu-btn").addEventListener("click", () => {
 document.addEventListener("click", e => { if (!e.target.closest(".picker")) closeMenu(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
 
+// 和旧版一样固定三栏并排,每栏顶上一行列标题;还没展开的栏是空的 <ul>,
+// CSS 的 :empty 给它写"← 指向左边一栏"。列标题不带 data-depth,悬停和点击都认不到它
+const MENU_HEADS = ["分类", "子类", "物品"];
 function renderMenu(columns) {
-  $("menu").innerHTML = columns.map((col, depth) =>
-    `<ul>` + col.map(x =>
-      `<li data-depth="${depth}" data-id="${esc(x.id)}"${depth < 2 ? ' class="has"' : ""}>${esc(x.label)}<span>${Number(x.count) || 0}</span></li>`
-    ).join("") + `</ul>`).join("");
+  $("menu").innerHTML = MENU_HEADS.map((head, depth) => {
+    const col = columns[depth];
+    if (!col) return `<ul></ul>`;
+    return `<ul><li class="menu-head" role="presentation">${head}</li>` + col.map(x =>
+      `<li data-depth="${depth}" data-id="${esc(x.id)}"${depth < 2 ? ' class="has"' : ""}><b>${esc(x.label)}</b><span>${Number(x.count) || 0}</span></li>`
+    ).join("") + `</ul>`;
+  }).join("");
   $("menu")._columns = columns;
 }
 
 // 悬停某一项就把它的下一层追加到右边,和游戏里市场那几个下拉一样
 $("menu").addEventListener("mouseover", e => {
-  const li = e.target.closest("li");
+  const li = e.target.closest("li[data-depth]");
   if (!li) return;
   // 已经选中的不重绘。重绘会把鼠标底下的元素整个换掉,从文字挪到右边计数
   // 那一下就会触发;按下和松开落在两个不同的元素上,浏览器不派发 click ——
@@ -1159,7 +1336,7 @@ $("menu").addEventListener("mouseover", e => {
 // 三层都能点:点大类就列整个大类,点物品族就只列那一族。悬停只展开下一栏,
 // 不动筛选 —— 手划过去不该把左栏刷掉
 $("menu").addEventListener("click", e => {
-  const li = e.target.closest("li");
+  const li = e.target.closest("li[data-depth]");
   if (!li) return;
   const depth = +li.dataset.depth;
   const path = [];
