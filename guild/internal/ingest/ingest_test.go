@@ -1,6 +1,8 @@
 package ingest
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -165,13 +167,13 @@ func TestSubmit_同一张单换了城市按变化处理并计数(t *testing.T) {
 func TestSubmit_同一张单多次touch取最晚观测(t *testing.T) {
 	ing, _ := newTestIngestor(t)
 	ing.now = func() time.Time { return t0 }
-	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
 
 	at := func(d time.Duration) model.MarketOrder {
 		o := order(1, 1000, 50)
 		o.ObservedAt = t0.Add(d)
 		return o
 	}
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(-3 * time.Minute)}})
 	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(-time.Minute)}})
 	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(0)}})
 	if got := ing.touches[1]; !got.Equal(t0) {
@@ -180,6 +182,181 @@ func TestSubmit_同一张单多次touch取最晚观测(t *testing.T) {
 	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{at(-2 * time.Minute)}}) // 晚到的旧观测
 	if got := ing.touches[1]; !got.Equal(t0) {
 		t.Fatalf("旧观测不该把 touches[1] 往回拨,得到 %v", got)
+	}
+}
+
+// 断网重传、两个成员先后上传同一眼:旧观测晚到,状态又和当前不同。
+// 以前它算"变了",会把新状态盖回旧状态,LRU 也退回去,
+// 下一次真实的新观测又被当成变化重写一遍
+func TestSubmit_乱序晚到的旧观测不回写(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+	obs := func(amount int32, d time.Duration) model.MarketOrder {
+		o := order(42, 1000, amount)
+		o.ObservedAt = t0.Add(d)
+		return o
+	}
+	// SentAt 填成 now:钟是准的,这里只测乱序
+	ing.Submit(model.UploadBatch{Reporter: "甲", SentAt: t0, Orders: []model.MarketOrder{obs(5, -10*time.Minute)}})
+	ing.Submit(model.UploadBatch{Reporter: "乙", SentAt: t0, Orders: []model.MarketOrder{obs(3, -time.Minute)}})
+
+	changed, touched := ing.Submit(model.UploadBatch{Reporter: "甲", SentAt: t0,
+		Orders: []model.MarketOrder{obs(5, -5*time.Minute)}}) // 甲重传 T−5m 那一眼
+	if changed != 0 || touched != 1 {
+		t.Fatalf("旧观测不该算变化,得到 changed=%d touched=%d", changed, touched)
+	}
+	if n := ing.Stats().StaleObservations; n != 1 {
+		t.Fatalf("旧观测计数应为 1,得到 %d", n)
+	}
+	if n := len(ing.pending["甲"]); n != 1 {
+		t.Fatalf("甲的待写应只有最初那条,得到 %d", n)
+	}
+	if _, ok := ing.touches[42]; ok {
+		t.Fatal("旧观测也不该进 touch,反正刷不动 last_seen")
+	}
+	if n := len(dirty.keys); n != 2 {
+		t.Fatalf("旧观测不该标脏,应共 2 次,得到 %d", n)
+	}
+
+	// LRU 仍是乙的 ×3:乙的下一次同样观测只是 touch
+	if changed, touched := ing.Submit(model.UploadBatch{Reporter: "乙", SentAt: t0,
+		Orders: []model.MarketOrder{obs(3, 0)}}); changed != 0 || touched != 1 {
+		t.Fatalf("LRU 不该被旧观测改回去,得到 changed=%d touched=%d", changed, touched)
+	}
+	if got := ing.touches[42]; !got.Equal(t0) {
+		t.Fatalf("touch 应记 T,得到 %v", got)
+	}
+
+	// touch 也推进了已知的观测时间:比它旧的不同状态照样挡掉
+	if changed, _ := ing.Submit(model.UploadBatch{Reporter: "丙", SentAt: t0,
+		Orders: []model.MarketOrder{obs(4, -30*time.Second)}}); changed != 0 {
+		t.Fatal("比最近一次 touch 还旧的观测不该算变化")
+	}
+}
+
+// 串城的单新旧两个盘口都要记下冲突时刻:服务端分不清哪边是对的,
+// 两边的"最近一眼"都可能被错归单搅过,读簿时要对这些 key 暂停幽灵剔除
+func TestConflictedSince_新旧两个盘口都记(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+	first := order(1, 1000, 50)
+	first.ObservedAt = t0.Add(-time.Minute)
+	ing.Submit(model.UploadBatch{SentAt: t0, Orders: []model.MarketOrder{first}})
+	moved := first
+	moved.LocationID, moved.ObservedAt = "Thetford", t0
+	ing.Submit(model.UploadBatch{SentAt: t0, Orders: []model.MarketOrder{moved}})
+
+	kM, kT, kOther := first.Key(), moved.Key(), first.Key()
+	kOther.LocationID = "Lymhurst"
+	got := ing.ConflictedSince([]model.QuoteKey{kM, kT, kOther}, t0.Add(-5*time.Minute))
+	if len(got) != 2 || !got[kM].Equal(t0) || !got[kT].Equal(t0) {
+		t.Fatalf("Martlock 和 Thetford 都应记 T,得到 %v", got)
+	}
+	if got := ing.ConflictedSince([]model.QuoteKey{kM, kT}, t0); len(got) != 0 {
+		t.Fatalf("since 之后没有冲突,应为空,得到 %v", got)
+	}
+}
+
+// 老客户端不带 sent_at,钟纠不了偏。数出来,才知道还有多少人没升级
+func TestSubmit_不带SentAt的批次计数(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	ing.now = func() time.Time { return t0 }
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
+	ing.Submit(model.UploadBatch{SentAt: t0, Orders: []model.MarketOrder{order(2, 1000, 50)}})
+	ing.Submit(model.UploadBatch{}) // 空批不算
+	if n := ing.Stats().LegacyBatches; n != 1 {
+		t.Fatalf("应只数到 1 个老客户端批次,得到 %d", n)
+	}
+}
+
+// fakeSink 记下每次 Flush 收到了什么;during 在 Flush 里执行,
+// 用来模拟"写库期间又有新上传进来"
+type fakeSink struct {
+	calls  []flushCall
+	err    error
+	during func()
+}
+
+type flushCall struct {
+	byReporter map[string][]model.MarketOrder
+	touches    map[int64]time.Time
+}
+
+func (f *fakeSink) Flush(_ context.Context, byReporter map[string][]model.MarketOrder, touches map[int64]time.Time) error {
+	f.calls = append(f.calls, flushCall{byReporter, touches})
+	if f.during != nil {
+		f.during()
+	}
+	return f.err
+}
+
+// 同一眼里变了的走 upsert、没变的走 touch。两路分开提交的话,
+// 读簿夹在中间读到半眼,会把没变的真实挂单当幽灵剔掉。
+// 一轮 flush 必须只调一次 Flush,两样一起交
+func TestFlush_变了的和没变的一次提交(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	sk := &fakeSink{}
+	ing.store = sk
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{order(1, 1000, 50)}})
+	ing.flush(context.Background())
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{
+		order(1, 1000, 50), // 没变 → touch
+		order(2, 900, 10),  // 新单
+	}})
+	ing.Submit(model.UploadBatch{Reporter: "乙", Orders: []model.MarketOrder{order(3, 800, 5)}})
+	sk.calls = nil
+	ing.flush(context.Background())
+
+	if len(sk.calls) != 1 {
+		t.Fatalf("一轮 flush 应只提交一次,得到 %d 次", len(sk.calls))
+	}
+	c := sk.calls[0]
+	if len(c.byReporter["甲"]) != 1 || len(c.byReporter["乙"]) != 1 || len(c.touches) != 1 {
+		t.Fatalf("应同时带上两人的变化和一条 touch,得到 %+v", c)
+	}
+	if ing.PendingCount() != 0 || len(ing.touches) != 0 {
+		t.Fatal("flush 之后待写和待刷新都应清空")
+	}
+
+	sk.calls = nil
+	ing.flush(context.Background())
+	if len(sk.calls) != 0 {
+		t.Fatal("没东西可写时不该碰库")
+	}
+}
+
+// 写库失败后,LRU 里那几张单的新状态库里其实没有。不拿掉的话,
+// 下一次同样的观测只会 touch,库里的旧价格顶着新 last_seen 一直续命
+func TestFlush_写失败后这批单下次按变化重写(t *testing.T) {
+	ing, _ := newTestIngestor(t)
+	sk := &fakeSink{}
+	ing.store = sk
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{
+		order(1, 1000, 50), order(2, 900, 10)}})
+	ing.flush(context.Background()) // 两张单都写成功
+
+	// 1 号单改价后写失败;写库期间又来了一次同价观测(会进 touch)
+	sk.err = errors.New("库挂了")
+	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{order(1, 990, 50)}})
+	sk.during = func() {
+		if _, touched := ing.Submit(model.UploadBatch{Reporter: "甲",
+			Orders: []model.MarketOrder{order(1, 990, 50)}}); touched != 1 {
+			t.Error("写库期间 LRU 还是新状态,同价观测应先算 touch")
+		}
+	}
+	ing.flush(context.Background())
+	sk.during, sk.err = nil, nil
+
+	if _, ok := ing.touches[1]; ok {
+		t.Fatal("写失败那张单攒下的 touch 应一并丢掉")
+	}
+	if changed, _ := ing.Submit(model.UploadBatch{Reporter: "甲",
+		Orders: []model.MarketOrder{order(1, 990, 50)}}); changed != 1 {
+		t.Fatal("写失败的单下一次观测应按变化重写")
+	}
+	if _, touched := ing.Submit(model.UploadBatch{Reporter: "甲",
+		Orders: []model.MarketOrder{order(2, 900, 10)}}); touched != 1 {
+		t.Fatal("写成功的单不受影响,仍应只 touch")
 	}
 }
 

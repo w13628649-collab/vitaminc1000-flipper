@@ -37,6 +37,10 @@ type BookSide struct {
 // (还没实机验证,见 capture-plan「仍待核实」)。前提不成立时把 slack 调到
 // 不小于窗口,就退回按窗口过滤的旧行为。
 //
+// 另一个前提是"最近一眼"本身可信。多开串城的错归单带着新时间戳进来,
+// 会成为被串入那座城的 newest 和 view_edge,把那座城上一眼的真实挂单当幽灵
+// 剔掉。所以调用方对 ingest.ConflictedSince 报出来的 key 要把 slack 放到窗口大小。
+//
 // 用到的列都在 idx_live_book 里(键 item_id,location_id,quality,side,unit_price,
 // INCLUDE amount,last_seen),能走 index-only。**不取 reporter**:它不在 INCLUDE
 // 里,取了就要回表。

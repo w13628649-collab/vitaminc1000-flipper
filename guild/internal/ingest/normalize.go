@@ -62,14 +62,17 @@ func canonicalItemID(id string, enchant int16) string {
 // 游戏里一张单的这几项不会变(改了就是新 order_id),所以同一个 order_id
 // 指纹变了,几乎只可能是多开时客户端把城市记串了,或者跨服 id 撞车、
 // 解析出错。存 64 位哈希而不是原字符串,是为了 50 万条的 LRU 不多吃内存
-func identOf(o model.MarketOrder) uint64 {
+func identOf(o model.MarketOrder) uint64 { return identOfKey(o.Key()) }
+
+// identOfKey 和 identOf 同一个指纹,从盘口键算。查冲突记录时用
+func identOfKey(k model.QuoteKey) uint64 {
 	h := fnv.New64a()
-	_, _ = h.Write([]byte(o.ItemID))
+	_, _ = h.Write([]byte(k.ItemID))
 	_, _ = h.Write([]byte{'|'})
-	_, _ = h.Write([]byte(o.LocationID))
+	_, _ = h.Write([]byte(k.LocationID))
 	_, _ = h.Write([]byte{'|'})
-	_, _ = h.Write([]byte(strconv.Itoa(int(o.Quality))))
+	_, _ = h.Write([]byte(strconv.Itoa(int(k.Quality))))
 	_, _ = h.Write([]byte{'|'})
-	_, _ = h.Write([]byte(strconv.Itoa(int(o.Side))))
+	_, _ = h.Write([]byte(strconv.Itoa(int(k.Side))))
 	return h.Sum64()
 }

@@ -34,13 +34,21 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 
 func (s *Store) Close() { s.pool.Close() }
 
-// WriteOrders 把一批**状态确实变了**的挂单写进两张表。
+// Flush 把 ingest 一轮攒下的东西在**一个事务**里写完:状态变了的单
+// (按上报人分组)写 live 和 event 两张表,状态没变的单只推 last_seen。
 //
-// 调用方(ingest)负责去重,这里不再判断——数据库层面挡重复做不到,
-// 因为 hypertable 的唯一约束必须包含时间列,
-// ON CONFLICT (order_id, unit_price, amount) 根本建不出来。
-func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model.MarketOrder) error {
-	if len(orders) == 0 {
+// 为什么必须是一个事务:读簿(BookSides)按 last_seen 判断哪些单是"最近一眼"
+// 看到的。同一眼里变了的单走 upsert、没变的单走 touch,以前两路分开提交,
+// 中间被读到的话,变了的那几张已经把 newest 推到这一眼,没变的还停在上一眼,
+// 幽灵规则会把段内这些真实挂单全判成已成交,盘口最优那几档凭空消失。
+// 合成一个事务后,READ COMMITTED 下读簿是单语句快照:要么看到整眼,要么一点都看不到。
+func (s *Store) Flush(ctx context.Context, byReporter map[string][]model.MarketOrder,
+	touches map[int64]time.Time) error {
+	n := 0
+	for _, orders := range byReporter {
+		n += len(orders)
+	}
+	if n == 0 && len(touches) == 0 {
 		return nil
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -49,23 +57,66 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	if n > 0 {
+		if err := writeOrders(ctx, tx, byReporter, n); err != nil {
+			return err
+		}
+	}
+	// 顺序不能反:同一张单可能这一轮先新写入、又被 touch 过,
+	// 先 upsert 行才存在,touch 才有东西可刷
+	if len(touches) > 0 {
+		if err := touchOrders(ctx, tx, touches); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+// WriteOrders 把一个上报人的一批**状态确实变了**的挂单写进两张表。
+//
+// 调用方(ingest)负责去重,这里不再判断——数据库层面挡重复做不到,
+// 因为 hypertable 的唯一约束必须包含时间列,
+// ON CONFLICT (order_id, unit_price, amount) 根本建不出来。
+// 线上入库走 Flush;这个入口留给只写不 touch 的场合(测试夹具)。
+func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model.MarketOrder) error {
+	return s.Flush(ctx, map[string][]model.MarketOrder{reporter: orders}, nil)
+}
+
+// TouchOrders 只刷新"最后一次看到",单独提交。线上入库走 Flush。
+func (s *Store) TouchOrders(ctx context.Context, seen map[int64]time.Time) error {
+	return s.Flush(ctx, nil, seen)
+}
+
+func writeOrders(ctx context.Context, tx pgx.Tx, byReporter map[string][]model.MarketOrder, n int) error {
+	// 上报人排个序,写入顺序和 map 遍历无关。谁的那条落进当前态由下面的
+	// DISTINCT ON 按观测时间决定,不看写入先后
+	reporters := make([]string, 0, len(byReporter))
+	for r := range byReporter {
+		reporters = append(reporters, r)
+	}
+	slices.Sort(reporters)
+
 	// ① 当前态:同一张单反复上报就更新价格/数量/last_seen
-	liveRows := make([][]any, 0, len(orders))
+	liveRows := make([][]any, 0, n)
 	// ② 历史流:纯 append
-	evtRows := make([][]any, 0, len(orders))
-	for _, o := range orders {
-		liveRows = append(liveRows, []any{
-			o.OrderID, o.ItemID, o.LocationID, o.Quality, o.Enchant, int16(o.Side),
-			o.UnitPrice, o.Amount, o.ExpiresAt, o.ObservedAt, o.ObservedAt, reporter,
-			o.RawLocationID,
-		})
-		evtRows = append(evtRows, []any{
-			o.OrderID, o.ObservedAt, o.ItemID, o.LocationID, o.Quality, o.Enchant,
-			int16(o.Side), o.UnitPrice, o.Amount, reporter, o.RawLocationID,
-		})
+	evtRows := make([][]any, 0, n)
+	for _, reporter := range reporters {
+		for _, o := range byReporter[reporter] {
+			liveRows = append(liveRows, []any{
+				o.OrderID, o.ItemID, o.LocationID, o.Quality, o.Enchant, int16(o.Side),
+				o.UnitPrice, o.Amount, o.ExpiresAt, o.ObservedAt, o.ObservedAt, reporter,
+				o.RawLocationID,
+			})
+			evtRows = append(evtRows, []any{
+				o.OrderID, o.ObservedAt, o.ItemID, o.LocationID, o.Quality, o.Enchant,
+				int16(o.Side), o.UnitPrice, o.Amount, reporter, o.RawLocationID,
+			})
+		}
 	}
 
-	// live 表没法直接 CopyFrom(要 upsert),走临时表再 merge
+	// live 表没法直接 CopyFrom(要 upsert),走临时表再 merge。
+	// tmp_live 是 ON COMMIT DROP,一个事务里只能建一次——所以各上报人合成一次写,
+	// 不能按人各调一遍
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE tmp_live (LIKE market_order_live) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("建临时表: %w", err)
@@ -92,9 +143,15 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 			unit_price  = EXCLUDED.unit_price,
 			amount      = EXCLUDED.amount,
 			expires_at  = EXCLUDED.expires_at,
-			last_seen   = GREATEST(market_order_live.last_seen, EXCLUDED.last_seen),
+			last_seen   = EXCLUDED.last_seen,
 			reporter    = EXCLUDED.reporter,
-			raw_location = EXCLUDED.raw_location`); err != nil {
+			raw_location = EXCLUDED.raw_location
+		-- 只接受不比库里旧的观测。乱序晚到的旧观测(断网重传、两个成员先后上传、
+		-- 服务重启后 LRU 是空的)状态和当前不同时也会走到这里,不挡的话新状态
+		-- 被盖回旧状态、last_seen 却还是新的,读簿会把"旧件数"当成最近一眼。
+		-- 同一时刻的两份观测谁对谁错判断不了,按后到的算,不能因此卡死。
+		-- 旧观测照样进下面的 event 表:observed_at 是真实时间,历史不受影响
+		WHERE market_order_live.last_seen <= EXCLUDED.last_seen`); err != nil {
 		return fmt.Errorf("合并 live: %w", err)
 	}
 
@@ -104,37 +161,36 @@ func (s *Store) WriteOrders(ctx context.Context, reporter string, orders []model
 		pgx.CopyFromRows(evtRows)); err != nil {
 		return fmt.Errorf("写入 event: %w", err)
 	}
-	return tx.Commit(ctx)
+	return nil
 }
 
-// TouchOrders 只刷新"最后一次看到"。
+// touchOrders 只刷新"最后一次看到"。
 //
 // 状态没变的重复观测走这条路——它不产生历史记录,但让我们知道这张单还活着。
 // 挂单从出现到消失的存活时长,是 AODP 给不了的东西。
 //
 // seen 是每张单各自的观测时间(ingest 已统一到服务端时钟),不是 flush 时刻:
-// last_seen 要和 WriteOrders 同一套钟,读簿时"几张单是不是同一眼看到的"
+// last_seen 要和 upsert 同一套钟,读簿时"几张单是不是同一眼看到的"
 // 才判得准。只前进不后退——乱序到达的旧观测不能把 last_seen 往回拨。
-func (s *Store) TouchOrders(ctx context.Context, seen map[int64]time.Time) error {
-	if len(seen) == 0 {
-		return nil
-	}
+func touchOrders(ctx context.Context, tx pgx.Tx, seen map[int64]time.Time) error {
 	ids := make([]int64, 0, len(seen))
 	for id := range seen {
 		ids = append(ids, id)
 	}
 	// 按 id 排序再更新:多实例共用一个库时,两边以同样的顺序加行锁,
-	// 不会互相等成死锁
+	// 不容易互相等成死锁(真撞上了 PG 会回滚其中一个,ingest 那边按写失败善后)
 	slices.Sort(ids)
 	ts := make([]time.Time, len(ids))
 	for i, id := range ids {
 		ts[i] = seen[id]
 	}
-	_, err := s.pool.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE market_order_live m SET last_seen = t.seen
 		FROM unnest($1::bigint[], $2::timestamptz[]) AS t(order_id, seen)
-		WHERE m.order_id = t.order_id AND m.last_seen < t.seen`, ids, ts)
-	return err
+		WHERE m.order_id = t.order_id AND m.last_seen < t.seen`, ids, ts); err != nil {
+		return fmt.Errorf("刷新 last_seen: %w", err)
+	}
+	return nil
 }
 
 // BookLevel 是订单簿上的一档。
