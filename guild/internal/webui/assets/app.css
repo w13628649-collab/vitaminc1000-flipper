@@ -1,225 +1,212 @@
 /* 字体随包带着,不打 Google。桌面程序不该因为公司网络挡了
-   fonts.googleapis.com 就掉成宋体。两个都是可变字体,
-   一族一个文件盖住所有字重。中文走系统字体——把中文字体打进去
-   要十几 MB,不值。 */
+   fonts.googleapis.com 就掉成宋体。可变字体,一个文件盖住所有字重。
+   中文走系统字体——把中文字体打进去要十几 MB,不值。
+   (fonts/cinzel.woff2 还在目录里但不再引用:那套大写衬线是游戏风,用户否掉了) */
 @font-face{
   font-family:Archivo; src:url(fonts/archivo.woff2) format('woff2-variations');
   font-weight:100 900; font-display:swap;
 }
-@font-face{
-  font-family:Cinzel; src:url(fonts/cinzel.woff2) format('woff2-variations');
-  font-weight:400 900; font-display:swap;
-}
 
-/* 配色跟着游戏走。这个窗口要和游戏并排开、来回切,
-   浅色底会晃眼,而且一眼就看出是"外挂工具"而不是游戏的一部分。
-   深暗木底 + 金边 + 羊皮纸字色,是 Albion 自己那套市场界面的调子。
+/* 配色回到旧版 web 端那一套 —— 用户 2026-09-23 明确要求:
+   "这个黄色背景我也不喜欢,还是以前那种配色好看"。
+   白银是这个游戏的血液,底色取银的冷灰;强调色是青铜,只当点缀
+   (品牌名第二个词、当前排序列、聚焦、悬停、最佳卖点、件数),
+   结构线和强调一律用墨黑。浅色主题,**不跟系统暗色模式走**:
+   WebView2 会跟随 Windows 的深色设置,加暗色分支等于把深底又带回来。
 
-   变量名沿用原来的(--ink / --bronze / 城市色 / 品质色),
-   只换值,所以 app.js 一个字都不用改。 */
+   城市色、品质色都是给浅底调过的:普通品质在游戏里是白的,
+   浅底上看不见,换成中灰。 */
 :root{
-  --bg:#14100c;            /* 窗口底:近黑的暖褐 */
-  --panel:#1d1811;         /* 面板 */
-  --panel-2:#262019;       /* 面板高一层,表头/悬停 */
-  --edge:#3a2f22;          /* 边框 */
-  --edge-hi:#56422c;       /* 高亮边 */
-
-  --ink:#e6dbc4;           /* 正文:羊皮纸 */
-  --ink-mid:#ab9b80;
-  --ink-soft:#7d6e59;
-  --rule:#332a1f;
-  --rule-soft:#282116;
-
-  --gold:#c9a227;          /* 主强调色 */
-  --bronze:#b08a2e;
-  --gain:#6faa5c;          /* 深底上要提亮,否则发灰 */
-  --warn:#cc5a50;
-
-  /* 五大城市 + 凯尔利恩,按游戏里的阵营色,深底上提亮 */
-  --thetford:#a978d6; --fort-sterling:#c2c8cc; --lymhurst:#6fb84f;
-  --martlock:#4a92d6; --bridgewatch:#d98f30; --caerleon:#d15048;
-  /* 物品品质,和游戏内一致 */
-  --q1:#b8ae9b; --q2:#4ea24e; --q3:#4a8fd6; --q4:#a86fd6; --q5:#d6a13a;
+  color-scheme:light;
+  --paper:#dfe1e3; --surface:#eef0f1; --surface-2:#e6e8ea;
+  --ink:#15181c; --ink-mid:#4a5158; --ink-soft:#7c858d;
+  --rule:#c6cbcf; --rule-soft:#d6dadd;
+  --bronze:#8a6320; --bronze-lift:#a87a2c;
+  --gain:#2c6e49; --warn:#9c3232;
+  --thetford:#6b4a8f; --fort-sterling:#69737d; --lymhurst:#4f7a3a;
+  --martlock:#2f5d8a; --bridgewatch:#b07226; --caerleon:#9c3232;
+  --brecilien:#2f7d7d; --black-market:#2a2a2a;
+  --q1:#5f6368; --q2:#2f7d3f; --q3:#2563a8; --q4:#7a3fa8; --q5:#b0810f;
   --r:2px;
 }
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; color:var(--ink);
-  background:var(--bg);
-  /* 极轻的暗角,让中间的内容区浮起来一点,不是纯平的黑 */
-  background-image:radial-gradient(ellipse 120% 80% at 50% 0%, #1b1610 0%, var(--bg) 70%);
-  background-attachment:fixed;
+  margin:0; background:var(--paper); color:var(--ink);
   font-family:Archivo,system-ui,sans-serif; font-size:14px; line-height:1.45;
-  font-variant-numeric:tabular-nums;
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
 }
-.wrap{max-width:1420px; margin:0 auto; padding:0 20px 70px}
+.wrap{max-width:1420px; margin:0 auto; padding:0 20px 72px}
+a{color:var(--bronze)}
+:focus-visible{outline:2px solid var(--bronze); outline-offset:2px}
+/* [hidden] 只是 UA 样式里的 display:none,会被任何同权重、后写的 display 盖掉
+   (.fact、.menu 都踩过)。统一在这里压住,所有用 hidden 切换的元素都不用再各补一条 */
+[hidden]{display:none !important}
 
-header{display:flex; gap:20px; align-items:baseline; padding:20px 0 12px;
-       border-bottom:1px solid var(--gold)}
-.brand{font-family:Cinzel,Archivo,serif; font-size:19px; font-weight:600;
-       letter-spacing:.06em; text-transform:uppercase; color:var(--ink)}
-.brand span{color:var(--gold)}
-.facts{display:flex; gap:22px; margin-left:auto}
+/* ── 顶栏 ───────────────────────────────────────────── */
+header{display:flex; flex-wrap:wrap; gap:20px; align-items:baseline;
+       padding:22px 0 16px; border-bottom:2px solid var(--ink)}
+.brand{font-size:19px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
+.brand span{color:var(--bronze)}
+.facts{display:flex; gap:22px; margin-left:auto; flex-wrap:wrap}
 .fact{display:flex; flex-direction:column; gap:1px; text-align:right}
-/* [hidden] 只是 UA 样式里的 display:none,被上面这条同权重的规则盖掉了。
-   和 .menu.bare 是同一个坑:后写的赢,所以这条必须在 .fact 之后 */
-.fact[hidden]{display:none}
 #quit{align-self:center; margin-left:4px}
-#quit[hidden]{display:none}
 .fact b{font-size:14px; font-weight:600; line-height:1.2}
-.fact i{font-size:11px; font-style:normal; color:var(--ink-soft)}
-.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px}
-.live{background:var(--gain); box-shadow:0 0 6px var(--gain)}
-.dead{background:var(--warn)}
+.fact i{font-size:11px; font-style:normal; color:var(--ink-soft); font-weight:500}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:1px}
+.dot.live{background:var(--gain); box-shadow:0 0 0 3px color-mix(in oklab, var(--gain), transparent 82%)}
+.dot.dead{background:var(--warn)}
 
-.banner{margin:14px 0 0; padding:11px 14px; border:1px solid var(--warn);
-  border-left-width:3px; border-radius:var(--r);
-  background:color-mix(in oklab, var(--warn), transparent 88%);
-  color:var(--ink); font-size:12.5px; line-height:1.5}
+.banner{margin:14px 0 0; padding:11px 14px; background:var(--surface);
+  border-left:3px solid var(--warn); border-radius:var(--r);
+  color:var(--ink-mid); font-size:12.5px; line-height:1.5; max-width:100ch}
 .banner b{color:var(--warn)}
-.banner[hidden]{display:none}
 
-nav{display:flex; gap:2px; border-bottom:1px solid var(--rule); margin-bottom:4px}
+/* 页签:旧版的药丸式,当前页墨底纸字 */
+nav{display:flex; flex-wrap:wrap; gap:2px; padding:12px 0; border-bottom:1px solid var(--rule)}
 nav button{
-  font:inherit; font-weight:600; font-size:13px; border:0; cursor:pointer;
-  background:transparent; color:var(--ink-soft); padding:9px 16px;
-  border-bottom:2px solid transparent; margin-bottom:-1px; letter-spacing:.02em;
+  font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  background:transparent; color:var(--ink-soft); border:1px solid transparent;
+  border-radius:var(--r); padding:5px 13px;
 }
-nav button:hover{color:var(--ink)}
-nav button[aria-current=page]{color:var(--gold); border-bottom-color:var(--gold)}
+nav button:hover{background:var(--surface); color:var(--ink)}
+nav button[aria-current=page],nav button[aria-current=page]:hover{background:var(--ink); color:var(--paper)}
 
-h3{font-family:Cinzel,Archivo,serif; font-size:11.5px; font-weight:600;
-   letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+h3{font-size:13px; font-weight:600; color:var(--ink);
    margin:26px 0 2px; padding-bottom:6px; border-bottom:1px solid var(--rule)}
 .note{padding:12px 0 4px; font-size:12.5px; color:var(--ink-mid); max-width:82ch}
+.note b{color:var(--ink)}
 .sub{font-size:11.5px; color:var(--ink-soft)}
-code{font-size:12px; color:var(--bronze)}
+code{font-size:12px; background:var(--surface-2); padding:1px 5px; border-radius:var(--r)}
 .bar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px 0 4px}
 label.f{display:flex; gap:6px; align-items:center; font-size:12px; color:var(--ink-mid)}
 select,input[type=search],input[type=number],input[type=text]{
-  font:inherit; font-size:13px; padding:5px 8px; border:1px solid var(--edge);
-  background:var(--panel); color:var(--ink); border-radius:var(--r);
+  font:inherit; font-size:13px; padding:5px 8px; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink); border-radius:var(--r);
 }
-select:focus,input:focus{outline:none; border-color:var(--gold)}
+select:focus,input:focus{outline:none; border-color:var(--bronze)}
+select:disabled,input:disabled{opacity:.45}
 input[type=search]{min-width:210px} input[type=number]{width:120px}
+
+/* 主按钮是墨黑底、纸色字,悬停才变青铜。整块铜色按钮就是"黄"的主要来源 */
 button.act{
-  font:inherit; font-size:12.5px; font-weight:600; padding:6px 13px; cursor:pointer;
-  border:1px solid var(--bronze); background:var(--bronze); color:#17120b;
-  border-radius:var(--r); letter-spacing:.02em;
+  font:inherit; font-size:13px; font-weight:600; padding:7px 16px; cursor:pointer;
+  border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  border-radius:var(--r); transition:background .15s,border-color .15s;
 }
-button.act:hover{background:var(--gold); border-color:var(--gold)}
-button.act:disabled{opacity:.5; cursor:default}
-button.ghost{background:transparent; color:var(--ink); border-color:var(--edge-hi)}
-button.ghost:hover{background:var(--panel-2); color:var(--gold); border-color:var(--gold)}
+button.act:hover:not(:disabled){background:var(--bronze); border-color:var(--bronze)}
+button.act:disabled{opacity:.45; cursor:progress}
+/* ghost 的悬停也必须带 :not(:disabled) 且写在后面:不然 .act 那条特异性更高,
+   "退出""取消"这些按钮一悬停就变成铜色实心 */
+button.act.ghost{background:transparent; color:var(--ink); border-color:var(--rule)}
+button.act.ghost:hover:not(:disabled){background:var(--surface); color:var(--ink); border-color:var(--ink)}
 button.mini{font:inherit; font-size:11px; font-weight:600; padding:2px 8px; cursor:pointer;
-  border:1px solid var(--edge-hi); background:transparent; color:var(--ink-mid); border-radius:var(--r)}
-button.mini:hover{border-color:var(--gold); color:var(--gold)}
+  border:1px solid var(--rule); background:transparent; color:var(--ink-mid); border-radius:var(--r)}
+button.mini:hover{border-color:var(--ink); color:var(--ink)}
 
-.seg{display:flex; border:1px solid var(--edge-hi); border-radius:var(--r); overflow:hidden}
+.seg{display:flex; border:1px solid var(--rule); border-radius:var(--r); overflow:hidden}
 .seg button{font:inherit; font-size:12.5px; font-weight:600; border:0; cursor:pointer;
-  padding:5px 14px; background:var(--panel); color:var(--ink-soft)}
-.seg button+button{border-left:1px solid var(--edge)}
-.seg button[aria-pressed=true]{background:var(--bronze); color:#17120b}
+  padding:5px 14px; background:var(--surface); color:var(--ink-soft)}
+.seg button:hover{color:var(--ink)}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed=true]{background:var(--ink); color:var(--paper)}
 
-/* 顶部四个大数字。游戏里的面板都是双线边框:外深内浅 */
-.kpis{display:flex; gap:0; margin:18px 0 6px; border:1px solid var(--edge-hi);
-      box-shadow:inset 0 0 0 1px rgba(201,162,39,.08);
-      background:var(--panel); border-radius:var(--r); overflow:hidden}
-.kpis div{flex:1; padding:13px 18px}
-.kpis div+div{border-left:1px solid var(--rule)}
-.kpis b{display:block; font-size:24px; font-weight:700; letter-spacing:-.01em;
-        line-height:1.15; color:var(--gold)}
+/* 大数字:1px 缝的格子,格子里是纸色 */
+.kpis{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:1px;
+      background:var(--rule-soft); border:1px solid var(--rule-soft);
+      margin:18px 0 6px; border-radius:var(--r); overflow:hidden}
+.kpis div{background:var(--paper); padding:12px 16px}
+.kpis b{display:block; font-size:22px; font-weight:700; letter-spacing:-.02em;
+        line-height:1.15; color:var(--ink)}
 .kpis i{font-style:normal; font-size:11.5px; color:var(--ink-soft)}
 .kpis em{font-style:normal; font-size:11.5px; color:var(--ink-mid); display:block; margin-top:3px}
 
 .split{display:grid; grid-template-columns:1.45fr 1fr; gap:28px; align-items:start}
-@media (max-width:1100px){ .split{grid-template-columns:1fr} }
 
 table{width:100%; border-collapse:collapse; margin-top:8px}
-th{text-align:right; font-size:11px; font-weight:600; color:var(--bronze);
-   padding:7px 9px; border-bottom:1px solid var(--edge-hi); white-space:nowrap;
-   letter-spacing:.04em}
+th{text-align:right; font-size:11px; font-weight:600; color:var(--ink-soft);
+   padding:7px 10px; border-bottom:1px solid var(--ink); white-space:nowrap}
 th.s{cursor:pointer; user-select:none}
-th.s:hover{color:var(--gold)}
-th.s::after{content:""; font-size:9px; margin-left:4px; color:var(--gold)}
+th.s:hover{color:var(--ink)}
+th.s[data-dir]{color:var(--bronze)}
+th.s::after{content:""; font-size:10px; margin-left:4px; opacity:.55}
 th.s[data-dir=desc]::after{content:"▼"}
 th.s[data-dir=asc]::after{content:"▲"}
 th.l,td.l{text-align:left}
-td{padding:8px 9px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
+td{padding:8px 10px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
 .tight td,.tight th{padding:6px 9px}
-tbody tr:nth-child(even){background:rgba(255,255,255,.012)}
-tbody tr:hover{background:var(--panel-2)}
+tbody tr:hover{background:var(--surface)}
 tr.open{cursor:pointer}
-tr.detail>td{background:#191409; padding:0;
-             box-shadow:inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge)}
+tr.detail>td{background:var(--surface); padding:0;
+             box-shadow:inset 0 1px 0 var(--rule), inset 0 -1px 0 var(--rule)}
 tr.detail table{margin:0}
 tr.detail th{border-bottom:1px solid var(--rule); font-size:10.5px}
 tr.detail td{border-bottom:0}
-tr.detail tbody tr:nth-child(even){background:transparent}
+tr.detail tbody tr:hover{background:var(--surface-2)}
 
 .city{display:inline-flex; align-items:center; gap:6px; font-weight:500}
-.cdot{width:8px; height:8px; border-radius:50%; background:var(--c); flex:0 0 auto;
-      box-shadow:0 0 4px color-mix(in oklab, var(--c), transparent 40%)}
+.cdot{width:9px; height:9px; border-radius:50%; background:var(--c); flex:0 0 auto}
 .route{display:inline-flex; align-items:center; gap:5px; font-size:12.5px}
 .route span{color:var(--ink-soft)}
 .item{display:flex; align-items:center; gap:8px}
-/* 游戏里物品图标都嵌在一个暗格子里,照做 */
-.item img{width:28px; height:28px; flex:0 0 auto; border:1px solid var(--edge);
-          background:#241d14; border-radius:var(--r)}
-.item a{color:inherit; text-decoration:none; border-bottom:1px solid var(--edge-hi)}
-.item a:hover{color:var(--gold); border-bottom-color:var(--gold)}
+.item img{width:28px; height:28px; flex:0 0 auto; background:var(--surface-2); border-radius:var(--r)}
+.item a{color:inherit; text-decoration:none; border-bottom:1px solid var(--rule)}
+.item a:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .q{font-weight:600; color:var(--q)}
 .price{font-weight:600; border-radius:var(--r); padding:2px 5px; margin:-2px -5px}
 .depth,.age{font-size:11.5px; color:var(--ink-soft)}
 .pos{color:var(--gain)} .neg{color:var(--warn)}
-.tag{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:8px; border:1px solid currentColor}
+.tag{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r); border:1px solid currentColor}
 .high{color:var(--gain)} .medium{color:var(--bronze)} .low{color:var(--warn)}
-.kind{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:8px}
-.kind.arb{background:var(--bronze); color:#17120b}
-.kind.flip{background:var(--rule); color:var(--ink-mid)}
+.kind{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r)}
+.kind.arb{background:var(--bronze); color:#fff}
+.kind.flip{background:var(--surface-2); color:var(--ink-mid); box-shadow:inset 0 0 0 1px var(--rule)}
 .slip{font-size:11px; color:var(--ink-soft)}
 
 .cov{display:flex; gap:14px; flex-wrap:wrap; margin:12px 0 2px}
 .cov div{flex:1 1 160px}
 .cov b{display:block; font-size:12px; font-weight:600; margin-bottom:4px}
-.cov .track{height:6px; background:#241d14; border:1px solid var(--rule);
-            border-radius:3px; overflow:hidden}
+.cov .track{height:8px; background:var(--surface-2); border-radius:var(--r); overflow:hidden}
 .cov .fill{height:100%; background:var(--c)}
 .cov i{font-style:normal; font-size:11px; color:var(--ink-soft)}
 
-.picker{position:relative; display:inline-block}
-.menu{position:absolute; z-index:20; top:100%; left:0; margin-top:2px;
-  background:var(--panel); border:1px solid var(--edge-hi); border-radius:var(--r);
-  box-shadow:0 10px 32px rgba(0,0,0,.6); display:flex}
+/* ── 三级分类菜单 ─────────────────────────────────────── */
+.picker{position:relative}
+.menu{position:absolute; z-index:40; top:calc(100% + 4px); left:0; display:flex;
+  background:var(--surface); border:1px solid var(--ink); border-radius:var(--r);
+  box-shadow:0 10px 30px rgba(21,24,28,.18); max-width:min(92vw,780px); overflow-x:auto}
 .menu.bare{display:none}   /* 同权重后写的赢,这条必须在 .menu 之后 */
-.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto; min-width:150px}
-.menu ul+ul{border-left:1px solid var(--rule)}
-.menu li{padding:5px 12px; cursor:pointer; font-size:13px; white-space:nowrap;
-         display:flex; gap:10px; justify-content:space-between; align-items:center}
-.menu li:hover,.menu li[aria-selected=true]{background:var(--panel-2); color:var(--gold)}
-.menu li span{font-size:11px; color:var(--ink-soft)}
-.results{margin-top:6px; max-height:300px; overflow:auto;
-         border:1px solid var(--edge); border-radius:var(--r); background:var(--panel)}
-.results div{padding:6px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px}
-.results div:hover{background:var(--panel-2)}
-.results img{width:24px; height:24px; border:1px solid var(--edge); background:#241d14}
+.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto; min-width:190px}
+.menu ul+ul{border-left:1px solid var(--rule-soft)}
+.menu li{padding:5px 11px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;
+         display:flex; gap:10px; align-items:baseline}
+.menu li span{margin-left:auto; font-size:10.5px; color:var(--ink-soft); font-weight:400}
+.menu li.has::after{content:"›"; color:var(--ink-soft); font-size:12px}
+/* 悬停只是浅一层;已展开的那条路径是墨底纸字 —— 两个状态必须分开写 */
+.menu li:hover{background:var(--surface-2); color:var(--ink)}
+.menu li[aria-selected=true]{background:var(--ink); color:var(--paper)}
+.menu li[aria-selected=true] span,.menu li[aria-selected=true].has::after{color:var(--paper); opacity:.7}
 
 .spark{display:block}
-@keyframes up   { from{background:color-mix(in oklab,var(--gain),transparent 55%)} to{background:transparent} }
-@keyframes down { from{background:color-mix(in oklab,var(--warn),transparent 55%)} to{background:transparent} }
+@keyframes up   { from{background:color-mix(in oklab,var(--gain),transparent 70%)} to{background:transparent} }
+@keyframes down { from{background:color-mix(in oklab,var(--warn),transparent 70%)} to{background:transparent} }
 .flash-up{animation:up .7s ease-out}
 .flash-down{animation:down .7s ease-out}
 @media (prefers-reduced-motion:reduce){ .flash-up,.flash-down{animation:none} }
 .empty{padding:36px 0; color:var(--ink-soft)}
-.view[hidden]{display:none}
 
-dialog{border:1px solid var(--gold); border-radius:var(--r); background:var(--panel);
+dialog{border:1px solid var(--ink); border-radius:var(--r); background:var(--surface);
        color:var(--ink); padding:22px 24px; min-width:340px;
-       box-shadow:0 16px 50px rgba(0,0,0,.7)}
-dialog::backdrop{background:rgba(8,6,4,.62)}
+       box-shadow:0 16px 50px rgba(21,24,28,.22)}
+dialog::backdrop{background:rgba(21,24,28,.28)}
 dialog h3{margin-top:0; border-bottom:0; padding-bottom:0; font-size:14px}
 dialog label.f{display:flex; justify-content:space-between; gap:14px; margin:9px 0}
 dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 
-/* 滚动条也跟着暗下来,否则深色页面上一条白杠很突兀 */
-*{scrollbar-color:var(--edge-hi) transparent; scrollbar-width:thin}
+.results{margin-top:6px; max-height:300px; overflow:auto;
+         border:1px solid var(--rule); border-radius:var(--r); background:var(--surface)}
+.results div{padding:6px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px}
+.results div:hover{background:var(--surface-2)}
+.results img{width:24px; height:24px; background:var(--surface-2); border-radius:var(--r)}
+@media (max-width:1100px){ .split{grid-template-columns:1fr} }
+@media (max-width:920px){ .kpis{grid-auto-flow:row; grid-template-columns:1fr 1fr} }

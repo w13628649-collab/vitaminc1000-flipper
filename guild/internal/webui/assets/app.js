@@ -4,8 +4,10 @@
 const CITY_VAR = {
   "Thetford": "--thetford", "Fort Sterling": "--fort-sterling", "Lymhurst": "--lymhurst",
   "Martlock": "--martlock", "Bridgewatch": "--bridgewatch", "Caerleon": "--caerleon",
+  "Brecilien": "--brecilien", "Black Market": "--black-market",
 };
-const QUALITY = ["", "普通", "优秀", "杰出", "卓越", "大师"];
+// 游戏里的五档品质名。以前写成了 优秀/杰出/卓越/大师,整体错了一位
+const QUALITY = ["", "普通", "良好", "优秀", "杰出", "不凡"];
 const CONFIDENCE = { high: "高", medium: "中", low: "低" };
 const TREND = { up: "涨", down: "跌", choppy: "震荡", flat: "平" };
 const REJECT = {
@@ -660,6 +662,9 @@ function sparkline(series) {
               stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
+// 走势线的颜色:涨绿跌红,震荡青铜,平盘淡灰(旧版就是这么配的)
+const TREND_CLASS = { up: "pos", down: "neg", choppy: "medium", flat: "sub" };
+
 function renderRank(rows) {
   $("rank-empty").style.display = rows.length ? "none" : "";
   $("rank-rows").innerHTML = rows.map(r => `<tr>
@@ -674,7 +679,7 @@ function renderRank(rows) {
     <td>${r.volatility.toFixed(2)}</td>
     <td class="${r.trend === "up" ? "pos" : r.trend === "down" ? "neg" : ""}"
         title="R² ${r.trend_fit.toFixed(2)}">${TREND[r.trend]} ${r.trend_pct >= 0 ? "+" : ""}${r.trend_pct.toFixed(1)}%</td>
-    <td class="l ${r.trend === "up" ? "pos" : r.trend === "down" ? "neg" : ""}">${sparkline(r.series)}</td>
+    <td class="l ${TREND_CLASS[r.trend] || ""}">${sparkline(r.series)}</td>
     <td class="sub">${r.days_with_data} 天</td>
   </tr>`).join("");
 }
