@@ -169,6 +169,7 @@ func (s *Server) handleCoverage(w http.ResponseWriter, r *http.Request) {
 	if res := s.Flip.LastScan(); res != nil {
 		out["scan"] = map[string]any{
 			"started_at":    res.StartedAt,
+			"evaluated_at":  res.EvaluatedAt,
 			"opportunities": len(res.Opportunities),
 			"price_rows":    res.PriceRows,
 			"coverage":      res.Coverage,

@@ -25,7 +25,7 @@ func TestDefault_深度阈值与抓包段(t *testing.T) {
 	if c.Capture != (Capture{
 		Enabled: false, MaxHours: 0, DepthMaxHours: 2.0,
 		SnapshotSlackSeconds: 120, PreferSlackMinutes: 10, BookLevels: 128,
-		MaxExtraItems: 300,
+		MaxExtraItems: 300, ReevalSeconds: 60,
 	}) {
 		t.Fatalf("capture 默认值不对: %+v", c.Capture)
 	}
@@ -42,6 +42,9 @@ func TestDefault_深度阈值与抓包段(t *testing.T) {
 	}
 	if got := c.PreferSlack(); got != 10*time.Minute {
 		t.Fatalf("PreferSlack 应为 10m,得到 %v", got)
+	}
+	if got := c.ReevalInterval(); got != time.Minute {
+		t.Fatalf("ReevalInterval 应为 1m,得到 %v", got)
 	}
 	if err := c.Validate(); err != nil {
 		t.Fatalf("默认值自己要能过校验: %v", err)
@@ -96,6 +99,7 @@ func TestValidate_深度与抓包段的边界(t *testing.T) {
 		{"同一眼宽容度为负", func(c *Config) { c.Capture.SnapshotSlackSeconds = -1 }, "snapshot_slack_seconds"},
 		{"优先宽容度为负", func(c *Config) { c.Capture.PreferSlackMinutes = -1 }, "prefer_slack_minutes"},
 		{"并入物品上限为负", func(c *Config) { c.Capture.MaxExtraItems = -1 }, "max_extra_items"},
+		{"重算间隔为负", func(c *Config) { c.Capture.ReevalSeconds = -1 }, "reeval_seconds"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

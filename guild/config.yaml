@@ -43,6 +43,7 @@ capture:
   prefer_slack_minutes: 10      # 抓包比 AODP 旧不超过这么多,仍用抓包
   book_levels: 128        # 每个盘口最多读多少档
   max_extra_items: 300    # 配置清单外、抓包窗口里有挂单的物品最多并进扫描多少个(按件数截断);0 = 不并入
+  reeval_seconds: 60      # 两次全量扫描之间,多久用缓存的 AODP 快照 + 最新抓包重算一次;不打 AODP。0 = 关闭
 
 economics:
   market_tax: 0.04        # 高级会员 4%,非会员 8%

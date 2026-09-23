@@ -24,9 +24,9 @@ func main() {
 	fmt.Printf("depth: near=%g minBook=%d thinBook=%d minBid=%d thinBid=%d cliff=%g maxSpread=%g\n",
 		c.Filters.NearPct, c.Filters.MinBookQty, c.Filters.ThinBookEdgeQty,
 		c.Filters.MinBidDepth, c.Filters.ThinBidEdgeQty, c.Filters.BidCliffEdgePct, c.Filters.MaxSpreadPct)
-	fmt.Printf("capture: enabled=%v window=%v depth=%v slack=%v prefer=%v levels=%d extra=%d\n",
+	fmt.Printf("capture: enabled=%v window=%v depth=%v slack=%v prefer=%v levels=%d extra=%d reeval=%v\n",
 		c.Capture.Enabled, c.CaptureWindow(), c.DepthWindow(), c.SnapshotSlack(), c.PreferSlack(),
-		c.Capture.BookLevels, c.Capture.MaxExtraItems)
+		c.Capture.BookLevels, c.Capture.MaxExtraItems, c.ReevalInterval())
 	fmt.Printf("econ: tax=%g fee=%g buyFee=%v 摩擦=%.1f%%\n",
 		c.Economics.MarketTax, c.Economics.SetupFee, c.Economics.BuyOrderSetupFee, c.Economics.RoundTripFriction()*100)
 	fmt.Printf("api: url=%d rate=%d/%d  sizing: absorb=%g base=%d hist=%d\n",

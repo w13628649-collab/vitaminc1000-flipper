@@ -111,8 +111,8 @@ func TestStoreBooks_串过城的盘口放宽slack(t *testing.T) {
 	if c := lr.calls[0]; len(c.keys) != 1 || c.keys[0] != a || c.slack != 2*time.Minute {
 		t.Fatalf("第一次读正常 key、slack=2m,得到 %+v", c)
 	}
-	if c := lr.calls[1]; len(c.keys) != 1 || c.keys[0] != b || c.slack != 6*time.Hour {
-		t.Fatalf("第二次读串城 key、slack=窗口 6h,得到 %+v", c)
+	if c := lr.calls[1]; len(c.keys) != 1 || c.keys[0] != b || c.slack != 6*time.Hour+2*time.Minute {
+		t.Fatalf("第二次读串城 key、slack=窗口 6h + 2m,得到 %+v", c)
 	}
 	if got[a].Conflicted || !got[b].Conflicted {
 		t.Fatalf("只有 b 应标串城,得到 a=%v b=%v", got[a].Conflicted, got[b].Conflicted)
@@ -150,7 +150,7 @@ func TestStoreBooks_接真Ingestor的串城记录(t *testing.T) {
 		t.Fatalf("Martlock、Thetford 应标串城,Lymhurst 不该,得到 %v %v %v",
 			got[a].Conflicted, got[b].Conflicted, got[other].Conflicted)
 	}
-	if len(lr.calls) != 2 || len(lr.calls[1].keys) != 2 || lr.calls[1].slack != 6*time.Hour {
+	if len(lr.calls) != 2 || len(lr.calls[1].keys) != 2 || lr.calls[1].slack < 6*time.Hour {
 		t.Fatalf("串城的两个 key 应放宽 slack 另读一次,得到 %+v", lr.calls)
 	}
 }

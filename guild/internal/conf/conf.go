@@ -111,6 +111,11 @@ type Capture struct {
 	// 历史(troll 过滤和成交量离不开),所以要有上限:超出时按抓包件数从多到少截断。
 	// 0 = 不并入
 	MaxExtraItems int `yaml:"max_extra_items"`
+	// ReevalSeconds 是两次 AODP 全量扫描之间,多久用缓存的 AODP 快照 + 最新抓包
+	// 重算一次机会板。全量扫描 30 分钟一次(要打 AODP、受配额限制),成员刚翻完
+	// 市场却要等半小时才看得到,抓包"实时"这个优势就没了。重算只读库、不打 AODP。
+	// 0 = 关闭,只随全量扫描刷新
+	ReevalSeconds float64 `yaml:"reeval_seconds"`
 }
 
 // Economics 是交易经济学。默认值对应亚服 + 高级会员。
@@ -229,6 +234,7 @@ func Default() Config {
 			// id 批量塞进 URL:300 个 id 约 6.6k 字符,按 3500 的 URL 预算每个端点
 			// 多两三次请求,prices + history 合计多 4~6 次,280 次/5 分钟的配额里不算什么
 			MaxExtraItems: 300,
+			ReevalSeconds: 60,
 		},
 		Filters: Filters{
 			DeviationMin:         0.4,
@@ -293,6 +299,11 @@ func (c Config) PreferSlack() time.Duration {
 	return time.Duration(c.Capture.PreferSlackMinutes * float64(time.Minute))
 }
 
+// ReevalInterval 是用缓存快照重算机会板的间隔,0 表示不重算。
+func (c Config) ReevalInterval() time.Duration {
+	return time.Duration(c.Capture.ReevalSeconds * float64(time.Second))
+}
+
 func hours(h float64) time.Duration { return time.Duration(h * float64(time.Hour)) }
 
 func (c Config) Validate() error {
@@ -343,6 +354,9 @@ func (c Config) Validate() error {
 	}
 	if cp.MaxExtraItems < 0 {
 		return fmt.Errorf("capture.max_extra_items 不能为负(0 = 不并入抓包物品),得到 %d", cp.MaxExtraItems)
+	}
+	if cp.ReevalSeconds < 0 {
+		return fmt.Errorf("capture.reeval_seconds 不能为负(0 = 不重算),得到 %g", cp.ReevalSeconds)
 	}
 	return nil
 }

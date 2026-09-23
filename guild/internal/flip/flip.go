@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,10 +34,22 @@ type Service struct {
 	// 暂停幽灵剔除。可以不设:不设就不做这层处理
 	Conflicts ConflictSource
 
-	cat      atomic.Pointer[catalog.Catalog]
+	cat atomic.Pointer[catalog.Catalog]
+	// last 是对外的扫描结果,整份原子替换,发布之后不再改。
+	// snap 是它所用的 AODP 快照,定时重算拿它配最新抓包重跑,不打 AODP
 	last     atomic.Pointer[scan.Result]
+	snap     atomic.Pointer[scan.Snapshot]
 	scanning atomic.Bool
-	icons    *http.Client
+	// evalMu 串起"换快照 → 评估 → 发布结果"这一整段。全量扫描和定时重算都会
+	// 发布结果,不串起来的话,一轮拿旧快照、算得慢的重算会在全量之后才发布,
+	// 把新结果盖回旧的。AODP 拉取在锁外,锁里只有读库和内存计算
+	evalMu sync.Mutex
+	// backfilling/lastBackfill 管"给新抓到的物品补拉 AODP"的节流
+	backfilling  atomic.Bool
+	lastBackfill atomic.Int64 // unix 纳秒,0 = 还没补过
+	// bookSrc 非 nil 时代替库做读簿来源,只给测试用
+	bookSrc scan.BookSource
+	icons   *http.Client
 	// aodp 是**共用一个**。限流器的状态在 Client 里,每次调用新建一个
 	// 就等于各限各的,几个查价请求并撞上定时扫描,合起来直接击穿
 	// AODP 那 300 次/5 分钟的配额
@@ -86,10 +99,13 @@ func (s *Service) SyncCatalog(ctx context.Context) error {
 	return nil
 }
 
-// Scan 跑一次扫描,顺手把拉回来的成交历史存进库。
+// Scan 跑一次全量扫描(打 AODP),顺手把拉回来的成交历史存进库。
 //
 // 存历史这一步很重要:AODP 的 history 只给最近一段,自己存就能越攒越长,
 // 跑上几个月手里就有一份上游给不了的长历史。
+//
+// 返回的结果带 History(给调用方入库);发布出去的那份不带,
+// 免得在内存里一直挂着几千条序列。
 func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	cat := s.cat.Load()
 	if cat == nil {
@@ -100,19 +116,34 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	}
 	defer s.scanning.Store(false)
 
-	res, err := scan.RunWithCapture(ctx, s.aodp, s.Cfg, cat, s.books(), time.Now().UTC())
+	books := s.books()
+	snap, history, err := scan.FetchSnapshot(ctx, s.aodp, s.Cfg, cat, books, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
+	// 评估用拉完 AODP 之后的时刻:读簿就发生在这时,AODP 的数据龄也按这时算
+	s.evalMu.Lock()
+	s.snap.Store(snap)
+	res := scan.EvaluateSnapshot(ctx, snap, s.Cfg, cat, books, time.Now().UTC())
 	s.last.Store(res)
+	s.evalMu.Unlock()
 
-	if n, err := s.Store.WriteHistory(ctx, res.History, store.SourceAODP); err != nil {
-		// 历史没存上不该让整次扫描白跑,报出来继续
+	s.writeHistory(ctx, history)
+	out := *res
+	out.History = history
+	return &out, nil
+}
+
+// writeHistory 把 AODP 成交历史存进库。没存上不该让整次扫描白跑,报出来继续
+func (s *Service) writeHistory(ctx context.Context, history []aodp.HistorySeries) {
+	if s.Store == nil || len(history) == 0 {
+		return
+	}
+	if n, err := s.Store.WriteHistory(ctx, history, store.SourceAODP); err != nil {
 		slog.Warn("成交历史入库失败", "err", err)
 	} else {
 		slog.Info("成交历史已入库", "rows", n)
 	}
-	return res, nil
 }
 
 // Run 按间隔自动扫描。第一次立刻跑,这样服务端起来就有数据。

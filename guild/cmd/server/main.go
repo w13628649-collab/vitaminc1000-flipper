@@ -115,6 +115,9 @@ func main() {
 	if *scanTick > 0 {
 		go flipper.Run(ctx, *scanTick)
 	}
+	// 两次全量之间用缓存的 AODP 快照配最新抓包重算(capture.reeval_seconds),
+	// 不打 AODP。开关关着时立刻返回
+	go flipper.RunReeval(ctx)
 
 	apiSrv := api.New(st, ing, h, *fresh, flipper)
 	apiSrv.ReleaseDir = *relDir

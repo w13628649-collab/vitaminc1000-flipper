@@ -35,7 +35,7 @@ type storeBooks struct {
 
 // CaptureBooks 读一批盘口边。
 //
-// 最近卷进过多开串城的 key 单独读一遍,slack 放到窗口大小——等于对它们暂停
+// 最近卷进过多开串城的 key 单独读一遍,slack 放到不小于窗口——等于对它们暂停
 // 幽灵剔除。幽灵规则把"最近一眼"当权威,而错归的单恰恰带着最新的时间戳,
 // 会成为被串入那座城的最近一眼,把那座城上一眼的真实挂单当幽灵剔掉。
 // 暂停剔除的代价是可能留几张已成交的旧单,比整段真实盘口凭空消失要轻。
@@ -78,11 +78,9 @@ func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 	if err := read(normal, b.slack, false); err != nil {
 		return nil, err
 	}
-	wide := b.window
-	if wide < b.slack {
-		wide = b.slack
-	}
-	if err := read(risky, wide, true); err != nil {
+	// 窗口再加一个 slack:newest 可能因为钟快略超前于扫描的 now,
+	// 只放到窗口大小的话,窗口最早那几张单仍可能被判成幽灵
+	if err := read(risky, b.window+b.slack, true); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -121,6 +119,9 @@ func toCaptured(b store.BookSide) scan.CapturedSide {
 // books 是扫描用的读簿来源。没有库(测试里)时是 nil,扫描退回纯 AODP;
 // 开关关着时照样返回——要不要融合由 scan 按 capture.enabled 决定,口径只在一处
 func (s *Service) books() scan.BookSource {
+	if s.bookSrc != nil {
+		return s.bookSrc
+	}
 	if s.Store == nil {
 		return nil
 	}

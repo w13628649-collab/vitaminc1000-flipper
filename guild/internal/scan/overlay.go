@@ -90,12 +90,18 @@ type CaptureSummary struct {
 	// ExtraDropped 是超出 capture.max_extra_items、按件数截掉的个数
 	ExtraItems   int `json:"extra_items"`
 	ExtraDropped int `json:"extra_dropped"`
+	// ExtraPending 是全量之后新抓到、还在等补拉 AODP 的物品数(补拉有节流)。
+	// 它们这一轮还不在机会板上
+	ExtraPending int `json:"extra_pending"`
+	// BackfilledAt 是最近一次给新抓到的物品补拉 AODP 的时刻,没补过不输出
+	BackfilledAt time.Time `json:"backfilled_at,omitzero"`
 	// Error 非空说明读抓包失败(读簿失败时这次评估退回了纯 AODP;
 	// 列抓包物品失败时只扫配置清单)。几处错误用 "; " 连起来
 	Error string `json:"error,omitempty"`
 }
 
-func (s *CaptureSummary) addError(err error) {
+// AddError 把一处错误追加进 Error,nil 忽略。
+func (s *CaptureSummary) AddError(err error) {
 	if err == nil {
 		return
 	}
