@@ -1,2 +1,5 @@
 # shell 脚本在 Windows 检出里也必须是 LF,否则从 WSL 跑会报 $'\r': command not found
 *.sh text eol=lf
+# 反过来 .cmd/.bat 必须是 CRLF,LF 的批处理在 cmd 里会逐行错位
+*.cmd text eol=crlf
+*.bat text eol=crlf
