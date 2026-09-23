@@ -103,10 +103,27 @@ func (p *Parser) Character() (id, name string) {
 }
 
 // HandleResponse 处理 operation 的响应。
-func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
-	code, ok := byteParam(params, paramOperationCode)
-	if !ok {
-		return
+// HandleResponse 处理 operation 的响应。
+//
+// photonOp 是 Photon 那一层的操作码,params[253] 是 Albion 真正的操作码。
+// **两个都要认**,因为市场挂单走的是一条没有参数表的路:
+//
+// 挂单数据以字符串数组的形式占在 debug message 的位置上(见
+// photon.dispatchResponse 的 []string 分支),photon 层把它包成
+// params[0] 就直接回调了,里面不可能有 253。只认 253 的话这条路是死的
+// —— 而 handleOrders 读的恰恰就是 params[0],也就是说唯一能拿到挂单的
+// 那条路被堵住了。症状是"日志一切正常、库里一条挂单都没有"。
+func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
+	code, hasCode := byteParam(params, paramOperationCode)
+	if !hasCode {
+		// 没有参数表。params[0] 是字符串数组就一定是挂单,没有别的响应长这样。
+		// 方向靠 JSON 里的 AuctionType 判,本来就不需要操作码区分
+		// offers / requests
+		if _, isOrders := stringSlice(params[0]); isOrders {
+			p.handleOrders(params)
+			return
+		}
+		code = photonOp // 退回 Photon 层那个操作码
 	}
 	switch code {
 	case p.Codes.AuctionGetOffers, p.Codes.AuctionGetRequests:

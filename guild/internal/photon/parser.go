@@ -57,6 +57,27 @@ type segmentedPackage struct {
 	totalLength  int
 	bytesWritten int
 	payload      []byte
+
+	// fragmentCount 是这条消息一共几片,received 记已经收到哪几片。
+	//
+	// 完整性必须按分片号判,不能靠累加字节数:重传的分片、或者
+	// 越界压根没拷进去的分片,累加法照样计数,于是 bytesWritten 提前
+	// 达标,把还带空洞(全零)的 payload 当成完整消息交上去解析。
+	// 这两个字段本来就在包头里,以前读出来直接丢了。
+	fragmentCount int
+	received      map[int]struct{}
+}
+
+// complete 判断这条消息是不是收齐了。
+//
+// 首选按分片号数:它是协议自己的判据,不受分片长度和重传影响。
+// 包头里的 fragmentCount 不可信(为 0 或离谱)时才退回按字节数判,
+// 那时 received 里的去重仍然保证不会被重传骗过去。
+func (s *segmentedPackage) complete() bool {
+	if s.fragmentCount > 0 {
+		return len(s.received) >= s.fragmentCount
+	}
+	return s.bytesWritten >= s.totalLength
 }
 
 // RawPacket holds the raw UDP/TCP payload of one Photon packet.
@@ -435,9 +456,11 @@ func (p *PhotonParser) handleSendFragment(src []byte, offset, cmdLen int) int {
 	startSeq := int(binary.BigEndian.Uint32(src[offset:]))
 	offset += 4
 	cmdLen -= 4
-	offset += 4 // fragmentCount
+	fragCount := int(binary.BigEndian.Uint32(src[offset:]))
+	offset += 4
 	cmdLen -= 4
-	offset += 4 // fragmentNumber
+	fragNumber := int(binary.BigEndian.Uint32(src[offset:]))
+	offset += 4
 	cmdLen -= 4
 	totalLen := int(binary.BigEndian.Uint32(src[offset:]))
 	offset += 4
@@ -463,21 +486,30 @@ func (p *PhotonParser) handleSendFragment(src []byte, offset, cmdLen int) int {
 		}
 
 		seg = &segmentedPackage{
-			totalLength: totalLen,
-			payload:     make([]byte, totalLen),
+			totalLength:   totalLen,
+			payload:       make([]byte, totalLen),
+			fragmentCount: fragCount,
+			received:      make(map[int]struct{}),
 		}
 		p.pendingSegments[startSeq] = seg
 		p.segmentOrder = append(p.segmentOrder, startSeq)
 	}
 
 	end := fragOffset + fragLen
-	if end <= len(seg.payload) {
+	fitted := fragOffset >= 0 && end <= len(seg.payload)
+	if fitted {
 		copy(seg.payload[fragOffset:end], src[offset:offset+fragLen])
 	}
 	offset += fragLen
-	seg.bytesWritten += fragLen
 
-	if seg.bytesWritten >= seg.totalLength {
+	// 只有"这一片是新的,而且确实拷进去了"才算数。
+	// 重传的片不重复计数,越界没拷进去的片不冒充已写入
+	if _, dup := seg.received[fragNumber]; !dup && fitted {
+		seg.received[fragNumber] = struct{}{}
+		seg.bytesWritten += fragLen
+	}
+
+	if seg.complete() {
 		delete(p.pendingSegments, startSeq)
 		p.handleSendReliable(seg.payload, 0, len(seg.payload))
 	}

@@ -118,3 +118,51 @@ func TestStringSlice_兼容两种数组形态(t *testing.T) {
 		t.Fatal("非数组不该通过")
 	}
 }
+
+// 市场挂单走的是一条没有参数表的路,这条路以前是死的。
+//
+// photon.dispatchResponse 命中 []string 时,把挂单数组包成 params[0]
+// 就直接回调,**里面没有 253**;而 HandleResponse 第一件事就是取 253,
+// 取不到直接 return。handleOrders 读的恰恰就是 params[0] ——
+// 也就是说唯一能拿到挂单的那条路被自己堵死了。
+// 症状是"日志一切正常、库里一条挂单都没有",很难从现象反推。
+func TestHandleResponse_没有参数表时也要认挂单(t *testing.T) {
+	p := New()
+	p.HandleResponse(1, map[byte]any{8: "Martlock", 1: "guid", 2: "Tessaria",
+		253: byte(2)}) // 先 Join 一下,否则城市为空挂单会被丢掉
+
+	var got []model.MarketOrder
+	p.OnOrders = func(o []model.MarketOrder) { got = append(got, o...) }
+
+	// photon 层的 []string 分支产出的就是这个形状:只有 params[0]
+	p.HandleResponse(p.Codes.AuctionGetOffers, map[byte]any{
+		0: []string{
+			`{"Id":11,"ItemTypeId":"T5_CLOTH","QualityLevel":1,"EnchantmentLevel":0,` +
+				`"UnitPriceSilver":12340000,"Amount":7,"AuctionType":"offer","LocationId":""}`,
+			`{"Id":12,"ItemTypeId":"T5_CLOTH","QualityLevel":1,"EnchantmentLevel":0,` +
+				`"UnitPriceSilver":11110000,"Amount":3,"AuctionType":"request","LocationId":""}`,
+		},
+	})
+
+	if len(got) != 2 {
+		t.Fatalf("应该解出 2 条挂单,得到 %d 条", len(got))
+	}
+	if got[0].Side != model.SideOffer || got[1].Side != model.SideRequest {
+		t.Fatalf("方向该由 JSON 里的 AuctionType 判:%v / %v", got[0].Side, got[1].Side)
+	}
+	if got[0].LocationID != "Martlock" {
+		t.Fatalf("空 LocationId 该用当前所在地补,得到 %q", got[0].LocationID)
+	}
+}
+
+// 操作码在参数表里时照旧走参数表,别因为加了兜底就把正常路径改坏。
+func TestHandleResponse_有参数表时仍按253路由(t *testing.T) {
+	p := New()
+	var called bool
+	p.OnIdentity = func(_, _, _ string) { called = true }
+	// 253 说这是 Join,即使 photonOp 传的是别的东西
+	p.HandleResponse(99, map[byte]any{253: p.Codes.Join, 1: "guid", 2: "Tessaria", 8: "Lymhurst"})
+	if !called {
+		t.Fatal("有 253 时应该按它路由到 Join")
+	}
+}
