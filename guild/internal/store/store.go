@@ -142,6 +142,9 @@ type BookLevel struct {
 	Price  int64 `json:"price"`
 	Depth  int64 `json:"depth"`
 	Orders int32 `json:"orders"`
+	// Seen 是这一档里最近被看到的那张单的 last_seen。只有 BookSides 填;
+	// 不进 JSON,/api/book 的输出不变
+	Seen time.Time `json:"-"`
 }
 
 // Book 读某个盘口的挂单深度,价格从优到劣。
