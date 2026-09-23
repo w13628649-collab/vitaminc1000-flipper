@@ -84,9 +84,8 @@ type Filters struct {
 
 // Capture 是自建抓包盘口怎么参与扫描。键名沿用 Python 版能对上的那几个。
 //
-// 注意:上级目录旧 Python 版的 config.yaml 里写着 capture.enabled: true,
-// 拿它当 -config 会直接打开融合,不管这里默认值是什么。
-// 它的 capture.max_age_hours、freshness.capture_max_hours 这里不认,
+// 上级目录旧 Python 版的 config.yaml 里也写着 capture.enabled: true,和这里的
+// 默认值一致;它的 capture.max_age_hours、freshness.capture_max_hours 这里不认,
 // 加载时会告警并忽略。
 type Capture struct {
 	// Enabled 是融合总开关。false 时扫描就是纯 AODP,抓到的数据照样入库,
@@ -223,9 +222,9 @@ func Default() Config {
 		Qualities: []int{1},
 		Freshness: Freshness{MaxHours: 6.0, HighConfidenceHours: 2.0},
 		Capture: Capture{
-			// 先关着:深度闸门接进 screen 之前打开,抓包价会在没有件数判据的
-			// 情况下直接盖到机会板上
-			Enabled:              false,
+			// 默认开:深度闸门(screen.LegGate)已经接上,抓包价上榜之前要先过件数判据。
+			// 要退回纯 AODP,在配置里写 capture.enabled: false
+			Enabled:              true,
 			MaxHours:             0,
 			DepthMaxHours:        2.0,
 			SnapshotSlackSeconds: 120,

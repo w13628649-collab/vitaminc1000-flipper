@@ -57,17 +57,30 @@ type Sides struct {
 	Bid Side
 }
 
-// legSides 把执行方式的两条腿映射到订单簿的两边:
-// 秒买吃卖单(ask)、挂买排在买单簿(bid)上;秒卖吃买单(bid)、挂卖排在卖单簿(ask)上。
-func legSides(m econ.Mode, s Sides) (buyLeg, sellLeg Side) {
-	buyLeg, sellLeg = s.Bid, s.Ask
+// legSides 是同城版的 LegSides:买卖两条腿在同一个城。
+func legSides(m econ.Mode, s Sides) (buyLeg, sellLeg Side) { return LegSides(m, s, s) }
+
+// LegSides 把执行方式的两条腿映射到订单簿的两边:
+// 秒买吃买入城的卖单(ask)、挂买排在买入城的买单簿(bid)上;
+// 秒卖吃卖出城的买单(bid)、挂卖排在卖出城的卖单簿(ask)上。
+// 同城时 from 和 to 是同一份。
+func LegSides(m econ.Mode, from, to Sides) (buyLeg, sellLeg Side) {
+	buyLeg, sellLeg = from.Bid, to.Ask
 	if m.Buy == econ.Taker {
-		buyLeg = s.Ask
+		buyLeg = from.Ask
 	}
 	if m.Sell == econ.Taker {
-		sellLeg = s.Bid
+		sellLeg = to.Bid
 	}
 	return buyLeg, sellLeg
+}
+
+// ResolveSides 给两边里融合层没填过的那一边补上 AODP 口径(来源、价、数据龄)。
+// 同城 screen 和跨城 arb 都经过它,两边对"这一边来自谁"的说法才一致
+func ResolveSides(rec aodp.PriceRecord, s Sides, now time.Time) Sides {
+	s.Ask = s.Ask.withAODP(rec.SellPriceMin, rec.SellPriceMinDate, now)
+	s.Bid = s.Bid.withAODP(rec.BuyPriceMax, rec.BuyPriceMaxDate, now)
+	return s
 }
 
 // withAODP 给没被融合层填过的那一边补上 AODP 口径。

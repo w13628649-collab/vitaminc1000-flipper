@@ -23,7 +23,7 @@ func writeYAML(t *testing.T, body string) string {
 func TestDefault_深度阈值与抓包段(t *testing.T) {
 	c := Default()
 	if c.Capture != (Capture{
-		Enabled: false, MaxHours: 0, DepthMaxHours: 2.0,
+		Enabled: true, MaxHours: 0, DepthMaxHours: 2.0,
 		SnapshotSlackSeconds: 120, PreferSlackMinutes: 10, BookLevels: 128,
 		MaxExtraItems: 300, ReevalSeconds: 60,
 	}) {
@@ -179,5 +179,9 @@ func TestLoad_仓库自带配置(t *testing.T) {
 	d := Default()
 	if c.Capture != d.Capture || c.Filters != d.Filters {
 		t.Fatalf("自带配置里写的深度阈值应和内置默认值一致\n得到 %+v %+v", c.Capture, c.Filters)
+	}
+	// 深度闸门接上之后融合默认开,自带配置不能悄悄把它关掉
+	if !c.Capture.Enabled {
+		t.Fatal("自带配置把 capture.enabled 关掉了")
 	}
 }

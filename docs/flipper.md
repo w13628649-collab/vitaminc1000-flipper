@@ -126,9 +126,18 @@ demo 不做跨城,理由是"钱锁在路上,跟现金流健康冲突"。这个�
 买走的,没人肯砸到买价上。实测那两个高价附魔材料都是 **0.96~0.97**
 (游戏内「市场历史」的平均价紧贴最低卖价)。落在中间才说明双挂说得通。
 
-`depth.Analyze` 和 `depth.FillPosition` 给出这两个量。**注意它们还没接进
-`screen` 的判据** —— 扫描路径现在完全不读抓包库(见下一节),接上之前
-这两个函数只在查价页有用。
+`depth.Analyze` 和 `depth.FillPosition` 给出这两个量。扫描把抓包盘口逐边
+融合进来之后(`capture.enabled`,默认开),近价件数进了 `screen.LegGate`:
+按执行方式的**挂单腿**判,只看来自抓包、2 小时内的那一边——
+
+- 挂买腿依托的买方近价件数 < `min_bid_depth`(20)→ `no_bid_side`;
+  < `thin_bid_edge_qty`(100)或窗口外落差 ≥ `bid_cliff_edge_pct`(20%)→ 降为 low
+- 挂卖腿依托的卖方近价件数 < `min_book_qty`(3)→ `thin_book`;
+  < `thin_book_edge_qty`(10)→ 降为 low
+
+上表三行按默认阈值:T6 被拦,T4(60 件)和 T5(40 件)上榜但降为 low。
+阈值都没校准,AODP 那一边一律不判(它不给件数),机会上的 `depth_checked`
+说明这条到底判过没有。`FillPosition` 只展示、不参与判定。
 
 口径提醒:AODP 的 `history.item_count` 只统计卖单成交,拿它算出来的均价
 天生偏向卖价一侧,`FillPosition` 会因此偏高。抓包的 `markethistories`

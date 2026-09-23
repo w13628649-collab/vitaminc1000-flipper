@@ -34,8 +34,9 @@ filters:
   bid_cliff_edge_pct: 0.20  # 买方近价窗口外第一档落差达到它 → 降为 low。0 = 关闭
   max_spread_pct: 0.0     # 卖一/买一 − 1 超过它 → wide_spread。0 = 关闭
 
-# 自建抓包的盘口怎么参与扫描。enabled 故意不写:用内置默认值(现在是关),
-# 要试融合就在这里加一行 enabled: true。四个件数阈值都不能超过 book_levels
+# 自建抓包的盘口怎么参与扫描。enabled 故意不写:用内置默认值(开,抓包价上榜前
+# 要先过上面的深度判据)。要退回纯 AODP 就在这里加一行 enabled: false。
+# 四个件数阈值都不能超过 book_levels
 capture:
   max_hours: 0            # 扫描读抓包的窗口;0 = 跟 freshness.max_hours 一致
   depth_max_hours: 2.0    # 深度只信这么近的档,更旧的不参与判据
