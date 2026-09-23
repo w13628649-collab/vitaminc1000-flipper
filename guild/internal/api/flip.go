@@ -173,6 +173,7 @@ func (s *Server) handleCoverage(w http.ResponseWriter, r *http.Request) {
 			"price_rows":    res.PriceRows,
 			"coverage":      res.Coverage,
 			"reject_counts": res.RejectCounts,
+			"capture":       res.Capture,
 		}
 	}
 	writeJSON(w, out)

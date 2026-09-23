@@ -106,6 +106,8 @@ func main() {
 	go conflator.Run(ctx, *tick)
 
 	flipper := flip.New(st, cfg)
+	// 扫描读簿要知道哪些盘口最近串过城:那些盘口的"最近一眼"不可信,暂停幽灵剔除
+	flipper.Conflicts = ing
 	// 目录拉不动不该拦住服务端启动——行情中转本身不依赖它
 	if err := flipper.LoadCatalog(ctx); err != nil {
 		slog.Warn("载入物品目录失败,倒爷相关接口会返回 503", "err", err)

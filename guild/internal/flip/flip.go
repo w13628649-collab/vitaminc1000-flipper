@@ -29,6 +29,9 @@ import (
 type Service struct {
 	Store *store.Store
 	Cfg   conf.Config
+	// Conflicts 是 ingest 那边的串城记录,扫描读簿时对最近串过城的盘口
+	// 暂停幽灵剔除。可以不设:不设就不做这层处理
+	Conflicts ConflictSource
 
 	cat      atomic.Pointer[catalog.Catalog]
 	last     atomic.Pointer[scan.Result]
@@ -97,7 +100,7 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	}
 	defer s.scanning.Store(false)
 
-	res, err := scan.Run(ctx, s.aodp, s.Cfg, cat, time.Now().UTC())
+	res, err := scan.RunWithCapture(ctx, s.aodp, s.Cfg, cat, s.books(), time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}

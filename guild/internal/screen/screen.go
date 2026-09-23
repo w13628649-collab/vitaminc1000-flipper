@@ -100,6 +100,18 @@ type Opportunity struct {
 	SellAgeHours float64    `json:"sell_age_hours"`
 	DataAgeHours float64    `json:"data_age_hours"`
 	Confidence   Confidence `json:"confidence"`
+
+	// Ask/Bid 是卖单簿、买单簿两边各自用了谁的价。和 buy_age_hours/sell_age_hours
+	// 同一个口径:ask 对应 SellPrice,bid 对应 BuyPrice
+	Ask Side `json:"ask"`
+	Bid Side `json:"bid"`
+	// BuyLeg*/SellLeg* 是选中那个执行方式的两条腿各自依托哪一边:
+	// 秒买吃 ask、挂买排在 bid 上,秒卖吃 bid、挂卖排在 ask 上。
+	// 名字刻意和 ask/bid 分开——"买"指交易腿,不指买单簿
+	BuyLegSource    string  `json:"buy_leg_source"`
+	SellLegSource   string  `json:"sell_leg_source"`
+	BuyLegAgeHours  float64 `json:"buy_leg_age_hours"`
+	SellLegAgeHours float64 `json:"sell_leg_age_hours"`
 	// Warnings 是贴近过滤阈值的项。这条之所以还在榜上,是因为差一点点才被拦掉。
 	Warnings []string `json:"warnings,omitempty"`
 	// Hints 是中性信息,不影响可信度。
@@ -130,17 +142,41 @@ func (o Opportunity) Notes() []string { return append(append([]string{}, o.Warni
 type Rejected struct {
 	ItemID string `json:"item_id"`
 	City   string `json:"city"`
-	Reason string `json:"reason"`
-	Detail string `json:"detail"`
+	// Quality 以前没有:qualities 配成 [1,2,3] 时,同一物品同一城会有三条
+	// 看起来一模一样的拒绝
+	Quality int    `json:"quality"`
+	Reason  string `json:"reason"`
+	Detail  string `json:"detail"`
+	// AskSource/BidSource 说明判它时两边各用了谁的价。抓包价被拒和 AODP 价被拒,
+	// 处置不一样:前者多半该回游戏里再翻一眼
+	AskSource string `json:"ask_source,omitempty"`
+	BidSource string `json:"bid_source,omitempty"`
 }
 
 // Evaluate 把一条 (物品, 城市) 的市场快照判成机会或拒绝原因。
-// 两个返回值永远只有一个非 nil。
+// 两个返回值永远只有一个非 nil。等于两边都用 AODP 的 EvaluateSides。
 func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 	names Namer, now time.Time) (*Opportunity, *Rejected) {
+	return EvaluateSides(rec, Sides{}, stats, cfg, names, now)
+}
+
+// EvaluateSides 和 Evaluate 一样,只是多带了两边的来源说明。
+//
+// 价格本身已经由融合层写进 rec(SellPriceMin/BuyPriceMax 及其时间戳),
+// 这里的全部 troll 过滤照原样作用在融合后的价格上;sides 只负责把来源、
+// 数据龄、落选报价和深度带到输出里。深度判据在下一步才接进来。
+func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg conf.Config,
+	names Namer, now time.Time) (*Opportunity, *Rejected) {
+
+	sides.Ask = sides.Ask.withAODP(rec.SellPriceMin, rec.SellPriceMinDate, now)
+	sides.Bid = sides.Bid.withAODP(rec.BuyPriceMax, rec.BuyPriceMaxDate, now)
 
 	reject := func(reason, detail string) (*Opportunity, *Rejected) {
-		return nil, &Rejected{ItemID: rec.ItemID, City: rec.City, Reason: reason, Detail: detail}
+		return nil, &Rejected{
+			ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality,
+			Reason: reason, Detail: detail,
+			AskSource: sides.Ask.Source, BidSource: sides.Bid.Source,
+		}
 	}
 
 	f := cfg.Filters
@@ -250,6 +286,7 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		q    ModeQuote
 		unit econ.Unit
 		qty  int64
+		mode econ.Mode
 	}
 	var profitable []sized
 	for _, m := range econ.Modes {
@@ -266,7 +303,7 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		}
 		modes = append(modes, q)
 		if u.ProfitPerUnit > 0 {
-			profitable = append(profitable, sized{q, u, qty})
+			profitable = append(profitable, sized{q, u, qty, m})
 		}
 	}
 	sort.SliceStable(modes, func(i, j int) bool { return modes[i].DailyProfit > modes[j].DailyProfit })
@@ -293,7 +330,7 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		}
 		return profitable[i].q.ProfitPerUnit > profitable[j].q.ProfitPerUnit
 	})
-	best, unit, bestQty := profitable[0].q, profitable[0].unit, profitable[0].qty
+	best, unit, bestQty, bestMode := profitable[0].q, profitable[0].unit, profitable[0].qty, profitable[0].mode
 
 	if unit.Margin > f.MaxMargin {
 		return reject("implausible_margin", fmt.Sprintf("毛利率 %.0f%% 高得不真实", unit.Margin*100))
@@ -331,7 +368,25 @@ func Evaluate(rec aodp.PriceRecord, stats *histagg.Stats, cfg conf.Config,
 		warnings = append(warnings, fmt.Sprintf("价格波动大(变异系数 %.2f)", stats.CV))
 	}
 
+	for _, s := range []Side{sides.Ask, sides.Bid} {
+		if s.Note != "" {
+			hints = append(hints, s.Note)
+		}
+	}
+	if sides.Ask.Source == SourceCapture && sides.Bid.Source != SourceCapture {
+		// 最常见的缺口:市场列表页只发卖单请求。买单簿要点进物品详情页才抓得到,
+		// 挂买腿有没有人砸货这件事现在完全不知道
+		hints = append(hints, "买方深度未知:列表页只抓卖单,点进物品详情页才抓得到买单")
+	}
+	buyLeg, sellLeg := legSides(bestMode, sides)
+
 	return &Opportunity{
+		Ask:               sides.Ask,
+		Bid:               sides.Bid,
+		BuyLegSource:      buyLeg.Source,
+		SellLegSource:     sellLeg.Source,
+		BuyLegAgeHours:    buyLeg.AgeHours,
+		SellLegAgeHours:   sellLeg.AgeHours,
 		ItemID:            rec.ItemID,
 		ItemName:          name,
 		City:              rec.City,
