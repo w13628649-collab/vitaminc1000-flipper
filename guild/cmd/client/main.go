@@ -361,7 +361,11 @@ func (u *uploader) run(ctx context.Context, interval time.Duration) {
 
 func (u *uploader) flush(ctx context.Context) {
 	u.mu.Lock()
-	batch := model.UploadBatch{Reporter: u.character, Orders: u.pending}
+	// SentAt 让服务端算出这台机器的钟差并整批平移 ObservedAt。服务端的 touch
+	// 已改为记观测时间而不是服务端时刻,不带 SentAt 的话钟慢的成员的单会提前过期。
+	// 每次发送现填:退回队列重发的那批也要用这一次发出的时刻,里面的旧单才保持旧
+	batch := model.UploadBatch{Reporter: u.character, Orders: u.pending,
+		SentAt: time.Now(), ClientVersion: version}
 	u.pending = nil
 	u.mu.Unlock()
 
