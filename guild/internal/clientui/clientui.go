@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"albion-guild/internal/webui"
+	"albion-guild/internal/world"
 )
 
 // Status 是窗口顶部要显示的客户端自身状态。
@@ -40,8 +41,12 @@ type Status struct {
 	Version   string `json:"version"`
 	ClientID  string `json:"client_id"`
 	Character string `json:"character"`
-	Location  string `json:"location"`
-	Server    string `json:"server"`
+	// Location 是 Join 包里的原始地点 id(0007、3008 这种),原样给出,排查用。
+	// City 是它给人看的地名(world.DisplayName),顶栏显示这个:
+	// 以前直接显示 Location,成员看到的是 "0007" 而不是 Thetford
+	Location string `json:"location"`
+	City     string `json:"city"`
+	Server   string `json:"server"`
 
 	Devices   int  `json:"devices"`
 	Capturing bool `json:"capturing"`
@@ -177,6 +182,10 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	st.Fallback = s.fallback
 	s.mu.Unlock()
+	// 地名在这里统一翻,主程序只管报原始 id。翻不出的原样给,界面照样能显示
+	if st.City == "" {
+		st.City = world.DisplayName(st.Location)
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(st)

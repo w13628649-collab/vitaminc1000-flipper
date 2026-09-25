@@ -8,28 +8,29 @@
 </head>
 <body>
 <div class="wrap">
+  <!-- 页签和旧版 web 端一样放在顶栏这一行里:品牌名 | 页签 | 状态。
+       拆成单独一行会让查价页整体下移一截,右侧挂单簿就更容易露到视口外 -->
   <header>
     <div class="brand">albion <span>guild</span></div>
+    <nav>
+      <button data-view="desk" aria-current="page">总览</button>
+      <button data-view="ideas">机会</button>
+      <button data-view="lookup">查价</button>
+      <button data-view="rank">销量榜</button>
+      <button data-view="book">记账</button>
+      <button data-view="live">实时</button>
+    </nav>
     <div class="facts">
       <div class="fact"><b id="capture"><span class="dot dead"></span>未抓包</b><i id="capture-sub">本机</i></div>
       <div class="fact"><b id="who">—</b><i id="who-sub">角色</i></div>
-      <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i>推送</i></div>
-      <div class="fact"><b id="scan-age">—</b><i>行情</i></div>
+      <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i id="conn-sub">推送</i></div>
+      <div class="fact"><b id="scan-age">—</b><i id="scan-age-sub">行情</i></div>
       <button class="act ghost" id="quit" hidden>退出</button>
     </div>
   </header>
 
   <!-- 驱动没装就完全收不到数据,这是唯一值得占一整条的警告 -->
   <div id="driver-warn" class="banner" hidden></div>
-
-  <nav>
-    <button data-view="desk" aria-current="page">总览</button>
-    <button data-view="ideas">机会</button>
-    <button data-view="lookup">查价</button>
-    <button data-view="rank">销量榜</button>
-    <button data-view="book">记账</button>
-    <button data-view="live">实时</button>
-  </nav>
 
   <!-- ═══════════ 总览:这笔钱怎么分 ═══════════ -->
   <section class="view" id="v-desk">
@@ -53,6 +54,7 @@
       <button class="act" id="rescan">重新扫描</button>
       <span class="sub" id="scan-meta"></span>
     </div>
+    <div id="desk-banners"></div>
 
     <div class="kpis" id="kpis"></div>
     <p class="note" id="p-note"></p>
@@ -60,14 +62,17 @@
     <div class="split">
       <div>
         <h3>资金怎么分</h3>
+        <div class="tablewrap">
         <table class="tight">
           <thead><tr>
             <th class="l">标的</th><th class="l">类型</th>
-            <th>一轮件数</th><th>占用本金</th><th>日收益</th><th>回报率</th>
-            <th>风险调整</th><th>波动</th><th>轮/天</th>
+            <th title="一轮买多少件">一轮件数</th><th title="一天能出掉多少件(几轮加起来)">日件数</th>
+            <th>占用本金</th><th>日收益</th><th>回报率</th>
+            <th>风险调整</th><th>波动</th><th>轮/天</th><th class="l">可信</th>
           </tr></thead>
           <tbody id="p-rows"></tbody>
         </table>
+        </div>
       </div>
       <div>
         <h3>边际收益</h3>
@@ -76,84 +81,144 @@
       </div>
     </div>
 
-    <h3>数据覆盖率</h3>
+    <h3>待核对 <span class="sub">日收益靠前、但两条腿的深度还没核过的机会</span></h3>
+    <p class="sub" id="check-note"></p>
+    <table class="tight">
+      <thead><tr>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">路线</th><th class="l">执行</th>
+        <th>日收益</th><th class="l">哪条腿没核</th><th class="l">进游戏怎么核</th>
+      </tr></thead>
+      <tbody id="check-rows"></tbody>
+    </table>
+
+    <h3>数据覆盖率 <span class="sub" id="cov-note"></span></h3>
     <p class="sub">亚服的真瓶颈是有没有数据,不是算法。条越短,这座城的报价越旧。</p>
-    <div class="cov" id="cov"></div>
+    <div class="cov-grid" id="cov"></div>
+    <div class="cov-legend" id="cov-legend"></div>
+
+    <h3>抓包融合 <span class="sub">成员抓包传上来的挂单在这一轮扫描里用上了多少</span></h3>
+    <div class="statgrid small" id="cap-sum"></div>
 
     <h3>模型校准</h3>
     <div id="calib"></div>
   </section>
 
-  <!-- ═══════════ 机会:同城 + 跨城 ═══════════ -->
+  <!-- ═══════════ 机会:同城 + 跨城 ═══════════
+       旧版 web 端价差扫描页的布局:先覆盖率(这份数据能不能信)、再控制条、再结果表、
+       最后是被过滤的候选和诊断。同城和跨城在同一张表里,它们争的是同一笔钱 -->
   <section class="view" id="v-ideas" hidden>
-    <div class="bar">
-      <div class="seg" id="kind-seg">
-        <button data-kind="all" aria-pressed="true">全部</button>
-        <button data-kind="flip">同城</button>
-        <button data-kind="arb">跨城</button>
+    <section class="lede" id="i-lede">
+      <h1>先看数据能不能信,再看能赚多少</h1>
+      <p>AODP 的价格靠玩家自愿上传——必须有人在游戏里翻到那一页市场,数据才会进库。亚服人少,
+         一条 15 小时前的完美价差没有意义。所以这里先给各城覆盖率;公会成员抓包传上来的挂单
+         会逐边盖掉 AODP 的价,还带着件数。</p>
+    </section>
+
+    <section class="coverage" id="i-coverage" hidden>
+      <div class="cov-head"><h2>各城数据覆盖率</h2><em id="i-cov-note"></em></div>
+      <div class="cov-grid" id="i-cov-grid"></div>
+      <div class="cov-legend" id="i-cov-legend"></div>
+    </section>
+
+    <div id="i-banners"></div>
+
+    <section class="controls">
+      <div class="ctrl"><label>玩法</label>
+        <div class="seg" id="kind-seg">
+          <button data-kind="all" aria-pressed="true">全部</button>
+          <button data-kind="flip">同城</button>
+          <button data-kind="arb">跨城</button>
+        </div>
       </div>
-      <label class="f">只看可信度
+      <div class="ctrl"><label for="i-city">城市</label>
+        <select id="i-city"><option value="">全部</option></select></div>
+      <div class="ctrl"><label for="i-conf">最低置信度</label>
         <select id="i-conf">
-          <option value="">全部</option><option value="high">高</option>
-          <option value="medium">中及以上</option>
-        </select>
-      </label>
-      <span class="sub" id="ideas-meta"></span>
+          <option value="">low = 全部</option>
+          <option value="medium">medium 以上</option>
+          <option value="high">仅 high</option>
+        </select></div>
+      <div class="ctrl"><label for="i-src">价格来源</label>
+        <select id="i-src" title="按两条腿实际用的价筛:用了抓包 = 至少一条腿的价是成员抓包抓到的">
+          <option value="">全部</option>
+          <option value="capture">用了抓包</option>
+          <option value="aodp">纯 AODP</option>
+        </select></div>
+      <div class="ctrl"><label for="i-age">新鲜度上限</label>
+        <select id="i-age" title="服务端扫描已经按 6 小时滤过,这里只能再收紧">
+          <option value="">6 小时(服务端)</option>
+          <option value="4">4 小时</option>
+          <option value="2">2 小时</option>
+          <option value="1">1 小时</option>
+        </select></div>
+      <div class="spacer"></div>
+      <button class="act" id="i-rescan">重新扫描</button>
+    </section>
+
+    <div class="empty" id="i-empty">
+      <p>正在读取扫描结果…</p>
     </div>
-    <p class="note">
-      点开任意一行看<b>四种执行方式</b>的报价。秒买秒卖只收 4% 市场税,没有挂单费;
-      挂买挂卖价格最好但摩擦 9%,而且两头都要等成交。哪种划算取决于盘口宽度。
-    </p>
-    <table>
-      <thead><tr>
-        <th class="l s" data-k="item_name">物品</th>
-        <th class="l">路线</th>
-        <th class="l">执行</th>
-        <th class="s" data-k="buy_price">买</th>
-        <th class="s" data-k="sell_price">卖</th>
-        <th class="s" data-k="profit_per_unit">单件</th>
-        <th class="s" data-k="margin">毛利</th>
-        <th class="s" data-k="qty">可吃量</th>
-        <th class="s" data-k="capital_used">占用</th>
-        <th class="s" data-k="daily_profit" data-dir="desc">日收益</th>
-        <th class="s" data-k="z_score">z</th>
-        <th class="s" data-k="volatility">波动</th>
-        <th class="s" data-k="max_age_hours">年龄</th>
-        <th class="l">可信</th>
-      </tr></thead>
-      <tbody id="ideas-rows"></tbody>
-    </table>
-    <div class="empty" id="ideas-empty">还没扫过。</div>
-    <p class="note" id="rejects"></p>
+
+    <div id="i-results" hidden>
+      <div class="count" id="i-count"></div>
+      <p class="note">
+        点开任意一行看<b>四种执行方式</b>的报价和两边盘口。真实盈亏平衡价差:秒买秒卖
+        <b id="be-tt">4.17%</b>、秒买挂卖 <b id="be-tm">6.95%</b>、挂买秒卖 <b id="be-mt">6.77%</b>、
+        挂买挂卖 <b id="be-mm">9.63%</b>——比费率直接相加(4% / 6.5% / 9%)高,
+        因为买侧的费乘在买价上、卖侧的费乘在卖价上。挂单腿还要等成交,创建费下单就扣、不成交不退。
+      </p>
+      <div class="tablewrap">
+        <table class="ideas">
+          <thead><tr id="i-head"></tr></thead>
+          <tbody id="ideas-rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="ideas-empty" hidden>没有机会通过当前筛选。</div>
+      <details class="rejects" id="i-rejects">
+        <summary>被过滤的候选 <em id="i-reject-total"></em></summary>
+        <div class="statgrid" id="i-reject-grid"></div>
+        <div id="i-reject-list"></div>
+        <div id="i-diagnosis"></div>
+      </details>
+    </div>
+    <footer class="foot" id="i-foot"></footer>
   </section>
 
-  <!-- ═══════════ 查价 ═══════════ -->
+  <!-- ═══════════ 查价 ═══════════
+       旧版 web 端的三栏:左物品列表 | 中间 城市 × 品质 价格矩阵 | 右侧固定挂单簿 -->
   <section class="view" id="v-lookup" hidden>
-    <div class="bar">
-      <div class="picker">
-        <button class="act ghost" id="menu-btn">按分类浏览 ▾</button>
-        <div class="menu bare" id="menu"></div>
+    <div class="browse">
+      <div class="ctrl picker">
+        <label id="menu-label">分类</label>
+        <button id="menu-btn" aria-haspopup="true" aria-expanded="false"
+                aria-labelledby="menu-label"><span id="menu-path">全部物品</span></button>
+        <div class="menu bare" id="menu" role="menu" aria-labelledby="menu-label"></div>
       </div>
-      <input type="search" id="search" placeholder="搜中文名 / 英文名 / 物品 ID" autocomplete="off">
-      <label class="f">吃单量 <input type="number" id="d-qty" value="1000" step="100" min="1"></label>
-      <span class="sub" id="lookup-title"></span>
+      <div class="ctrl"><label for="f-tier">等级</label>
+        <select id="f-tier"><option value="0">全部</option></select></div>
+      <div class="ctrl"><label for="f-ench">附魔</label>
+        <select id="f-ench"><option value="-1">全部</option></select></div>
+      <div class="ctrl"><label for="f-qual">品质</label>
+        <select id="f-qual"><option value="0">全部</option></select></div>
+      <div class="ctrl grow"><label for="search">搜索</label>
+        <input id="search" type="search" autocomplete="off" spellcheck="false"
+               placeholder="中文、英文或物品 ID —— 输入后忽略左边的分类"></div>
     </div>
-    <div class="results" id="results" hidden></div>
-    <p class="note">
-      <b>数量</b>和<b>实际均价</b>只有抓包拿得到。AODP 的接口不返回挂单数量,
-      所以"最低价 1000"可能只对应 1 件货——这正是 troll 挂单能骗人的原因。
-      实际均价那一列是走完盘口吃到目标数量后的加权价,和最优价的差就是滑点。
-    </p>
-    <table>
-      <thead><tr>
-        <th class="l">城市</th><th class="l">品质</th>
-        <th>卖单最低</th><th>数量</th><th>实际买入均价</th>
-        <th>买单最高</th><th>数量</th><th>实际卖出均价</th>
-        <th>同城价差</th><th>年龄</th><th class="l">来源</th>
-      </tr></thead>
-      <tbody id="lookup-rows"></tbody>
-    </table>
-    <div class="empty" id="lookup-empty">先在上面挑一件物品。</div>
+    <div class="lookup-body" id="lookup-body">
+      <aside class="itemlist">
+        <div class="itemlist-head" id="list-head">从上面的分类挑,或者直接搜</div>
+        <div id="list"></div>
+      </aside>
+      <div class="pricepanel">
+        <div id="lookup-empty" class="empty">
+          <p>游戏里一次只能看当前所在城市的一个品质。这里把所有城市 × 所有品质摊成一张表,
+             另外带上黑市、7 日 / 30 日均价和日均成交量。点任意一格,右边出来那一格的完整挂单簿和成交走势。</p>
+        </div>
+        <div id="lookup-result" hidden></div>
+      </div>
+      <!-- 挂单簿固定在右侧:点格子就出来,页面不用滚 -->
+      <aside class="bookside" id="bookpanel" hidden></aside>
+    </div>
   </section>
 
   <!-- ═══════════ 销量榜 ═══════════ -->
@@ -164,8 +229,8 @@
         <option value="7">7 天</option><option value="14">14 天</option><option value="30">30 天</option>
       </select></label>
       <label class="f">品质 <select id="r-quality">
-        <option value="1">普通</option><option value="2">优秀</option><option value="3">杰出</option>
-        <option value="4">卓越</option><option value="5">大师</option>
+        <option value="1">普通</option><option value="2">良好</option><option value="3">优秀</option>
+        <option value="4">杰出</option><option value="5">不凡</option>
       </select></label>
       <label class="f">分类 <select id="r-category"><option value="">全部</option></select></label>
       <span class="sub" id="rank-meta"></span>
@@ -212,9 +277,10 @@
     </div>
     <table class="tight">
       <thead><tr>
-        <th class="l">物品</th><th class="l">路线</th><th class="l">执行</th>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">路线</th><th class="l">执行</th>
         <th>计划量</th><th>计划买</th><th>计划卖</th>
-        <th>成交量</th><th>实际净利</th><th class="l">状态</th><th class="l">操作</th>
+        <th title="实际买入 / 卖出件数">成交量</th><th title="实际买入 / 卖出均价">成交均价</th>
+        <th>实际净利</th><th class="l">状态</th><th class="l">开单 / 收口</th><th class="l">操作</th>
       </tr></thead>
       <tbody id="book-rows"></tbody>
     </table>
@@ -225,11 +291,16 @@
   <section class="view" id="v-live" hidden>
     <p class="note">
       成员在游戏里翻市场时数据实时传上来。<b>不需要刷新页面</b>,数值变化时会自己跳动,涨绿跌红。
+      看哪些物品不用自己挑:<b>机会板日收益前几名</b>的物品,加上<b>查价页正在看的那件</b>,
+      在配置里的每座城都订上买卖两边;机会板一更新,这里跟着换。
     </p>
+    <p class="sub" id="live-meta"></p>
     <table>
       <thead><tr>
-        <th class="l">物品</th><th class="l">城市</th>
-        <th>卖单最低</th><th>深度</th><th>买单最高</th><th>深度</th><th>更新</th>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">城市</th>
+        <th title="这个盘口最便宜的那张卖单(抓包)">卖单最低</th><th title="最优价上的件数 / 单数">件数 / 单数</th>
+        <th title="这个盘口出价最高的那张买单(抓包)">买单最高</th><th title="最优价上的件数 / 单数">件数 / 单数</th>
+        <th title="最近一次有成员看到这个盘口变化">多久前</th><th>更新时刻</th>
       </tr></thead>
       <tbody id="live-rows"></tbody>
     </table>

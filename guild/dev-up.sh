@@ -53,9 +53,15 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
 # 客户端开着的时候 exe 被 Windows 锁住,直接覆盖会失败、脚本停在这里、
 # 服务端也不重启。Windows 允许给运行中的 exe 改名(只是不许覆盖和删除),
 # 所以先把旧的挪开再换上新的:正在跑的那个不受影响,重开就是新版
-rm -f ../dist/flipper-client.exe.old 2>/dev/null || true
+#
+# 挪开的文件名要带时间戳:上上次挪开的那个可能还在跑(用户一直没重开客户端),
+# 删不掉也覆盖不了,固定叫 .old 的话第二次部署就卡在这里。
+# 清理时删得掉的删,还在跑的留着,下次再清
+for old in ../dist/flipper-client.exe.old*; do
+  [ -e "$old" ] && rm -f "$old" 2>/dev/null || true
+done
 if [ -e ../dist/flipper-client.exe ]; then
-  mv -f ../dist/flipper-client.exe ../dist/flipper-client.exe.old
+  mv -f ../dist/flipper-client.exe "../dist/flipper-client.exe.old-$(date +%H%M%S)"
 fi
 mv -f ../dist/flipper-client.exe.new ../dist/flipper-client.exe
 cp ../dist/flipper-client.exe "$DEPLOY/release/flipper-client.exe"

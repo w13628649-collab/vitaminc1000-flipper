@@ -1,225 +1,568 @@
 /* 字体随包带着,不打 Google。桌面程序不该因为公司网络挡了
-   fonts.googleapis.com 就掉成宋体。两个都是可变字体,
-   一族一个文件盖住所有字重。中文走系统字体——把中文字体打进去
-   要十几 MB,不值。 */
+   fonts.googleapis.com 就掉成宋体。可变字体,一个文件盖住所有字重。
+   中文走系统字体——把中文字体打进去要十几 MB,不值。
+   (fonts/cinzel.woff2 还在目录里但不再引用:那套大写衬线是游戏风,用户否掉了) */
 @font-face{
   font-family:Archivo; src:url(fonts/archivo.woff2) format('woff2-variations');
   font-weight:100 900; font-display:swap;
 }
-@font-face{
-  font-family:Cinzel; src:url(fonts/cinzel.woff2) format('woff2-variations');
-  font-weight:400 900; font-display:swap;
-}
 
-/* 配色跟着游戏走。这个窗口要和游戏并排开、来回切,
-   浅色底会晃眼,而且一眼就看出是"外挂工具"而不是游戏的一部分。
-   深暗木底 + 金边 + 羊皮纸字色,是 Albion 自己那套市场界面的调子。
+/* 配色回到旧版 web 端那一套 —— 用户 2026-09-23 明确要求:
+   "这个黄色背景我也不喜欢,还是以前那种配色好看"。
+   白银是这个游戏的血液,底色取银的冷灰;强调色是青铜,只当点缀
+   (品牌名第二个词、当前排序列、聚焦、悬停、最佳卖点、件数),
+   结构线和强调一律用墨黑。浅色主题,**不跟系统暗色模式走**:
+   WebView2 会跟随 Windows 的深色设置,加暗色分支等于把深底又带回来。
 
-   变量名沿用原来的(--ink / --bronze / 城市色 / 品质色),
-   只换值,所以 app.js 一个字都不用改。 */
+   城市色、品质色都是给浅底调过的:普通品质在游戏里是白的,
+   浅底上看不见,换成中灰。 */
 :root{
-  --bg:#14100c;            /* 窗口底:近黑的暖褐 */
-  --panel:#1d1811;         /* 面板 */
-  --panel-2:#262019;       /* 面板高一层,表头/悬停 */
-  --edge:#3a2f22;          /* 边框 */
-  --edge-hi:#56422c;       /* 高亮边 */
-
-  --ink:#e6dbc4;           /* 正文:羊皮纸 */
-  --ink-mid:#ab9b80;
-  --ink-soft:#7d6e59;
-  --rule:#332a1f;
-  --rule-soft:#282116;
-
-  --gold:#c9a227;          /* 主强调色 */
-  --bronze:#b08a2e;
-  --gain:#6faa5c;          /* 深底上要提亮,否则发灰 */
-  --warn:#cc5a50;
-
-  /* 五大城市 + 凯尔利恩,按游戏里的阵营色,深底上提亮 */
-  --thetford:#a978d6; --fort-sterling:#c2c8cc; --lymhurst:#6fb84f;
-  --martlock:#4a92d6; --bridgewatch:#d98f30; --caerleon:#d15048;
-  /* 物品品质,和游戏内一致 */
-  --q1:#b8ae9b; --q2:#4ea24e; --q3:#4a8fd6; --q4:#a86fd6; --q5:#d6a13a;
+  color-scheme:light;
+  --paper:#dfe1e3; --surface:#eef0f1; --surface-2:#e6e8ea;
+  --ink:#15181c; --ink-mid:#4a5158; --ink-soft:#7c858d;
+  --rule:#c6cbcf; --rule-soft:#d6dadd;
+  --bronze:#8a6320; --bronze-lift:#a87a2c;
+  --gain:#2c6e49; --warn:#9c3232;
+  --thetford:#6b4a8f; --fort-sterling:#69737d; --lymhurst:#4f7a3a;
+  --martlock:#2f5d8a; --bridgewatch:#b07226; --caerleon:#9c3232;
+  --brecilien:#2f7d7d; --black-market:#2a2a2a;
+  --q1:#5f6368; --q2:#2f7d3f; --q3:#2563a8; --q4:#7a3fa8; --q5:#b0810f;
   --r:2px;
 }
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; color:var(--ink);
-  background:var(--bg);
-  /* 极轻的暗角,让中间的内容区浮起来一点,不是纯平的黑 */
-  background-image:radial-gradient(ellipse 120% 80% at 50% 0%, #1b1610 0%, var(--bg) 70%);
-  background-attachment:fixed;
+  margin:0; background:var(--paper); color:var(--ink);
   font-family:Archivo,system-ui,sans-serif; font-size:14px; line-height:1.45;
-  font-variant-numeric:tabular-nums;
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
 }
-.wrap{max-width:1420px; margin:0 auto; padding:0 20px 70px}
+.wrap{max-width:1420px; margin:0 auto; padding:0 20px 72px}
+a{color:var(--bronze)}
+:focus-visible{outline:2px solid var(--bronze); outline-offset:2px}
+/* [hidden] 只是 UA 样式里的 display:none,会被任何同权重、后写的 display 盖掉
+   (.fact、.menu 都踩过)。统一在这里压住,所有用 hidden 切换的元素都不用再各补一条 */
+[hidden]{display:none !important}
 
-header{display:flex; gap:20px; align-items:baseline; padding:20px 0 12px;
-       border-bottom:1px solid var(--gold)}
-.brand{font-family:Cinzel,Archivo,serif; font-size:19px; font-weight:600;
-       letter-spacing:.06em; text-transform:uppercase; color:var(--ink)}
-.brand span{color:var(--gold)}
-.facts{display:flex; gap:22px; margin-left:auto}
+/* ── 顶栏 ───────────────────────────────────────────── */
+header{display:flex; flex-wrap:wrap; gap:20px; align-items:baseline;
+       padding:22px 0 16px; border-bottom:2px solid var(--ink)}
+.brand{font-size:19px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
+.brand span{color:var(--bronze)}
+.facts{display:flex; gap:22px; flex-wrap:wrap}
 .fact{display:flex; flex-direction:column; gap:1px; text-align:right}
-/* [hidden] 只是 UA 样式里的 display:none,被上面这条同权重的规则盖掉了。
-   和 .menu.bare 是同一个坑:后写的赢,所以这条必须在 .fact 之后 */
-.fact[hidden]{display:none}
 #quit{align-self:center; margin-left:4px}
-#quit[hidden]{display:none}
 .fact b{font-size:14px; font-weight:600; line-height:1.2}
-.fact i{font-size:11px; font-style:normal; color:var(--ink-soft)}
-.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px}
-.live{background:var(--gain); box-shadow:0 0 6px var(--gain)}
-.dead{background:var(--warn)}
+.fact i{font-size:11px; font-style:normal; color:var(--ink-soft); font-weight:500}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:1px}
+.dot.live{background:var(--gain); box-shadow:0 0 0 3px color-mix(in oklab, var(--gain), transparent 82%)}
+.dot.dead{background:var(--warn)}
 
-.banner{margin:14px 0 0; padding:11px 14px; border:1px solid var(--warn);
-  border-left-width:3px; border-radius:var(--r);
-  background:color-mix(in oklab, var(--warn), transparent 88%);
-  color:var(--ink); font-size:12.5px; line-height:1.5}
+.banner{margin:14px 0 0; padding:11px 14px; background:var(--surface);
+  border-left:3px solid var(--warn); border-radius:var(--r);
+  color:var(--ink-mid); font-size:12.5px; line-height:1.5; max-width:100ch}
 .banner b{color:var(--warn)}
-.banner[hidden]{display:none}
 
-nav{display:flex; gap:2px; border-bottom:1px solid var(--rule); margin-bottom:4px}
+/* 页签:旧版的药丸式,当前页墨底纸字。和旧版一样放在顶栏里,把状态挤到最右 */
+nav{display:flex; flex-wrap:wrap; gap:2px; margin-right:auto}
 nav button{
-  font:inherit; font-weight:600; font-size:13px; border:0; cursor:pointer;
-  background:transparent; color:var(--ink-soft); padding:9px 16px;
-  border-bottom:2px solid transparent; margin-bottom:-1px; letter-spacing:.02em;
+  font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  background:transparent; color:var(--ink-soft); border:1px solid transparent;
+  border-radius:var(--r); padding:5px 13px;
 }
-nav button:hover{color:var(--ink)}
-nav button[aria-current=page]{color:var(--gold); border-bottom-color:var(--gold)}
+nav button:hover{background:var(--surface); color:var(--ink)}
+nav button[aria-current=page],nav button[aria-current=page]:hover{background:var(--ink); color:var(--paper)}
 
-h3{font-family:Cinzel,Archivo,serif; font-size:11.5px; font-weight:600;
-   letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+h3{font-size:13px; font-weight:600; color:var(--ink);
    margin:26px 0 2px; padding-bottom:6px; border-bottom:1px solid var(--rule)}
 .note{padding:12px 0 4px; font-size:12.5px; color:var(--ink-mid); max-width:82ch}
+.note b{color:var(--ink)}
 .sub{font-size:11.5px; color:var(--ink-soft)}
-code{font-size:12px; color:var(--bronze)}
+code{font-size:12px; background:var(--surface-2); padding:1px 5px; border-radius:var(--r)}
 .bar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px 0 4px}
 label.f{display:flex; gap:6px; align-items:center; font-size:12px; color:var(--ink-mid)}
 select,input[type=search],input[type=number],input[type=text]{
-  font:inherit; font-size:13px; padding:5px 8px; border:1px solid var(--edge);
-  background:var(--panel); color:var(--ink); border-radius:var(--r);
+  font:inherit; font-size:13px; padding:5px 8px; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink); border-radius:var(--r);
 }
-select:focus,input:focus{outline:none; border-color:var(--gold)}
+select:focus,input:focus{outline:none; border-color:var(--bronze)}
+select:disabled,input:disabled{opacity:.45}
 input[type=search]{min-width:210px} input[type=number]{width:120px}
+
+/* 主按钮是墨黑底、纸色字,悬停才变青铜。整块铜色按钮就是"黄"的主要来源 */
 button.act{
-  font:inherit; font-size:12.5px; font-weight:600; padding:6px 13px; cursor:pointer;
-  border:1px solid var(--bronze); background:var(--bronze); color:#17120b;
-  border-radius:var(--r); letter-spacing:.02em;
+  font:inherit; font-size:13px; font-weight:600; padding:7px 16px; cursor:pointer;
+  border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  border-radius:var(--r); transition:background .15s,border-color .15s;
 }
-button.act:hover{background:var(--gold); border-color:var(--gold)}
-button.act:disabled{opacity:.5; cursor:default}
-button.ghost{background:transparent; color:var(--ink); border-color:var(--edge-hi)}
-button.ghost:hover{background:var(--panel-2); color:var(--gold); border-color:var(--gold)}
+button.act:hover:not(:disabled){background:var(--bronze); border-color:var(--bronze)}
+button.act:disabled{opacity:.45; cursor:progress}
+/* ghost 的悬停也必须带 :not(:disabled) 且写在后面:不然 .act 那条特异性更高,
+   "退出""取消"这些按钮一悬停就变成铜色实心 */
+button.act.ghost{background:transparent; color:var(--ink); border-color:var(--rule)}
+button.act.ghost:hover:not(:disabled){background:var(--surface); color:var(--ink); border-color:var(--ink)}
 button.mini{font:inherit; font-size:11px; font-weight:600; padding:2px 8px; cursor:pointer;
-  border:1px solid var(--edge-hi); background:transparent; color:var(--ink-mid); border-radius:var(--r)}
-button.mini:hover{border-color:var(--gold); color:var(--gold)}
+  border:1px solid var(--rule); background:transparent; color:var(--ink-mid); border-radius:var(--r)}
+button.mini:hover{border-color:var(--ink); color:var(--ink)}
 
-.seg{display:flex; border:1px solid var(--edge-hi); border-radius:var(--r); overflow:hidden}
+.seg{display:flex; border:1px solid var(--rule); border-radius:var(--r); overflow:hidden}
 .seg button{font:inherit; font-size:12.5px; font-weight:600; border:0; cursor:pointer;
-  padding:5px 14px; background:var(--panel); color:var(--ink-soft)}
-.seg button+button{border-left:1px solid var(--edge)}
-.seg button[aria-pressed=true]{background:var(--bronze); color:#17120b}
+  padding:5px 14px; background:var(--surface); color:var(--ink-soft)}
+.seg button:hover{color:var(--ink)}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed=true]{background:var(--ink); color:var(--paper)}
 
-/* 顶部四个大数字。游戏里的面板都是双线边框:外深内浅 */
-.kpis{display:flex; gap:0; margin:18px 0 6px; border:1px solid var(--edge-hi);
-      box-shadow:inset 0 0 0 1px rgba(201,162,39,.08);
-      background:var(--panel); border-radius:var(--r); overflow:hidden}
-.kpis div{flex:1; padding:13px 18px}
-.kpis div+div{border-left:1px solid var(--rule)}
-.kpis b{display:block; font-size:24px; font-weight:700; letter-spacing:-.01em;
-        line-height:1.15; color:var(--gold)}
+/* 大数字:1px 缝的格子,格子里是纸色 */
+.kpis{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:1px;
+      background:var(--rule-soft); border:1px solid var(--rule-soft);
+      margin:18px 0 6px; border-radius:var(--r); overflow:hidden}
+.kpis div{background:var(--paper); padding:12px 16px}
+.kpis b{display:block; font-size:22px; font-weight:700; letter-spacing:-.02em;
+        line-height:1.15; color:var(--ink)}
 .kpis i{font-style:normal; font-size:11.5px; color:var(--ink-soft)}
 .kpis em{font-style:normal; font-size:11.5px; color:var(--ink-mid); display:block; margin-top:3px}
 
 .split{display:grid; grid-template-columns:1.45fr 1fr; gap:28px; align-items:start}
-@media (max-width:1100px){ .split{grid-template-columns:1fr} }
 
 table{width:100%; border-collapse:collapse; margin-top:8px}
-th{text-align:right; font-size:11px; font-weight:600; color:var(--bronze);
-   padding:7px 9px; border-bottom:1px solid var(--edge-hi); white-space:nowrap;
-   letter-spacing:.04em}
+th{text-align:right; font-size:11px; font-weight:600; color:var(--ink-soft);
+   padding:7px 10px; border-bottom:1px solid var(--ink); white-space:nowrap}
 th.s{cursor:pointer; user-select:none}
-th.s:hover{color:var(--gold)}
-th.s::after{content:""; font-size:9px; margin-left:4px; color:var(--gold)}
+th.s:hover{color:var(--ink)}
+th.s[data-dir]{color:var(--bronze)}
+th.s::after{content:""; font-size:10px; margin-left:4px; opacity:.55}
 th.s[data-dir=desc]::after{content:"▼"}
 th.s[data-dir=asc]::after{content:"▲"}
 th.l,td.l{text-align:left}
-td{padding:8px 9px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
+td{padding:8px 10px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
 .tight td,.tight th{padding:6px 9px}
-tbody tr:nth-child(even){background:rgba(255,255,255,.012)}
-tbody tr:hover{background:var(--panel-2)}
+tbody tr:hover{background:var(--surface)}
 tr.open{cursor:pointer}
-tr.detail>td{background:#191409; padding:0;
-             box-shadow:inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge)}
+tr.detail>td{background:var(--surface); padding:0;
+             box-shadow:inset 0 1px 0 var(--rule), inset 0 -1px 0 var(--rule)}
 tr.detail table{margin:0}
 tr.detail th{border-bottom:1px solid var(--rule); font-size:10.5px}
 tr.detail td{border-bottom:0}
-tr.detail tbody tr:nth-child(even){background:transparent}
+tr.detail tbody tr:hover{background:var(--surface-2)}
 
 .city{display:inline-flex; align-items:center; gap:6px; font-weight:500}
-.cdot{width:8px; height:8px; border-radius:50%; background:var(--c); flex:0 0 auto;
-      box-shadow:0 0 4px color-mix(in oklab, var(--c), transparent 40%)}
+.cdot{width:9px; height:9px; border-radius:50%; background:var(--c); flex:0 0 auto}
 .route{display:inline-flex; align-items:center; gap:5px; font-size:12.5px}
 .route span{color:var(--ink-soft)}
 .item{display:flex; align-items:center; gap:8px}
-/* 游戏里物品图标都嵌在一个暗格子里,照做 */
-.item img{width:28px; height:28px; flex:0 0 auto; border:1px solid var(--edge);
-          background:#241d14; border-radius:var(--r)}
-.item a{color:inherit; text-decoration:none; border-bottom:1px solid var(--edge-hi)}
-.item a:hover{color:var(--gold); border-bottom-color:var(--gold)}
+.item img{width:28px; height:28px; flex:0 0 auto; background:var(--surface-2); border-radius:var(--r)}
+.item a{color:inherit; text-decoration:none; border-bottom:1px solid var(--rule)}
+.item a:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .q{font-weight:600; color:var(--q)}
 .price{font-weight:600; border-radius:var(--r); padding:2px 5px; margin:-2px -5px}
 .depth,.age{font-size:11.5px; color:var(--ink-soft)}
 .pos{color:var(--gain)} .neg{color:var(--warn)}
-.tag{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:8px; border:1px solid currentColor}
+.tag{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r); border:1px solid currentColor}
 .high{color:var(--gain)} .medium{color:var(--bronze)} .low{color:var(--warn)}
-.kind{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:8px}
-.kind.arb{background:var(--bronze); color:#17120b}
-.kind.flip{background:var(--rule); color:var(--ink-mid)}
+.kind{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r)}
+.kind.arb{background:var(--bronze); color:#fff}
+.kind.flip{background:var(--surface-2); color:var(--ink-mid); box-shadow:inset 0 0 0 1px var(--rule)}
 .slip{font-size:11px; color:var(--ink-soft)}
 
-.cov{display:flex; gap:14px; flex-wrap:wrap; margin:12px 0 2px}
-.cov div{flex:1 1 160px}
-.cov b{display:block; font-size:12px; font-weight:600; margin-bottom:4px}
-.cov .track{height:6px; background:#241d14; border:1px solid var(--rule);
-            border-radius:3px; overflow:hidden}
-.cov .fill{height:100%; background:var(--c)}
-.cov i{font-style:normal; font-size:11px; color:var(--ink-soft)}
+#v-desk .cov-grid{margin-top:12px}
+#v-desk h3 .sub{font-weight:400; margin-left:8px}
 
-.picker{position:relative; display:inline-block}
-.menu{position:absolute; z-index:20; top:100%; left:0; margin-top:2px;
-  background:var(--panel); border:1px solid var(--edge-hi); border-radius:var(--r);
-  box-shadow:0 10px 32px rgba(0,0,0,.6); display:flex}
+/* ── 三级分类菜单 ─────────────────────────────────────── */
+.picker{position:relative}
+.menu{position:absolute; z-index:40; top:calc(100% + 4px); left:0; display:flex;
+  background:var(--surface); border:1px solid var(--ink); border-radius:var(--r);
+  box-shadow:0 10px 30px rgba(21,24,28,.18); max-width:min(92vw,780px); overflow-x:auto}
 .menu.bare{display:none}   /* 同权重后写的赢,这条必须在 .menu 之后 */
-.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto; min-width:150px}
-.menu ul+ul{border-left:1px solid var(--rule)}
-.menu li{padding:5px 12px; cursor:pointer; font-size:13px; white-space:nowrap;
-         display:flex; gap:10px; justify-content:space-between; align-items:center}
-.menu li:hover,.menu li[aria-selected=true]{background:var(--panel-2); color:var(--gold)}
-.menu li span{font-size:11px; color:var(--ink-soft)}
-.results{margin-top:6px; max-height:300px; overflow:auto;
-         border:1px solid var(--edge); border-radius:var(--r); background:var(--panel)}
-.results div{padding:6px 10px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px}
-.results div:hover{background:var(--panel-2)}
-.results img{width:24px; height:24px; border:1px solid var(--edge); background:#241d14}
+/* 旧版是固定的三栏并排(196 / 196 / 236),每栏顶上有列标题,还没展开的栏写一句提示 */
+.menu ul{list-style:none; margin:0; padding:4px 0; max-height:min(58vh,420px); overflow:auto;
+         width:196px; flex:none}
+.menu ul:last-child{width:236px}
+.menu ul+ul{border-left:1px solid var(--rule-soft)}
+.menu ul:empty::before{content:"← 指向左边一栏"; display:block; padding:14px 12px;
+         font-size:11.5px; color:var(--ink-soft)}
+.menu li{padding:5px 11px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;
+         display:flex; gap:10px; align-items:baseline}
+.menu li.menu-head,.menu li.menu-head:hover{padding:6px 11px 5px; margin-bottom:3px; cursor:default;
+         font-size:10.5px; font-weight:600; color:var(--ink-soft); background:transparent;
+         border-bottom:1px solid var(--rule-soft)}
+.menu li>b{font-weight:inherit; overflow:hidden; text-overflow:ellipsis; min-width:0}
+.menu li span{margin-left:auto; font-size:10.5px; color:var(--ink-soft); font-weight:400}
+.menu li.has::after{content:"›"; color:var(--ink-soft); font-size:12px}
+/* 悬停只是浅一层;已展开的那条路径是墨底纸字 —— 两个状态必须分开写 */
+.menu li:hover{background:var(--surface-2); color:var(--ink)}
+.menu li[aria-selected=true]{background:var(--ink); color:var(--paper)}
+.menu li[aria-selected=true] span,.menu li[aria-selected=true].has::after{color:var(--paper); opacity:.7}
 
 .spark{display:block}
-@keyframes up   { from{background:color-mix(in oklab,var(--gain),transparent 55%)} to{background:transparent} }
-@keyframes down { from{background:color-mix(in oklab,var(--warn),transparent 55%)} to{background:transparent} }
+@keyframes up   { from{background:color-mix(in oklab,var(--gain),transparent 70%)} to{background:transparent} }
+@keyframes down { from{background:color-mix(in oklab,var(--warn),transparent 70%)} to{background:transparent} }
 .flash-up{animation:up .7s ease-out}
 .flash-down{animation:down .7s ease-out}
 @media (prefers-reduced-motion:reduce){ .flash-up,.flash-down{animation:none} }
 .empty{padding:36px 0; color:var(--ink-soft)}
-.view[hidden]{display:none}
 
-dialog{border:1px solid var(--gold); border-radius:var(--r); background:var(--panel);
+dialog{border:1px solid var(--ink); border-radius:var(--r); background:var(--surface);
        color:var(--ink); padding:22px 24px; min-width:340px;
-       box-shadow:0 16px 50px rgba(0,0,0,.7)}
-dialog::backdrop{background:rgba(8,6,4,.62)}
+       box-shadow:0 16px 50px rgba(21,24,28,.22)}
+dialog::backdrop{background:rgba(21,24,28,.28)}
 dialog h3{margin-top:0; border-bottom:0; padding-bottom:0; font-size:14px}
 dialog label.f{display:flex; justify-content:space-between; gap:14px; margin:9px 0}
 dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 
-/* 滚动条也跟着暗下来,否则深色页面上一条白杠很突兀 */
-*{scrollbar-color:var(--edge-hi) transparent; scrollbar-width:thin}
+/* ══ 查价 ════════════════════════════════════════════════
+   旧版 web 端的三栏布局:左物品列表 | 中间 城市 × 品质 价格矩阵 | 右侧固定挂单簿。
+   规则都挂在 #v-lookup 下面:旧版的 .dot/.tag/.q/.empty 和这边同名不同义 */
+#v-lookup .browse{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end;
+  padding:18px 0; border-bottom:1px solid var(--rule)}
+#v-lookup .ctrl{display:flex; flex-direction:column; gap:4px}
+#v-lookup .ctrl label{font-size:11px; color:var(--ink-soft); font-weight:500}
+#v-lookup .ctrl select{min-width:96px}
+#v-lookup .grow{flex:1 1 240px}
+#v-lookup .grow input{width:100%; min-width:0; font-size:14px; padding:5px 9px}
+#menu-btn{
+  font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  background:var(--surface); color:var(--ink); border:1px solid var(--rule); border-radius:var(--r);
+  padding:5px 12px; min-width:220px; max-width:420px; text-align:left;
+  display:flex; align-items:center; gap:8px;
+}
+#menu-btn span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#menu-btn::after{content:"▾"; margin-left:auto; color:var(--ink-soft); font-size:10px}
+#menu-btn:hover:not(:disabled){background:var(--surface-2); border-color:var(--ink)}
+#menu-btn[aria-expanded=true]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+#menu-btn[aria-expanded=true]::after{color:var(--paper)}
+#menu-btn:disabled{opacity:.45; cursor:default}
+
+/* 不设 align-items:start —— 左栏要拉满整行,它的右边线才能贯穿整张价格表(旧版就是这样)。
+   右栏自己 align-self:start,sticky 不受影响 */
+.lookup-body{display:grid; grid-template-columns:302px minmax(0,1fr); gap:24px; padding-top:18px}
+/* 开着挂单簿时挤出第三栏。右侧本来就是空的,不用牺牲价格矩阵。
+   上限封在 480px:只按 32vw 走的话大屏上右栏比中栏还宽 */
+.lookup-body.with-book{grid-template-columns:302px minmax(0,1fr) minmax(360px,min(32vw,480px))}
+
+.itemlist{border-right:1px solid var(--rule); padding-right:18px; min-height:320px; min-width:0}
+.itemlist-head{font-size:11.5px; color:var(--ink-soft); padding-bottom:8px; border-bottom:1px solid var(--rule-soft)}
+#list{max-height:70vh; overflow-y:auto}
+#list button{
+  display:flex; width:100%; gap:9px; align-items:center; text-align:left;
+  font:inherit; cursor:pointer; background:transparent; color:var(--ink);
+  border:none; border-radius:0; border-bottom:1px solid var(--rule-soft); padding:6px 4px; font-weight:400;
+}
+#list button:hover{background:var(--surface)}
+#list button.on{background:var(--ink); color:var(--paper)}
+#list button.on .en,#list button.on .tierbadge{color:var(--paper); opacity:.72}
+#list button.on .tierbadge{border-color:currentColor}
+#list img{width:28px; height:28px; flex:none; background:var(--surface-2); border-radius:var(--r)}
+#list .names{display:flex; flex-direction:column; min-width:0}
+#list .zh{font-weight:600; font-size:13px; line-height:1.3}
+#list .en{font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#list .empty{padding:18px 0}
+.tierbadge{flex:none; width:25px; text-align:center; font-size:10.5px; font-weight:700;
+  color:var(--bronze); border:1px solid var(--rule); border-radius:var(--r); padding:1px 0}
+
+.pricepanel{min-width:0}
+#v-lookup .empty{padding:26px 0 40px; max-width:62ch; color:inherit}
+#v-lookup .empty h2{font-size:20px; font-weight:700; margin:0 0 8px; letter-spacing:-.02em}
+#v-lookup .empty p{margin:0 0 18px; color:var(--ink-mid)}
+
+.lookup-head{display:flex; gap:14px; align-items:center; padding:2px 0 14px; flex-wrap:wrap}
+.lookup-head img{width:52px; height:52px; border-radius:var(--r); background:var(--surface-2)}
+.lookup-head h2{margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em}
+.lookup-head .sub{font-size:12px}
+.verdict{display:flex; gap:34px; flex-wrap:wrap; margin-left:auto; text-align:right}
+.verdict div{display:flex; flex-direction:column; gap:1px}
+.verdict b{font-size:15px; font-weight:700}
+.verdict i{font-style:normal; font-size:11px; color:var(--ink-soft)}
+
+/* 五档品质都有数据时表比中栏宽,只让表自己横向滚,标题和说明照常折行。
+   表底下那条原生滚动条在很高的表的最下面、落在视口外,所以表头上面再放一条同步的
+   (.hbar,只在放不下时出现),城市列钉在左边,横着滚也知道是哪一行。
+   用 separate + 0 间距而不是 collapse:collapse 下钉住的格子带不走自己的边框 */
+.hbar{overflow-x:auto; overflow-y:hidden; margin-top:4px}
+.hbar div{height:1px}
+.hbar-note{font-size:11px; color:var(--ink-soft); margin-top:2px}
+.matrix-wrap{overflow-x:auto}
+#v-lookup .matrix{width:100%; border-collapse:separate; border-spacing:0; margin-top:4px}
+#v-lookup .matrix th{font-size:11px; font-weight:600; color:var(--ink-soft); padding:7px 8px;
+  border-bottom:1px solid var(--ink); text-align:center; white-space:nowrap}
+#v-lookup .matrix th:first-child{text-align:left; width:112px; min-width:112px}
+#v-lookup .matrix-wrap.hscroll th:first-child,
+#v-lookup .matrix-wrap.hscroll td:first-child{position:sticky; left:0; z-index:1; background:var(--paper)}
+#v-lookup .matrix th .qdot{display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--q); margin-right:5px}
+#v-lookup .matrix th.q{color:var(--q); border-bottom-color:var(--q)}
+#v-lookup .matrix th.flex,#v-lookup .matrix td.flex{width:auto; border-bottom-color:transparent}
+#v-lookup .matrix th:not(:first-child):not(.flex),
+#v-lookup .matrix td:not(:first-child):not(.flex){width:176px; min-width:176px}
+#v-lookup .matrix td{border-bottom:1px solid var(--rule-soft); padding:6px; vertical-align:top;
+  text-align:left; white-space:normal}
+#v-lookup .matrix td:first-child{font-weight:600; font-size:13px; padding:12px 6px 6px 0; white-space:nowrap}
+#v-lookup .matrix tbody tr:hover{background:transparent}
+
+.cell{border:1px solid var(--rule-soft); border-radius:var(--r); padding:6px 8px;
+  background:var(--surface); line-height:1.35}
+.cell.void{background:transparent; border-style:dashed; color:var(--ink-soft);
+  text-align:center; padding:12px 8px; font-size:12px}
+.cell .ln{display:grid; grid-template-columns:auto 1fr auto; gap:7px; align-items:baseline; font-size:12.5px}
+.cell .ln u{text-decoration:none; color:var(--ink-soft); font-size:10.5px}
+.cell .ln b{font-weight:600; text-align:right}
+.cell .ln s{text-decoration:none; font-size:10px; color:var(--ink-soft)}
+.cell .ln s.stale{color:var(--warn); opacity:.75}
+.cell .ln2{font-size:10.5px; color:var(--ink-soft); text-align:right; margin:-1px 0 3px}
+.cell .meta{font-size:10.5px; color:var(--ink-soft); margin-top:4px; padding-top:4px;
+  border-top:1px solid var(--rule-soft)}
+.cell .spread{font-weight:600}
+.cell .spread.up{color:var(--gain)}
+.cell .spread.down{color:var(--ink-soft)}
+.cell .spread.suspect{color:var(--warn); background:color-mix(in oklab, var(--warn), transparent 90%);
+  padding:0 3px; border-radius:var(--r)}
+.cell.best-buy{border-color:var(--gain); box-shadow:inset 0 0 0 1px var(--gain)}
+.cell.best-sell{border-color:var(--bronze); box-shadow:inset 0 0 0 1px var(--bronze)}
+.cell .ctag{font-size:10px; font-weight:600; margin-top:3px}
+.best-buy .ctag{color:var(--gain)}
+.best-sell .ctag{color:var(--bronze)}
+.best-buy.best-sell .ctag{color:var(--ink)}
+.cell .ctag.warn{color:var(--warn); font-weight:500}
+.cell .ctag.warn b{font-weight:700}
+/* 来源徽标:绿底白字 = 这一侧用的是自建抓包 */
+.src{font-style:normal; font-size:9.5px; font-weight:700; margin-left:4px; padding:0 3px;
+  border-radius:var(--r); vertical-align:1px; background:var(--gain); color:#fff}
+.qty{font-style:normal; font-size:11px; color:var(--bronze); font-weight:600}
+.qty.dim{opacity:.55}
+.hsrc{font-style:normal; font-size:9.5px; font-weight:600; margin-left:4px; padding:0 3px;
+  border-radius:var(--r); background:var(--gain); color:#fff; vertical-align:1px}
+
+/* 格子整块是按钮。高亮打在里面的 .cell 上:按钮自己的底色会被 .cell 的不透明底盖住,
+   旧版就是这么"点了看不出开的是哪格"的 */
+.cellbtn{all:unset; display:block; width:100%; cursor:pointer; border-radius:var(--r)}
+.cellbtn:hover .cell{background:var(--surface-2)}
+.cellbtn:focus-visible{outline:2px solid var(--bronze); outline-offset:1px}
+.cellbtn.open .cell{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--bronze)}
+.cellbtn.open .cell.best-buy{box-shadow:inset 3px 0 0 var(--bronze), inset 0 0 0 1px var(--gain)}
+.cellbtn.open .cell.best-sell{box-shadow:inset 3px 0 0 var(--bronze), inset 0 0 0 1px var(--bronze)}
+
+.matrix-note{margin-top:14px; font-size:12px; color:var(--ink-soft); max-width:80ch}
+.matrix-note p{margin:0 0 7px}
+.matrix-note b{color:var(--ink-mid)}
+.matrix-note b.warnish{color:var(--warn)}
+/* 图例里的「抓」要和格子里的一样是绿底白字:.matrix-note b 的特异性比 .src 高,会把字染成深灰 */
+.matrix-note .src{color:#fff}
+
+.diagnosis{margin:0 0 14px; padding:11px 13px; background:var(--surface);
+  border-left:3px solid var(--bronze); font-size:12.5px; color:var(--ink-mid); max-width:80ch}
+.diagnosis b{color:var(--ink)}
+.diagnosis.warn{border-left-color:var(--warn)}
+
+/* ── 右侧挂单簿:sticky,点格子就出来,页面不用滚 ──
+   max-height 这里只是兜底。真正的高度由 app.js 的 fitLookup 按"查价区在视口里露出来的那一段"
+   实时算:页面在顶部时挂单簿从自己的位置到视口底;滚到底时不超过查价区的下沿 ——
+   写死 100vh 的话,前者底部的走势图落在视口外,后者标题和「收起」被顶出视口 */
+.bookside{position:sticky; top:14px; align-self:start; min-width:0;
+  max-height:calc(100vh - 28px); overflow-y:auto; overscroll-behavior:contain;
+  border-left:1px solid var(--rule); padding-left:18px}
+.bookhead .stalehint{flex-basis:100%; font-size:11.5px; color:var(--warn)}
+.bookhead .stalehint button{margin-left:6px}
+.bookwrap{padding:0 0 12px}
+.bookhead{display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;
+  position:sticky; top:0; background:var(--paper); padding:2px 0 8px; z-index:2}
+.bookhead b{font-size:14px; display:flex; align-items:center; gap:7px}
+.bookhead .spacer{margin-left:auto}
+.bookhead .bsub{flex-basis:100%; font-size:11.5px; color:var(--ink-soft)}
+.bstats{display:grid; grid-template-columns:repeat(auto-fit,minmax(104px,1fr));
+  gap:1px; background:var(--rule-soft); border:1px solid var(--rule-soft); margin-bottom:12px}
+.bstat{background:var(--paper); padding:7px 10px}
+.bstat b{display:block; font-size:13.5px; font-weight:700; line-height:1.25}
+.bstat span{font-size:10px; color:var(--ink-soft)}
+.fillrow{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; font-size:12px;
+  color:var(--ink-mid); margin:0 0 14px}
+.fillrow input[type=number]{width:96px; padding:3px 6px; font-size:12.5px}
+.fillrow b{color:var(--ink)}
+.ladders{display:grid; grid-template-columns:1fr; gap:18px}
+.ladders h4,.chh{font-size:12.5px; font-weight:600; margin:0 0 7px; display:flex; gap:8px; align-items:baseline}
+.ladders h4 em,.chh em{font-style:normal; font-weight:400; font-size:11px; color:var(--ink-soft)}
+.sellh{color:var(--warn)} .buyh{color:var(--gain)} .chh{margin-top:20px}
+table.ladder{width:100%; border-collapse:collapse; font-size:12px; margin:0}
+table.ladder th{font-size:10.5px; color:var(--ink-soft); font-weight:500; text-align:right;
+  padding:3px 6px; border-bottom:1px solid var(--rule)}
+table.ladder th:first-child{text-align:left}
+table.ladder td{padding:3px 6px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule-soft)}
+table.ladder td.p{text-align:left; font-weight:600}
+table.ladder td.p i{font-style:normal; font-size:10px; color:var(--ink-soft); margin-left:5px; font-weight:400}
+table.ladder td.qt{position:relative; min-width:86px}
+table.ladder td.qt b{position:relative; font-weight:600}
+table.ladder td.c,table.ladder td.t{color:var(--ink-soft); font-size:11px}
+table.ladder tr.cliff td{background:color-mix(in oklab,var(--warn),transparent 92%)}
+table.ladder tr.cliff td.p i{color:var(--warn); font-weight:600}
+table.ladder tr.stale td{opacity:.45}
+.qbar{position:absolute; right:6px; top:4px; bottom:4px; border-radius:1px; opacity:.24}
+.qbar.sell{background:var(--warn)} .qbar.buy{background:var(--gain)}
+.ladderfoot{font-size:11px; color:var(--ink-soft); padding-top:6px}
+.ladderfoot .warnish{color:var(--warn)}
+/* viewBox 宽度按画图那一刻右栏的实际像素宽取(见 tradeChart),1 个单位 ≈ 1px,
+   字号才是真的字号。以前 viewBox 固定 640 宽、被缩到 414px,9.5 的字实际只有 6px */
+.tradechart{width:100%; height:auto; display:block}
+.tradechart .vbar{fill:var(--bronze); opacity:.3}
+.tradechart .vline{fill:none; stroke:var(--ink); stroke-width:1.5}
+.tradechart .vdot{fill:var(--ink)}
+.tradechart .ax{font-size:10.5px; fill:var(--ink-soft)}
+.void{color:var(--ink-soft); font-size:12px; padding:10px 0; text-align:center}
+
+/* ══ 覆盖率:这个工具最先该回答的问题不是"赚多少",是"这份数据能不能信" ══
+   旧版价差扫描页的三段条。机会页和总览共用,类名都带 cov- 前缀:旧版的 .bar/.dot
+   和这边的工具条、顶栏状态点同名不同义 */
+.coverage{padding:22px 0 24px; border-bottom:1px solid var(--rule)}
+.cov-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; gap:16px; flex-wrap:wrap}
+.cov-head h2{font-size:15px; font-weight:600; margin:0}
+.cov-head em{font-style:normal; font-size:12px; color:var(--ink-soft)}
+.cov-grid{display:grid; gap:7px}
+.cov-row{display:grid; grid-template-columns:104px 1fr 190px; gap:14px; align-items:center}
+.cov-city{display:flex; align-items:center; gap:7px; font-weight:600; font-size:13px}
+.cov-bars{display:grid; gap:3px}
+.cov-bar{height:15px; background:var(--surface-2); border-radius:var(--r); overflow:hidden; display:flex}
+.cov-bar.cap{height:7px}
+.cov-bar i{display:block; height:100%; transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.cov-bar .fresh{background:var(--bronze)}
+.cov-bar .usable{background:var(--c); opacity:.42}
+.cov-bar .aged{background:var(--ink-soft); opacity:.18}
+.cov-bar .capused{background:var(--gain)}
+.cov-bar .caponly{background:var(--gain); opacity:.3}
+.cov-num{font-size:12px; color:var(--ink-mid); text-align:right; line-height:1.3}
+.cov-num b{color:var(--ink); font-weight:600}
+.cov-num span{display:block; font-size:11px; color:var(--ink-soft)}
+.cov-legend{display:flex; gap:6px 16px; flex-wrap:wrap; margin-top:12px; font-size:11.5px; color:var(--ink-soft)}
+.cov-legend span{display:flex; align-items:center; gap:6px}
+.cov-legend b{font-weight:500}
+.swatch{width:10px; height:10px; border-radius:1px; flex:none}
+.swatch-city{background:linear-gradient(90deg,
+  var(--thetford) 0 33%, var(--lymhurst) 33% 66%, var(--bridgewatch) 66%); opacity:.42}
+
+/* 通用的"数字 + 小字"格子:被过滤原因、抓包汇总都用它 */
+.statgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:1px;
+  margin-top:14px; background:var(--rule-soft); border:1px solid var(--rule-soft)}
+.statgrid>div,.statgrid>button{background:var(--paper); padding:10px 12px; text-align:left;
+  font:inherit; color:inherit; border:0; border-radius:0}
+.statgrid>button{cursor:pointer}
+.statgrid>button:hover{background:var(--surface)}
+.statgrid>button[aria-pressed=true]{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--bronze)}
+.statgrid b{display:block; font-size:18px; font-weight:700; line-height:1.1}
+.statgrid span{font-size:11.5px; color:var(--ink-soft)}
+.statgrid.small b{font-size:15px}
+
+/* ══ 机会页 ═══════════════════════════════════════════════
+   旧版价差扫描页的样式。和别的页同名不同义的(.empty/.note/.age/.src/.city/
+   全局 thead th/tbody td)一律挂在 #v-ideas 下面,不外溢到总览、查价 */
+#v-ideas .lede{padding:26px 0 8px; max-width:66ch}
+#v-ideas .lede h1{font-size:26px; font-weight:700; letter-spacing:-.025em; margin:0 0 8px; line-height:1.15}
+#v-ideas .lede p{margin:0; color:var(--ink-mid)}
+#v-ideas .controls{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:flex-end;
+  padding:16px 0; border-bottom:1px solid var(--rule)}
+#v-ideas .ctrl{display:flex; flex-direction:column; gap:4px}
+#v-ideas .ctrl label{font-size:11px; color:var(--ink-soft); font-weight:500}
+#v-ideas .ctrl select{min-width:96px}
+#v-ideas .spacer{margin-left:auto}
+#v-ideas .empty{padding:26px 0 40px; max-width:62ch; color:inherit}
+#v-ideas .empty h2{font-size:20px; font-weight:700; margin:0 0 8px; letter-spacing:-.02em}
+#v-ideas .empty p{margin:0 0 18px; color:var(--ink-mid)}
+#v-ideas .empty button{padding:10px 22px; font-size:14px}
+#v-ideas .empty .empty-sub{margin:11px 0 0; font-size:12.5px; color:var(--ink-soft)}
+#v-ideas .count{padding:16px 0 0; font-size:13px; color:var(--ink-mid)}
+#v-ideas .count b{color:var(--ink); font-weight:600; font-size:15px}
+#v-ideas .count .capn{color:var(--gain); font-weight:600}
+.tablewrap{overflow-x:auto}
+
+table.ideas th{cursor:pointer; user-select:none}
+table.ideas th:hover{color:var(--ink)}
+table.ideas th[aria-sort]{color:var(--bronze)}
+table.ideas th .arrow{opacity:.55; font-size:10px; margin-left:3px}
+table.ideas th,table.ideas td{padding-left:8px; padding-right:8px}
+/* 数据越旧,这一行就越褪色——旧数据看起来就该旧 */
+table.ideas>tbody>tr{--fade:0}
+table.ideas>tbody>tr>td{color:color-mix(in oklab, var(--ink), var(--paper) calc(var(--fade) * 46%))}
+table.ideas>tbody>tr.main>td{border-bottom:0; padding-bottom:4px}
+table.ideas>tbody>tr.main.last>td{border-bottom:1px solid var(--rule-soft); padding-bottom:8px}
+table.ideas>tbody>tr.rnote>td{border-bottom:0; padding:0 8px 4px; white-space:normal; text-align:left;
+  font-size:11px; line-height:1.4}
+table.ideas>tbody>tr.rnote.last>td{border-bottom:1px solid var(--rule-soft); padding-bottom:8px}
+table.ideas>tbody>tr.rnote:hover{background:transparent}
+table.ideas>tbody>tr.rnote .warn{color:var(--warn)}
+table.ideas>tbody>tr.rnote .hint{color:var(--ink-soft)}
+/* confidence=low 的行(贴着某道阈值才留在榜上)左侧一条红线,别让人只盯着绿色的日收益 */
+table.ideas>tbody>tr.edge>td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+#v-ideas .item{gap:9px; min-width:0}
+#v-ideas .item img{width:30px; height:30px}
+#v-ideas .item-name{font-weight:600; display:flex; align-items:center; gap:4px; max-width:230px}
+#v-ideas .item-name a{overflow:hidden; text-overflow:ellipsis}
+#v-ideas .item-id{font-size:10.5px; color:var(--ink-soft); font-weight:400; display:block;
+  max-width:230px; overflow:hidden; text-overflow:ellipsis}
+#v-ideas .src{font-size:10px; margin-left:2px; padding:1px 4px; vertical-align:0}
+#v-ideas .src.half{background:var(--bronze)}
+#v-ideas .routecell{display:flex; flex-direction:column; gap:3px; align-items:flex-start}
+#v-ideas .routecell .tags{display:flex; gap:4px}
+.quote{font-weight:600}
+.quote i{font-style:normal; color:var(--ink-soft); font-weight:400; padding:0 3px}
+.profit{font-weight:700; color:color-mix(in oklab, var(--gain), var(--paper) calc(var(--fade, 0) * 46%))}
+.roi,.subln{display:block; font-size:11px; color:var(--ink-soft); font-weight:500}
+.agecell{display:flex; align-items:center; gap:6px; justify-content:flex-end; color:var(--ink-mid)}
+.pip{width:7px; height:7px; border-radius:50%; flex:none}
+.pip.high{background:var(--gain)} .pip.medium{background:var(--bronze-lift)} .pip.low{background:var(--warn)}
+.legtxt .cliff{color:var(--warn)}
+.legtxt i{font-style:normal; color:var(--ink-soft); padding:0 2px}
+.nodata{opacity:.35}
+.tag.risk{color:var(--warn)}
+td.flash-up .profit,td.flash-down .profit{border-radius:var(--r)}
+
+/* 展开行:四种执行方式 + 两边盘口 */
+.detailbox{padding:12px 14px 14px}
+.detailbox h4{font-size:12px; font-weight:600; margin:14px 0 4px; color:var(--ink)}
+.detailbox h4:first-child{margin-top:0}
+.detailbox h4 em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:11px; margin-left:6px}
+tr.detail tr.blocked td{opacity:.5}
+tr.detail tr.blocked td.why{opacity:1; color:var(--warn)}
+tr.detail td.why{white-space:normal; min-width:220px}
+.facts2{display:flex; flex-wrap:wrap; gap:4px 18px; font-size:12px; color:var(--ink-mid); margin-top:6px}
+.facts2 b{color:var(--ink); font-weight:600}
+.fillpos{display:flex; align-items:center; gap:12px; margin-top:6px; font-size:12px; color:var(--ink-mid)}
+.fp-track{position:relative; width:220px; height:8px; flex:none; border-radius:var(--r);
+  background:linear-gradient(90deg, var(--gain), var(--surface-2) 50%, var(--warn)); opacity:.75}
+.fp-track i{position:absolute; top:-3px; width:3px; height:14px; margin-left:-1px; background:var(--ink); border-radius:1px}
+.detailbox .note{padding:10px 0 0}
+
+/* 被过滤的候选 */
+#v-ideas .rejects{margin-top:28px; border-top:1px solid var(--rule); padding-top:18px}
+#v-ideas .rejects summary{cursor:pointer; font-weight:600; font-size:13px; list-style:none;
+  display:flex; gap:10px; align-items:baseline}
+#v-ideas .rejects summary::-webkit-details-marker{display:none}
+#v-ideas .rejects summary::before{content:"▸"; color:var(--bronze); font-size:11px}
+#v-ideas .rejects[open] summary::before{content:"▾"}
+#v-ideas .rejects summary em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:12px}
+#v-ideas .diagnosis{margin:16px 0 0; max-width:76ch}
+.rlist{margin-top:10px; max-height:420px; overflow:auto; border:1px solid var(--rule-soft)}
+.rlist table{margin:0}
+.rlist td{white-space:normal}
+.rlist td.l.d{min-width:260px; color:var(--ink-mid); font-size:12px}
+.foot{padding-top:26px; font-size:11.5px; color:var(--ink-soft); max-width:86ch}
+.foot p{margin:0 0 5px}
+
+/* 媒体查询一律写在基础规则之后。旧版把 1180 那条写在 .bookside 前面,
+   窄屏下 position/max-height 被后面的基础规则盖回去了 */
+@media (max-width:1180px){
+  .lookup-body.with-book{grid-template-columns:302px minmax(0,1fr)}
+  .bookside{grid-column:1/-1; position:static; max-height:none; border-left:0;
+    padding-left:0; border-top:1px solid var(--rule); padding-top:16px}
+  .bookside .ladders{grid-template-columns:1fr 1fr}
+  .split{grid-template-columns:1fr}
+}
+/* 1300 宽时 15 列刚好放得下。再窄才收起日流水、轮/天、z、波动 —— 这四个数在
+   展开行里都有,收起来不丢信息;更窄的屏表自己横向滚(.tablewrap) */
+@media (max-width:1100px){
+  table.ideas .hide-md{display:none}
+}
+@media (max-width:920px){
+  table.ideas .hide-sm{display:none}
+  .cov-row{grid-template-columns:88px 1fr 130px; gap:10px}
+  #v-ideas .lede h1{font-size:22px}
+  .lookup-body,.lookup-body.with-book{grid-template-columns:1fr; gap:16px}
+  .itemlist{border-right:none; border-bottom:1px solid var(--rule); padding-right:0; min-height:0}
+  #list{max-height:300px}
+  .verdict{margin-left:0; text-align:left}
+  .bookside .ladders{grid-template-columns:1fr}
+  .kpis{grid-auto-flow:row; grid-template-columns:1fr 1fr}
+}

@@ -34,3 +34,32 @@ func City(raw string) string {
 	}
 	return raw
 }
+
+// places 是顶栏显示"客户端认为你现在在哪"用的对照表,**只用于显示**。
+//
+// 和 markets 刻意分开:City 管数据收敛,只收有依据的市场 id,城市本体 id 收进去
+// 会让黑市求购冒充 Caerleon 的买单(见 markets 的注释)。这里没有这个顾虑——
+// 认错了只是顶栏上写错一个字,不会有一条数据被并到别的城市去。所以城市本体、
+// 银行、传送门都收。对照同样取自 ao-bin-dumps 的 formatted/world.json
+// (docs/packet-capture.md 列出的那几条),拿不准的一律不收、原样显示。
+var places = map[string]string{
+	"0000": "Thetford", "0006": "Thetford · 银行", "0007": "Thetford · 市场", "0301": "Thetford · 传送门",
+	"1000": "Lymhurst", "1002": "Lymhurst · 市场",
+	"2000": "Bridgewatch", "2004": "Bridgewatch · 市场",
+	"3004": "Martlock", "3008": "Martlock · 市场",
+	"4000": "Fort Sterling", "4002": "Fort Sterling · 市场",
+	"3003": "Caerleon", "3005": "Caerleon · 市场", "3013-Auction2": "Caerleon · 市场",
+	"5000": "Brecilien", "5001": "Brecilien", "5003": "Brecilien · 市场",
+}
+
+// DisplayName 把包里的原始地点 id 翻成给人看的地名:市场 id 和城市本体 id 都认,
+// 认不出的(走私窝点 xxxx@yyyy、个人岛、野外地图……)原样返回。
+//
+// **只用于显示,不要拿它做 key。** 做 key 用 City:两者对城市本体 id 的回答
+// 故意不同(City("0000") 原样返回 "0000")。
+func DisplayName(raw string) string {
+	if n, ok := places[raw]; ok {
+		return n
+	}
+	return raw
+}

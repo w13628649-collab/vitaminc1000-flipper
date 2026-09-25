@@ -90,7 +90,9 @@ GET  /api/calibration  实测的 absorb_ratio 和模型准确度
 GET  /api/release      更新 manifest(版本、sha256、大小)
 GET  /download/{name}  客户端二进制(白名单,支持 Range 续传)
 GET  /api/rank         销量榜
-GET  /api/lookup       一个物品在所有城市所有品质的价格
+GET  /api/lookup       一个物品在所有城市所有品质的价格(旧接口,整格融合,旧客户端在用)
+GET  /api/lookup/grid  查价矩阵:城市(含 Brecilien、黑市)× 品质,逐边融合抓包/AODP,带 7/30 日成交和日线
+GET  /api/lookup/book  查价右栏:一格两侧完整阶梯(剔上一轮残单),?qty= 时带吃单均价
 GET  /api/menu         三级分类菜单
 GET  /api/items        搜索 / 按分类浏览
 GET  /api/icon/{id}    物品图标(库里缓存)
