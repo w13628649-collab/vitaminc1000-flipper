@@ -222,10 +222,12 @@ func TestRoute_逐腿偏离检查堵住天价毛利(t *testing.T) {
 		return from, to
 	}
 
-	// 先钉住漏洞本身:关掉逐腿检查,就会出一条天价毛利的挂买挂卖
+	// 先钉住漏洞本身:关掉逐腿检查,就会出一条天价毛利的挂买挂卖。
+	// 毛利率上限那一层也会拦它,一并关掉,这里单独证明逐腿检查
 	from, to := mk()
 	off := opts()
 	off.DeviationMin, off.DeviationMax = 0, 0
+	off.MaxMargin = 0
 	loose, ok := routeOf(Find("T5_CLOTH", "精布", 1, []Market{from, to}, conf.Default().Economics, off, now), "Lymhurst", "Martlock")
 	if !ok || loose.Mode != "maker-maker" || loose.Margin < 100 {
 		t.Fatalf("前提变了:关掉检查时应出天价毛利的挂买挂卖,得到 %s / %.0f%%", loose.Mode, loose.Margin*100)

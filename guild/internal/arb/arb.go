@@ -197,6 +197,20 @@ type Options struct {
 	// 2 银的占位单、销地只有卖单时,它一组都比不了、只能看另一组,挂买腿于是
 	// 按 3 银成本算出天价毛利。同城 screen 早就对两边做偏离度,跨城一直没有
 	DeviationMin, DeviationMax float64
+	// MaxMargin 是同城 filters.max_margin 在跨城的对应,零值 = 关。判的不是原始毛利率,
+	// 而是 excessMargin:扣掉两城 7 日均价本身的差距之后还剩的毛利率。
+	//
+	// 同城第五层补的缺口跨城一样有:两腿各自对本城均价都"合规"(买价 0.45×、卖价 2.4×),
+	// 组合起来就是几倍的价差,MaxPriceRatio 比的是同侧价格,也可能两组都过。审查实测
+	// T4_RUNE Fort Sterling → Caerleon 挂买挂卖 6 → 15、毛利 128%,两头都是 AODP、
+	// 没有深度,排进了组合页第一。
+	//
+	// 以前跨城刻意不用毛利率判(见 docs/flipper.md「跨城」第 5 条):同一对价格换个
+	// 执行方式毛利差一截,拿最赚的那个撞上限会误杀整条路线;而且城市之间本来就可能有
+	// 结构性价差,原始毛利率超过 100% 未必是假单。所以这里两点都避开:按执行方式逐个判,
+	// 只砍超了的那个模式;判之前先除掉两城均价之比,结构性价差不算"高得不真实"。
+	// 两城是同一个均价时 excessMargin 就是毛利率本身,和同城第五层逐字同一个判据
+	MaxMargin float64
 }
 
 // roundTripHours 是这种执行方式跑完一趟来回要多久。同城没有路程,
@@ -234,6 +248,7 @@ func DefaultOptions(cfg conf.Config) Options {
 		Filters:              cfg.Filters,
 		DeviationMin:         cfg.Filters.DeviationMin,
 		DeviationMax:         cfg.Filters.DeviationMax,
+		MaxMargin:            cfg.Filters.MaxMargin,
 	}
 }
 
@@ -320,6 +335,11 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		}
 		q, ok := bestFill(m, from, to, byMarket, cfg, opt)
 		if !ok {
+			continue
+		}
+		// 扣掉两城均价之差还高得不真实:这个模式依托的那两边多半有一头是假单或旧单。
+		// 只砍这个模式,别的模式用的是另外两边,照样能做
+		if opt.MaxMargin > 0 && excessMargin(q.Margin, from.Stats, to.Stats) > opt.MaxMargin {
 			continue
 		}
 		// 挂买排在产地的买单簿上,挂卖排在销地的卖单簿上
@@ -542,6 +562,19 @@ func legSane(price int64, s *histagg.Stats, opt Options) bool {
 		return false
 	}
 	return true
+}
+
+// excessMargin 是扣掉两城 7 日均价本身的差距之后还剩的毛利率:成本、收入各自
+// 除以本城 7 日均价再算,等于 (1+毛利率) × 产地均价 / 销地均价 − 1。
+//
+// 销地均价本来就是产地的 2.5 倍时,128% 的毛利只是"按历史价搬过去",扣完是负的;
+// 两城均价差不多时,128% 就是实打实的 128%,和同城一样高得不真实。
+// 任一端没有 7 日均价时退回原始毛利率:判不了结构性价差,宁可严。
+func excessMargin(margin float64, fromStats, toStats *histagg.Stats) float64 {
+	if fromStats == nil || toStats == nil || fromStats.AvgPrice7d <= 0 || toStats.AvgPrice7d <= 0 {
+		return margin
+	}
+	return (1+margin)*fromStats.AvgPrice7d/toStats.AvgPrice7d - 1
 }
 
 // sideRef 给 JSON 用:没有价的那一边不输出。

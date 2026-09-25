@@ -248,10 +248,12 @@ func TestCrossedBookAtEitherEndIsRejected(t *testing.T) {
 	if r := find(good, market("Martlock", 10, 1000, 5000)); len(r) != 0 {
 		t.Fatalf("销地交叉盘不该出路线,却出了 %d 条", len(r))
 	}
-	// 关掉这层就该放行,证明确实是它拦的
+	// 关掉这层就该放行,证明确实是它拦的。毛利率上限(MaxMargin)对这种
+	// 10 银的卖单同样会拦——多一层兜底是好事,但这里要单独证明交叉盘这一层
 	o := opts()
 	o.RejectCrossedBook = false
 	o.MaxPriceRatio = 0
+	o.MaxMargin = 0
 	if r := Find("T5_CLOTH", "精布", 1, []Market{bad, good},
 		conf.Default().Economics, o, now); len(r) == 0 {
 		t.Fatal("关掉交叉盘拦截后应该能出路线,否则是别的地方拦的")
