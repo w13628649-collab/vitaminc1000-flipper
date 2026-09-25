@@ -129,6 +129,14 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	// AODP 已经拉完,配额花出去了:剩下的读簿、发布、写历史不再跟调用方的取消走。
+	// POST /api/scan 用的是请求自己的 ctx,拉完 AODP 之后客户端一断开,读簿就会拿到
+	// context canceled——evaluate 把它当成"读簿失败退回纯 AODP",把一份没有抓包、
+	// 带着 capture.error 的结果当全局结果发布出去、还推了 WS,这一轮的成交历史也不入库。
+	// 给个上限,库卡住时不至于永远挂着
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), afterFetchTimeout)
+	defer cancel()
+
 	// 评估用拉完 AODP 之后的时刻:读簿就发生在这时,AODP 的数据龄也按这时算
 	s.evalMu.Lock()
 	s.snap.Store(snap)
@@ -141,6 +149,10 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	out.History = history
 	return &out, nil
 }
+
+// afterFetchTimeout 是全量扫描拉完 AODP 之后,读簿、发布和写成交历史一共最多等多久。
+// 读簿实测几百毫秒,写历史几千行几秒,两分钟很宽
+const afterFetchTimeout = 2 * time.Minute
 
 // writeHistory 把 AODP 成交历史存进库。没存上不该让整次扫描白跑,报出来继续
 func (s *Service) writeHistory(ctx context.Context, history []aodp.HistorySeries) {

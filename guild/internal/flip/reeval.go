@@ -43,6 +43,11 @@ func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 	snap := s.snap.Load().With(ext)
 	s.snap.Store(snap)
 	res := scan.EvaluateSnapshot(ctx, snap, s.Cfg, cat, books, time.Now().UTC())
+	if err := ctx.Err(); err != nil {
+		// 自己的 ctx 被取消了(服务端在关):读簿多半是因此失败、退回了纯 AODP,
+		// 这份降级结果不该盖掉手上那份好的。重算便宜,不像全量那样值得收尾
+		return nil, err
+	}
 	res.Capture.ExtraPending = len(snap.PendingExtras(captured, s.Cfg, cat))
 	res.Capture.AddError(listErr)
 	res.Capture.AddError(fillErr)
@@ -98,6 +103,7 @@ func (s *Service) RunReeval(ctx context.Context) {
 			res, err := s.Reevaluate(ctx)
 			switch {
 			case errors.Is(err, errNotReady):
+			case err != nil && ctx.Err() != nil: // 服务端在关,不算失败
 			case err != nil:
 				slog.Warn("抓包重算失败", "err", err)
 			default:
