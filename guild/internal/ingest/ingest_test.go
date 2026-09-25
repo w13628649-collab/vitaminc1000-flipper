@@ -3,11 +3,13 @@ package ingest
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 
+	"albion-guild/internal/hub"
 	"albion-guild/internal/model"
 )
 
@@ -15,7 +17,8 @@ type fakeDirty struct{ keys []model.QuoteKey }
 
 func (f *fakeDirty) MarkDirty(k model.QuoteKey) { f.keys = append(f.keys, k) }
 
-// 这些用例不碰数据库,只测去重那一层的判断
+// 这些用例不碰数据库,只测去重那一层的判断。落库换成 fakeSink:脏标要等 flush
+// 提交之后才打,测脏标的用例得先 flush
 func newTestIngestor(t *testing.T) (*Ingestor, *fakeDirty) {
 	t.Helper()
 	c, err := lru.New[int64, orderState](1000)
@@ -23,7 +26,7 @@ func newTestIngestor(t *testing.T) (*Ingestor, *fakeDirty) {
 		t.Fatal(err)
 	}
 	d := &fakeDirty{}
-	return &Ingestor{seen: c, dirty: d}, d
+	return &Ingestor{seen: c, dirty: d, store: &fakeSink{}}, d
 }
 
 func order(id int64, price int64, amount int32) model.MarketOrder {
@@ -68,18 +71,153 @@ func TestSubmit_价格或数量变了要入库(t *testing.T) {
 	}
 }
 
-func TestSubmit_只有真变化才标记脏盘口(t *testing.T) {
-	// 脏盘口会触发一次查库算最优价再广播,重复标记等于白跑
+// 脏盘口会触发一次查库算最优价再广播。标早了(单子还没落库)推出去的是旧状态,
+// 而且脏标被 conflator 清掉之后没人再标——所以一律等 flush 提交之后才标,
+// 一轮里同一个盘口只标一次
+func TestSubmit_提交之后才标脏且一轮只标一次(t *testing.T) {
 	ing, dirty := newTestIngestor(t)
 	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
-	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
-
-	if len(dirty.keys) != 1 {
-		t.Fatalf("应该只标记一次,得到 %d 次", len(dirty.keys))
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(2, 1010, 5)}})
+	if len(dirty.keys) != 0 {
+		t.Fatalf("还没落库就标了脏: %+v", dirty.keys)
 	}
+	ing.flush(context.Background())
 	want := model.QuoteKey{ItemID: "T5_METALBAR", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
-	if dirty.keys[0] != want {
-		t.Fatalf("脏盘口不对: %+v", dirty.keys[0])
+	if len(dirty.keys) != 1 || dirty.keys[0] != want {
+		t.Fatalf("同一盘口两张单,提交后应只标一次 %+v,得到 %+v", want, dirty.keys)
+	}
+}
+
+// 只刷 last_seen 的观测也要标脏:这一眼里没再出现的旧最优单会被读簿当幽灵剔掉,
+// 最优价可能已经退到次优档,"最近一眼"的时间也往前走了。以前 touch 从来不标,
+// 最优单被买走之后行情推送一直挂着它,直到 30 分钟过期
+func TestSubmit_只touch的盘口提交后也标脏(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
+	ing.flush(context.Background())
+	dirty.keys = nil
+
+	if _, touched := ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}}); touched != 1 {
+		t.Fatal("前提:同状态的再次观测应只 touch")
+	}
+	ing.flush(context.Background())
+	if len(dirty.keys) != 1 || dirty.keys[0].ItemID != "T5_METALBAR" {
+		t.Fatalf("只 touch 的盘口提交后应标脏,得到 %+v", dirty.keys)
+	}
+}
+
+// 写库失败:库里什么都没变,标脏只会让 conflator 白查一次、推出旧状态
+func TestFlush_写失败不标脏(t *testing.T) {
+	ing, dirty := newTestIngestor(t)
+	ing.store = &fakeSink{err: errors.New("库挂了")}
+	ing.Submit(model.UploadBatch{Orders: []model.MarketOrder{order(1, 1000, 50)}})
+	ing.flush(context.Background())
+	if len(dirty.keys) != 0 {
+		t.Fatalf("写失败不该标脏,得到 %+v", dirty.keys)
+	}
+}
+
+// committedSink 是一个最小的"库":Flush 成功才算落库;BestQuotes 按落了库的状态算卖一
+type committedSink struct {
+	mu        sync.Mutex
+	committed map[int64]model.MarketOrder
+}
+
+func (s *committedSink) Flush(_ context.Context, byReporter map[string][]model.MarketOrder, _ map[int64]time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.committed == nil {
+		s.committed = map[int64]model.MarketOrder{}
+	}
+	for _, orders := range byReporter {
+		for _, o := range orders {
+			s.committed[o.OrderID] = o
+		}
+	}
+	return nil
+}
+
+func (s *committedSink) BestQuotes(_ context.Context, keys []model.QuoteKey, _ time.Duration) ([]model.Quote, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []model.Quote
+	for _, k := range keys {
+		var best model.MarketOrder
+		for _, o := range s.committed {
+			if o.Key() == k && (best.OrderID == 0 || o.UnitPrice < best.UnitPrice) {
+				best = o
+			}
+		}
+		if best.OrderID != 0 {
+			out = append(out, model.Quote{Key: k.String(), Price: best.UnitPrice, Depth: int64(best.Amount), Orders: 1, At: best.ObservedAt})
+		}
+	}
+	return out, nil
+}
+
+type recBroadcaster struct {
+	mu     sync.Mutex
+	quotes []model.Quote
+}
+
+func (b *recBroadcaster) Publish(_ context.Context, q []model.Quote) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.quotes = append(b.quotes, q...)
+	return nil
+}
+
+func (b *recBroadcaster) prices() []int64 {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	var out []int64
+	for _, q := range b.quotes {
+		out = append(out, q.Price)
+	}
+	return out
+}
+
+// 审查实测:连发 5 张新单 520→516,每条推送都是上一张的价,516 始终没推出来;
+// 只被看到一次的新单一条都推不出去。接真的 hub.Conflator 复现:上传之后 conflator
+// 空转几十个 tick(单子还没落库),flush 之后推出去的必须是刚落库的那个价
+func TestFlush_接真Conflator推出去的是刚落库的状态(t *testing.T) {
+	c, err := lru.New[int64, orderState](1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sink := &committedSink{}
+	bc := &recBroadcaster{}
+	conflator := hub.NewConflator(sink, bc, time.Hour)
+	ing := &Ingestor{seen: c, dirty: conflator, store: sink}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go conflator.Run(ctx, 2*time.Millisecond)
+
+	waitPrice := func(want int64) {
+		t.Helper()
+		deadline := time.Now().Add(2 * time.Second)
+		for {
+			if p := bc.prices(); len(p) > 0 && p[len(p)-1] == want {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("flush 之后应推出 %d,推出去的是 %v", want, bc.prices())
+			}
+			time.Sleep(2 * time.Millisecond)
+		}
+	}
+	base := time.Now()
+	for i, price := range []int64{520, 519, 518, 517, 516} {
+		o := order(int64(100+i), price, 1)
+		o.ObservedAt = base.Add(time.Duration(i) * time.Second)
+		ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{o}})
+		time.Sleep(20 * time.Millisecond) // conflator 空转:这时推任何东西都是旧状态
+		if p := bc.prices(); len(p) != i {
+			t.Fatalf("第 %d 张单还没落库就推了: %v", i+1, p)
+		}
+		ing.flush(context.Background())
+		waitPrice(price)
 	}
 }
 
@@ -108,12 +246,13 @@ func TestSubmit_市场id收敛成城市名并保留原值(t *testing.T) {
 	o.LocationID = "3008"
 	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{o}})
 
-	if len(dirty.keys) != 1 || dirty.keys[0].LocationID != "Martlock" {
-		t.Fatalf("脏盘口该按城市名标,得到 %+v", dirty.keys)
-	}
 	got := ing.pending["甲"][0]
 	if got.LocationID != "Martlock" || got.RawLocationID != "3008" {
 		t.Fatalf("落库应为 Martlock 且保留原值 3008,得到 %q / %q", got.LocationID, got.RawLocationID)
+	}
+	ing.flush(context.Background())
+	if len(dirty.keys) != 1 || dirty.keys[0].LocationID != "Martlock" {
+		t.Fatalf("脏盘口该按城市名标,得到 %+v", dirty.keys)
 	}
 }
 
@@ -127,6 +266,7 @@ func TestSubmit_同一张单换了城市按变化处理并计数(t *testing.T) {
 	first := order(1, 1000, 50)
 	first.ObservedAt = t0.Add(-time.Minute)
 	ing.Submit(model.UploadBatch{Reporter: "甲", Orders: []model.MarketOrder{first}})
+	ing.flush(context.Background())
 
 	moved := order(1, 1000, 50) // 同价同量,只有城市不同
 	moved.LocationID = "Thetford"
@@ -147,6 +287,7 @@ func TestSubmit_同一张单换了城市按变化处理并计数(t *testing.T) {
 	if last := p[len(p)-1]; last.OrderID != 1 || last.LocationID != "Thetford" {
 		t.Fatalf("待写队列里这张单最后应是 Thetford,得到 %+v", last)
 	}
+	ing.flush(context.Background())
 	if n := len(dirty.keys); n != 2 || dirty.keys[1].LocationID != "Thetford" {
 		t.Fatalf("新盘口要标脏,得到 %+v", dirty.keys)
 	}
@@ -199,6 +340,11 @@ func TestSubmit_乱序晚到的旧观测不回写(t *testing.T) {
 	// SentAt 填成 now:钟是准的,这里只测乱序
 	ing.Submit(model.UploadBatch{Reporter: "甲", SentAt: t0, Orders: []model.MarketOrder{obs(5, -10*time.Minute)}})
 	ing.Submit(model.UploadBatch{Reporter: "乙", SentAt: t0, Orders: []model.MarketOrder{obs(3, -time.Minute)}})
+	if n := len(ing.pending["甲"]) + len(ing.pending["乙"]); n != 2 {
+		t.Fatalf("两次都是变化,应各进待写,得到 %d", n)
+	}
+	ing.flush(context.Background())
+	dirty.keys = nil
 
 	changed, touched := ing.Submit(model.UploadBatch{Reporter: "甲", SentAt: t0,
 		Orders: []model.MarketOrder{obs(5, -5*time.Minute)}}) // 甲重传 T−5m 那一眼
@@ -208,14 +354,15 @@ func TestSubmit_乱序晚到的旧观测不回写(t *testing.T) {
 	if n := ing.Stats().StaleObservations; n != 1 {
 		t.Fatalf("旧观测计数应为 1,得到 %d", n)
 	}
-	if n := len(ing.pending["甲"]); n != 1 {
-		t.Fatalf("甲的待写应只有最初那条,得到 %d", n)
+	if n := len(ing.pending["甲"]); n != 0 {
+		t.Fatalf("旧观测不该进待写,得到 %d", n)
 	}
 	if _, ok := ing.touches[42]; ok {
 		t.Fatal("旧观测也不该进 touch,反正刷不动 last_seen")
 	}
-	if n := len(dirty.keys); n != 2 {
-		t.Fatalf("旧观测不该标脏,应共 2 次,得到 %d", n)
+	ing.flush(context.Background())
+	if n := len(dirty.keys); n != 0 {
+		t.Fatalf("旧观测不该标脏,得到 %d 次", n)
 	}
 
 	// LRU 仍是乙的 ×3:乙的下一次同样观测只是 touch
@@ -384,7 +531,8 @@ func TestSubmit_附魔后缀在入库前补齐(t *testing.T) {
 	if got := ing.pending["甲"][0].ItemID; got != "T5_2H_FIRESTAFF@2" {
 		t.Fatalf("落库物品应为 T5_2H_FIRESTAFF@2,得到 %q", got)
 	}
-	if dirty.keys[0].ItemID != "T5_2H_FIRESTAFF@2" {
+	ing.flush(context.Background())
+	if len(dirty.keys) != 1 || dirty.keys[0].ItemID != "T5_2H_FIRESTAFF@2" {
 		t.Fatalf("脏盘口也要用补齐后的 id,得到 %q", dirty.keys[0].ItemID)
 	}
 }

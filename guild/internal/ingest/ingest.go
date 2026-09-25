@@ -100,7 +100,16 @@ type Ingestor struct {
 	// touches 是状态没变的,只刷 last_seen。存每张单这段时间里最新的观测时间
 	// 而不是 flush 时刻:last_seen 要和 WriteOrders 用同一套(已纠偏的)客户端
 	// 观测时钟,"同一眼"的判断才有意义
-	touches      map[int64]time.Time
+	touches map[int64]time.Time
+	// dirtyKeys 是这一轮要标脏的盘口:状态变了的单和只刷 last_seen 的单所在的盘口。
+	// **flush 提交之后才标**(见 flush)。以前在 Submit 里当场标,conflator 每 200ms
+	// 从库里读最优价,而单子要等 2s 一次的 flush 才落库:读到的是旧状态,脏标却已经
+	// 清掉了,flush 之后也没人再标一次。结果是每条推送都晚一拍,一张单只被看到
+	// 一次的话,它的状态永远推不出去。
+	//
+	// 只 touch 的盘口也要标:这一眼里没再出现的旧最优单会被读簿当成幽灵剔掉,
+	// 最优价可能已经退到次优档;"最近一眼"的时间也往前走了
+	dirtyKeys    map[model.QuoteKey]struct{}
 	lastConflict *Conflict
 	lastWarn     time.Time // 串城告警限频:每分钟最多一条,免得把日志刷满
 	// conflictAt 是每个盘口最近一次卷进身份冲突的观测时间,按盘口指纹
@@ -152,6 +161,9 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 	if i.touches == nil {
 		i.touches = map[int64]time.Time{}
 	}
+	if i.dirtyKeys == nil {
+		i.dirtyKeys = map[model.QuoteKey]struct{}{}
+	}
 	for _, o := range batch.Orders {
 		// 先收敛地点再做别的:盘口键、落库、推送全都要用城市名,
 		// 否则抓包数据和 AODP 永远是两个 key(0007 vs Thetford)
@@ -180,6 +192,7 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 			if o.ObservedAt.After(i.touches[o.OrderID]) {
 				i.touches[o.OrderID] = o.ObservedAt
 			}
+			i.dirtyKeys[o.Key()] = struct{}{}
 			touched++
 			continue
 		}
@@ -191,7 +204,7 @@ func (i *Ingestor) Submit(batch model.UploadBatch) (changed, touched int) {
 		}
 		i.seen.Add(o.OrderID, orderState{price: o.UnitPrice, amount: o.Amount, ident: ident, seen: at})
 		i.pending[batch.Reporter] = append(i.pending[batch.Reporter], o)
-		i.dirty.MarkDirty(o.Key())
+		i.dirtyKeys[o.Key()] = struct{}{}
 		changed++
 	}
 	return changed, touched
@@ -302,8 +315,8 @@ func (i *Ingestor) Run(ctx context.Context) {
 
 func (i *Ingestor) flush(ctx context.Context) {
 	i.mu.Lock()
-	byReporter, touches := i.pending, i.touches
-	i.pending, i.touches = map[string][]model.MarketOrder{}, nil
+	byReporter, touches, keys := i.pending, i.touches, i.dirtyKeys
+	i.pending, i.touches, i.dirtyKeys = map[string][]model.MarketOrder{}, nil, nil
 	i.mu.Unlock()
 
 	n := 0
@@ -318,6 +331,13 @@ func (i *Ingestor) flush(ctx context.Context) {
 	if err := i.store.Flush(ctx, byReporter, touches); err != nil {
 		slog.Error("写入挂单失败,这一轮整批作废", "changed", n, "touched", len(touches), "err", err)
 		i.forget(byReporter)
+		return // 库里什么都没变,不标脏
+	}
+	// 提交之后才标脏:conflator 下一次 tick 读到的一定是这一轮的新状态
+	if i.dirty != nil {
+		for k := range keys {
+			i.dirty.MarkDirty(k)
+		}
 	}
 }
 
