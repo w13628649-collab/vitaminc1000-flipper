@@ -54,6 +54,7 @@
       <button class="act" id="rescan">重新扫描</button>
       <span class="sub" id="scan-meta"></span>
     </div>
+    <div id="desk-banners"></div>
 
     <div class="kpis" id="kpis"></div>
     <p class="note" id="p-note"></p>
@@ -61,14 +62,17 @@
     <div class="split">
       <div>
         <h3>资金怎么分</h3>
+        <div class="tablewrap">
         <table class="tight">
           <thead><tr>
             <th class="l">标的</th><th class="l">类型</th>
-            <th>一轮件数</th><th>占用本金</th><th>日收益</th><th>回报率</th>
-            <th>风险调整</th><th>波动</th><th>轮/天</th>
+            <th title="一轮买多少件">一轮件数</th><th title="一天能出掉多少件(几轮加起来)">日件数</th>
+            <th>占用本金</th><th>日收益</th><th>回报率</th>
+            <th>风险调整</th><th>波动</th><th>轮/天</th><th class="l">可信</th>
           </tr></thead>
           <tbody id="p-rows"></tbody>
         </table>
+        </div>
       </div>
       <div>
         <h3>边际收益</h3>
@@ -77,9 +81,23 @@
       </div>
     </div>
 
-    <h3>数据覆盖率</h3>
+    <h3>待核对 <span class="sub">日收益靠前、但两条腿的深度还没核过的机会</span></h3>
+    <p class="sub" id="check-note"></p>
+    <table class="tight">
+      <thead><tr>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">路线</th><th class="l">执行</th>
+        <th>日收益</th><th class="l">哪条腿没核</th><th class="l">进游戏怎么核</th>
+      </tr></thead>
+      <tbody id="check-rows"></tbody>
+    </table>
+
+    <h3>数据覆盖率 <span class="sub" id="cov-note"></span></h3>
     <p class="sub">亚服的真瓶颈是有没有数据,不是算法。条越短,这座城的报价越旧。</p>
-    <div class="cov" id="cov"></div>
+    <div class="cov-grid" id="cov"></div>
+    <div class="cov-legend" id="cov-legend"></div>
+
+    <h3>抓包融合 <span class="sub">成员抓包传上来的挂单在这一轮扫描里用上了多少</span></h3>
+    <div class="statgrid small" id="cap-sum"></div>
 
     <h3>模型校准</h3>
     <div id="calib"></div>
@@ -259,9 +277,10 @@
     </div>
     <table class="tight">
       <thead><tr>
-        <th class="l">物品</th><th class="l">路线</th><th class="l">执行</th>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">路线</th><th class="l">执行</th>
         <th>计划量</th><th>计划买</th><th>计划卖</th>
-        <th>成交量</th><th>实际净利</th><th class="l">状态</th><th class="l">操作</th>
+        <th title="实际买入 / 卖出件数">成交量</th><th title="实际买入 / 卖出均价">成交均价</th>
+        <th>实际净利</th><th class="l">状态</th><th class="l">开单 / 收口</th><th class="l">操作</th>
       </tr></thead>
       <tbody id="book-rows"></tbody>
     </table>

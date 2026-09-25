@@ -848,7 +848,7 @@ async function doRescan() {
     applyResult(res, "rescan");
   } catch (e) {
     scanError = String(e.message || e) + (e.status === 409 ? "(上一轮可能还在跑,跑完会自己出结果)" : "");
-    if (scan) { renderIdeasBanners(scan); renderDeskScan(scan); } else renderIdeasEmpty(e);
+    if (scan) { renderIdeasBanners(scan); renderDeskScan(scan); } else { renderIdeasEmpty(e); renderDeskBanners(null); }
   } finally {
     rescanning = false;
     for (const b of btns) { b.disabled = false; if (b.dataset.label) b.textContent = b.dataset.label; }
@@ -859,10 +859,81 @@ $("i-rescan").addEventListener("click", doRescan);
 
 // 总览上和扫描有关的那几块
 function renderDeskScan(res) {
+  const extra = (res.extra_item_ids || []).length, missing = (res.missing_item_ids || []).length;
+  const hm = s => new Date(s).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   $("scan-meta").textContent =
-    `${(res.item_ids || []).length} 个物品・${num(res.price_rows)} 条报价・${num(res.request_count)} 次请求` +
-    (scanError ? `・重新扫描失败:${scanError}` : "");
-  renderDeskCoverage(res.coverage || []);
+    `${(res.item_ids || []).length} 个物品${extra ? `(抓包并入 ${extra})` : ""}` +
+    `${missing ? `・目录里查不到 ${missing} 个` : ""}・${num(res.price_rows)} 条报价・${num(res.request_count)} 次请求` +
+    (res.started_at ? `・AODP 全量 ${hm(res.started_at)}` : "") +
+    (res.evaluated_at && res.evaluated_at !== res.started_at ? `・最近重算 ${hm(res.evaluated_at)}` : "");
+  $("scan-meta").title = missing ? "配置里有、目录里查不到的:" + res.missing_item_ids.join(", ") : "";
+  renderCoverage(res, { grid: "cov", note: "cov-note", legend: "cov-legend" });
+  renderCaptureSummary(res.capture);
+  renderCheckTable();
+  renderDeskBanners(res);
+}
+
+function renderDeskBanners(res) {
+  const out = [];
+  if (scanError) out.push(`<div class="banner"><b>重新扫描失败:</b>${esc(scanError)}</div>`);
+  if (res?.capture?.error)
+    out.push(`<div class="banner"><b>抓包没融合全:</b>${esc(res.capture.error)}。受影响的部分这一轮退回了纯 AODP 的价。</div>`);
+  if (ingestInfo?.location_conflicts > 0) out.push(conflictBanner(ingestInfo));
+  $("desk-banners").innerHTML = out.join("");
+}
+
+// 抓包融合汇总。老服务端没有 capture 段,整块写一句说明
+const CAP_FIELDS = [
+  ["book_sides", "个盘口边抓到了挂单", c => `向库里要了 ${num(c.requested_keys)} 个盘口边`],
+  ["asks_used", "个卖单簿用了抓包价"],
+  ["bids_used", "个买单簿用了抓包价"],
+  ["superseded", "个边 AODP 更新,抓包落选"],
+  ["synthesized", "格只靠抓包补出来", () => "AODP 没返回这一格,全靠成员抓包"],
+  ["ghosts", "张幽灵单被剔掉", () => "上一轮翻到、这一轮没再出现的单(多半已成交或撤单)"],
+  ["conflict_keys", "个边最近串过城", () => "多开串城的盘口暂停了幽灵单剔除"],
+  ["extra_items", "个物品因抓包并进扫描", c => (c.extra_dropped ? `超上限截掉 ${num(c.extra_dropped)} 个` : "")],
+  ["extra_pending", "个新物品等着补拉 AODP", c => (c.backfilled_at ? `最近补拉 ${new Date(c.backfilled_at).toLocaleTimeString("zh-CN")}` : "")],
+];
+function renderCaptureSummary(c) {
+  const box = $("cap-sum");
+  if (!c || c.enabled === undefined) {
+    box.innerHTML = `<div><span>这版服务端还不把抓包融合进扫描,机会板用的全是 AODP 的价。</span></div>`;
+    return;
+  }
+  if (!c.enabled) {
+    box.innerHTML = `<div><span>服务端配置里抓包融合关着(capture.enabled),机会板用的全是 AODP 的价。</span></div>`;
+    return;
+  }
+  box.innerHTML = CAP_FIELDS.map(([k, label, tip]) =>
+    `<div title="${esc(tip ? tip(c) : "")}"><b>${num(c[k] || 0)}</b><span>${label}</span></div>`).join("");
+}
+
+// 「待核对」:日收益靠前、但深度没核过的机会。不是深度不够,是不知道 ——
+// 进游戏点进物品详情页翻一眼,下一轮重算就核上了
+function renderCheckTable() {
+  const rows = sortBy(ideas.filter(r => r.depth_checked === false), "daily_profit", "desc").slice(0, 10);
+  const any = ideas.some(r => r.depth_checked !== undefined);
+  $("check-note").textContent = !any ? "这版服务端的扫描结果里没有深度核验字段。"
+    : rows.length ? "两条腿依托的那一边没有可信的抓包深度:进游戏照右边那列翻一眼,下一轮重算就核上了。"
+      : "日收益靠前的机会深度都核过了。";
+  const miss = r => [["买腿", r.buyLeg], ["卖腿", r.sellLeg]].filter(([, l]) => !l.side?.depth).map(([w]) => w);
+  const guide = r => {
+    const legs = miss(r);
+    const at = w => (w === "买腿" ? r.from_city : r.to_city);
+    const book = (w, l) => (l.name.endsWith("ask") ? "出售订单" : "购入订单");
+    return [["买腿", r.buyLeg], ["卖腿", r.sellLeg]].filter(([w]) => legs.includes(w))
+      .map(([w, l]) => `到 ${at(w)} 市场点进物品详情页,看「${book(w, l)}」`).join(";");
+  };
+  $("check-rows").closest("table").hidden = !rows.length;
+  $("check-rows").innerHTML = rows.map(r => `<tr>
+    <td class="l">${itemCell(r.item_id, r.item_name)}</td>
+    <td class="l">${qualityTag(r.quality)}</td>
+    <td class="l">${r.kind === "arb" ? `<span class="route">${cityMark(r.from_city)}<span>→</span>${cityMark(r.to_city)}</span>` : cityMark(r.from_city)}</td>
+    <td class="l sub">${esc(r.mode_text)}</td>
+    <td><b>${num(r.daily_profit)}</b></td>
+    <td class="l">${miss(r).join("、") || "—"}</td>
+    <td class="l sub" style="white-space:normal">${esc(guide(r))}</td>
+  </tr>`).join("");
 }
 
 // 顶栏「行情」:最近一次评估(抓包快速重算,evaluated_at)离现在多久,老服务端没有就按
@@ -884,16 +955,6 @@ function renderScanAge() {
 }
 setInterval(renderScanAge, 30000);
 
-function renderDeskCoverage(coverage) {
-  $("cov").innerHTML = coverage.map(c => {
-    const ratio = c.with_data ? c.within_threshold / c.with_data : 0;
-    return `<div>
-      <b>${esc(c.city)}</b>
-      <div class="track"><div class="fill" style="width:${(ratio * 100).toFixed(0)}%;--c:var(${CITY_VAR[c.city] || "--ink-soft"})"></div></div>
-      <i>${c.within_threshold}/${c.with_data} 新鲜${c.has_median ? "・中位 " + c.median_age_hours.toFixed(1) + "h" : ""}</i>
-    </div>`;
-  }).join("");
-}
 
 // ── 总览:资金分配 ─────────────────────────────────────────
 async function loadPortfolio() {
@@ -911,28 +972,41 @@ async function loadPortfolio() {
 for (const id of ["p-capital", "p-cap", "p-risk"]) $(id).addEventListener("change", loadPortfolio);
 
 function renderPlan(p) {
+  // 没扫过、或者一条都没分到时后端给的 slices 是 null。以前直接读 .length,
+  // TypeError 的报错文字就显示在说明那一行
+  const slices = p.slices || [];
   const idlePct = p.capital ? p.idle / p.capital : 0;
   $("kpis").innerHTML = `
     <div><b>${num(p.daily_profit)}</b><i>日收益(银)</i>
-      <em>${p.slices.length} 个仓位</em></div>
+      <em>${slices.length} 个仓位</em></div>
     <div><b>${pct(p.daily_roi, 2)}</b><i>本金日回报</i>
       <em>年化没有意义,市场吃不下</em></div>
     <div><b>${num(p.deployed)}</b><i>已部署</i>
       <em>闲置 ${num(p.idle)}(${pct(idlePct, 0)})</em></div>
-    <div><b>${num(p.slices.reduce((a, s) => a + s.qty, 0))}</b><i>总件数</i>
-      <em>跨城 ${p.slices.filter(s => s.kind === "arb").length} 条</em></div>`;
-  $("p-note").textContent = p.note || "";
+    <div><b>${num(slices.reduce((a, s) => a + (s.qty || 0), 0))}</b><i>总件数</i>
+      <em>跨城 ${slices.filter(s => s.kind === "arb").length} 条</em></div>`;
+  $("p-note").textContent = p.note || (slices.length ? "" : "这一轮扫描没有能分到钱的机会。");
 
-  $("p-rows").innerHTML = p.slices.map(s => `<tr>
+  // payload 是整条机会/路线:可信度、深度核没核过都从它取,和机会页同一个口径
+  const trust = pl => {
+    if (!pl) return "—";
+    const c = confClass(pl.confidence);
+    const mists = (pl.risk_tags || []).includes("mists") ? ' <span class="tag risk">经迷雾</span>' : "";
+    const chk = pl.depth_checked === false ? ' <span class="tag medium" title="两条腿的深度没都核过">未核深度</span>' : "";
+    return `<span class="tag ${c}">${CONFIDENCE[pl.confidence] || "低"}</span>${chk}${mists}`;
+  };
+  $("p-rows").innerHTML = slices.map(s => `<tr>
     <td class="l">${esc(s.label)}</td>
-    <td class="l"><span class="kind ${s.kind}">${s.kind === "arb" ? "跨城" : "同城"}</span></td>
+    <td class="l"><span class="kind ${s.kind === "arb" ? "arb" : "flip"}">${s.kind === "arb" ? "跨城" : "同城"}</span></td>
     <td>${num(s.qty)}</td>
+    <td class="sub">${s.daily_qty != null ? num(s.daily_qty) : "—"}</td>
     <td>${num(s.capital)}</td>
     <td><b>${num(s.daily_profit)}</b></td>
     <td>${pct(s.roi)}</td>
     <td class="sub" title="风险调整后,排序按这个">${s.risk_adj_roi ? pct(s.risk_adj_roi) : "—"}</td>
     <td class="sub">${s.volatility ? s.volatility.toFixed(2) : "—"}</td>
     <td class="sub">${s.turns_per_day ? s.turns_per_day.toFixed(1) : "—"}</td>
+    <td class="l">${trust(s.payload)}</td>
   </tr>`).join("");
 
   renderCurve(p);
@@ -941,7 +1015,7 @@ function renderPlan(p) {
 // 累计投入 vs 累计收益。曲线越往右越平,就是边际收益递减——
 // 一眼能看出"再投下去不值得"的拐点在哪
 function renderCurve(p) {
-  const pts = p.slices;
+  const pts = p.slices || [];
   if (!pts.length) { $("curve").innerHTML = ""; $("curve-note").textContent = ""; return; }
   const W = 400, H = 210, pad = { l: 8, r: 8, t: 12, b: 26 };
   const maxCap = pts[pts.length - 1].cum_capital || 1;
@@ -995,7 +1069,7 @@ async function loadCalibration() {
       <div><b>${c.has_suggestion ? c.suggested_absorb_ratio.toFixed(3) : "—"}</b>
         <i>实测 absorb_ratio</i><em>当前配置 ${d.current_absorb}</em></div>
       <div><b>${c.has_accuracy ? pct(c.accuracy) : "—"}</b><i>模型准确度</i>
-        <em>实际净利 / 计划净利</em></div>
+        <em>实际净利 ${num(c.realized_profit)} / 计划净利 ${num(c.planned_profit)}</em></div>
     </div>`;
   } catch (e) { $("calib").innerHTML = `<p class="note">${esc(e.message || e)}</p>`; }
 }
@@ -1045,24 +1119,30 @@ async function loadBook() {
   const q = new URLSearchParams({ owner, status: $("t-status").value });
   try {
     const rows = await getJSON("/api/trades?" + q);
+    await resolveNames(rows.map(t => t.item_id));
     $("book-empty").style.display = rows.length ? "none" : "";
     $("book-meta").textContent = `${rows.length} 笔`;
+    const pair = (a, b) => (a != null || b != null ? `${a != null ? num(a) : "—"} / ${b != null ? num(b) : "—"}` : "—");
+    const day = s => (s ? new Date(s).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
     $("book-rows").innerHTML = rows.map(t => `<tr>
-      <td class="l">${itemCell(t.item_id, t.item_id)}</td>
+      <td class="l">${itemCell(t.item_id, NAMES.get(t.item_id) || t.item_id)}${t.note ? `<div class="sub" title="${esc(t.note)}">${esc(t.note)}</div>` : ""}</td>
+      <td class="l">${qualityTag(t.quality)}</td>
       <td class="l">${t.kind === "arb"
         ? `<span class="route">${cityDot(t.buy_city)}<span>→</span>${cityDot(t.sell_city)}</span>`
         : cityDot(t.buy_city)}</td>
-      <td class="l sub">${esc(t.mode)}</td>
+      <td class="l sub" title="${esc(t.mode)}">${esc(MODE_LABEL[t.mode] || t.mode)}</td>
       <td>${num(t.planned_qty)}</td>
       <td>${num(t.planned_buy)}</td>
       <td>${num(t.planned_sell)}</td>
-      <td>${t.filled_buy_qty != null ? num(t.filled_buy_qty) : "—"}</td>
+      <td title="买入 / 卖出件数">${pair(t.filled_buy_qty, t.filled_sell_qty)}</td>
+      <td class="sub" title="买入 / 卖出均价">${pair(t.filled_buy_price, t.filled_sell_price)}</td>
       <td class="${t.realized_profit > 0 ? "pos" : t.realized_profit < 0 ? "neg" : ""}">
         ${t.realized_profit != null ? num(t.realized_profit) : "—"}</td>
-      <td class="l"><span class="tag ${t.status === "filled" ? "high" : t.status === "open" ? "medium" : "low"}">${STATUS[t.status] || t.status}</span></td>
+      <td class="l"><span class="tag ${t.status === "filled" ? "high" : t.status === "open" ? "medium" : "low"}">${esc(STATUS[t.status] || t.status)}</span></td>
+      <td class="l sub">${day(t.opened_at)}${t.closed_at ? ` → ${day(t.closed_at)}` : ""}</td>
       <td class="l">${t.status === "open"
-        ? `<button class="mini" data-close="${t.id}" data-qty="${t.planned_qty}">收口</button> ` : ""
-        }<button class="mini" data-del="${t.id}">删</button></td>
+        ? `<button class="mini" data-close="${Number(t.id)}" data-qty="${Number(t.planned_qty)}">收口</button> ` : ""
+        }<button class="mini" data-del="${Number(t.id)}">删</button></td>
     </tr>`).join("");
     loadCalibration();
   } catch (e) {
@@ -1071,6 +1151,19 @@ async function loadBook() {
   }
 }
 const STATUS = { open: "未收口", filled: "已成交", partial: "部分成交", abandoned: "放弃" };
+
+// 记账接口只存 item_id。扫描、查价里见过的名字直接用;没见过的按 id 搜一次目录,
+// 一次最多查 20 个,查不到的就显示 id
+async function resolveNames(ids) {
+  const want = [...new Set(ids)].filter(id => id && !NAMES.has(id)).slice(0, 20);
+  await Promise.all(want.map(async id => {
+    try {
+      const hits = await getJSON(`/api/items?limit=5&q=${encodeURIComponent(id)}`);
+      const it = (hits || []).find(x => x.item_id === id);
+      if (it) noteName(id, displayName(it));
+    } catch (e) { /* 目录没同步:显示 id */ }
+  }));
+}
 
 for (const id of ["t-owner", "t-status"]) $(id).addEventListener("change", loadBook);
 
@@ -1318,6 +1411,7 @@ function renderPrices(d) {
   const P = d.params || {};
   const maxH = P.max_hours ?? 6;
   const minBid = P.min_bid_depth ?? 20;
+  const nearTxt = pct(P.near_pct ?? 0.05, 0);   // 近价窗口:服务端给的,以前文案里写死 5%
   const qualities = d.qualities?.length ? d.qualities : [1];
   const fresh = s => s && s.best > 0 && s.age_hours != null && s.age_hours <= maxH;
 
@@ -1369,7 +1463,7 @@ function renderPrices(d) {
   // 一侧的来源说明:两路都列出来,说清楚用的是哪一路、为什么
   const srcHint = s => {
     const lines = [];
-    if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${Number(s.capture.orders_at_best)} 单 · 5% 以内 ${num(s.capture.qty_near)} 件`);
+    if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${Number(s.capture.orders_at_best)} 单 · ${nearTxt} 以内 ${num(s.capture.qty_near)} 件`);
     if (s.capture?.prev_page_orders) lines.push(`最近一次只翻到了后面的页,前面 ${Number(s.capture.prev_page_orders)} 张单是更早那一页看到的,照样算在内`);
     if (s.aodp) lines.push(`AODP ${num(s.aodp.best)}(${s.aodp.age_hours == null ? "没有时间戳" : ageText(s.aodp.age_hours) + " 前"})`);
     if (s.capture && s.aodp) lines.push(`用的是${s.pick === "capture" ? "抓包" : "AODP"}:两路谁新用谁,一样新用抓包`);
@@ -1390,7 +1484,7 @@ function renderPrices(d) {
     const cap = s.capture;
     if (cap) {
       const dim = s.pick !== "capture";
-      parts.push(`<em class="qty${dim ? " dim" : ""}" title="${esc(`最优档 ${num(cap.qty_at_best)} 件,最优价 5% 以内共 ${num(cap.qty_near)} 件` +
+      parts.push(`<em class="qty${dim ? " dim" : ""}" title="${esc(`最优档 ${num(cap.qty_at_best)} 件,最优价 ${nearTxt} 以内共 ${num(cap.qty_near)} 件` +
         (dim ? "\n抓包比 AODP 旧,价格用的是 AODP,件数只作参考" : ""))}">×${num(cap.qty_at_best)}${cap.qty_near > cap.qty_at_best ? "/" + num(cap.qty_near) : ""}</em>`);
     }
     const far = s.pick === "capture" ? cap.far : s.pick === "aodp" ? s.aodp.far : 0;
@@ -1497,7 +1591,7 @@ function renderPrices(d) {
     <div class="matrix-note">
       <p><b>卖单最低</b>就是游戏里市场「销售订单」页签最上面那一行 —— 别人挂着卖的最低价,
       你想马上买到货付的就是它。<b>买单最高</b>是「购买订单」页签最上面那一行 —— 别人挂着收的最高价,
-      你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 5% 以内的件数,只有自建抓包拿得到;
+      你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 ${nearTxt} 以内的件数,只有自建抓包拿得到;
       带 <i class="src" style="margin:0">抓</i> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
       <p>所以<b>卖单价总是比买单价高</b>,这段差就是倒爷的利润空间。<b>同城价差</b>已经替你把
       ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了(真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}):
@@ -1794,6 +1888,10 @@ function renderLadder() {
     stat("7日 / 30日均价", h ? `${h.avg_7d ? num(h.avg_7d) : "—"} / ${num(h.avg_30d)}` : "—",
       "成交量加权,不含今天。零星成交日和万笔成交日不等权"),
     stat("成交区间", h?.price_min ? `${num(h.price_min)}~${num(h.price_max)}` : "—", "30 日窗口里各天均价的最低 ~ 最高"),
+    // trend_30d 是小数(0.05 = 涨 5%),和销量榜的 trend_pct(百分数)口径不同,这里按小数显示
+    stat("30日趋势", h?.trend_30d != null && h.days_30d >= 2 ? `${h.trend_30d >= 0 ? "+" : ""}${pct(h.trend_30d)}` : "—",
+      h ? `30 日各天均价的最小二乘趋势,拟合度 R² ${h.trend_fit != null ? h.trend_fit.toFixed(2) : "—"}` : ""),
+    stat("价格波动", h?.cv ? h.cv.toFixed(2) : "—", h ? `30 日价格变异系数(标准差 ${num(h.stddev_30d)} / 均价)` : ""),
     stat(h && !h.days_7d ? "日均成交(30日)" : "日均成交",
       h ? num(h.days_7d ? h.daily_qty_7d : h.daily_qty_30d) + " 件" : "—",
       h ? `7 日窗口 ${h.days_7d} 天有数据;30 日口径 ${num(h.daily_qty_30d)} 件/天` : ""),
@@ -1839,7 +1937,7 @@ function renderLadder() {
           你挂买单进去大概率一直挂着,而 2.5% 创建费下单就扣、不退。`
         : pos < 0.2 ? `成交集中在<b>买价</b>一侧 —— 买单容易成交,难的是把货挂出去。`
         : `买卖两侧都在成交,双挂(挂买收货 + 挂卖出货)在这个物品上说得通。`}
-      ${thinBid ? `<br>而且最高买价 5% 以内只有 ${num(buy.support.qty_near)} 件在收。` : ""}
+      ${thinBid ? `<br>而且最高买价 ${pct(P.near_pct ?? 0.05, 0)} 以内只有 ${num(buy.support.qty_near)} 件在收。` : ""}
       <br><span class="sub">均价是 ${h.avg_7d ? 7 : 30} 日成交量加权均价(${h.source === "capture" ? "自抓" : "AODP"})。
       AODP 的成交只统计卖单,天生偏向卖价一侧。</span></div>`);
   }
@@ -2040,20 +2138,22 @@ const TREND_CLASS = { up: "pos", down: "neg", choppy: "medium", flat: "sub" };
 
 function renderRank(rows) {
   $("rank-empty").style.display = rows.length ? "none" : "";
+  for (const r of rows) noteName(r.item_id, r.item_name);
+  const fix = (v, d) => (v == null || !isFinite(v) ? "—" : v.toFixed(d));
   $("rank-rows").innerHTML = rows.map(r => `<tr>
     <td class="l">${itemCell(r.item_id, r.item_name)}</td>
     <td class="l">${r.city === "全服" ? "全服" : cityDot(r.city)}</td>
-    <td>${num(r.daily_qty)}</td>
+    <td title="窗口内共成交 ${num(r.total_qty)} 件">${num(r.daily_qty)}</td>
     <td><b>${num(r.daily_silver)}</b></td>
     <td>${num(r.avg_price)}</td>
     <td>${num(r.price_min)}</td>
     <td>${num(r.price_median)}</td>
     <td>${num(r.price_max)}</td>
-    <td>${r.volatility.toFixed(2)}</td>
+    <td>${fix(r.volatility, 2)}</td>
     <td class="${r.trend === "up" ? "pos" : r.trend === "down" ? "neg" : ""}"
-        title="R² ${r.trend_fit.toFixed(2)}">${TREND[r.trend]} ${r.trend_pct >= 0 ? "+" : ""}${r.trend_pct.toFixed(1)}%</td>
+        title="窗口内的最小二乘涨跌幅(%),拟合度 R² ${fix(r.trend_fit, 2)}">${esc(TREND[r.trend] || "")} ${r.trend_pct >= 0 ? "+" : ""}${fix(r.trend_pct, 1)}%</td>
     <td class="l ${TREND_CLASS[r.trend] || ""}">${sparkline(r.series)}</td>
-    <td class="sub">${r.days_with_data} 天</td>
+    <td class="sub" title="${r.last_day ? "最近一天有成交:" + esc(r.last_day) : ""}">${Number(r.days_with_data) || 0} 天</td>
   </tr>`).join("");
 }
 
@@ -2409,6 +2509,7 @@ async function loadServerCoverage() {
     if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
     ingestInfo = cov.ingest || null;
     if (scan) renderIdeasBanners(scan);
+    renderDeskBanners(scan);
   } catch (e) { /* 服务端还没起来就先空着 */ }
 }
 
