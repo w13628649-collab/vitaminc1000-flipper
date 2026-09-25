@@ -24,7 +24,7 @@
       <div class="fact"><b id="capture"><span class="dot dead"></span>未抓包</b><i id="capture-sub">本机</i></div>
       <div class="fact"><b id="who">—</b><i id="who-sub">角色</i></div>
       <div class="fact"><b id="conn"><span class="dot dead"></span>未连接</b><i id="conn-sub">推送</i></div>
-      <div class="fact"><b id="scan-age">—</b><i>行情</i></div>
+      <div class="fact"><b id="scan-age">—</b><i id="scan-age-sub">行情</i></div>
       <button class="act ghost" id="quit" hidden>退出</button>
     </div>
   </header>
@@ -272,11 +272,16 @@
   <section class="view" id="v-live" hidden>
     <p class="note">
       成员在游戏里翻市场时数据实时传上来。<b>不需要刷新页面</b>,数值变化时会自己跳动,涨绿跌红。
+      看哪些物品不用自己挑:<b>机会板日收益前几名</b>的物品,加上<b>查价页正在看的那件</b>,
+      在配置里的每座城都订上买卖两边;机会板一更新,这里跟着换。
     </p>
+    <p class="sub" id="live-meta"></p>
     <table>
       <thead><tr>
-        <th class="l">物品</th><th class="l">城市</th>
-        <th>卖单最低</th><th>深度</th><th>买单最高</th><th>深度</th><th>更新</th>
+        <th class="l">物品</th><th class="l">品质</th><th class="l">城市</th>
+        <th title="这个盘口最便宜的那张卖单(抓包)">卖单最低</th><th title="最优价上的件数 / 单数">件数 / 单数</th>
+        <th title="这个盘口出价最高的那张买单(抓包)">买单最高</th><th title="最优价上的件数 / 单数">件数 / 单数</th>
+        <th title="最近一次有成员看到这个盘口变化">多久前</th><th>更新时刻</th>
       </tr></thead>
       <tbody id="live-rows"></tbody>
     </table>

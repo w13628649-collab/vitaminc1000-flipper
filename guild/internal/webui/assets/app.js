@@ -832,6 +832,7 @@ function applyResult(res, why) {
   renderDeskScan(res);
   loadPortfolio();
   noteEval(res.evaluated_at, res.started_at);
+  liveTargetsChanged();   // 实时页订阅跟着机会板前几名换
 }
 
 // 两处「重新扫描」(总览、机会页)和空态里的「立即扫描」走同一个
@@ -864,13 +865,24 @@ function renderDeskScan(res) {
   renderDeskCoverage(res.coverage || []);
 }
 
-// 顶栏「行情」:最近一次评估(抓包重算)离现在多久,没有就按 AODP 全量
+// 顶栏「行情」:最近一次评估(抓包快速重算,evaluated_at)离现在多久,老服务端没有就按
+// AODP 全量(started_at)。两个都有而且不同时副行再写全量多久前。30 秒走一次,
+// 以前只在拿到结果那一刻算一次,页面开一小时还写着"0 分钟前"
 function renderScanAge() {
-  const at = sync.evalAt || sync.fullAt;
-  if (!at) return;
-  const m = (Date.now() - Date.parse(at)) / 60000;
-  $("scan-age").textContent = m < 60 ? `${Math.max(0, Math.round(m))} 分钟前` : `${(m / 60).toFixed(1)} 小时前`;
+  const ev = sync.evalAt, full = sync.fullAt;
+  if (!ev && !full) return;
+  const ago = at => {
+    const m = (Date.now() - Date.parse(at)) / 60000;
+    return m < 1 ? "刚刚" : m < 60 ? `${Math.round(m)} 分钟前` : `${(m / 60).toFixed(1)} 小时前`;
+  };
+  const both = ev && full && ev !== full;
+  $("scan-age").textContent = both ? `重算 ${ago(ev)}` : ago(ev || full);
+  $("scan-age-sub").textContent = both ? `行情 · 全量 ${ago(full)}` : "行情";
+  const when = s => new Date(s).toLocaleString("zh-CN");
+  $("scan-age").closest(".fact").title = (full ? `AODP 全量拉取:${when(full)}` : "") +
+    (both ? `\n最近一次用抓包重算:${when(ev)}` : "");
 }
+setInterval(renderScanAge, 30000);
 
 function renderDeskCoverage(coverage) {
   $("cov").innerHTML = coverage.map(c => {
@@ -2261,48 +2273,113 @@ setInterval(() => {
 }, 5000);
 
 // ── 实时行情页 ─────────────────────────────────────────────
-const liveState = new Map();
-const WATCH_ITEMS = ["T4_METALBAR", "T5_METALBAR", "T6_METALBAR", "T5_CLOTH", "T5_PLANKS"];
-const WATCH_CITIES = ["Martlock", "Lymhurst", "Bridgewatch", "Thetford"];
-const keys = [];
-for (const it of WATCH_ITEMS)
-  for (const c of WATCH_CITIES)
-    for (const side of [0, 1]) keys.push(`${it}|${c}|1|${side}`);
-rtSetKeys("live", keys);
-function liveTargetsChanged() { /* 实时页的订阅集合暂时写死 */ }
+// 看哪些盘口不再写死(以前是 5 个物品 × 4 座城,缺 Fort Sterling / Caerleon / Brecilien):
+// 机会板日收益前 LIVE_TOP 名的物品 + 查价页正在看的那件(它的所有品质),
+// 在配置里的每座城都订买卖两边。机会板一更新、查价换了物品,订阅跟着换
+const LIVE_TOP = 15;
+const DEFAULT_CITIES = ["Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch", "Caerleon", "Brecilien"];
+const liveState = new Map();   // item|city|quality → { sell:{p,d,n}, buy:{p,d,n}, at }
+const live = { targets: [], cities: [], sig: "" };
+
+// 城市取扫描覆盖率里的(就是配置里的城市),再并上查价页的城市。Brecilien 总是带上:
+// 抓包的 5003 收敛成它,查价页也一直有这一行;配置里没列它时扫描不算它的机会,
+// 但成员在那边翻市场时这里照样该看得到
+function liveCities() {
+  const out = [];
+  const add = c => { if (c && c !== "Black Market" && !out.includes(c)) out.push(c); };
+  for (const c of scan?.coverage || []) add(c.city);
+  for (const c of lookup.data?.cities || []) add(c);
+  if (!out.length) DEFAULT_CITIES.forEach(add);
+  add("Brecilien");
+  return out;
+}
+function liveTargets() {
+  const out = new Map();
+  const d = lookup.data;
+  if (d?.item?.item_id)
+    for (const q of d.qualities?.length ? d.qualities : [1])
+      out.set(`${d.item.item_id}|${q}`, { item_id: d.item.item_id, quality: q, name: displayName(d.item), from: "查价" });
+  let n = 0;
+  for (const r of sortBy(ideas, "daily_profit", "desc")) {
+    if (n >= LIVE_TOP) break;
+    const k = `${r.item_id}|${r.quality}`;
+    if (out.has(k)) continue;
+    out.set(k, { item_id: r.item_id, quality: r.quality, name: r.item_name, from: "机会板" });
+    n++;
+  }
+  return [...out.values()];
+}
+function liveTargetsChanged() {
+  const targets = liveTargets(), cities = liveCities();
+  const keys = [];
+  for (const t of targets) for (const c of cities) for (const s of [0, 1]) keys.push(`${t.item_id}|${c}|${t.quality}|${s}`);
+  const sig = keys.join(",");
+  live.targets = targets;
+  live.cities = cities;
+  if (sig === live.sig) return;   // 集合没变(查价页每次实时刷新都会走到这)就什么都不动
+  live.sig = sig;
+  const want = new Set(keys);
+  for (const rk of [...liveState.keys()]) {
+    const [i, c, q] = rk.split("|");
+    if (!want.has(`${i}|${c}|${q}|0`)) liveState.delete(rk);   // 不再订阅的盘口从表里拿掉
+  }
+  rtSetKeys("live", keys);
+  renderLive();
+}
+
+const agoText = t => {
+  const s = (Date.now() - Date.parse(t)) / 1000;
+  if (!isFinite(s)) return "";
+  return s < 60 ? `${Math.max(0, Math.round(s))} 秒前` : s < 3600 ? `${Math.round(s / 60)} 分钟前` : `${(s / 3600).toFixed(1)} 小时前`;
+};
+const agoSpan = t => (t ? `<span class="tick-ago" data-t="${esc(t)}">${agoText(t)}</span>` : "");
+setInterval(() => { for (const el of document.querySelectorAll(".tick-ago")) el.textContent = agoText(el.dataset.t); }, 15000);
+
+const depthText = v => (v ? `${num(v.d)} 件${v.n ? ` / ${num(v.n)} 单` : ""}` : "");
 
 function renderLive() {
-  const rows = [...liveState.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const order = new Map(live.targets.map((t, i) => [`${t.item_id}|${t.quality}`, i]));
+  const cityIdx = new Map(live.cities.map((c, i) => [c, i]));
+  const rows = [...liveState.entries()].map(([rk, v]) => {
+    const [item, city, q] = rk.split("|");
+    return { rk, v, item, city, q: Number(q), t: live.targets[order.get(`${item}|${q}`)] };
+  }).filter(x => x.t).sort((a, b) =>
+    order.get(`${a.item}|${a.q}`) - order.get(`${b.item}|${b.q}`) || (cityIdx.get(a.city) ?? 99) - (cityIdx.get(b.city) ?? 99));
+  const nKeys = live.targets.length * live.cities.length * 2;
+  const fromLookup = live.targets.filter(t => t.from === "查价").length;
+  $("live-meta").textContent = live.targets.length
+    ? `订阅了 ${live.targets.length} 个物品(机会板前 ${live.targets.length - fromLookup} 个${fromLookup ? ` + 查价页 ${fromLookup} 个品质` : ""})× ${live.cities.length} 城 × 买卖两边 = ${nKeys} 个盘口,` +
+      `其中 ${rows.length} 个最近 30 分钟有人看到。城市:${live.cities.join("、")}`
+    : "";
   $("live-empty").style.display = rows.length ? "none" : "";
-  $("live-rows").innerHTML = rows.map(([rk, v]) => {
-    const [item, city] = rk.split("|");
-    return `<tr data-rk="${rk}">
-      <td class="l">${esc(item)}</td><td class="l">${cityDot(city)}</td>
+  $("live-empty").textContent = !live.targets.length
+    ? "机会板还没有结果,查价页也没选物品 —— 两边有了就自动订阅。"
+    : `已订阅 ${nKeys} 个盘口,等待行情…需要有成员开着客户端在游戏里翻这些物品的市场(最近 30 分钟内看到的挂单才算)。`;
+  $("live-rows").innerHTML = rows.map(({ rk, v, city, q, t }) => `<tr data-rk="${esc(rk)}">
+      <td class="l">${itemCell(t.item_id, t.name)} <span class="kind flip" title="${t.from === "查价" ? "查价页正在看的物品" : "机会板日收益前几名"}">${t.from}</span></td>
+      <td class="l">${qualityTag(q)}</td>
+      <td class="l">${cityDot(city)}</td>
       <td><span class="price" data-f="sell">${v.sell ? num(v.sell.p) : "—"}</span></td>
-      <td class="depth">${v.sell ? num(v.sell.d) : ""}</td>
+      <td class="depth" data-d="sell">${depthText(v.sell)}</td>
       <td><span class="price" data-f="buy">${v.buy ? num(v.buy.p) : "—"}</span></td>
-      <td class="depth">${v.buy ? num(v.buy.d) : ""}</td>
-      <td class="age">${v.at ? new Date(v.at).toLocaleTimeString("zh-CN") : ""}</td>
-    </tr>`;
-  }).join("");
+      <td class="depth" data-d="buy">${depthText(v.buy)}</td>
+      <td class="age" data-a>${agoSpan(v.at)}</td>
+      <td class="age" data-at>${v.at ? new Date(v.at).toLocaleTimeString("zh-CN") : ""}</td>
+    </tr>`).join("");
 }
 
 // 只改变化的那个单元格并让它闪一下,不整表重绘
-function patch(rk, field, q, dir) {
-  const tr = document.querySelector(`tr[data-rk="${CSS.escape(rk)}"]`);
+function patch(rk, field, v, at, dir) {
+  const tr = $("live-rows").querySelector(`tr[data-rk="${CSS.escape(rk)}"]`);
   if (!tr) { renderLive(); return; }
   const el = tr.querySelector(`[data-f="${field}"]`);
   if (!el) return;
-  el.textContent = num(q.p);
-  // 深度在下一个 td 里,不是 span 的兄弟——span 是这个 td 里唯一的元素
-  const depthCell = el.closest("td").nextElementSibling;
-  if (depthCell) depthCell.textContent = num(q.d);
-  tr.lastElementChild.textContent = new Date(q.t).toLocaleTimeString("zh-CN");
-  if (dir) {
-    el.classList.remove("flash-up", "flash-down");
-    void el.offsetWidth;                 // 强制重排,让同一元素能连续播动画
-    el.classList.add("flash-" + dir);
-  }
+  el.textContent = num(v.p);
+  const d = tr.querySelector(`[data-d="${field}"]`);
+  if (d) d.textContent = depthText(v);
+  tr.querySelector("[data-a]").innerHTML = agoSpan(at);
+  tr.querySelector("[data-at]").textContent = at ? new Date(at).toLocaleTimeString("zh-CN") : "";
+  if (dir) flash(el, dir);
 }
 
 function applyQuote(q) {
@@ -2312,11 +2389,12 @@ function applyQuote(q) {
   const side = p[3] === "0" ? "sell" : "buy";
   const cur = liveState.get(rk) || {};
   const prev = cur[side];
-  const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : "") : "";
-  cur[side] = { p: q.p, d: q.d };
-  cur.at = q.t;
+  // 价没动、件数变了也闪:有人吃掉/补上了最优档
+  const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : q.d !== prev.d ? (q.d > prev.d ? "up" : "down") : "") : "";
+  cur[side] = { p: q.p, d: q.d, n: q.n };
+  if (!cur.at || Date.parse(q.t) > Date.parse(cur.at)) cur.at = q.t;
   liveState.set(rk, cur);
-  if (!prev) renderLive(); else patch(rk, side, { p: q.p, d: q.d, t: q.t }, dir);
+  if (!prev) renderLive(); else patch(rk, side, cur[side], cur.at, dir);
 }
 rt.quoteFns.push(applyQuote);
 
@@ -2363,7 +2441,20 @@ async function pollLocal() {
       ? `已传 ${s.orders_uploaded.toLocaleString("zh-CN")} 条`
       : (s.devices ? `${s.devices} 张网卡` : "本机");
     $("who").textContent = s.character || "—";
-    $("who-sub").textContent = s.location ? s.location : "角色";
+    // 地名由客户端本地服务翻好(world.DisplayName),认不出的原样给。以前直接显示原始 id,
+    // 成员看到的是 "0007" 而不是 Thetford
+    const sub = $("who-sub");
+    if (s.location) {
+      sub.textContent = s.city || s.location;
+      sub.title = s.city && s.city !== s.location ? `地点 id ${s.location}` : `未识别的地点 id ${s.location}`;
+    } else if (s.capturing && s.character) {
+      // 解析器不知道在哪的时候会直接丢掉挂单(城市单的地点在包里是空的,靠它补)
+      sub.textContent = "位置未知,换一次区";
+      sub.title = "客户端还没抓到进图的包,这时翻到的挂单不知道是哪座城的,会被丢掉。换一次区(进出一次建筑或传送)就好";
+    } else {
+      sub.textContent = "角色";
+      sub.title = "";
+    }
 
     $("quit").hidden = !s.fallback;
 
