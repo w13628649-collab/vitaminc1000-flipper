@@ -87,7 +87,11 @@ function show(name, push = true) {
     currentView = name;
     window.scrollTo(0, 0);   // 从机会表下面点物品名跳过来时,别停在半页
   }
-  if (name === "lookup") queueFit();   // 隐藏时量不出尺寸,切回来补一次
+  if (name === "lookup") {
+    queueFit();   // 隐藏时量不出尺寸,切回来补一次
+    // 不在这一页的时候推送来过:切回来补拉一次
+    if (lookup.stale) refreshLookupLive();
+  }
   if (name === "rank") loadRank();
   if (name === "book") loadBook();
 }
@@ -813,24 +817,21 @@ const conflictBanner = g => `<div class="banner"><b>多开串城:</b>入库时�
   一台机器上多个客户端同时抓包、又分别在不同城市时,城市归属会串,那部分挂单的城市不可信。${
   g.last_conflict ? `最近一次:${esc(g.last_conflict.item_id)} 被报成 ${esc(g.last_conflict.location_id)}(原始地点 ${esc(g.last_conflict.raw_location_id)}),上报人 ${esc(g.last_conflict.reporter)}。` : ""}</div>`;
 
-// 拿到一份新的扫描结果:两个页面一起换。why 只影响"要不要闪一下"
+// 拿到一份新的扫描结果:两个页面一起换。why 只影响"要不要闪一下"。
+// 推送消息本身不带 coverage / reject_counts / capture 这些摘要,所以结果一律来自
+// /api/scan(pullScan 或重新扫描),不直接拿推送消息画
 function applyResult(res, why) {
   const had = !!scan;
   scan = res;
+  sync.digest = res.digest || "";
+  sync.stamp = scanStamp(res);
   scanBaseAt = Date.parse(res.evaluated_at || res.started_at) || Date.now();
   ideas = unify(res);
   for (const r of ideas) noteName(r.item_id, r.item_name);
   renderIdeasPage(res, { flash: had && why !== "boot" });
   renderDeskScan(res);
   loadPortfolio();
-}
-
-async function loadScan() {
-  try {
-    applyResult(await getJSON("/api/scan"), "boot");
-  } catch (e) {
-    if (!scan) renderIdeasEmpty(e);
-  }
+  noteEval(res.evaluated_at, res.started_at);
 }
 
 // 两处「重新扫描」(总览、机会页)和空态里的「立即扫描」走同一个
@@ -861,8 +862,14 @@ function renderDeskScan(res) {
     `${(res.item_ids || []).length} 个物品・${num(res.price_rows)} 条报价・${num(res.request_count)} 次请求` +
     (scanError ? `・重新扫描失败:${scanError}` : "");
   renderDeskCoverage(res.coverage || []);
-  const age = (Date.now() - new Date(res.started_at)) / 3600000;
-  $("scan-age").textContent = age < 1 ? `${Math.round(age * 60)} 分钟前` : `${age.toFixed(1)} 小时前`;
+}
+
+// 顶栏「行情」:最近一次评估(抓包重算)离现在多久,没有就按 AODP 全量
+function renderScanAge() {
+  const at = sync.evalAt || sync.fullAt;
+  if (!at) return;
+  const m = (Date.now() - Date.parse(at)) / 60000;
+  $("scan-age").textContent = m < 60 ? `${Math.max(0, Math.round(m))} 分钟前` : `${(m / 60).toFixed(1)} 小时前`;
 }
 
 function renderDeskCoverage(coverage) {
@@ -1229,7 +1236,9 @@ async function selectItem(itemId) {
     lookup.pending = false;
     lookup.data = d;
     lookup.loadedAt = Date.now();
+    noteName(d.item?.item_id, displayName(d.item || {}));
     renderPrices(d);
+    lookupSubscribe(d);
     // 同一件重查过了,右栏的阶梯也得跟着换成这一刻的,不然面板上下两半是两个时间的数
     if (ladder.key && ladder.itemId === itemId) loadLadder(++ladder.seq, { grid: false });
     // 从别的页面点物品名跳过来、这件又不在左栏里:照它的分类重填左栏。
@@ -1243,10 +1252,54 @@ async function selectItem(itemId) {
   } catch (err) {
     if (seq !== lookup.seq) return;
     lookup.pending = false;
+    // 实时刷新那次失败(服务端抖了一下)就留着手上那份,不把整张表换成"查不到"
+    if (again) return;
     lookup.data = null;
     box.innerHTML = `<div class="empty"><h2>查不到</h2><p>${esc(err.message || err)}</p></div>`;
     closeLadder();
+    lookupSubscribe(null);
   }
+}
+
+// ── 查价页的实时刷新 ──
+// 订阅当前物品在所有查价城市 × 品质 × 两边的 key。黑市没有抓包,订了也不会有消息。
+// 推送不带整张表需要的东西(件数分档、成交历史),收到就去重拉 grid:
+// 第一条到了之后等 1.5 秒把同一波的都攒上,再拉一次。右栏开着的话挂单簿一起刷新
+const LOOKUP_LIVE_MS = 1500;
+function lookupSubscribe(d) {
+  const keys = [];
+  if (d?.item?.item_id) {
+    const qs = d.qualities?.length ? d.qualities : [1];
+    for (const c of d.cities || []) {
+      if (c === "Black Market") continue;
+      for (const q of qs) for (const s of [0, 1]) keys.push(`${d.item.item_id}|${c}|${q}|${s}`);
+    }
+  }
+  rtSetKeys("lookup", keys, { snapshot: false });
+  liveTargetsChanged();
+}
+// 挂在 rt.quoteFns 上(见实时模块)。快照不触发:那是刚订阅时补的,表本来就是新拉的
+function onLookupQuote(q, pushed) {
+  if (!pushed || !lookup.data || !rt.owners.get("lookup")?.keys.has(q.k)) return;
+  lookupLiveKick();
+}
+function lookupLiveKick() {
+  if (lookup.liveTimer) return;
+  lookup.liveTimer = setTimeout(() => {
+    lookup.liveTimer = null;
+    // 不在查价页就先记着,切回来再拉:看不见的表没必要每几秒重拉一次
+    if (currentView !== "lookup") { lookup.stale = true; return; }
+    refreshLookupLive();
+  }, LOOKUP_LIVE_MS);
+}
+function refreshLookupLive() {
+  if (!lookup.itemId || !lookup.data) return;
+  if (lookup.pending) { lookupLiveKick(); return; }   // 正在拉,拉完再来一轮
+  // 右栏的吃单量输入框里正打着字:重画会把焦点冲掉,等他打完
+  const a = document.activeElement;
+  if (a && a.tagName === "INPUT" && $("bookpanel").contains(a)) { lookupLiveKick(); return; }
+  lookup.stale = false;
+  selectItem(lookup.itemId);   // 同一件重查:旧表先留着,新数据回来再换;右栏的阶梯跟着换
 }
 
 function renderPrices(d) {
@@ -1311,10 +1364,10 @@ function renderPrices(d) {
     return lines.join("\n");
   };
   // 买卖两侧的时间戳常常差很远,各报各的龄。标签用游戏里市场那两个页签的说法
-  const side = (label, s, hint) => {
+  const side = (label, s, hint, kind) => {
     const stale = s.best && (s.age_hours == null || s.age_hours > maxH);
     const src = srcHint(s);
-    return `<div class="ln" title="${esc(hint + (src ? "\n\n" + src : ""))}"><u>${label}</u><b>${s.best ? num(s.best) : "—"}</b>
+    return `<div class="ln" title="${esc(hint + (src ? "\n\n" + src : ""))}"><u>${label}</u><b data-f="${kind}">${s.best ? num(s.best) : "—"}</b>
       <s class="${stale ? "stale" : ""}">${ageText(s.age_hours)}</s></div>`;
   };
   // 价格下面那一行:件数(只有抓包有)+ 这一侧最远的一档 + 来源徽标。
@@ -1381,8 +1434,8 @@ function renderPrices(d) {
       : thin ? `<div class="ctag warn">买方只有 ${num(bc.qty_near)} 件在收${gap ? `,再往下断崖 ${pct(bc.gap_after_near, 0)}` : ""} —— 挂买单多半收不到货</div>`
       : gap ? `<div class="ctag warn">买一附近吃完,下一档就低 ${pct(bc.gap_after_near, 0)},最高买价没支撑</div>` : "";
     return `<div class="${cls}">
-      ${side("卖单最低", c.sell, "市场上最便宜的那张卖单。你想马上买到货,就付这个价")}${extra(c.sell, "sell")}
-      ${side("买单最高", c.buy, "市场上出价最高的那张买单。你想马上出货,就拿这个价")}${extra(c.buy, "buy")}
+      ${side("卖单最低", c.sell, "市场上最便宜的那张卖单。你想马上买到货,就付这个价", "sell")}${extra(c.sell, "sell")}
+      ${side("买单最高", c.buy, "市场上出价最高的那张买单。你想马上出货,就拿这个价", "buy")}${extra(c.buy, "buy")}
       <div class="meta">${spread}${histLines(c.history)}</div>
       ${tags ? `<div class="ctag">${tags}</div>` : ""}
       ${bidNote}
@@ -1411,6 +1464,14 @@ function renderPrices(d) {
   // 五档品质的装备点了"杰出"那列,重画完又滚回最左边就白点了
   const oldWrap = $("lookup-result").querySelector(".matrix-wrap");
   const keep = oldWrap ? { x: oldWrap.scrollLeft, focus: oldWrap.contains(document.activeElement) } : null;
+  // 同一件物品重画(实时刷新)时,变了的价闪一下:涨绿跌红。换了物品不闪
+  const was = lookup.shown?.itemId === d.item.item_id ? lookup.shown.best : null;
+  const bestNow = new Map();
+  for (const c of d.cells) {
+    bestNow.set(`${c.city}|${c.quality}|sell`, c.sell.best || 0);
+    bestNow.set(`${c.city}|${c.quality}|buy`, c.buy.best || 0);
+  }
+  lookup.shown = { itemId: d.item.item_id, best: bestNow };
 
   $("lookup-result").innerHTML = head + aodpWarn + `
     <div class="hbar" hidden aria-hidden="true"><div></div></div>
@@ -1454,6 +1515,16 @@ function renderPrices(d) {
   if (keep) {
     wrap.scrollLeft = keep.x;
     if (keep.focus) wrap.querySelector(".cellbtn.open")?.focus({ preventScroll: true });
+  }
+  if (was) {
+    for (const b of wrap.querySelectorAll(".cellbtn")) {
+      for (const kind of ["sell", "buy"]) {
+        const k = `${b.dataset.city}|${b.dataset.q}|${kind}`;
+        const before = was.get(k), after = bestNow.get(k);
+        if (before !== undefined && after !== before)
+          flash(b.querySelector(`b[data-f="${kind}"]`), after > before ? "up" : "down");
+      }
+    }
   }
 }
 $("lookup-result").addEventListener("click", e => {
@@ -1993,7 +2064,203 @@ for (const id of ["r-city", "r-window", "r-quality", "r-category"])
   $(id).addEventListener("change", loadRank);
 sortable("#v-rank thead", () => rankRows, renderRank);
 
-// ── 实时行情 ───────────────────────────────────────────────
+// ── 实时:一条 WS 连接,各页登记自己要订阅的 key ─────────────────
+// 协议(服务端 hub/topic.go):
+//   → {"op":"sub"|"unsub","keys":[...],"topics":["scan"]}   key = item|city|quality|side(0 卖单 1 买单)
+//   ← 报价 {k,p,d,n,t},没有 type 字段;订阅了 scan 的连接,服务端每发布一次扫描结果
+//     (AODP 全量或抓包快速重算)都收到 {"type":"scan","evaluated_at","started_at","digest",…,"full"}
+// 老服务端不认识 topics:encoding/json 直接忽略未知字段,所以现在就带上是安全的
+const rt = {
+  ws: null, up: false, backoff: 500, openedAt: 0,
+  owners: new Map(),     // 登记方 → { keys: Set, snapshot: bool }("live" 实时页、"lookup" 查价页)
+  subbed: new Set(),     // 这条连接上已经订上的 key
+  quoteFns: [], scanFns: [], openFns: [],
+};
+const SUB_CHUNK = 400;   // 服务端一条指令最多读 64KB,一个 key 四十来字节
+const SNAP_CHUNK = 100;  // /api/quotes 一次带多少个 key
+
+function rtUnion() {
+  const u = new Set();
+  for (const o of rt.owners.values()) for (const k of o.keys) u.add(k);
+  return u;
+}
+function rtSend(op, keys, topics) {
+  if (!rt.up || rt.ws?.readyState !== WebSocket.OPEN) return;
+  if (!keys.length && !topics) return;
+  for (let i = 0; i === 0 || i < keys.length; i += SUB_CHUNK) {
+    const msg = { op, keys: keys.slice(i, i + SUB_CHUNK) };
+    if (topics && i === 0) msg.topics = topics;
+    rt.ws.send(JSON.stringify(msg));
+  }
+}
+// 登记方换一整套 key:和这条连接上已订的求差集,只发增减的那部分。
+// snapshot:新加进来的 key 要不要立刻拉一次快照(实时页要;查价页自己会拉 grid,不要)
+function rtSetKeys(owner, keys, opts = {}) {
+  const next = new Set(keys);
+  const prev = rt.owners.get(owner)?.keys || new Set();
+  rt.owners.set(owner, { keys: next, snapshot: opts.snapshot !== false });
+  if (!rt.up) return;   // 连上时 onopen 按并集整体订阅,这里不用管
+  const want = rtUnion();
+  const add = [...want].filter(k => !rt.subbed.has(k));
+  const drop = [...rt.subbed].filter(k => !want.has(k));
+  rtSend("unsub", drop);
+  rtSend("sub", add);
+  rt.subbed = want;
+  if (opts.snapshot !== false) rtSnapshot([...next].filter(k => !prev.has(k)));
+}
+async function rtSnapshot(keys) {
+  for (let i = 0; i < keys.length; i += SNAP_CHUNK) {
+    try {
+      const qs = await getJSON("/api/quotes?" + new URLSearchParams({ keys: keys.slice(i, i + SNAP_CHUNK).join(",") }));
+      for (const q of qs || []) rtQuote(q, false);
+    } catch (e) { /* 服务端抖一下:下一次推送或重连会补上 */ }
+  }
+}
+rt.quoteFns.push(onLookupQuote);
+function rtQuote(q, pushed) {
+  for (const fn of rt.quoteFns) {
+    try { fn(q, pushed); } catch (e) { console.error("处理报价出错", e); }
+  }
+}
+function rtConnect() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  let ws;
+  try { ws = new WebSocket(`${proto}//${location.host}/ws`); } catch (e) { rtRetry(); return; }
+  rt.ws = ws;
+  ws.onopen = () => {
+    rt.up = true; rt.backoff = 500; rt.openedAt = Date.now();
+    renderConn();
+    // ① 重新订阅 keys 和 topics:新连接(可能是另一个实例)完全不知道你要看什么
+    const keys = [...rtUnion()];
+    rt.subbed = new Set(keys);
+    rtSend("sub", keys, ["scan"]);
+    // ② 补快照:断线期间错过的变化。少了这步界面会停在旧值上,
+    //    却看起来"一切正常"——这是这类系统最常见的 bug
+    const snap = new Set();
+    for (const o of rt.owners.values()) if (o.snapshot) for (const k of o.keys) snap.add(k);
+    rtSnapshot([...snap]);
+    for (const fn of rt.openFns) {
+      try { fn(); } catch (e) { console.error(e); }
+    }
+  };
+  // 按类型分派。以前每条都当报价处理,服务端一推 {type:"scan"} 就在 q.k.split 上抛异常
+  ws.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (err) { return; }
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type === "scan") {
+      for (const fn of rt.scanFns) {
+        try { fn(msg); } catch (err) { console.error("处理扫描通知出错", err); }
+      }
+      return;
+    }
+    if (msg.type) return;   // 以后新加的主题,不认识就不管
+    if (typeof msg.k === "string") rtQuote(msg, true);
+  };
+  ws.onclose = () => {
+    if (rt.ws !== ws) return;
+    rt.up = false;
+    rt.subbed = new Set();
+    renderConn();
+    rtRetry();
+  };
+}
+function rtRetry() {
+  setTimeout(rtConnect, rt.backoff);
+  rt.backoff = Math.min(rt.backoff * 2, 30000);   // 指数退避
+}
+
+// 顶栏「推送」那一格
+function renderConn() {
+  $("conn").innerHTML = rt.up ? '<span class="dot live"></span>已连接' : '<span class="dot dead"></span>重连中…';
+  $("conn-sub").textContent = sync.poll ? "推送 · 扫描结果靠轮询" : "推送";
+  $("conn-sub").title = sync.poll
+    ? "这两分钟没收到服务端的扫描通知(服务端版本较旧,或连接断过),每分钟拉一次 /api/scan 比对" : "";
+}
+
+// ── 扫描结果的实时同步 ──
+// 订阅 scan 主题:摘要(digest)变了才重拉 /api/scan。连上后 2 分钟内一条 scan 消息都没收到
+// (老服务端没有这个主题,或者 hub 积压丢了)就退回每 60 秒拉一次、比较 evaluated_at || started_at;
+// 一收到 scan 消息就停掉轮询。看门狗是滚动的:任何时候 2 分钟没消息都会退回轮询
+const sync = {
+  watchdogMs: 120000, pollMs: 60000,   // 做成字段:排查时能在控制台临时调小
+  lastMsgAt: 0, bootAt: Date.now(),
+  digest: "", stamp: "", evalAt: "", fullAt: "",
+  poll: null, busy: false, again: false, want: "", pulledAt: 0,
+};
+const scanStamp = r => (r && (r.evaluated_at || r.started_at)) || "";
+
+async function pullScan(why) {
+  if (sync.busy) { sync.again = true; return; }
+  sync.busy = true;
+  try {
+    const res = await getJSON("/api/scan");
+    sync.pulledAt = Date.now();
+    // 同一份内容:有摘要比摘要,老服务端没有摘要就比时间戳
+    const same = scan && (res.digest ? res.digest === sync.digest : scanStamp(res) === sync.stamp);
+    if (same) noteEval(res.evaluated_at, res.started_at);   // 数据龄本来就按本地时间在走,不用重画
+    else applyResult(res, why);
+  } catch (e) {
+    // 503 = 服务端还没扫完第一轮,不是错误。第一轮通常一两分钟就好,
+    // 这时不等看门狗的 2 分钟,15 秒后自己再问一次(推送到了也会提前拉)
+    if (!scan) {
+      renderIdeasEmpty(e);
+      clearTimeout(sync.retry);
+      sync.retry = setTimeout(() => { if (!scan) pullScan("retry"); }, 15000);
+    }
+  } finally {
+    sync.busy = false;
+    if (sync.again) {
+      sync.again = false;
+      if (!(sync.want && sync.want === sync.digest)) pullScan("again");
+    }
+  }
+}
+
+function onScanPush(msg) {
+  sync.lastMsgAt = Date.now();
+  stopPoll();
+  // AODP 全量换了(成交历史也跟着入库了):销量榜、串城计数那些慢数据补读一次
+  if (msg.full && msg.started_at && sync.fullAt && msg.started_at !== sync.fullAt) {
+    loadServerCoverage();
+    if (currentView === "rank") loadRank();
+  }
+  noteEval(msg.evaluated_at, msg.started_at);
+  if (scan && msg.digest && msg.digest === sync.digest) return;   // 摘要没变,不重拉
+  if (sync.busy) { sync.again = true; sync.want = msg.digest || ""; return; }
+  pullScan("push");
+}
+rt.scanFns.push(onScanPush);
+
+// 重连后补一次 /api/scan 快照:断线那段时间的推送收不到了。刚拉过就不重复拉
+rt.openFns.push(() => {
+  if (!sync.busy && Date.now() - sync.pulledAt > 5000) pullScan("reconnect");
+});
+
+function noteEval(evaluatedAt, startedAt) {
+  if (evaluatedAt) sync.evalAt = evaluatedAt;
+  if (startedAt) sync.fullAt = startedAt;
+  renderScanAge();
+}
+
+function startPoll() {
+  if (sync.poll) return;
+  sync.poll = setInterval(() => pullScan("poll"), sync.pollMs);
+  renderConn();
+  pullScan("poll");
+}
+function stopPoll() {
+  if (!sync.poll) return;
+  clearInterval(sync.poll);
+  sync.poll = null;
+  renderConn();
+}
+setInterval(() => {
+  const quiet = Date.now() - Math.max(sync.lastMsgAt, rt.openedAt, sync.bootAt);
+  if (!sync.poll && quiet > sync.watchdogMs) startPoll();
+}, 5000);
+
+// ── 实时行情页 ─────────────────────────────────────────────
 const liveState = new Map();
 const WATCH_ITEMS = ["T4_METALBAR", "T5_METALBAR", "T6_METALBAR", "T5_CLOTH", "T5_PLANKS"];
 const WATCH_CITIES = ["Martlock", "Lymhurst", "Bridgewatch", "Thetford"];
@@ -2001,6 +2268,8 @@ const keys = [];
 for (const it of WATCH_ITEMS)
   for (const c of WATCH_CITIES)
     for (const side of [0, 1]) keys.push(`${it}|${c}|1|${side}`);
+rtSetKeys("live", keys);
+function liveTargetsChanged() { /* 实时页的订阅集合暂时写死 */ }
 
 function renderLive() {
   const rows = [...liveState.entries()].sort((a, b) => a[0].localeCompare(b[0]));
@@ -2037,6 +2306,7 @@ function patch(rk, field, q, dir) {
 }
 
 function applyQuote(q) {
+  if (!rt.owners.get("live")?.keys.has(q.k)) return;   // 退订之后还在路上的,或者是查价页订的
   const p = q.k.split("|");
   const rk = `${p[0]}|${p[1]}|${p[2]}`;
   const side = p[3] === "0" ? "sell" : "buy";
@@ -2048,27 +2318,7 @@ function applyQuote(q) {
   liveState.set(rk, cur);
   if (!prev) renderLive(); else patch(rk, side, { p: q.p, d: q.d, t: q.t }, dir);
 }
-
-let backoff = 500;
-function connect() {
-  const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(`${proto}//${location.host}/ws`);
-  ws.onopen = async () => {
-    backoff = 500;
-    $("conn").innerHTML = '<span class="dot live"></span>已连接';
-    // ① 重新订阅:新连接(可能是另一个实例)完全不知道你要看什么
-    ws.send(JSON.stringify({ op: "sub", keys }));
-    // ② 拉快照:补上断线期间错过的变化。少了这步界面会停在旧值上,
-    //    却看起来"一切正常"——这是这类系统最常见的 bug
-    try { (await getJSON("/api/quotes?keys=" + keys.join(","))).forEach(applyQuote); } catch (e) { }
-  };
-  ws.onmessage = e => applyQuote(JSON.parse(e.data));
-  ws.onclose = () => {
-    $("conn").innerHTML = '<span class="dot dead"></span>重连中…';
-    setTimeout(connect, backoff);
-    backoff = Math.min(backoff * 2, 30000);   // 指数退避
-  };
-}
+rt.quoteFns.push(applyQuote);
 
 // /api/coverage 每次都对成交历史全表跑 COUNT(DISTINCT),**不能轮询**:
 // 只在启动和 AODP 全量扫描之后读一次。要的是销量榜的城市列表和入库的串城计数
@@ -2087,8 +2337,8 @@ async function loadServerCoverage() {
 // ── 启动 ───────────────────────────────────────────────────
 async function boot() {
   route();
-  connect();
-  loadScan();
+  pullScan("boot");
+  rtConnect();
   loadCalibration();
   loadServerCoverage();
   try {
