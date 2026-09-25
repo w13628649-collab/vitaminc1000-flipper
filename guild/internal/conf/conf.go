@@ -156,6 +156,28 @@ type Sizing struct {
 	FillHours float64 `yaml:"fill_hours"`
 	// TravelHours 是跨城单程路上的时间,同城为 0。
 	TravelHours float64 `yaml:"travel_hours"`
+	// BrecilienTravelHours 是一端是 Brecilien 的路线单程要多久,0 = 和 travel_hours 一样。
+	//
+	// Brecilien 在迷雾里,进出都要穿过迷雾,按比两个皇家城市之间走得久算,所以单列。
+	// **默认的 1.0 小时是估的,没实测过**(具体路线和耗时也没核实):按"皇家城市
+	// 之间 0.5 小时的两倍"拍,跑过几趟之后按实际改
+	BrecilienTravelHours float64 `yaml:"brecilien_travel_hours"`
+}
+
+// Brecilien 是迷雾里那座城在 AODP 和扫描器里的名字。抓包的 5003 已经在
+// world.City 收敛成这个名字,AODP 的 locations 参数也认它。
+const Brecilien = "Brecilien"
+
+// ViaMists 说明这两座城之间要不要穿过迷雾:任何一端是 Brecilien 都要。
+// 迷雾里能被劫,工具不把被劫概率建模成数字,只打风险标记、限置信度。
+func ViaMists(a, b string) bool { return a == Brecilien || b == Brecilien }
+
+// TravelHoursBetween 是 a、b 两城之间单程路上的时间。
+func (s Sizing) TravelHoursBetween(a, b string) float64 {
+	if ViaMists(a, b) && s.BrecilienTravelHours > 0 {
+		return s.BrecilienTravelHours
+	}
+	return s.TravelHours
 }
 
 // API 是 AODP 的调用约束。
@@ -193,10 +215,14 @@ type Config struct {
 	Items     Items     `yaml:"items"`
 }
 
-// DefaultCities 是五个皇家城市加凯尔利恩。黑区市场不进来——
+// DefaultCities 是五个皇家城市、凯尔利恩和 Brecilien。黑区市场不进来——
 // 那里的价格好看,但货运不出来。
+//
+// Brecilien 同城机会照常算;跨城路线也出,但一端是它的路线要穿迷雾:
+// 运输时间用 sizing.brecilien_travel_hours,路线带 risk_tags=["mists"]、
+// 置信度最高 medium(见 arb)
 var DefaultCities = []string{
-	"Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch", "Caerleon",
+	"Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch", "Caerleon", Brecilien,
 }
 
 // DefaultPatterns 是起步的物品清单:只碰高流动性、低单价的品类。
@@ -261,6 +287,8 @@ func Default() Config {
 		Sizing: Sizing{
 			AbsorbRatio: 0.20, BaselineDays: 7, HistoryDays: 30,
 			FillHours: 4.0, TravelHours: 0.5,
+			// 估的,没实测:经迷雾按皇家城市之间的两倍算,见 BrecilienTravelHours
+			BrecilienTravelHours: 1.0,
 		},
 		Items: Items{Patterns: append([]string(nil), DefaultPatterns...)},
 		API: API{
@@ -356,6 +384,14 @@ func (c Config) Validate() error {
 	}
 	if cp.ReevalSeconds < 0 {
 		return fmt.Errorf("capture.reeval_seconds 不能为负(0 = 不重算),得到 %g", cp.ReevalSeconds)
+	}
+	// 路上时间为负会让一趟来回比挂单等待还短,周转次数凭空变多
+	if c.Sizing.TravelHours < 0 {
+		return fmt.Errorf("sizing.travel_hours 不能为负,得到 %g", c.Sizing.TravelHours)
+	}
+	if c.Sizing.BrecilienTravelHours < 0 {
+		return fmt.Errorf("sizing.brecilien_travel_hours 不能为负(0 = 和 travel_hours 一样),得到 %g",
+			c.Sizing.BrecilienTravelHours)
 	}
 	return nil
 }

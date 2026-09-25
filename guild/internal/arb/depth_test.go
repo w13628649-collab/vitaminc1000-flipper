@@ -283,7 +283,7 @@ func bruteFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economic
 			if !legsSane(m, bk, sk, from.Stats, to.Stats, opt) || u.ProfitPerUnit < opt.MinProfitPerUnit || u.Margin < opt.MinMargin {
 				continue
 			}
-			q, _, daily := econ.Turnover(u, math.Min(byMarket, math.Min(b.qty, s.qty)), opt.Capital, opt.roundTripHours(m))
+			q, _, daily := econ.Turnover(u, math.Min(byMarket, math.Min(b.qty, s.qty)), opt.Capital, opt.routeHours(m, from.City, to.City))
 			if q >= 1 && (!found || daily > best.DailyProfit) {
 				found = true
 				best = ModeQuote{BuyPrice: u.MyBid, SellPrice: u.MyAsk, DailyProfit: daily, qty: q}

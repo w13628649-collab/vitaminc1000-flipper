@@ -8,6 +8,7 @@ cities:
   - Martlock
   - Bridgewatch
   - Caerleon
+  - Brecilien             # 迷雾里的城:同城照常算;跨城路线带 mists 风险标记,置信度最高 medium
 
 capital: 10_000_000       # 银币
 qualities: [1]            # 1 普通 / 2 优秀 / 3 杰出 / 4 卓越 / 5 大师
@@ -57,6 +58,8 @@ sizing:
   absorb_ratio: 0.20      # 敢吃日成交量的比例。第二阶段用实盘成交率校准这个数
   baseline_days: 7
   history_days: 30
+  travel_hours: 0.5       # 跨城单程路上的时间(皇家城市之间)
+  brecilien_travel_hours: 1.0   # 一端是 Brecilien 的路线单程时间:经迷雾,估的、没实测。0 = 同 travel_hours
 
 api:
   max_url_length: 3500    # 官方 4096,留余量

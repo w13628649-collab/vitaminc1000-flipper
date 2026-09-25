@@ -29,8 +29,10 @@ func main() {
 		c.Capture.BookLevels, c.Capture.MaxExtraItems, c.ReevalInterval())
 	fmt.Printf("econ: tax=%g fee=%g buyFee=%v 摩擦=%.1f%%\n",
 		c.Economics.MarketTax, c.Economics.SetupFee, c.Economics.BuyOrderSetupFee, c.Economics.RoundTripFriction()*100)
-	fmt.Printf("api: url=%d rate=%d/%d  sizing: absorb=%g base=%d hist=%d\n",
+	fmt.Printf("api: url=%d rate=%d/%d  sizing: absorb=%g base=%d hist=%d fill=%gh travel=%gh brecilien=%gh\n",
 		c.API.MaxURLLength, c.API.RatePerMinute, c.API.RatePer5Min,
-		c.Sizing.AbsorbRatio, c.Sizing.BaselineDays, c.Sizing.HistoryDays)
+		c.Sizing.AbsorbRatio, c.Sizing.BaselineDays, c.Sizing.HistoryDays,
+		c.Sizing.FillHours, c.Sizing.TravelHours, c.Sizing.TravelHoursBetween(conf.Brecilien, "Martlock"))
+	fmt.Printf("cities=%v\n", c.Cities)
 	fmt.Printf("patterns=%d\n", len(c.Items.Patterns))
 }

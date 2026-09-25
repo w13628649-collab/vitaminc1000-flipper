@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -162,6 +163,53 @@ func TestLoad_未知键只告警不失败(t *testing.T) {
 	}
 }
 
+// Brecilien 同城跨城都要参与:默认城市里有它,经迷雾的单程时间单列、比皇家城市之间久
+func TestDefault_Brecilien参与扫描且路上时间单列(t *testing.T) {
+	c := Default()
+	if !slices.Contains(c.Cities, Brecilien) || len(c.Cities) != 7 {
+		t.Fatalf("默认城市应是五个皇家城市 + Caerleon + Brecilien,得到 %v", c.Cities)
+	}
+	s := c.Sizing
+	if s.TravelHours != 0.5 || s.BrecilienTravelHours != 1.0 {
+		t.Fatalf("单程默认值应为皇家 0.5h、Brecilien 1.0h,得到 %v / %v", s.TravelHours, s.BrecilienTravelHours)
+	}
+	for _, tc := range []struct {
+		a, b string
+		want float64
+	}{
+		{"Lymhurst", "Martlock", 0.5},
+		{"Caerleon", "Thetford", 0.5},
+		{Brecilien, "Martlock", 1.0},
+		{"Lymhurst", Brecilien, 1.0},
+	} {
+		if got := s.TravelHoursBetween(tc.a, tc.b); got != tc.want {
+			t.Fatalf("%s ↔ %s 单程应为 %v,得到 %v", tc.a, tc.b, tc.want, got)
+		}
+	}
+	if !ViaMists(Brecilien, "Lymhurst") || !ViaMists("Lymhurst", Brecilien) || ViaMists("Lymhurst", "Caerleon") {
+		t.Fatal("只有一端是 Brecilien 才算经迷雾")
+	}
+	// 0 = 跟 travel_hours 走
+	s.BrecilienTravelHours = 0
+	if got := s.TravelHoursBetween(Brecilien, "Martlock"); got != 0.5 {
+		t.Fatalf("brecilien_travel_hours=0 时应退回 travel_hours,得到 %v", got)
+	}
+
+	for _, tc := range []struct {
+		key string
+		mut func(*Config)
+	}{
+		{"sizing.travel_hours", func(c *Config) { c.Sizing.TravelHours = -1 }},
+		{"sizing.brecilien_travel_hours", func(c *Config) { c.Sizing.BrecilienTravelHours = -0.5 }},
+	} {
+		c := Default()
+		tc.mut(&c)
+		if err := c.Validate(); err == nil || !strings.Contains(err.Error(), tc.key) {
+			t.Fatalf("%s 为负应报错并点名,得到 %v", tc.key, err)
+		}
+	}
+}
+
 // 仓库自带的 config.yaml 要能干净地加载:没有未知键、能过校验
 func TestLoad_仓库自带配置(t *testing.T) {
 	var buf bytes.Buffer
@@ -183,5 +231,11 @@ func TestLoad_仓库自带配置(t *testing.T) {
 	// 深度闸门接上之后融合默认开,自带配置不能悄悄把它关掉
 	if !c.Capture.Enabled {
 		t.Fatal("自带配置把 capture.enabled 关掉了")
+	}
+	// 自带配置写死了城市列表:默认加了城市,这里也得跟着加,否则用这份配置跑的
+	// 服务端根本不扫 Brecilien
+	if !slices.Equal(c.Cities, d.Cities) || c.Sizing != d.Sizing {
+		t.Fatalf("自带配置的城市和路上时间应和内置默认一致\n得到 %v %+v\n应为 %v %+v",
+			c.Cities, c.Sizing, d.Cities, d.Sizing)
 	}
 }

@@ -152,8 +152,9 @@ func extraItems(captured []CapturedItem, base []string, cat *catalog.Catalog,
 	return extra, dropped, unknown
 }
 
-// captureKeys 拼出要读的盘口边。城市只取 cfg.Cities:3003(黑市)、Brecilien、
-// 没收敛成城市名的原始地点 id 都进不来,和 AODP 那边的口径一致。
+// captureKeys 拼出要读的盘口边。城市只取 cfg.Cities:3003(黑市)、没收敛成
+// 城市名的原始地点 id 都进不来,和 AODP 那边的口径一致。Brecilien 在默认城市里
+// (抓包的 5003 已收敛成这个名字),不在 cfg.Cities 里时同样进不来。
 func captureKeys(itemIDs, cities []string, qualities []int) []model.QuoteKey {
 	keys := make([]model.QuoteKey, 0, len(itemIDs)*len(cities)*len(qualities)*2)
 	for _, item := range itemIDs {

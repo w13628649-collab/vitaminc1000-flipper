@@ -14,12 +14,15 @@
 //     吃单腿沿阶梯逐档试边际价,吃到的件数当日容量——最优价只是第一件的价格
 //
 // 风险(红区劫道、货砸手里)不建模成数字——那是玩家自己的判断,
-// 工具能做的是把量、价、时间摆清楚。
+// 工具能做的是把量、价、时间摆清楚。唯一的例外是一端是 Brecilien 的路线:
+// 要穿迷雾,路上时间单独配(sizing.brecilien_travel_hours),路线带
+// risk_tags=["mists"],置信度最高 medium。
 package arb
 
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"time"
 
@@ -98,6 +101,13 @@ type Route struct {
 	CapitalROI   float64 `json:"capital_roi"`
 	TripsPerDay  float64 `json:"trips_per_day"`
 	HoursPerTrip float64 `json:"hours_per_trip"`
+	// TravelHours 是这条路线单程路上按多少小时算(HoursPerTrip 里含两趟路程)。
+	// 皇家城市之间是 sizing.travel_hours,一端是 Brecilien 时是 brecilien_travel_hours
+	TravelHours float64 `json:"travel_hours"`
+
+	// RiskTags 是模型里没折成数字的路上风险。目前只有 "mists":一端是 Brecilien,
+	// 要穿迷雾,有被劫风险。带这个标记的路线置信度最高 medium
+	RiskTags []string `json:"risk_tags,omitempty"`
 
 	// Volatility 是销地的变异系数,ZScore 是销地当前价相对 30 日常态的位置。
 	// 两个合起来回答"这个价差是结构性的,还是我赶上了一次抽风"
@@ -149,6 +159,9 @@ type Options struct {
 	Capital int64
 	// TravelHours 是单程路上的时间,一趟来回按两倍算。
 	TravelHours float64
+	// BrecilienTravelHours 是一端是 Brecilien 时的单程时间,0 = 和 TravelHours 一样。
+	// 经迷雾比皇家城市之间走得久;默认值是估的,见 conf.Sizing.BrecilienTravelHours
+	BrecilienTravelHours float64
 	// FillHours 是**一条挂单腿**平均要等多久才成交。
 	//
 	// 秒买秒卖不用等,所以这个数只对挂单的腿生效。用同一个周转时间
@@ -192,10 +205,22 @@ func (o Options) roundTripHours(m econ.Mode) float64 {
 	return m.HoursPerRound(o.TravelHours, o.FillHours)
 }
 
+// travelHours 是 from → to 单程路上的时间。口径和 conf.Sizing.TravelHoursBetween 一致。
+func (o Options) travelHours(from, to string) float64 {
+	return conf.Sizing{TravelHours: o.TravelHours, BrecilienTravelHours: o.BrecilienTravelHours}.
+		TravelHoursBetween(from, to)
+}
+
+// routeHours 是这条路线用这种执行方式跑完一趟来回要多久。
+func (o Options) routeHours(m econ.Mode, from, to string) float64 {
+	return m.HoursPerRound(o.travelHours(from, to), o.FillHours)
+}
+
 func DefaultOptions(cfg conf.Config) Options {
 	return Options{
 		Capital:              cfg.Capital,
 		TravelHours:          cfg.Sizing.TravelHours,
+		BrecilienTravelHours: cfg.Sizing.BrecilienTravelHours,
 		FillHours:            cfg.Sizing.FillHours,
 		MinProfitPerUnit:     5,
 		MaxAgeHours:          cfg.Freshness.MaxHours,
@@ -361,8 +386,12 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		DailyProfit:  best.DailyProfit,
 		TripsPerDay:  best.TripsPerDay,
 		HoursPerTrip: best.HoursPerTrip,
+		TravelHours:  opt.travelHours(from.City, to.City),
 		MaxAgeHours:  maxAge,
 		Modes:        append(viable, blocked...),
+	}
+	if conf.ViaMists(from.City, to.City) {
+		r.RiskTags = []string{RiskMists}
 	}
 	if opt.Capital > 0 {
 		r.CapitalROI = best.DailyProfit / float64(opt.Capital)
@@ -431,7 +460,7 @@ func ladder(s screen.Side, walk bool, top int64) []rung {
 func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics, opt Options) (ModeQuote, bool) {
 	buys := ladder(from.Ask, m.Buy == econ.Taker, from.Book.SellMin)
 	sells := ladder(to.Bid, m.Sell == econ.Taker, to.Book.BuyMax)
-	hours := opt.roundTripHours(m)
+	hours := opt.routeHours(m, from.City, to.City)
 
 	var best ModeQuote
 	found := false
@@ -642,8 +671,19 @@ func judge(r Route, maxAge float64) (screen.Confidence, []string) {
 	if maxAge > 4 {
 		level = screen.Low
 	}
+	// 迷雾里能被劫。被劫概率没法折成数字(看时段、看人、看带多少货),
+	// 所以不改收益,只提醒、把置信度压到 medium:榜上看着再好也要自己掂量
+	if slices.Contains(r.RiskTags, RiskMists) {
+		warns = append(warns, fmt.Sprintf("经迷雾,有被劫风险;路上按单程 %.1f 小时估,没实测", r.TravelHours))
+		if level == screen.High {
+			level = screen.Medium
+		}
+	}
 	return level, warns
 }
+
+// RiskMists 是"路线要穿迷雾"的风险标记:一端是 Brecilien。
+const RiskMists = "mists"
 
 // depthQty 是两条腿里被阶梯限住的那个件数(较小的非零值)。
 func depthQty(r Route) int64 {
