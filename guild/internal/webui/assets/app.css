@@ -550,7 +550,9 @@ tr.detail td.why{white-space:normal; min-width:220px}
   .bookside .ladders{grid-template-columns:1fr 1fr}
   .split{grid-template-columns:1fr}
 }
-@media (max-width:1280px){
+/* 1300 宽时 15 列刚好放得下。再窄才收起日流水、轮/天、z、波动 —— 这四个数在
+   展开行里都有,收起来不丢信息;更窄的屏表自己横向滚(.tablewrap) */
+@media (max-width:1100px){
   table.ideas .hide-md{display:none}
 }
 @media (max-width:920px){

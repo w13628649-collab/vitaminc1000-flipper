@@ -823,6 +823,7 @@ const conflictBanner = g => `<div class="banner"><b>多开串城:</b>入库时�
 function applyResult(res, why) {
   const had = !!scan;
   scan = res;
+  scanError = "";   // 手上已经是更新的结果了,上一次「重新扫描失败」的提示不再成立
   sync.digest = res.digest || "";
   sync.stamp = scanStamp(res);
   scanBaseAt = Date.parse(res.evaluated_at || res.started_at) || Date.now();
@@ -917,12 +918,18 @@ function renderCheckTable() {
     : rows.length ? "两条腿依托的那一边没有可信的抓包深度:进游戏照右边那列翻一眼,下一轮重算就核上了。"
       : "日收益靠前的机会深度都核过了。";
   const miss = r => [["买腿", r.buyLeg], ["卖腿", r.sellLeg]].filter(([, l]) => !l.side?.depth).map(([w]) => w);
+  // 同一座城的两边合成一句:点进一次详情页两栏都抓到
   const guide = r => {
     const legs = miss(r);
-    const at = w => (w === "买腿" ? r.from_city : r.to_city);
-    const book = (w, l) => (l.name.endsWith("ask") ? "出售订单" : "购入订单");
-    return [["买腿", r.buyLeg], ["卖腿", r.sellLeg]].filter(([w]) => legs.includes(w))
-      .map(([w, l]) => `到 ${at(w)} 市场点进物品详情页,看「${book(w, l)}」`).join(";");
+    const byCity = new Map();
+    for (const [w, l] of [["买腿", r.buyLeg], ["卖腿", r.sellLeg]]) {
+      if (!legs.includes(w)) continue;
+      const city = w === "买腿" ? r.from_city : r.to_city;
+      const book = l.name.endsWith("ask") ? "出售订单" : "购入订单";
+      if (!byCity.has(city)) byCity.set(city, new Set());
+      byCity.get(city).add(book);
+    }
+    return [...byCity].map(([c, b]) => `到 ${c} 市场点进物品详情页,看「${[...b].join("」和「")}」`).join(";");
   };
   $("check-rows").closest("table").hidden = !rows.length;
   $("check-rows").innerHTML = rows.map(r => `<tr>
