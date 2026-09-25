@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"albion-guild/internal/conf"
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
 	"albion-guild/internal/store"
@@ -175,5 +176,67 @@ func TestServiceBooks_没有库时不给读簿来源(t *testing.T) {
 	s := &Service{}
 	if s.books() != nil {
 		t.Fatal("没有库时应返回 nil 接口,不能是装着 nil 指针的非 nil 接口")
+	}
+	if q, err := s.BestQuotes(context.Background(), []model.QuoteKey{{ItemID: "x"}}, time.Minute); q != nil || err != nil {
+		t.Fatalf("没有库时报价应为空,得到 %v / %v", q, err)
+	}
+}
+
+// quoteLadder 按 key 回事先放好的阶梯,记下每次读簿的参数
+type quoteLadder struct {
+	fakeLadder
+	sides map[model.QuoteKey]store.BookSide
+}
+
+func (f *quoteLadder) BookSides(_ context.Context, keys []model.QuoteKey, since time.Time,
+	slack time.Duration, maxLevels int) (map[model.QuoteKey]store.BookSide, error) {
+	f.calls = append(f.calls, ladderCall{keys, since, slack, maxLevels})
+	out := map[model.QuoteKey]store.BookSide{}
+	for _, k := range keys {
+		if b, ok := f.sides[k]; ok {
+			out[k] = b
+		}
+	}
+	return out, nil
+}
+
+// WS 推送和 /api/quotes 的最优价走和扫描同一套读簿:剔除幽灵单后的第一档。
+// At 取这一边的最近一眼,不取最优档自己的 last_seen——审查 E 轮:卖一 2900 被买走,
+// 第二眼只剩 2905、2910,新卖一 2905 的 last_seen 比旧卖一还早的话,
+// Fanout 的乱序闸门会把这条更新吞掉
+func TestBestQuotes_剔除幽灵后的第一档且时间取最近一眼(t *testing.T) {
+	a, b := capKeys()
+	now := time.Now()
+	lr := &quoteLadder{sides: map[model.QuoteKey]store.BookSide{
+		a: {Levels: []store.BookLevel{{Price: 2905, Depth: 20, Orders: 2, Seen: now.Add(-3 * time.Minute)}},
+			Newest: now.Add(-time.Minute), QtyTotal: 40, LevelCount: 2, Ghosts: 1},
+		b: {Levels: []store.BookLevel{{Price: 777, Depth: 1, Orders: 1, Seen: now}}, Newest: now},
+	}}
+	cfg := conf.Default()
+	s := &Service{Cfg: cfg, ladder: lr, Conflicts: fakeConflicts{b: now.Add(-5 * time.Minute)}}
+
+	got, err := s.BestQuotes(context.Background(), []model.QuoteKey{a, b}, 30*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Key != a.String() || got[1].Key != b.String() {
+		t.Fatalf("应按 key 排出两条,得到 %+v", got)
+	}
+	if q := got[0]; q.Price != 2905 || q.Depth != 20 || q.Orders != 2 || !q.At.Equal(now.Add(-time.Minute)) {
+		t.Fatalf("应是第一档 2905×20(2 张),时间取 Newest,得到 %+v", q)
+	}
+	// 读簿:只取 1 档、窗口 = fresh、slack 同扫描;串过城的 key 另读、暂停剔除
+	if len(lr.calls) != 2 {
+		t.Fatalf("正常 key 和串城 key 应分两次读,得到 %+v", lr.calls)
+	}
+	c0, c1 := lr.calls[0], lr.calls[1]
+	if c0.lv != 1 || c0.slack != cfg.SnapshotSlack() || len(c0.keys) != 1 || c0.keys[0] != a {
+		t.Fatalf("第一次应只读 a、1 档、slack=%v,得到 %+v", cfg.SnapshotSlack(), c0)
+	}
+	if d := now.Add(-30 * time.Minute).Sub(c0.since); d < -time.Second || d > time.Second {
+		t.Fatalf("窗口应是 now−fresh,得到 since=%v", c0.since)
+	}
+	if c1.lv != 1 || len(c1.keys) != 1 || c1.keys[0] != b || c1.slack < 30*time.Minute {
+		t.Fatalf("串城的 b 应另读、slack 不小于窗口,得到 %+v", c1)
 	}
 }

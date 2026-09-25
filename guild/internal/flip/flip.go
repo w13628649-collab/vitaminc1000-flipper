@@ -54,7 +54,10 @@ type Service struct {
 	lastBackfill atomic.Int64 // unix 纳秒,0 = 还没补过
 	// bookSrc 非 nil 时代替库做读簿来源,只给测试用
 	bookSrc scan.BookSource
-	icons   *http.Client
+	// ladder 非 nil 时代替库做 BookSides/CapturedItems,只给测试用:
+	// 报价(BestQuotes)和扫描都经它走 storeBooks 那一层
+	ladder captureReader
+	icons  *http.Client
 	// aodp 是**共用一个**。限流器的状态在 Client 里,每次调用新建一个
 	// 就等于各限各的,几个查价请求并撞上定时扫描,合起来直接击穿
 	// AODP 那 300 次/5 分钟的配额

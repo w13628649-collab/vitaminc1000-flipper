@@ -2,6 +2,7 @@ package flip
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"albion-guild/internal/depth"
@@ -42,6 +43,26 @@ type storeBooks struct {
 func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 	since time.Time) (map[model.QuoteKey]scan.CapturedSide, error) {
 
+	got, flagged, err := b.readSides(ctx, keys, since, b.levels)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[model.QuoteKey]scan.CapturedSide, len(got))
+	for k, side := range got {
+		cs := toCaptured(side)
+		cs.Conflicted = flagged[k]
+		out[k] = cs
+	}
+	return out, nil
+}
+
+// readSides 读一批盘口边剔除幽灵单后的阶梯,扫描(CaptureBooks)和报价(BestQuotes)
+// 共用这一处,两边对"盘口现在长什么样"的说法才一致。
+//
+// 最近卷进过多开串城的 key 单独读一遍、暂停幽灵剔除,第二个返回值标出它们。
+func (b *storeBooks) readSides(ctx context.Context, keys []model.QuoteKey, since time.Time,
+	levels int) (map[model.QuoteKey]store.BookSide, map[model.QuoteKey]bool, error) {
+
 	var conflicted map[model.QuoteKey]time.Time
 	if b.conflicts != nil {
 		conflicted = b.conflicts.ConflictedSince(keys, since)
@@ -59,30 +80,56 @@ func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 		}
 	}
 
-	out := make(map[model.QuoteKey]scan.CapturedSide)
-	read := func(keys []model.QuoteKey, slack time.Duration, flagged bool) error {
+	out := make(map[model.QuoteKey]store.BookSide)
+	flagged := make(map[model.QuoteKey]bool, len(risky))
+	read := func(keys []model.QuoteKey, slack time.Duration, conflict bool) error {
 		if len(keys) == 0 {
 			return nil
 		}
-		got, err := b.st.BookSides(ctx, keys, since, slack, b.levels)
+		got, err := b.st.BookSides(ctx, keys, since, slack, levels)
 		if err != nil {
 			return err
 		}
 		for k, side := range got {
-			cs := toCaptured(side)
-			cs.Conflicted = flagged
-			out[k] = cs
+			out[k] = side
+			if conflict {
+				flagged[k] = true
+			}
 		}
 		return nil
 	}
 	if err := read(normal, b.slack, false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// 窗口再加一个 slack:newest 可能因为钟快略超前于扫描的 now,
-	// 只放到窗口大小的话,窗口最早那几张单仍可能被判成幽灵
+	// 只放到窗口大小的话,窗口最早那几张单仍可能被判成幽灵。
+	// 报价的窗口(-fresh,默认 30m)比扫描的小,放到扫描窗口只会更宽,同样等于不剔
 	if err := read(risky, b.window+b.slack, true); err != nil {
+		return nil, nil, err
+	}
+	return out, flagged, nil
+}
+
+// bestQuotes 是每个盘口边剔除幽灵单后的第一档。
+//
+// At 取这一边的"最近一眼"(newest),不取最优档自己的 last_seen:最优单被买走、
+// 退到次优档时,次优档的 last_seen 往往比旧最优档早,hub.Fanout 的乱序闸门
+// (q.At 早于上一条就丢)会把这条合法更新当成旧消息吞掉。newest 只进不退。
+func (b *storeBooks) bestQuotes(ctx context.Context, keys []model.QuoteKey, since time.Time) ([]model.Quote, error) {
+	got, _, err := b.readSides(ctx, keys, since, 1)
+	if err != nil {
 		return nil, err
 	}
+	out := make([]model.Quote, 0, len(got))
+	for k, side := range got {
+		if len(side.Levels) == 0 {
+			continue
+		}
+		l := side.Levels[0]
+		out = append(out, model.Quote{Key: k.String(), Price: l.Price, Depth: l.Depth, Orders: l.Orders, At: side.Newest})
+	}
+	// 按 key 排:同一批报价每次顺序一样,测试和排查都好对
+	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	return out, nil
 }
 
@@ -122,14 +169,45 @@ func (s *Service) books() scan.BookSource {
 	if s.bookSrc != nil {
 		return s.bookSrc
 	}
-	if s.Store == nil {
+	if b := s.storeBooks(); b != nil {
+		return b
+	}
+	return nil // 不能直接返回 nil 的 *storeBooks:那是装着 nil 指针的非 nil 接口
+}
+
+// storeBooks 是库上的读簿器,扫描和报价共用。没有库时是 nil。
+func (s *Service) storeBooks() *storeBooks {
+	var st captureReader
+	switch {
+	case s.ladder != nil:
+		st = s.ladder
+	case s.Store != nil:
+		st = s.Store
+	default:
 		return nil
 	}
 	return &storeBooks{
-		st:        s.Store,
+		st:        st,
 		conflicts: s.Conflicts,
 		slack:     s.Cfg.SnapshotSlack(),
 		window:    s.Cfg.CaptureWindow(),
 		levels:    s.Cfg.Capture.BookLevels,
 	}
+}
+
+// BestQuotes 是 WS 报价推送(hub.Conflator)和 /api/quotes 的最优价来源,实现 hub.QuoteSource。
+//
+// 和扫描读簿同一套口径:底下就是 BookSides 只取第一档,幽灵剔除、串城盘口暂停剔除
+// 都一样。以前走的是一条只按 last_seen > now−fresh 过滤的 SQL:已经被买走的最优单
+// 在行情推送和 /api/quotes 里一直挂到 30 分钟过期,同一个盘口在实时页上是一个价、
+// 在机会页上是另一个价。
+//
+// 窗口仍是 fresh(服务端 -fresh,默认 30m),不是扫描的 6h:实时页只要"现在还看得到"的。
+// 没有库时返回空。
+func (s *Service) BestQuotes(ctx context.Context, keys []model.QuoteKey, fresh time.Duration) ([]model.Quote, error) {
+	b := s.storeBooks()
+	if b == nil || len(keys) == 0 {
+		return nil, nil
+	}
+	return b.bestQuotes(ctx, keys, time.Now().Add(-fresh))
 }

@@ -34,6 +34,10 @@ type Server struct {
 	Fresh    time.Duration // 多久没再看到的挂单不算数
 	// Flip 是倒爷工具那一套(目录/扫描/榜单)。为 nil 时那组接口不注册。
 	Flip *flip.Service
+	// Quotes 是 /api/quotes 的最优价来源,和 WS 推送(Conflator)用同一个:
+	// 两边口径不一致的话,界面重连补的快照和之后的推送会互相打架。
+	// New 里设成 Flip(读簿带幽灵剔除);为 nil 时 /api/quotes 返回 503
+	Quotes hub.QuoteSource
 
 	// ReleaseDir 是客户端二进制放哪。空字符串则不提供下载和更新检查。
 	ReleaseDir string
@@ -48,7 +52,7 @@ type Server struct {
 
 func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub,
 	fresh time.Duration, fl *flip.Service) *Server {
-	return &Server{
+	s := &Server{
 		Store: st, Ingestor: ing, Hub: h, Fresh: fresh, Flip: fl,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -58,6 +62,10 @@ func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub,
 			CheckOrigin: func(*http.Request) bool { return true },
 		},
 	}
+	if fl != nil { // 不能把 nil 的 *flip.Service 塞进接口:那是非 nil 接口
+		s.Quotes = fl
+	}
+	return s
 }
 
 func (s *Server) Routes() *http.ServeMux {
@@ -173,7 +181,11 @@ func (s *Server) handleQuotes(w http.ResponseWriter, r *http.Request) {
 		}
 		keys = append(keys, k)
 	}
-	quotes, err := s.Store.BestQuotes(r.Context(), keys, s.Fresh)
+	if s.Quotes == nil {
+		http.Error(w, "没有报价来源", http.StatusServiceUnavailable)
+		return
+	}
+	quotes, err := s.Quotes.BestQuotes(r.Context(), keys, s.Fresh)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

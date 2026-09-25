@@ -224,6 +224,50 @@ func TestBookSides(t *testing.T) {
 	})
 }
 
+// WS 推送和 /api/quotes 的最优价就是 BookSides 只取 1 档(flip.Service.BestQuotes)。
+// 审查 E 轮原样:第一眼卖一 2900、2905,随后新单 2910;125s 后第二眼只剩 2905、2910,
+// 全是 touch(没有状态变化)。以前的 BestQuotes 两次都报 2900,扫描却已经按幽灵剔掉了它
+func TestBookSides_只取一档是剔除幽灵后的卖一(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	T := time.Date(2026, 9, 25, 13, 32, 20, 0, time.UTC)
+	k := model.QuoteKey{ItemID: "T6_METALBAR", LocationID: "Thetford", Quality: 1, Side: model.SideOffer}
+	orders := []model.MarketOrder{
+		{OrderID: 1, ItemID: k.ItemID, LocationID: k.LocationID, Quality: 1, Side: k.Side, UnitPrice: 2900, Amount: 5, ObservedAt: T},
+		{OrderID: 2, ItemID: k.ItemID, LocationID: k.LocationID, Quality: 1, Side: k.Side, UnitPrice: 2905, Amount: 20, ObservedAt: T},
+		{OrderID: 3, ItemID: k.ItemID, LocationID: k.LocationID, Quality: 1, Side: k.Side, UnitPrice: 2910, Amount: 7, ObservedAt: T.Add(10 * time.Second)},
+	}
+	if err := st.WriteOrders(ctx, "测试", orders); err != nil {
+		t.Fatal(err)
+	}
+	since := T.Add(-30 * time.Minute)
+	const slack = 120 * time.Second
+
+	first, err := st.BookSides(ctx, []model.QuoteKey{k}, since, slack, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := first[k]; len(b.Levels) != 1 || b.Levels[0].Price != 2900 || b.Levels[0].Depth != 5 || !b.Newest.Equal(T.Add(10*time.Second)) {
+		t.Fatalf("第一眼之后卖一应是 2900×5,得到 %+v", b)
+	}
+
+	T2 := T.Add(125 * time.Second)
+	if err := st.TouchOrders(ctx, map[int64]time.Time{2: T2, 3: T2}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := st.BookSides(ctx, []model.QuoteKey{k}, since, slack, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := second[k]
+	if len(b.Levels) != 1 || b.Levels[0].Price != 2905 || b.Levels[0].Depth != 20 || b.Ghosts != 1 {
+		t.Fatalf("第二眼没再看到 2900:卖一应退到 2905×20、剔掉 1 张幽灵,得到 %+v", b)
+	}
+	if !b.Newest.Equal(T2) || !b.Newest.After(first[k].Newest) {
+		t.Fatalf("最近一眼应前进到第二眼 %v,得到 %v", T2, b.Newest)
+	}
+}
+
 // TestBookSides_查询计划 是手工检查,只在 FLIPPER_TEST_EXPLAIN=1 时跑:
 // 对 792 个 key(默认物品清单 66 个 × 6 城 × 1 品质 × 2 边)跑
 // EXPLAIN (ANALYZE, BUFFERS),确认走 idx_live_book 的 Index Only Scan。

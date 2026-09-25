@@ -234,62 +234,9 @@ func (s *Store) Book(ctx context.Context, k model.QuoteKey, fresh time.Duration,
 	return out, rows.Err()
 }
 
-// BestQuotes 批量取多个盘口的最优价,首屏和快照补齐用这个。
-func (s *Store) BestQuotes(ctx context.Context, keys []model.QuoteKey, fresh time.Duration) ([]model.Quote, error) {
-	if len(keys) == 0 {
-		return nil, nil
-	}
-	items := make([]string, len(keys))
-	locs := make([]string, len(keys))
-	quals := make([]int16, len(keys))
-	sides := make([]int16, len(keys))
-	for i, k := range keys {
-		items[i], locs[i], quals[i], sides[i] = k.ItemID, k.LocationID, k.Quality, int16(k.Side)
-	}
-
-	rows, err := s.pool.Query(ctx, `
-		WITH want AS (
-			SELECT * FROM unnest($1::text[], $2::text[], $3::smallint[], $4::smallint[])
-			         AS t(item_id, location_id, quality, side)
-		), best AS (
-			SELECT w.item_id, w.location_id, w.quality, w.side,
-			       CASE WHEN w.side = 0 THEN MIN(o.unit_price) ELSE MAX(o.unit_price) END AS price
-			FROM want w
-			JOIN market_order_live o
-			  ON o.item_id = w.item_id AND o.location_id = w.location_id
-			 AND o.quality = w.quality AND o.side = w.side
-			WHERE o.last_seen > $5
-			GROUP BY w.item_id, w.location_id, w.quality, w.side
-		)
-		SELECT b.item_id, b.location_id, b.quality, b.side, b.price,
-		       SUM(o.amount)::BIGINT, COUNT(*)::INT, MAX(o.last_seen)
-		FROM best b
-		JOIN market_order_live o
-		  ON o.item_id = b.item_id AND o.location_id = b.location_id
-		 AND o.quality = b.quality AND o.side = b.side AND o.unit_price = b.price
-		WHERE o.last_seen > $5
-		GROUP BY b.item_id, b.location_id, b.quality, b.side, b.price`,
-		items, locs, quals, sides, time.Now().Add(-fresh))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []model.Quote
-	for rows.Next() {
-		var k model.QuoteKey
-		var side int16
-		var q model.Quote
-		if err := rows.Scan(&k.ItemID, &k.LocationID, &k.Quality, &side,
-			&q.Price, &q.Depth, &q.Orders, &q.At); err != nil {
-			return nil, err
-		}
-		k.Side = model.Side(side)
-		q.Key = k.String()
-		out = append(out, q)
-	}
-	return out, rows.Err()
-}
+// 批量最优价(WS 推送和 /api/quotes)不在这里:以前这里有一条只按
+// last_seen > now−fresh 过滤的 BestQuotes,没有幽灵剔除,已经被买走的最优单会一直
+// 挂到过期。现在由 flip.Service.BestQuotes 走 BookSides 只取第一档,和扫描同一口径。
 
 // ItemName 取中文名,没有就回落到英文名再回落到 ID。
 func (s *Store) ItemName(ctx context.Context, itemID string) (string, error) {

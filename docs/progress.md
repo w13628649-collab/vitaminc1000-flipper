@@ -103,7 +103,9 @@ POST /api/catalog/sync 重新同步物品目录
 - 客户端 → 服务端:`{"op":"sub"|"unsub","keys":[...],"topics":[...]}`。`keys` 按盘口
   (`item|city|quality|side`)订报价;`topics` 按主题订状态通知,目前只有 `"scan"`。
   两者可以写在同一条里,不认识的主题忽略。老客户端只发 `keys`,行为不变
-- 报价消息 `{k,p,d,n,t}`,没有 `type` 字段
+- 报价消息 `{k,p,d,n,t}`,没有 `type` 字段。`p/d/n` 是剔除幽灵单之后的最优档(价、件数、
+  张数),和扫描读簿同一口径;`t` 是这一边的"最近一眼",只进不退。上传落库(flush,至多 2s)
+  之后才推,只刷新了 last_seen 的上传也推。`GET /api/quotes` 和推送是同一个来源
 - 扫描通知(只发给订了 `scan` 的连接):每次对外发布新的扫描结果(全量扫描、或抓包
   快速重算)之后推一条
   `{"type":"scan","evaluated_at":…,"started_at":…,"digest":"<hex>","opportunities":N,"routes":N,"full":bool}`。

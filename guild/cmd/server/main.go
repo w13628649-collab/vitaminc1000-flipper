@@ -95,19 +95,22 @@ func main() {
 		}()
 	}
 
-	conflator := hub.NewConflator(st, bc, *fresh)
+	flipper := flip.New(st, cfg)
+	// 推送的最优价走 flip:和扫描读簿同一套幽灵剔除、串城处理(/api/quotes 也是它),
+	// 实时页和机会页对同一个盘口报的才是同一个价
+	conflator := hub.NewConflator(flipper, bc, *fresh)
 	ing, err := ingest.New(st, conflator, *cacheSz)
 	if err != nil {
 		slog.Error("初始化摄取器失败", "err", err)
 		os.Exit(1)
 	}
+	// 读簿要知道哪些盘口最近串过城:那些盘口的"最近一眼"不可信,暂停幽灵剔除。
+	// 必须在 conflator 和 ingest 开跑之前设好,之后只读
+	flipper.Conflicts = ing
 
 	go ing.Run(ctx)
 	go conflator.Run(ctx, *tick)
 
-	flipper := flip.New(st, cfg)
-	// 扫描读簿要知道哪些盘口最近串过城:那些盘口的"最近一眼"不可信,暂停幽灵剔除
-	flipper.Conflicts = ing
 	// 每次发布扫描结果(全量或快速重算)都推一条 scan 通知给订阅了的 WS 连接。
 	// 直接给本实例的 hub,不走 NATS:扫描是每个实例各跑各的
 	flipper.Events = h
