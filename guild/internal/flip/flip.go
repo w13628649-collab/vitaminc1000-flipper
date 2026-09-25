@@ -376,18 +376,30 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 			continue
 		}
 		// 跨城要占产地和销地两个桶:进得去还得出得来
+		pools := []portfolio.Pool{
+			{Key: poolKey(r.ItemID, r.FromCity, r.Quality), Capacity: r.SourceDaily * absorb},
+			{Key: poolKey(r.ItemID, r.ToCity, r.Quality), Capacity: r.DestDaily * absorb},
+		}
+		// 吃单腿按抓包阶梯算过容量的,盘口本身也是一份共享的量:从同一座城的
+		// 同一个卖单簿往三个方向吃,三条路线加起来也只有那么多件。和上面的成交量桶
+		// 分开记——那个是市场一天消化得了多少,这个是眼下实际挂着多少
+		if r.BuyDepthQty > 0 {
+			pools = append(pools, portfolio.Pool{
+				Key: poolKey(r.ItemID, r.FromCity, r.Quality) + "|ask", Capacity: float64(r.BuyDepthQty)})
+		}
+		if r.SellDepthQty > 0 {
+			pools = append(pools, portfolio.Pool{
+				Key: poolKey(r.ItemID, r.ToCity, r.Quality) + "|bid", Capacity: float64(r.SellDepthQty)})
+		}
 		pool = append(pool, portfolio.Candidate{
 			Key:         "arb:" + r.ItemID + "|" + r.FromCity + "->" + r.ToCity,
 			Label:       r.ItemName + " · " + r.FromCity + " → " + r.ToCity,
 			Kind:        "arb",
 			CostPerUnit: r.CostPerUnit, ProfitPerUnit: r.ProfitPerUnit,
 			HoursPerRound: r.HoursPerTrip,
-			Pools: []portfolio.Pool{
-				{Key: poolKey(r.ItemID, r.FromCity, r.Quality), Capacity: r.SourceDaily * absorb},
-				{Key: poolKey(r.ItemID, r.ToCity, r.Quality), Capacity: r.DestDaily * absorb},
-			},
-			Volatility: r.Volatility,
-			Payload:    r,
+			Pools:         pools,
+			Volatility:    r.Volatility,
+			Payload:       r,
 		})
 	}
 	return portfolio.Build(pool, opt)

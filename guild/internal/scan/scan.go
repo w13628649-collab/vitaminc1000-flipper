@@ -161,9 +161,11 @@ type Result struct {
 // findRoutes 把同一物品在各城的快照凑成市场,两两配对找跨城路线。
 //
 // 用的是和同城完全一样的那批价格数据——跨城不需要额外请求,
-// 只是换个角度看同一份快照。
+// 只是换个角度看同一份快照。sides 是融合层给的逐边来源和深度,
+// 和同城走同一个 screen.ResolveSides,两边对"这一边来自谁"的说法一致;
+// 为 nil 时就是纯 AODP。
 func findRoutes(prices []aodp.PriceRecord, stats map[histagg.QualityKey]histagg.Stats,
-	cat *catalog.Catalog, cfg conf.Config, now time.Time) []arb.Route {
+	sides map[histagg.QualityKey]screen.Sides, cat *catalog.Catalog, cfg conf.Config, now time.Time) []arb.Route {
 
 	type group struct {
 		itemID  string
@@ -180,14 +182,16 @@ func findRoutes(prices []aodp.PriceRecord, stats map[histagg.QualityKey]histagg.
 		if !ok {
 			continue
 		}
+		qk := histagg.QualityKey{ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality}
+		sd := screen.ResolveSides(rec, sides[qk], now)
 		m := arb.Market{
 			City:     rec.City,
 			Book:     econ.Book{SellMin: rec.SellPriceMin, BuyMax: rec.BuyPriceMax},
 			AgeHours: age,
+			Ask:      sd.Ask,
+			Bid:      sd.Bid,
 		}
-		if s, ok := stats[histagg.QualityKey{
-			ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality,
-		}]; ok {
+		if s, ok := stats[qk]; ok {
 			m.Stats = &s
 		}
 		k := group{rec.ItemID, rec.Quality}
@@ -305,8 +309,8 @@ func evaluate(ctx context.Context, raw []aodp.PriceRecord, stats map[histagg.Qua
 		return opportunities[i].DailyProfit > opportunities[j].DailyProfit
 	})
 
-	// 跨城这一步只吃到融合后的价格,两端深度要到 arb 按腿接上之后才用得上
-	routes := findRoutes(prices, stats, cat, cfg, now)
+	// 跨城用同一份融合后的价格和逐边深度:挂单腿过闸门,吃单腿沿阶梯逐档算
+	routes := findRoutes(prices, stats, sides, cat, cfg, now)
 
 	cov := coverageByCity(raw, cfg.Cities, now, cfg.Freshness.MaxHours)
 	addCaptureCoverage(cov, got, sides, now)

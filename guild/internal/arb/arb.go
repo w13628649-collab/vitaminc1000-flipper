@@ -10,6 +10,8 @@
 //     只看一边是这类工具最常见的高估来源
 //  2. **运输时间摊薄日化收益。** 一趟来回按 RoundTripHours 折算,
 //     跑一趟赚 10 万但要两小时,不如同城一小时赚 6 万
+//  3. **盘口深度(只有抓包那一边有)。** 挂单腿过和同城同一道闸门(screen.LegGate);
+//     吃单腿沿阶梯逐档试边际价,吃到的件数当日容量——最优价只是第一件的价格
 //
 // 风险(红区劫道、货砸手里)不建模成数字——那是玩家自己的判断,
 // 工具能做的是把量、价、时间摆清楚。
@@ -33,6 +35,10 @@ type Market struct {
 	Book     econ.Book
 	Stats    *histagg.Stats
 	AgeHours float64
+	// Ask/Bid 是这座城卖单簿、买单簿各自用了谁的价、多旧、深度如何,和同城 screen
+	// 同一套(scan 经 screen.ResolveSides 填)。数据龄就在 Side.AgeHours 里。
+	// 零值就是纯 AODP:挂单腿闸门不触发,吃单腿按最优价算、不限件数,和以前逐位一致
+	Ask, Bid screen.Side
 }
 
 // Route 是一条跨城路线。
@@ -49,6 +55,8 @@ type Route struct {
 	Mode      string `json:"mode"`
 	ModeLabel string `json:"mode_label"`
 
+	// BuyPrice/SellPrice 是我的买价和卖价。吃单腿沿抓包阶梯走过的,就是走到的
+	// 最差那一档(限价):整轮都按它计价,只会低估不会高估
 	BuyPrice  int64 `json:"buy_price"`
 	SellPrice int64 `json:"sell_price"`
 
@@ -58,11 +66,31 @@ type Route struct {
 	Margin         float64 `json:"margin"`
 
 	// SourceDaily/DestDaily 是两端各自的日均成交件数,
-	// Qty 取两端可吃量和本金三者的最小值
+	// Qty 取两端可吃量、盘口深度和本金的最小值
 	SourceDaily float64 `json:"source_daily_qty"`
 	DestDaily   float64 `json:"dest_daily_qty"`
 	Qty         int64   `json:"qty"`
-	Bottleneck  string  `json:"bottleneck"` // capital | source | dest
+	Bottleneck  string  `json:"bottleneck"` // capital | source | dest | depth
+
+	// FromAsk/FromBid/ToAsk/ToBid 是两端四个盘口边各自用了谁的价、多旧、深度如何。
+	// 没有价的那一边不输出
+	FromAsk *screen.Side `json:"from_ask,omitempty"`
+	FromBid *screen.Side `json:"from_bid,omitempty"`
+	ToAsk   *screen.Side `json:"to_ask,omitempty"`
+	ToBid   *screen.Side `json:"to_bid,omitempty"`
+	// BuyLeg*/SellLeg* 是选中模式的两条腿各自依托哪一边:秒买吃产地 ask、
+	// 挂买排在产地 bid,秒卖吃销地 bid、挂卖排在销地 ask。和同城机会同名同义
+	BuyLegSource    string  `json:"buy_leg_source"`
+	SellLegSource   string  `json:"sell_leg_source"`
+	BuyLegAgeHours  float64 `json:"buy_leg_age_hours"`
+	SellLegAgeHours float64 `json:"sell_leg_age_hours"`
+	// BuyDepthQty/SellDepthQty 是吃单腿沿抓包阶梯走到限价那一档为止、盘口上一共
+	// 挂着多少件,当日容量用(不假设当天会补货)。0 = 这条腿没按阶梯算:
+	// 挂单腿,或那一边没有可信的抓包深度,这时容量只受成交量约束
+	BuyDepthQty  int64 `json:"buy_depth_qty,omitempty"`
+	SellDepthQty int64 `json:"sell_depth_qty,omitempty"`
+	// DepthChecked 说明两条腿依托的那一边都有可信的抓包深度
+	DepthChecked bool `json:"depth_checked"`
 
 	CapitalUsed  float64 `json:"capital_used"`
 	TripProfit   float64 `json:"trip_profit"`
@@ -81,7 +109,8 @@ type Route struct {
 	Confidence  screen.Confidence `json:"confidence"`
 	Warnings    []string          `json:"warnings,omitempty"`
 
-	// Modes 是这条路线上所有可行的执行方式,按单件利润排。
+	// Modes 是这条路线上可行的执行方式,按日收益排,第一个就是选用的;
+	// 后面跟着被深度闸门拦下的(Blocked 非空),账照算、不参与挑选。
 	// 界面全都显示出来:最赚的那个往往要两头等,用户可能宁愿要快的
 	Modes []ModeQuote `json:"modes"`
 }
@@ -95,14 +124,24 @@ type ModeQuote struct {
 	ProfitPerUnit float64 `json:"profit_per_unit"`
 	Margin        float64 `json:"margin"`
 	Friction      float64 `json:"friction"`
+	// Breakeven 是真实盈亏平衡价差,和同城一个口径(Friction 是名义和,偏小)
+	Breakeven float64 `json:"breakeven"`
 	// 下面三个是把周转算进去之后的结果。**选哪个模式要看 DailyProfit,
 	// 不是 ProfitPerUnit**——单件赚得少但一天能转八趟的,总量可能高得多
 	HoursPerTrip float64 `json:"hours_per_trip"`
 	TripsPerDay  float64 `json:"trips_per_day"`
 	DailyProfit  float64 `json:"daily_profit"`
+	// Blocked 非空说明挂单腿被深度闸门拦下(no_bid_side / thin_book)
+	Blocked string `json:"blocked,omitempty"`
 
+	mode econ.Mode
 	unit econ.Unit
 	qty  int64
+	// buyCap/sellCap 是吃单腿按阶梯走到的那一档为止的件数,没按阶梯算是 +Inf
+	buyCap, sellCap float64
+	// edge/warns 是深度闸门对这个模式的判定:贴着阈值、要降置信
+	edge  bool
+	warns []string
 }
 
 // Options 控制路线怎么算。
@@ -135,6 +174,16 @@ type Options struct {
 	MinDailyVolumeSilver float64
 	MinDaysWithData      int
 	MaxHistoryGapDays    float64
+
+	// Filters 给挂单腿的深度闸门(screen.LegGate)用,零值 = 闸门关
+	Filters conf.Filters
+	// DeviationMin/Max 是逐腿偏离检查:每条腿实际用到的价 / 该城 7 日均价
+	// 要落在这个区间里。零值 = 关。
+	//
+	// MaxPriceRatio 只比两地同侧价格,遇到一侧为 0 就跳过——产地买一只剩一张
+	// 2 银的占位单、销地只有卖单时,它一组都比不了、只能看另一组,挂买腿于是
+	// 按 3 银成本算出天价毛利。同城 screen 早就对两边做偏离度,跨城一直没有
+	DeviationMin, DeviationMax float64
 }
 
 // roundTripHours 是这种执行方式跑完一趟来回要多久。同城没有路程,
@@ -157,6 +206,9 @@ func DefaultOptions(cfg conf.Config) Options {
 		MinDailyVolumeSilver: cfg.Filters.MinDailyVolumeSilver,
 		MinDaysWithData:      cfg.Filters.MinDaysWithData7d,
 		MaxHistoryGapDays:    cfg.Filters.MaxHistoryGapDays,
+		Filters:              cfg.Filters,
+		DeviationMin:         cfg.Filters.DeviationMin,
+		DeviationMax:         cfg.Filters.DeviationMax,
 	}
 }
 
@@ -229,41 +281,38 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 
 	// 四种执行方式各算一遍完整的账,只在**通过约束的**里面挑最优。
 	//
-	// 两个关键点:
+	// 三个关键点:
 	//  1. 先挑最赚的再检查约束,会因为最赚那个不合规就把整条路线扔掉
 	//  2. 挑的标准是**日收益**不是单件利润。挂买挂卖单件赚得最多,
 	//     但要等两次成交,一天转不了几趟;秒买秒卖单件少一半,
 	//     周转快起来总量可能反超
-	var viable []ModeQuote
+	//  3. 深度闸门只砍掉被拦的那个模式,不连带整条路线:产地买方太薄只说明
+	//     挂买收不到货,秒买照样能做
+	var viable, blocked []ModeQuote
 	for _, m := range econ.Modes {
 		if !playable(m, from.Book, to.Book) {
 			continue
 		}
-		u := econ.Quote(from.Book, to.Book, m, cfg)
-		if u.ProfitPerUnit < opt.MinProfitPerUnit || u.Margin < opt.MinMargin {
+		q, ok := bestFill(m, from, to, byMarket, cfg, opt)
+		if !ok {
 			continue
 		}
-		q, trips, daily := econ.Turnover(u, byMarket, opt.Capital, opt.roundTripHours(m))
-		if q < 1 {
-			continue
+		// 挂买排在产地的买单簿上,挂卖排在销地的卖单簿上
+		q.Blocked, _, q.edge, q.warns = screen.LegGate(m, from.Bid, to.Ask, opt.Filters)
+		if q.Blocked != "" {
+			blocked = append(blocked, q)
+		} else {
+			viable = append(viable, q)
 		}
-		viable = append(viable, ModeQuote{
-			Mode: m.Key(), Label: m.Label(),
-			BuyPrice: u.MyBid, SellPrice: u.MyAsk,
-			ProfitPerUnit: u.ProfitPerUnit, Margin: u.Margin,
-			Friction:     m.Friction(cfg),
-			HoursPerTrip: opt.roundTripHours(m),
-			TripsPerDay:  trips,
-			DailyProfit:  daily,
-			unit:         u, qty: q,
-		})
 	}
 	if len(viable) == 0 {
 		return Route{}, false
 	}
-	sort.SliceStable(viable, func(i, j int) bool {
-		return viable[i].DailyProfit > viable[j].DailyProfit
-	})
+	byDaily := func(s []ModeQuote) {
+		sort.SliceStable(s, func(i, j int) bool { return s[i].DailyProfit > s[j].DailyProfit })
+	}
+	byDaily(viable)
+	byDaily(blocked)
 	best := viable[0]
 	unit := best.unit
 	qty := best.qty
@@ -273,8 +322,12 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		byCapital = float64(opt.Capital) / unit.CostPerUnit
 	}
 
+	// 盘口深度比成交量和本金都紧,才算深度是瓶颈。没按阶梯算的腿是 +Inf,不参与
+	depthCap := math.Min(best.buyCap, best.sellCap)
 	bottleneck := "capital"
 	switch {
+	case depthCap < byMarket && depthCap < byCapital:
+		bottleneck = "depth"
 	case byCapital > byMarket && sourceCap <= destCap:
 		bottleneck = "source"
 	case byCapital > byMarket:
@@ -282,6 +335,10 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 	}
 
 	tripProfit := unit.ProfitPerUnit * float64(qty)
+
+	fromSides := screen.Sides{Ask: from.Ask, Bid: from.Bid}
+	toSides := screen.Sides{Ask: to.Ask, Bid: to.Bid}
+	buyLeg, sellLeg := screen.LegSides(best.mode, fromSides, toSides)
 
 	r := Route{
 		ItemID: itemID, ItemName: itemName, Quality: quality,
@@ -292,26 +349,186 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		ProfitPerUnit: unit.ProfitPerUnit, Margin: unit.Margin,
 		SourceDaily: sourceDaily, DestDaily: destDaily,
 		Qty: qty, Bottleneck: bottleneck,
+		FromAsk: sideRef(from.Ask), FromBid: sideRef(from.Bid),
+		ToAsk: sideRef(to.Ask), ToBid: sideRef(to.Bid),
+		BuyLegSource: buyLeg.Source, SellLegSource: sellLeg.Source,
+		BuyLegAgeHours: buyLeg.AgeHours, SellLegAgeHours: sellLeg.AgeHours,
+		BuyDepthQty: capQty(best.buyCap), SellDepthQty: capQty(best.sellCap),
+		// 挂单腿看的是闸门那一边,吃单腿看的是阶梯那一边——都是 LegSides 映射到的那一边
+		DepthChecked: buyLeg.Captured() && sellLeg.Captured(),
 		CapitalUsed:  float64(qty) * unit.CostPerUnit,
 		TripProfit:   tripProfit,
 		DailyProfit:  best.DailyProfit,
 		TripsPerDay:  best.TripsPerDay,
 		HoursPerTrip: best.HoursPerTrip,
 		MaxAgeHours:  maxAge,
-		Modes:        viable,
+		Modes:        append(viable, blocked...),
 	}
 	if opt.Capital > 0 {
 		r.CapitalROI = best.DailyProfit / float64(opt.Capital)
 	}
 	if to.Stats != nil {
 		r.Volatility = to.Stats.CV
-		// 到这里已经排除过交叉盘,中价是可信的
-		if z, ok := to.Stats.ZScore(float64(to.Book.SellMin+to.Book.BuyMax) / 2); ok {
-			r.ZScore, r.HasZ = z, true
+		// 销地两侧都有价,中价才有意义。只有卖单时 (卖一 + 0) / 2 是个假中价,
+		// 会算出一个离谱的负 z,看着像"现在便宜、是买点"。
+		// 交叉盘在前面已经排除(RejectCrossedBook 开着时)
+		if to.Book.SellMin > 0 && to.Book.BuyMax > 0 {
+			if z, ok := to.Stats.ZScore(float64(to.Book.SellMin+to.Book.BuyMax) / 2); ok {
+				r.ZScore, r.HasZ = z, true
+			}
 		}
 	}
 	r.Confidence, r.Warnings = judge(r, maxAge)
+	// 选中模式的挂单腿贴着深度阈值:和同城一样降为 low
+	if best.edge {
+		r.Confidence = screen.Low
+	}
+	r.Warnings = append(r.Warnings, best.warns...)
 	return r, true
+}
+
+// rung 是吃单腿阶梯的一个前缀:一路吃到 price 这一档为止,一共 qty 件。
+type rung struct {
+	price int64
+	qty   float64
+}
+
+// ladder 列出一条腿的候选前缀。只有吃单腿、而且那一边有可信的抓包深度时才逐档走;
+// 否则只有一个候选:最优价、不限件数——没有阶梯时整个循环退化成单次,和以前逐位一致。
+func ladder(s screen.Side, walk bool, top int64) []rung {
+	if walk && s.Captured() {
+		out := make([]rung, 0, len(s.Levels))
+		cum := 0.0
+		for _, l := range s.Levels {
+			if l.Qty <= 0 || l.Price <= 0 {
+				continue
+			}
+			cum += float64(l.Qty)
+			out = append(out, rung{price: l.Price, qty: cum})
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return []rung{{price: top, qty: math.Inf(1)}}
+}
+
+// bestFill 算一个执行方式在这两端能做成什么样:吃单腿沿阶梯逐档试边际价,
+// 挑日收益最高的那个前缀。不可行(价不合理、不赚钱、一件都做不成)返回 false。
+//
+// 口径:
+//   - 整轮按吃到的最差那一档计价(不是 VWAP),只会低估
+//   - 吃到的件数当**日容量**,和成交量、本金一起取最小,不假设当天会补货
+//   - 日收益并列时取浅的:同样的钱,少吃几档少冒一分险
+//
+// 剪枝:
+//   - 某个前缀不赚钱或毛利不够,更深的只会更差(买价只升、卖价只降)。卖侧第一档
+//     就不合格时,更深的买价也救不回来,整个模式到此为止。这一条是精确的
+//   - 偏离度那一关不完全单调:最优档离谱地便宜、更深几档反而正常时,这里也收手。
+//     是故意的——最优档本身离谱,多半是 troll 或幽灵单,这一整边都不该信
+//   - 容量已经顶到别的约束,再往深吃容量不涨、价只更差。这一条也是精确的
+//     (有测试拿暴力枚举对过)
+func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics, opt Options) (ModeQuote, bool) {
+	buys := ladder(from.Ask, m.Buy == econ.Taker, from.Book.SellMin)
+	sells := ladder(to.Bid, m.Sell == econ.Taker, to.Book.BuyMax)
+	hours := opt.roundTripHours(m)
+
+	var best ModeQuote
+	found := false
+	for _, b := range buys {
+		bk := from.Book
+		if m.Buy == econ.Taker {
+			bk.SellMin = b.price
+		}
+		for j, s := range sells {
+			sk := to.Book
+			if m.Sell == econ.Taker {
+				sk.BuyMax = s.price
+			}
+			u := econ.Quote(bk, sk, m, cfg)
+			if !legsSane(m, bk, sk, from.Stats, to.Stats, opt) ||
+				u.ProfitPerUnit < opt.MinProfitPerUnit || u.Margin < opt.MinMargin {
+				if j == 0 {
+					return best, found
+				}
+				break
+			}
+			absorbable := math.Min(byMarket, math.Min(b.qty, s.qty))
+			q, trips, daily := econ.Turnover(u, absorbable, opt.Capital, hours)
+			if q >= 1 && (!found || daily > best.DailyProfit) {
+				found = true
+				best = ModeQuote{
+					Mode: m.Key(), Label: m.Label(),
+					BuyPrice: u.MyBid, SellPrice: u.MyAsk,
+					ProfitPerUnit: u.ProfitPerUnit, Margin: u.Margin,
+					Friction:     m.Friction(cfg),
+					Breakeven:    m.Breakeven(cfg),
+					HoursPerTrip: hours,
+					TripsPerDay:  trips,
+					DailyProfit:  daily,
+					mode:         m, unit: u, qty: q,
+					buyCap: b.qty, sellCap: s.qty,
+				}
+			}
+			if s.qty >= math.Min(byMarket, b.qty) {
+				break
+			}
+		}
+		// 卖侧最深的前缀也就这么多件:买侧已经不比它少,再往深买容量不涨
+		if b.qty >= math.Min(byMarket, sells[len(sells)-1].qty) {
+			break
+		}
+	}
+	return best, found
+}
+
+// legsSane 是逐腿偏离检查:每条腿实际依托的价 / 该城 7 日均价要落在
+// [DeviationMin, DeviationMax] 内。秒买依托产地卖一、挂买依托产地买一,
+// 秒卖依托销地买一、挂卖依托销地卖一。7 日均价没有时跳过这一腿——
+// 历史闸门(usable)已经管了"有没有历史",这里只管"价离不离谱"。
+func legsSane(m econ.Mode, buy, sell econ.Book, fromStats, toStats *histagg.Stats, opt Options) bool {
+	if opt.DeviationMin <= 0 && opt.DeviationMax <= 0 {
+		return true
+	}
+	bp := buy.BuyMax
+	if m.Buy == econ.Taker {
+		bp = buy.SellMin
+	}
+	sp := sell.SellMin
+	if m.Sell == econ.Taker {
+		sp = sell.BuyMax
+	}
+	return legSane(bp, fromStats, opt) && legSane(sp, toStats, opt)
+}
+
+func legSane(price int64, s *histagg.Stats, opt Options) bool {
+	if s == nil || s.AvgPrice7d <= 0 || price <= 0 {
+		return true
+	}
+	r := float64(price) / s.AvgPrice7d
+	if opt.DeviationMin > 0 && r < opt.DeviationMin {
+		return false
+	}
+	if opt.DeviationMax > 0 && r > opt.DeviationMax {
+		return false
+	}
+	return true
+}
+
+// sideRef 给 JSON 用:没有价的那一边不输出。
+func sideRef(s screen.Side) *screen.Side {
+	if s.Source == "" {
+		return nil
+	}
+	return &s
+}
+
+// capQty 把阶梯容量转成件数,没按阶梯算(+Inf)的是 0。
+func capQty(c float64) int64 {
+	if math.IsInf(c, 1) {
+		return 0
+	}
+	return int64(c)
 }
 
 // playable 判断这个执行方式需要的价格是不是都有。
@@ -409,7 +626,13 @@ func judge(r Route, maxAge float64) (screen.Confidence, []string) {
 			level = screen.Medium
 		}
 	}
-	if r.Bottleneck != "capital" {
+	switch r.Bottleneck {
+	case "capital":
+	case "depth":
+		// 阶梯是某一眼的快照,吃掉之后多久补上完全不知道——按日容量算已经是保守口径,
+		// 但真去做的人得知道"一天就这么多"
+		warns = append(warns, fmt.Sprintf("盘口深度是瓶颈:按当前挂单只够 %d 件,补货速度未知", depthQty(r)))
+	default:
 		side := "产地"
 		if r.Bottleneck == "dest" {
 			side = "销地"
@@ -420,4 +643,16 @@ func judge(r Route, maxAge float64) (screen.Confidence, []string) {
 		level = screen.Low
 	}
 	return level, warns
+}
+
+// depthQty 是两条腿里被阶梯限住的那个件数(较小的非零值)。
+func depthQty(r Route) int64 {
+	switch {
+	case r.BuyDepthQty > 0 && r.SellDepthQty > 0:
+		return min(r.BuyDepthQty, r.SellDepthQty)
+	case r.BuyDepthQty > 0:
+		return r.BuyDepthQty
+	default:
+		return r.SellDepthQty
+	}
 }
