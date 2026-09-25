@@ -71,6 +71,57 @@ func TestSharedPoolIsNotCountedTwice(t *testing.T) {
 	t.Logf("三条同产地路线共搬 %.0f 件(容量 %d),日收益 %.0f", moved, capacity, plan.DailyProfit)
 }
 
+// 挂单簿(Ladder)按"已经被吃掉多少"记账:各条机会的 Capacity 是自己限价以内的件数,
+// 本来就不同。深的限价以内 1000 件、浅的 100 件,同一份卖单簿:
+//   - 深的先分:吃掉最便宜的 1000 件,浅的限价以内一件不剩
+//   - 浅的先分:吃掉最便宜的 100 件,深的限价以内还剩 900
+//
+// 以前按普通桶取最小容量,深的那条先分也只能分到 100 件
+func TestLadderPoolTracksWhatIsEaten(t *testing.T) {
+	ladder := func(c Candidate, capacity float64) Candidate {
+		c.Pools = append(c.Pools, Pool{Key: "T5_CLOTH|Lymhurst|ask", Capacity: capacity, Ladder: true})
+		return c
+	}
+	total := func(p Plan) (sum float64, byKey map[string]float64) {
+		byKey = map[string]float64{}
+		for _, s := range p.Slices {
+			sum += s.DailyQty
+			byKey[s.Key] = s.DailyQty
+		}
+		return sum, byKey
+	}
+	opt := DefaultOptions(1_000_000_000) // 本金不是瓶颈
+
+	// 深的更赚钱,先分
+	deepFirst := Build([]Candidate{
+		ladder(cand("deep", 1000, 60, 100_000, 0), 1000),
+		ladder(cand("shallow", 1000, 50, 100_000, 0), 100),
+	}, opt)
+	sum, got := total(deepFirst)
+	if !near(got["deep"], 1000) || got["shallow"] != 0 || sum > 1000+1e-6 {
+		t.Fatalf("深的先分应吃满 1000、浅的一件不剩,得到 %v", got)
+	}
+
+	// 浅的更赚钱,先分
+	shallowFirst := Build([]Candidate{
+		ladder(cand("deep", 1000, 50, 100_000, 0), 1000),
+		ladder(cand("shallow", 1000, 60, 100_000, 0), 100),
+	}, opt)
+	sum, got = total(shallowFirst)
+	if !near(got["shallow"], 100) || !near(got["deep"], 900) || !near(sum, 1000) {
+		t.Fatalf("浅的先分吃 100、深的吃剩下的 900,得到 %v", got)
+	}
+
+	// 非 Ladder 的普通桶口径不变:同一个桶取最保守的容量
+	plain := Build([]Candidate{
+		cand("a", 1000, 60, 1000, 0, "same"),
+		cand("b", 1000, 50, 100, 0, "same"),
+	}, opt)
+	if _, got := total(plain); !near(got["a"], 100) || got["b"] != 0 {
+		t.Fatalf("普通桶仍取最小容量 100,得到 %v", got)
+	}
+}
+
 // 组合页和机会榜必须对同一条路线给出同样的数。
 // 以前组合页只算一轮,榜单按周转算,两边差 2–3 倍。
 func TestSliceProfitMatchesTurnoverModel(t *testing.T) {

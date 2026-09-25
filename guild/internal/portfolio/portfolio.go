@@ -25,7 +25,19 @@ import (
 type Pool struct {
 	Key string
 	// Capacity 是这个桶一天吃得下多少件(日成交量 × absorb_ratio)。
+	// Ladder 为 true 时是这条机会自己的限价以内、盘口上挂着多少件(见 Ladder)
 	Capacity float64
+	// Ladder 为 true 说明这是一份按价排好的挂单簿,吃单的机会都从最优价往下吃。
+	//
+	// 这时各条机会的 Capacity 本来就不同:同一个产地卖单簿往不同销地吃,销地买一越低,
+	// 限价越浅,走到的件数越少。以前按普通桶"取最保守的那个容量",走得深的好路线
+	// 被浅路线的件数卡住,组合页低估了一个数量级。
+	//
+	// 账本记的是这份盘口**已经被吃掉多少**,一条机会还能吃 Capacity − 已吃:
+	// 前面的仓位是从最优价往下吃的,吃掉的正是最便宜的那一段,后来者限价以内
+	// 剩下的就是这么多。浅的先分,深的还能吃到它限价以内剩下的;深的先分,
+	// 浅的限价以内早就被吃光,一件也分不到——两种顺序都不会超卖盘口
+	Ladder bool
 }
 
 // Candidate 是待分配的一条机会。扫描器和套利引擎各自转成这个形状。
@@ -127,14 +139,25 @@ func Build(candidates []Candidate, opt Options) Plan {
 	}
 
 	// 流动性账本。同一个桶被多条机会引用时取最保守的那个容量——
-	// 它们本该一致,不一致说明上游数据有出入,宁可少算
+	// 它们本该一致,不一致说明上游数据有出入,宁可少算。
+	// 挂单簿(Ladder)不走这本账,另记已经被吃掉多少(见 Pool.Ladder)
 	remaining := map[string]float64{}
+	eaten := map[string]float64{}
 	for _, c := range candidates {
 		for _, p := range c.Pools {
+			if p.Ladder {
+				continue
+			}
 			if cur, ok := remaining[p.Key]; !ok || p.Capacity < cur {
 				remaining[p.Key] = p.Capacity
 			}
 		}
+	}
+	room := func(p Pool) float64 {
+		if p.Ladder {
+			return p.Capacity - eaten[p.Key]
+		}
+		return remaining[p.Key]
 	}
 
 	ranked := append([]Candidate(nil), candidates...)
@@ -157,7 +180,7 @@ func Build(candidates []Candidate, opt Options) Plan {
 		// 这条还能吃多少:受各个流动性桶的剩余量约束,取最紧的那个
 		capacity := math.Inf(1)
 		for _, p := range c.Pools {
-			capacity = math.Min(capacity, remaining[p.Key])
+			capacity = math.Min(capacity, room(p))
 		}
 		if math.IsInf(capacity, 1) || capacity < 1 {
 			if capacity < 1 {
@@ -188,7 +211,11 @@ func Build(candidates []Candidate, opt Options) Plan {
 		plan.Deployed += capital
 		plan.DailyProfit += profit
 		for _, p := range c.Pools {
-			remaining[p.Key] -= dailyQty
+			if p.Ladder {
+				eaten[p.Key] += dailyQty
+			} else {
+				remaining[p.Key] -= dailyQty
+			}
 		}
 
 		s := Slice{

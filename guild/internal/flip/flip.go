@@ -390,14 +390,18 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 		}
 		// 吃单腿按抓包阶梯算过容量的,盘口本身也是一份共享的量:从同一座城的
 		// 同一个卖单簿往三个方向吃,三条路线加起来也只有那么多件。和上面的成交量桶
-		// 分开记——那个是市场一天消化得了多少,这个是眼下实际挂着多少
+		// 分开记——那个是市场一天消化得了多少,这个是眼下实际挂着多少。
+		//
+		// 各条路线的 BuyDepthQty/SellDepthQty 是**各自限价以内**的件数,本来就不同
+		// (销地买一越低,产地那边能吃的限价越浅),所以按挂单簿记账(Ladder):
+		// 记这份盘口被前面的仓位吃掉了多少,不取各条里最小的那个容量
 		if r.BuyDepthQty > 0 {
 			pools = append(pools, portfolio.Pool{
-				Key: poolKey(r.ItemID, r.FromCity, r.Quality) + "|ask", Capacity: float64(r.BuyDepthQty)})
+				Key: poolKey(r.ItemID, r.FromCity, r.Quality) + "|ask", Capacity: float64(r.BuyDepthQty), Ladder: true})
 		}
 		if r.SellDepthQty > 0 {
 			pools = append(pools, portfolio.Pool{
-				Key: poolKey(r.ItemID, r.ToCity, r.Quality) + "|bid", Capacity: float64(r.SellDepthQty)})
+				Key: poolKey(r.ItemID, r.ToCity, r.Quality) + "|bid", Capacity: float64(r.SellDepthQty), Ladder: true})
 		}
 		pool = append(pool, portfolio.Candidate{
 			Key:         "arb:" + r.ItemID + "|" + r.FromCity + "->" + r.ToCity,

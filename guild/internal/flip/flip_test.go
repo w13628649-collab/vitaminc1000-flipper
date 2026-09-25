@@ -48,3 +48,38 @@ func TestPortfolio_同一盘口的深度池两条路线共用(t *testing.T) {
 		t.Fatalf("没有深度池时两条都该分到,得到 %+v", q.Slices)
 	}
 }
+
+// 审查探针:同一个 Lymhurst 卖单簿,往 Martlock 能走到 1105 件,往 Thetford 限价浅、
+// 只走到 105 件。深度池以前取最小容量,两条一起放进组合时深的那条只分到 105 件,
+// 组合页报 5,460/天,真实可做的约 57,460/天
+func TestPortfolio_深浅两条路线共用一个卖单簿时深的不被浅的卡住(t *testing.T) {
+	deep := arb.Route{ItemID: "T5_CLOTH", Quality: 1, FromCity: "Lymhurst", ToCity: "Martlock",
+		Mode: "taker-taker", Qty: 1105, CostPerUnit: 1100, ProfitPerUnit: 52, HoursPerTrip: 1,
+		SourceDaily: 6000, DestDaily: 6000, BuyDepthQty: 1105, DailyProfit: 57_460}
+	shallow := arb.Route{ItemID: "T5_CLOTH", Quality: 1, FromCity: "Lymhurst", ToCity: "Thetford",
+		Mode: "taker-taker", Qty: 105, CostPerUnit: 1010, ProfitPerUnit: 46, HoursPerTrip: 1,
+		SourceDaily: 6000, DestDaily: 6000, BuyDepthQty: 105, DailyProfit: 4_830}
+	plan := func(routes ...arb.Route) map[string]float64 {
+		s := &Service{Cfg: conf.Default()}
+		s.last.Store(&scan.Result{Routes: routes})
+		out := map[string]float64{}
+		for _, sl := range s.Portfolio(portfolio.DefaultOptions(10_000_000)).Slices {
+			out[sl.Key] += sl.DailyQty
+		}
+		return out
+	}
+	const kDeep, kShallow = "arb:T5_CLOTH|Lymhurst->Martlock", "arb:T5_CLOTH|Lymhurst->Thetford"
+
+	// 深的回报率高,先分:吃满自己限价以内的 1105 件;浅的限价以内的货已经被吃光
+	got := plan(deep, shallow)
+	if got[kDeep] != 1105 || got[kShallow] != 0 {
+		t.Fatalf("深的应分到 1105 件、浅的 0 件,得到 %v", got)
+	}
+	// 浅的回报率高时反过来:浅的吃最便宜的 105 件,深的吃它限价以内剩下的 1000 件,
+	// 合计正好是深的那条限价以内挂着的量,没有超卖
+	shallow.ProfitPerUnit = 80
+	got = plan(deep, shallow)
+	if got[kShallow] != 105 || got[kDeep] != 1000 {
+		t.Fatalf("浅的先分 105、深的分剩下的 1000,得到 %v", got)
+	}
+}
