@@ -107,8 +107,11 @@ POST /api/catalog/sync 重新同步物品目录
 - 扫描通知(只发给订了 `scan` 的连接):每次对外发布新的扫描结果(全量扫描、或抓包
   快速重算)之后推一条
   `{"type":"scan","evaluated_at":…,"started_at":…,"digest":"<hex>","opportunities":N,"routes":N,"full":bool}`。
-  `digest` 是机会 + 路线 + 拒绝统计的摘要(数据龄 `*_age_hours` 不算内容),和
-  `GET /api/scan` 里的 `digest` 是同一个值:相同就不用重拉。内容没变也照发。
+  `digest` 是 `GET /api/scan` **整份输出**的摘要,和那里的 `digest` 是同一个值:相同就不用
+  重拉。只剔掉换个时刻再评估就会自己变的几样:`evaluated_at`、所有 `*_age_hours`、
+  `coverage[].within_*` 分桶、`stale`/`stale_history`/`future_timestamp` 拒绝的 `detail` 文案。
+  所以覆盖率抓包列、`capture` 汇总和错误、被拒明细的来源、物品数和请求数单独变了也会换摘要;
+  每次全量 `started_at` 都换,摘要必变。内容没变也照发
   `full=true` 是 AODP 全量。订阅时如果已经发布过,立刻补发最近一条
 - 主题消息只扇给本实例的连接,不走 NATS(扫描是每个实例各跑各的)。
   背压和报价同一套:连接积压就丢、计进 `/api/stats` 的 `dropped`;

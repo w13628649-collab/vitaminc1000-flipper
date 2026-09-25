@@ -154,9 +154,9 @@ type Result struct {
 	Routes []arb.Route `json:"routes"`
 	// Capture 是抓包参与融合的汇总。capture.enabled 关着时是零值
 	Capture CaptureSummary `json:"capture"`
-	// Digest 是机会 + 路线 + 拒绝统计的摘要(见 Digest),对外发布时由 flip 填,
-	// 和 WS scan 通知里的 digest 是同一个值:界面拉完 /api/scan 记下它,
-	// 之后收到的通知摘要相同就不用重拉。没发布过的结果(测试里直接调 Run)为空
+	// Digest 是这份结果除 evaluated_at 和数据龄之外全部内容的摘要(见 Digest),
+	// 对外发布时由 flip 填,和 WS scan 通知里的 digest 是同一个值:界面拉完 /api/scan
+	// 记下它,之后收到的通知摘要相同就不用重拉。没发布过的结果(测试里直接调 Run)为空
 	Digest string `json:"digest,omitempty"`
 	// History 是这次顺带拉回来的成交历史,调用方可以存进库攒长历史。
 	History []aodp.HistorySeries `json:"-"`

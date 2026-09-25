@@ -89,13 +89,25 @@ func TestPublish_全量和快速重算都推且摘要只随内容变(t *testing.
 		t.Fatalf("内容变了摘要要变,得到 %+v", evs)
 	}
 
-	// 下一次全量:AODP 还是那些数、抓包也没变,full=true 但摘要不变
+	// 下一次全量:AODP 还是那些数、抓包也没变,机会和路线一模一样,但摘要照样变——
+	// started_at 换了。界面页脚的"上次全量"、AODP 覆盖率的新鲜度分桶都要跟着重画,
+	// 那几个分桶不进摘要(见 scan.Digest),只能靠全量换 started_at 带着刷新
 	if _, err := s.Scan(ctx); err != nil {
 		t.Fatal(err)
 	}
 	evs = rec.events(t)
-	if len(evs) != 4 || !evs[3].Full || evs[3].Digest != evs[2].Digest {
-		t.Fatalf("全量也推;内容和上一轮一样时摘要不变,得到 %+v", evs)
+	if len(evs) != 4 || !evs[3].Full || evs[3].Digest == evs[2].Digest || evs[3].Digest != s.LastScan().Digest ||
+		evs[3].StartedAt.Equal(evs[2].StartedAt) {
+		t.Fatalf("全量也推;started_at 换了,摘要要变,得到 %+v", evs)
+	}
+
+	// 全量之后什么都没变的重算:摘要回到稳定
+	if _, err := s.Reevaluate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	evs = rec.events(t)
+	if len(evs) != 5 || evs[4].Full || evs[4].Digest != evs[3].Digest {
+		t.Fatalf("全量之后内容没变的重算,摘要应和全量那次相同,得到 %+v", evs)
 	}
 }
 
