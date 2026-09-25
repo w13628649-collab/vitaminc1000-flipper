@@ -85,47 +85,85 @@
     <div id="calib"></div>
   </section>
 
-  <!-- ═══════════ 机会:同城 + 跨城 ═══════════ -->
+  <!-- ═══════════ 机会:同城 + 跨城 ═══════════
+       旧版 web 端价差扫描页的布局:先覆盖率(这份数据能不能信)、再控制条、再结果表、
+       最后是被过滤的候选和诊断。同城和跨城在同一张表里,它们争的是同一笔钱 -->
   <section class="view" id="v-ideas" hidden>
-    <div class="bar">
-      <div class="seg" id="kind-seg">
-        <button data-kind="all" aria-pressed="true">全部</button>
-        <button data-kind="flip">同城</button>
-        <button data-kind="arb">跨城</button>
+    <section class="lede" id="i-lede">
+      <h1>先看数据能不能信,再看能赚多少</h1>
+      <p>AODP 的价格靠玩家自愿上传——必须有人在游戏里翻到那一页市场,数据才会进库。亚服人少,
+         一条 15 小时前的完美价差没有意义。所以这里先给各城覆盖率;公会成员抓包传上来的挂单
+         会逐边盖掉 AODP 的价,还带着件数。</p>
+    </section>
+
+    <section class="coverage" id="i-coverage" hidden>
+      <div class="cov-head"><h2>各城数据覆盖率</h2><em id="i-cov-note"></em></div>
+      <div class="cov-grid" id="i-cov-grid"></div>
+      <div class="cov-legend" id="i-cov-legend"></div>
+    </section>
+
+    <div id="i-banners"></div>
+
+    <section class="controls">
+      <div class="ctrl"><label>玩法</label>
+        <div class="seg" id="kind-seg">
+          <button data-kind="all" aria-pressed="true">全部</button>
+          <button data-kind="flip">同城</button>
+          <button data-kind="arb">跨城</button>
+        </div>
       </div>
-      <label class="f">只看可信度
+      <div class="ctrl"><label for="i-city">城市</label>
+        <select id="i-city"><option value="">全部</option></select></div>
+      <div class="ctrl"><label for="i-conf">最低置信度</label>
         <select id="i-conf">
-          <option value="">全部</option><option value="high">高</option>
-          <option value="medium">中及以上</option>
-        </select>
-      </label>
-      <span class="sub" id="ideas-meta"></span>
+          <option value="">low = 全部</option>
+          <option value="medium">medium 以上</option>
+          <option value="high">仅 high</option>
+        </select></div>
+      <div class="ctrl"><label for="i-src">价格来源</label>
+        <select id="i-src" title="按两条腿实际用的价筛:用了抓包 = 至少一条腿的价是成员抓包抓到的">
+          <option value="">全部</option>
+          <option value="capture">用了抓包</option>
+          <option value="aodp">纯 AODP</option>
+        </select></div>
+      <div class="ctrl"><label for="i-age">新鲜度上限</label>
+        <select id="i-age" title="服务端扫描已经按 6 小时滤过,这里只能再收紧">
+          <option value="">6 小时(服务端)</option>
+          <option value="4">4 小时</option>
+          <option value="2">2 小时</option>
+          <option value="1">1 小时</option>
+        </select></div>
+      <div class="spacer"></div>
+      <button class="act" id="i-rescan">重新扫描</button>
+    </section>
+
+    <div class="empty" id="i-empty">
+      <p>正在读取扫描结果…</p>
     </div>
-    <p class="note">
-      点开任意一行看<b>四种执行方式</b>的报价。秒买秒卖只收 4% 市场税,没有挂单费;
-      挂买挂卖价格最好但摩擦 9%,而且两头都要等成交。哪种划算取决于盘口宽度。
-    </p>
-    <table>
-      <thead><tr>
-        <th class="l s" data-k="item_name">物品</th>
-        <th class="l">路线</th>
-        <th class="l">执行</th>
-        <th class="s" data-k="buy_price">买</th>
-        <th class="s" data-k="sell_price">卖</th>
-        <th class="s" data-k="profit_per_unit">单件</th>
-        <th class="s" data-k="margin">毛利</th>
-        <th class="s" data-k="qty">可吃量</th>
-        <th class="s" data-k="capital_used">占用</th>
-        <th class="s" data-k="daily_profit" data-dir="desc">日收益</th>
-        <th class="s" data-k="z_score">z</th>
-        <th class="s" data-k="volatility">波动</th>
-        <th class="s" data-k="max_age_hours">年龄</th>
-        <th class="l">可信</th>
-      </tr></thead>
-      <tbody id="ideas-rows"></tbody>
-    </table>
-    <div class="empty" id="ideas-empty">还没扫过。</div>
-    <p class="note" id="rejects"></p>
+
+    <div id="i-results" hidden>
+      <div class="count" id="i-count"></div>
+      <p class="note">
+        点开任意一行看<b>四种执行方式</b>的报价和两边盘口。真实盈亏平衡价差:秒买秒卖
+        <b id="be-tt">4.17%</b>、秒买挂卖 <b id="be-tm">6.95%</b>、挂买秒卖 <b id="be-mt">6.77%</b>、
+        挂买挂卖 <b id="be-mm">9.63%</b>——比费率直接相加(4% / 6.5% / 9%)高,
+        因为买侧的费乘在买价上、卖侧的费乘在卖价上。挂单腿还要等成交,创建费下单就扣、不成交不退。
+      </p>
+      <div class="tablewrap">
+        <table class="ideas">
+          <thead><tr id="i-head"></tr></thead>
+          <tbody id="ideas-rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="ideas-empty" hidden>没有机会通过当前筛选。</div>
+      <details class="rejects" id="i-rejects">
+        <summary>被过滤的候选 <em id="i-reject-total"></em></summary>
+        <div class="statgrid" id="i-reject-grid"></div>
+        <div id="i-reject-list"></div>
+        <div id="i-diagnosis"></div>
+      </details>
+    </div>
+    <footer class="foot" id="i-foot"></footer>
   </section>
 
   <!-- ═══════════ 查价 ═══════════

@@ -409,6 +409,142 @@ table.ladder tr.stale td{opacity:.45}
 .tradechart .ax{font-size:10.5px; fill:var(--ink-soft)}
 .void{color:var(--ink-soft); font-size:12px; padding:10px 0; text-align:center}
 
+/* ══ 覆盖率:这个工具最先该回答的问题不是"赚多少",是"这份数据能不能信" ══
+   旧版价差扫描页的三段条。机会页和总览共用,类名都带 cov- 前缀:旧版的 .bar/.dot
+   和这边的工具条、顶栏状态点同名不同义 */
+.coverage{padding:22px 0 24px; border-bottom:1px solid var(--rule)}
+.cov-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; gap:16px; flex-wrap:wrap}
+.cov-head h2{font-size:15px; font-weight:600; margin:0}
+.cov-head em{font-style:normal; font-size:12px; color:var(--ink-soft)}
+.cov-grid{display:grid; gap:7px}
+.cov-row{display:grid; grid-template-columns:104px 1fr 190px; gap:14px; align-items:center}
+.cov-city{display:flex; align-items:center; gap:7px; font-weight:600; font-size:13px}
+.cov-bars{display:grid; gap:3px}
+.cov-bar{height:15px; background:var(--surface-2); border-radius:var(--r); overflow:hidden; display:flex}
+.cov-bar.cap{height:7px}
+.cov-bar i{display:block; height:100%; transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.cov-bar .fresh{background:var(--bronze)}
+.cov-bar .usable{background:var(--c); opacity:.42}
+.cov-bar .aged{background:var(--ink-soft); opacity:.18}
+.cov-bar .capused{background:var(--gain)}
+.cov-bar .caponly{background:var(--gain); opacity:.3}
+.cov-num{font-size:12px; color:var(--ink-mid); text-align:right; line-height:1.3}
+.cov-num b{color:var(--ink); font-weight:600}
+.cov-num span{display:block; font-size:11px; color:var(--ink-soft)}
+.cov-legend{display:flex; gap:6px 16px; flex-wrap:wrap; margin-top:12px; font-size:11.5px; color:var(--ink-soft)}
+.cov-legend span{display:flex; align-items:center; gap:6px}
+.cov-legend b{font-weight:500}
+.swatch{width:10px; height:10px; border-radius:1px; flex:none}
+.swatch-city{background:linear-gradient(90deg,
+  var(--thetford) 0 33%, var(--lymhurst) 33% 66%, var(--bridgewatch) 66%); opacity:.42}
+
+/* 通用的"数字 + 小字"格子:被过滤原因、抓包汇总都用它 */
+.statgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:1px;
+  margin-top:14px; background:var(--rule-soft); border:1px solid var(--rule-soft)}
+.statgrid>div,.statgrid>button{background:var(--paper); padding:10px 12px; text-align:left;
+  font:inherit; color:inherit; border:0; border-radius:0}
+.statgrid>button{cursor:pointer}
+.statgrid>button:hover{background:var(--surface)}
+.statgrid>button[aria-pressed=true]{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--bronze)}
+.statgrid b{display:block; font-size:18px; font-weight:700; line-height:1.1}
+.statgrid span{font-size:11.5px; color:var(--ink-soft)}
+.statgrid.small b{font-size:15px}
+
+/* ══ 机会页 ═══════════════════════════════════════════════
+   旧版价差扫描页的样式。和别的页同名不同义的(.empty/.note/.age/.src/.city/
+   全局 thead th/tbody td)一律挂在 #v-ideas 下面,不外溢到总览、查价 */
+#v-ideas .lede{padding:26px 0 8px; max-width:66ch}
+#v-ideas .lede h1{font-size:26px; font-weight:700; letter-spacing:-.025em; margin:0 0 8px; line-height:1.15}
+#v-ideas .lede p{margin:0; color:var(--ink-mid)}
+#v-ideas .controls{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:flex-end;
+  padding:16px 0; border-bottom:1px solid var(--rule)}
+#v-ideas .ctrl{display:flex; flex-direction:column; gap:4px}
+#v-ideas .ctrl label{font-size:11px; color:var(--ink-soft); font-weight:500}
+#v-ideas .ctrl select{min-width:96px}
+#v-ideas .spacer{margin-left:auto}
+#v-ideas .empty{padding:26px 0 40px; max-width:62ch; color:inherit}
+#v-ideas .empty h2{font-size:20px; font-weight:700; margin:0 0 8px; letter-spacing:-.02em}
+#v-ideas .empty p{margin:0 0 18px; color:var(--ink-mid)}
+#v-ideas .empty button{padding:10px 22px; font-size:14px}
+#v-ideas .empty .empty-sub{margin:11px 0 0; font-size:12.5px; color:var(--ink-soft)}
+#v-ideas .count{padding:16px 0 0; font-size:13px; color:var(--ink-mid)}
+#v-ideas .count b{color:var(--ink); font-weight:600; font-size:15px}
+#v-ideas .count .capn{color:var(--gain); font-weight:600}
+.tablewrap{overflow-x:auto}
+
+table.ideas th{cursor:pointer; user-select:none}
+table.ideas th:hover{color:var(--ink)}
+table.ideas th[aria-sort]{color:var(--bronze)}
+table.ideas th .arrow{opacity:.55; font-size:10px; margin-left:3px}
+table.ideas th,table.ideas td{padding-left:8px; padding-right:8px}
+/* 数据越旧,这一行就越褪色——旧数据看起来就该旧 */
+table.ideas>tbody>tr{--fade:0}
+table.ideas>tbody>tr>td{color:color-mix(in oklab, var(--ink), var(--paper) calc(var(--fade) * 46%))}
+table.ideas>tbody>tr.main>td{border-bottom:0; padding-bottom:4px}
+table.ideas>tbody>tr.main.last>td{border-bottom:1px solid var(--rule-soft); padding-bottom:8px}
+table.ideas>tbody>tr.rnote>td{border-bottom:0; padding:0 8px 4px; white-space:normal; text-align:left;
+  font-size:11px; line-height:1.4}
+table.ideas>tbody>tr.rnote.last>td{border-bottom:1px solid var(--rule-soft); padding-bottom:8px}
+table.ideas>tbody>tr.rnote:hover{background:transparent}
+table.ideas>tbody>tr.rnote .warn{color:var(--warn)}
+table.ideas>tbody>tr.rnote .hint{color:var(--ink-soft)}
+/* confidence=low 的行(贴着某道阈值才留在榜上)左侧一条红线,别让人只盯着绿色的日收益 */
+table.ideas>tbody>tr.edge>td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+#v-ideas .item{gap:9px; min-width:0}
+#v-ideas .item img{width:30px; height:30px}
+#v-ideas .item-name{font-weight:600; display:flex; align-items:center; gap:4px; max-width:230px}
+#v-ideas .item-name a{overflow:hidden; text-overflow:ellipsis}
+#v-ideas .item-id{font-size:10.5px; color:var(--ink-soft); font-weight:400; display:block;
+  max-width:230px; overflow:hidden; text-overflow:ellipsis}
+#v-ideas .src{font-size:10px; margin-left:2px; padding:1px 4px; vertical-align:0}
+#v-ideas .src.half{background:var(--bronze)}
+#v-ideas .routecell{display:flex; flex-direction:column; gap:3px; align-items:flex-start}
+#v-ideas .routecell .tags{display:flex; gap:4px}
+.quote{font-weight:600}
+.quote i{font-style:normal; color:var(--ink-soft); font-weight:400; padding:0 3px}
+.profit{font-weight:700; color:color-mix(in oklab, var(--gain), var(--paper) calc(var(--fade, 0) * 46%))}
+.roi,.subln{display:block; font-size:11px; color:var(--ink-soft); font-weight:500}
+.agecell{display:flex; align-items:center; gap:6px; justify-content:flex-end; color:var(--ink-mid)}
+.pip{width:7px; height:7px; border-radius:50%; flex:none}
+.pip.high{background:var(--gain)} .pip.medium{background:var(--bronze-lift)} .pip.low{background:var(--warn)}
+.legtxt .cliff{color:var(--warn)}
+.legtxt i{font-style:normal; color:var(--ink-soft); padding:0 2px}
+.nodata{opacity:.35}
+.tag.risk{color:var(--warn)}
+td.flash-up .profit,td.flash-down .profit{border-radius:var(--r)}
+
+/* 展开行:四种执行方式 + 两边盘口 */
+.detailbox{padding:12px 14px 14px}
+.detailbox h4{font-size:12px; font-weight:600; margin:14px 0 4px; color:var(--ink)}
+.detailbox h4:first-child{margin-top:0}
+.detailbox h4 em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:11px; margin-left:6px}
+tr.detail tr.blocked td{opacity:.5}
+tr.detail tr.blocked td.why{opacity:1; color:var(--warn)}
+tr.detail td.why{white-space:normal; min-width:220px}
+.facts2{display:flex; flex-wrap:wrap; gap:4px 18px; font-size:12px; color:var(--ink-mid); margin-top:6px}
+.facts2 b{color:var(--ink); font-weight:600}
+.fillpos{display:flex; align-items:center; gap:12px; margin-top:6px; font-size:12px; color:var(--ink-mid)}
+.fp-track{position:relative; width:220px; height:8px; flex:none; border-radius:var(--r);
+  background:linear-gradient(90deg, var(--gain), var(--surface-2) 50%, var(--warn)); opacity:.75}
+.fp-track i{position:absolute; top:-3px; width:3px; height:14px; margin-left:-1px; background:var(--ink); border-radius:1px}
+.detailbox .note{padding:10px 0 0}
+
+/* 被过滤的候选 */
+#v-ideas .rejects{margin-top:28px; border-top:1px solid var(--rule); padding-top:18px}
+#v-ideas .rejects summary{cursor:pointer; font-weight:600; font-size:13px; list-style:none;
+  display:flex; gap:10px; align-items:baseline}
+#v-ideas .rejects summary::-webkit-details-marker{display:none}
+#v-ideas .rejects summary::before{content:"▸"; color:var(--bronze); font-size:11px}
+#v-ideas .rejects[open] summary::before{content:"▾"}
+#v-ideas .rejects summary em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:12px}
+#v-ideas .diagnosis{margin:16px 0 0; max-width:76ch}
+.rlist{margin-top:10px; max-height:420px; overflow:auto; border:1px solid var(--rule-soft)}
+.rlist table{margin:0}
+.rlist td{white-space:normal}
+.rlist td.l.d{min-width:260px; color:var(--ink-mid); font-size:12px}
+.foot{padding-top:26px; font-size:11.5px; color:var(--ink-soft); max-width:86ch}
+.foot p{margin:0 0 5px}
+
 /* 媒体查询一律写在基础规则之后。旧版把 1180 那条写在 .bookside 前面,
    窄屏下 position/max-height 被后面的基础规则盖回去了 */
 @media (max-width:1180px){
@@ -418,7 +554,13 @@ table.ladder tr.stale td{opacity:.45}
   .bookside .ladders{grid-template-columns:1fr 1fr}
   .split{grid-template-columns:1fr}
 }
+@media (max-width:1280px){
+  table.ideas .hide-md{display:none}
+}
 @media (max-width:920px){
+  table.ideas .hide-sm{display:none}
+  .cov-row{grid-template-columns:88px 1fr 130px; gap:10px}
+  #v-ideas .lede h1{font-size:22px}
   .lookup-body,.lookup-body.with-book{grid-template-columns:1fr; gap:16px}
   .itemlist{border-right:none; border-bottom:1px solid var(--rule); padding-right:0; min-height:0}
   #list{max-height:300px}
