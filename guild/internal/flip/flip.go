@@ -33,13 +33,18 @@ type Service struct {
 	// Conflicts 是 ingest 那边的串城记录,扫描读簿时对最近串过城的盘口
 	// 暂停幽灵剔除。可以不设:不设就不做这层处理
 	Conflicts ConflictSource
+	// Events 收"扫描结果重新发布了"的通知(见 events.go),推给订阅了 scan 的
+	// WS 连接。服务端 main 里设成 hub;不设就不推
+	Events TopicPublisher
 
 	cat atomic.Pointer[catalog.Catalog]
 	// last 是对外的扫描结果,整份原子替换,发布之后不再改。
-	// snap 是它所用的 AODP 快照,定时重算拿它配最新抓包重跑,不打 AODP
-	last     atomic.Pointer[scan.Result]
-	snap     atomic.Pointer[scan.Snapshot]
-	scanning atomic.Bool
+	// snap 是它所用的 AODP 快照,定时重算拿它配最新抓包重跑,不打 AODP。
+	// 换 last 一律走 publish:摘要和 WS 通知跟着一起发
+	last      atomic.Pointer[scan.Result]
+	lastEvent atomic.Pointer[ScanEvent]
+	snap      atomic.Pointer[scan.Snapshot]
+	scanning  atomic.Bool
 	// evalMu 串起"换快照 → 评估 → 发布结果"这一整段。全量扫描和定时重算都会
 	// 发布结果,不串起来的话,一轮拿旧快照、算得慢的重算会在全量之后才发布,
 	// 把新结果盖回旧的。AODP 拉取在锁外,锁里只有读库和内存计算
@@ -125,7 +130,7 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	s.evalMu.Lock()
 	s.snap.Store(snap)
 	res := scan.EvaluateSnapshot(ctx, snap, s.Cfg, cat, books, time.Now().UTC())
-	s.last.Store(res)
+	s.publish(res, true)
 	s.evalMu.Unlock()
 
 	s.writeHistory(ctx, history)

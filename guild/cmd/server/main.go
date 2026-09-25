@@ -108,6 +108,9 @@ func main() {
 	flipper := flip.New(st, cfg)
 	// 扫描读簿要知道哪些盘口最近串过城:那些盘口的"最近一眼"不可信,暂停幽灵剔除
 	flipper.Conflicts = ing
+	// 每次发布扫描结果(全量或快速重算)都推一条 scan 通知给订阅了的 WS 连接。
+	// 直接给本实例的 hub,不走 NATS:扫描是每个实例各跑各的
+	flipper.Events = h
 	// 目录拉不动不该拦住服务端启动——行情中转本身不依赖它
 	if err := flipper.LoadCatalog(ctx); err != nil {
 		slog.Warn("载入物品目录失败,倒爷相关接口会返回 503", "err", err)

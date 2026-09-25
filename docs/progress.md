@@ -98,6 +98,22 @@ GET  /api/coverage     数据覆盖情况
 POST /api/catalog/sync 重新同步物品目录
 ```
 
+`/ws` 的协议:
+
+- 客户端 → 服务端:`{"op":"sub"|"unsub","keys":[...],"topics":[...]}`。`keys` 按盘口
+  (`item|city|quality|side`)订报价;`topics` 按主题订状态通知,目前只有 `"scan"`。
+  两者可以写在同一条里,不认识的主题忽略。老客户端只发 `keys`,行为不变
+- 报价消息 `{k,p,d,n,t}`,没有 `type` 字段
+- 扫描通知(只发给订了 `scan` 的连接):每次对外发布新的扫描结果(全量扫描、或抓包
+  快速重算)之后推一条
+  `{"type":"scan","evaluated_at":…,"started_at":…,"digest":"<hex>","opportunities":N,"routes":N,"full":bool}`。
+  `digest` 是机会 + 路线 + 拒绝统计的摘要(数据龄 `*_age_hours` 不算内容),和
+  `GET /api/scan` 里的 `digest` 是同一个值:相同就不用重拉。内容没变也照发。
+  `full=true` 是 AODP 全量。订阅时如果已经发布过,立刻补发最近一条
+- 主题消息只扇给本实例的连接,不走 NATS(扫描是每个实例各跑各的)。
+  背压和报价同一套:连接积压就丢、计进 `/api/stats` 的 `dropped`;
+  `/api/stats` 的 `topic_subscribers.scan` 是订阅数,`last_scan_event` 是最近一条通知
+
 重启:
 
 ```bash

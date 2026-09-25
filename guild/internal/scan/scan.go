@@ -154,6 +154,10 @@ type Result struct {
 	Routes []arb.Route `json:"routes"`
 	// Capture 是抓包参与融合的汇总。capture.enabled 关着时是零值
 	Capture CaptureSummary `json:"capture"`
+	// Digest 是机会 + 路线 + 拒绝统计的摘要(见 Digest),对外发布时由 flip 填,
+	// 和 WS scan 通知里的 digest 是同一个值:界面拉完 /api/scan 记下它,
+	// 之后收到的通知摘要相同就不用重拉。没发布过的结果(测试里直接调 Run)为空
+	Digest string `json:"digest,omitempty"`
 	// History 是这次顺带拉回来的成交历史,调用方可以存进库攒长历史。
 	History []aodp.HistorySeries `json:"-"`
 }
@@ -198,9 +202,23 @@ func findRoutes(prices []aodp.PriceRecord, stats map[histagg.QualityKey]histagg.
 		byItem[k] = append(byItem[k], m)
 	}
 
+	// 按物品、品质的固定顺序配对。以前直接遍历 map,日收益并列的两条路线
+	// 每次重算都可能换位置:界面上的行无故跳动,WS 通知的摘要也跟着乱变
+	groups := make([]group, 0, len(byItem))
+	for k := range byItem {
+		groups = append(groups, k)
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		if groups[i].itemID != groups[j].itemID {
+			return groups[i].itemID < groups[j].itemID
+		}
+		return groups[i].quality < groups[j].quality
+	})
+
 	opt := arb.DefaultOptions(cfg)
 	var out []arb.Route
-	for k, markets := range byItem {
+	for _, k := range groups {
+		markets := byItem[k]
 		if len(markets) < 2 {
 			continue // 只有一个城市有数据,没得比
 		}

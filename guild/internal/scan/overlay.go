@@ -253,7 +253,9 @@ func MergeSide(aodpPx int64, aodpAt aodp.Stamp, cs CapturedSide, cfg conf.Config
 	// 更旧的档可能早就没了。最优档本身都太旧的话,深度整个不参与判定
 	cutoff := now.Add(-cfg.DepthWindow())
 	if seen.Before(cutoff) {
-		side.Note = fmt.Sprintf("深度快照 %.1fh 前,未参与判定", now.Sub(seen).Hours())
+		// 文本里不写"x.xh 前":那个数随 now 走,每隔几分钟就变,WS 通知的摘要
+		// (scan.Digest)会跟着变、界面白白重拉。具体多旧看 age_hours
+		side.Note = fmt.Sprintf("深度快照超过 %gh 可信窗口,未参与判定", cfg.Capture.DepthMaxHours)
 	} else {
 		var lv []depth.Level
 		for i, l := range cs.Levels {

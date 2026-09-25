@@ -203,8 +203,10 @@ func TestOverlay_最优档超出深度窗口只用价不用深度(t *testing.T) 
 	if a.Source != screen.SourceCapture || a.Depth != nil || a.Captured() || a.Levels != nil {
 		t.Fatalf("深度快照 3h 前,不该参与判定,得到 %+v", a)
 	}
-	if !strings.Contains(a.Note, "3.0h") {
-		t.Fatalf("Note 应说明深度快照多旧,得到 %q", a.Note)
+	// 多旧看 age_hours;Note 只说超过了多宽的窗口——文本里嵌一个随 now 走的数,
+	// 扫描结果的摘要会每隔几分钟变一次
+	if math.Abs(a.AgeHours-3) > 1e-9 || !strings.Contains(a.Note, "2h") || strings.Contains(a.Note, "3.0h") {
+		t.Fatalf("age_hours 应为 3、Note 应说明超过 2h 窗口且不嵌数据龄,得到 %v / %q", a.AgeHours, a.Note)
 	}
 	if a.Alt != nil {
 		t.Fatalf("AODP 这边没价,不该有 alt,得到 %+v", a.Alt)

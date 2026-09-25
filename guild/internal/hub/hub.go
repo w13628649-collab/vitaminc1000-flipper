@@ -39,7 +39,10 @@ type Client struct {
 	closed    chan struct{}
 	closeOnce sync.Once
 	subs      map[string]struct{}
-	mu        sync.RWMutex
+	// topics 是按主题订阅的那部分(见 topic.go),和按盘口 key 订阅的 subs 分开:
+	// 两者的消息形状不同,老客户端只订 key,永远收不到主题消息
+	topics map[string]struct{}
+	mu     sync.RWMutex
 }
 
 func NewClient(buffer int) *Client {
@@ -47,6 +50,7 @@ func NewClient(buffer int) *Client {
 		send:   make(chan []byte, buffer),
 		closed: make(chan struct{}),
 		subs:   make(map[string]struct{}),
+		topics: make(map[string]struct{}),
 	}
 }
 
@@ -85,14 +89,17 @@ type Hub struct {
 	// lastAt 挡住乱序:多实例下晚发生的消息可能先到,
 	// 不挡的话界面会停在旧值上。单实例也不亏,能挡住重试导致的重复。
 	lastAt map[string]time.Time
+	// retained 是每个主题最近发布的那一条,新订阅者一订阅就先收到它(见 topic.go)
+	retained map[string][]byte
 
-	Dropped uint64 // 因客户端积压被丢弃的消息数,接监控用
+	Dropped uint64 // 因客户端积压被丢弃的消息数,接监控用。报价和主题消息都算在这里
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients: make(map[*Client]struct{}),
-		lastAt:  make(map[string]time.Time),
+		clients:  make(map[*Client]struct{}),
+		lastAt:   make(map[string]time.Time),
+		retained: make(map[string][]byte),
 	}
 }
 

@@ -46,7 +46,7 @@ func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 	res.Capture.ExtraPending = len(snap.PendingExtras(captured, s.Cfg, cat))
 	res.Capture.AddError(listErr)
 	res.Capture.AddError(fillErr)
-	s.last.Store(res)
+	s.publish(res, false)
 	return res, nil
 }
 

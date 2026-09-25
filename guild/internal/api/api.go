@@ -185,15 +185,27 @@ func (s *Server) handleQuotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{
+	out := map[string]any{
 		"clients": s.Hub.ClientCount(),
 		"dropped": s.Hub.DroppedCount(), // 不能直接读字段,Fanout 在并发改它
-	})
+		// 排查"界面收不到扫描推送":订阅数为 0 说明前端没发 topics
+		"topic_subscribers": map[string]int{hub.TopicScan: s.Hub.TopicSubscribers(hub.TopicScan)},
+	}
+	if s.Flip != nil {
+		if ev := s.Flip.LastScanEvent(); ev != nil {
+			out["last_scan_event"] = ev
+		}
+	}
+	writeJSON(w, out)
 }
 
+// wsCommand 是客户端发来的订阅指令。keys 按盘口订报价,topics 按主题订状态通知
+// (目前只有 "scan",见 hub/topic.go),两者可以写在同一条里。
+// 老客户端只发 keys,topics 缺省就是空,行为和以前一样
 type wsCommand struct {
-	Op   string   `json:"op"`
-	Keys []string `json:"keys"`
+	Op     string   `json:"op"`
+	Keys   []string `json:"keys"`
+	Topics []string `json:"topics,omitempty"`
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -227,8 +239,13 @@ func (s *Server) wsReader(conn *websocket.Conn, client *hub.Client) {
 		switch cmd.Op {
 		case "sub":
 			client.Subscribe(cmd.Keys)
+			// 订上的主题如果已经发布过,立刻补发最近一条
+			if got := s.Hub.SubscribeTopics(client, cmd.Topics); len(got) < len(cmd.Topics) {
+				slog.Debug("WS 订阅里有不认识的主题", "topics", cmd.Topics)
+			}
 		case "unsub":
 			client.Unsubscribe(cmd.Keys)
+			client.UnsubscribeTopics(cmd.Topics)
 		default:
 			slog.Debug("未知 WS 指令", "op", cmd.Op)
 		}
