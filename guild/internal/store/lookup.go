@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"albion-guild/internal/book"
 	"albion-guild/internal/model"
 )
 
@@ -20,17 +21,13 @@ const itemOrdersCap = 20000
 
 // LiveOrder 是一张活跃挂单。**不按价位聚合**:判"这张单是不是上一轮
 // 浏览留下来的"要看每张单自己的 last_seen,聚合以后就分不开了。
-type LiveOrder struct {
-	City      string
-	Quality   int
-	Side      model.Side
-	Price     int64
-	Amount    int64
-	FirstSeen time.Time
-	LastSeen  time.Time
-}
+// 就是 book.Order:读出来直接喂给 book.Build,不用再转一道形状。
+type LiveOrder = book.Order
 
 // ItemOrders 读一个物品在所有城市、所有品质、两个方向上 since 之后还看得到的挂单。
+// Page 不填:调用方拿到的就是这个物品的全部单,用 book.WithPages 数,口径和
+// BookOrders 在 SQL 里数的一样。过滤条件(amount > 0、unit_price > 0)也和它一样,
+// 查价页和扫描看到的才是同一批单。
 //
 // 走 idx_live_book 的 item_id 前缀;first_seen 不在索引的 INCLUDE 里要回表,
 // 单个物品几百到几千行,可以接受。
@@ -38,7 +35,7 @@ func (s *Store) ItemOrders(ctx context.Context, itemID string, since time.Time) 
 	rows, err := s.pool.Query(ctx, `
 		SELECT location_id, quality, side, unit_price, amount, first_seen, last_seen
 		FROM market_order_live
-		WHERE item_id = $1 AND last_seen > $2 AND amount > 0
+		WHERE item_id = $1 AND last_seen > $2 AND amount > 0 AND unit_price > 0
 		ORDER BY location_id, quality, side, unit_price
 		LIMIT $3`, itemID, since, itemOrdersCap)
 	if err != nil {
@@ -48,7 +45,7 @@ func (s *Store) ItemOrders(ctx context.Context, itemID string, since time.Time) 
 
 	var out []LiveOrder
 	for rows.Next() {
-		var o LiveOrder
+		o := LiveOrder{ItemID: itemID}
 		var quality, side int16
 		var amount int32
 		if err := rows.Scan(&o.City, &quality, &side, &o.Price, &amount,

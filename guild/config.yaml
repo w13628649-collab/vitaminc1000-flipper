@@ -41,8 +41,8 @@ filters:
 capture:
   max_hours: 0            # 扫描读抓包的窗口;0 = 跟 freshness.max_hours 一致
   depth_max_hours: 2.0    # 深度只信这么近的档,更旧的不参与判据
-  snapshot_slack_seconds: 120   # 多宽算"同一眼";设成 ≥ 窗口 = 关掉幽灵单剔除
-  prefer_slack_minutes: 10      # 抓包比 AODP 旧不超过这么多,仍用抓包
+  snapshot_slack_seconds: 120   # 多宽算"同一眼";扫描、WS 报价、查价页共用。设成 ≥ 窗口 = 关掉残单剔除
+  prefer_slack_minutes: 10      # 抓包比 AODP 旧不超过这么多,仍用抓包;扫描和查价页共用
   book_levels: 128        # 每个盘口最多读多少档
   max_extra_items: 300    # 配置清单外、抓包窗口里有挂单的物品最多并进扫描多少个(按件数截断);0 = 不并入
   reeval_seconds: 60      # 两次全量扫描之间,多久用缓存的 AODP 快照 + 最新抓包重算一次;不打 AODP。0 = 关闭

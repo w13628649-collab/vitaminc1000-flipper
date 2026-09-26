@@ -97,8 +97,17 @@ type Capture struct {
 	// DepthMaxHours 是深度的可信窗口。幽灵单规则只能验证"最近一眼"覆盖到的
 	// 价段,更旧的档可能早就没了,不拿来做深度判据
 	DepthMaxHours float64 `yaml:"depth_max_hours"`
-	// SnapshotSlackSeconds 是多宽的时间范围算"同一眼":要盖住翻页、客户端 3s 攒批、
-	// 服务端 2s flush。设成 ≥ 窗口就等于关掉幽灵单剔除,是规则前提不成立时的逃生口
+	// SnapshotSlackSeconds 是多宽的时间范围算"同一眼"(book.Build 的最近一轮)。
+	// 扫描、WS 报价和查价页共用这一个数。设成 ≥ 窗口就等于关掉残单剔除,
+	// 是规则前提不成立时的逃生口。
+	//
+	// 默认 120s,不是查价页以前的 5 分钟:
+	//   - 要盖住的只是一次响应里的时间差:客户端 3s 攒批、服务端 2s flush,加上同一页
+	//     几秒后被详情页又看一眼。实测 293 个盘口里 283 个所有单都在 1 分钟内,120s 留一倍余量
+	//   - 翻页翻得慢(第 2 页比第 1 页晚到超过 slack)已经由续页识别处理(第 1 页是满页
+	//     就整页保留),不用再靠放宽 slack 兜。以前扫描的 SQL 规则认不得续页,才会在这里出错
+	//   - 放到 5 分钟的代价:两眼隔 2~5 分钟时被并成一轮,中间被买走的最优单剔不掉,
+	//     机会页和 WS 报价会把它多报几分钟(审查 E 轮就是 125s 后的第二眼)
 	SnapshotSlackSeconds float64 `yaml:"snapshot_slack_seconds"`
 	// PreferSlackMinutes:抓包比 AODP 旧不超过这么多,仍然用抓包
 	PreferSlackMinutes float64 `yaml:"prefer_slack_minutes"`

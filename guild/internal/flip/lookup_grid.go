@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"albion-guild/internal/aodp"
+	"albion-guild/internal/book"
 	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
@@ -223,6 +224,9 @@ type gridInput struct {
 
 	DBHistory []store.HistoryRow
 	Orders    []store.LiveOrder
+	// Conflicted 是 Orders 里最近卷进过多开串城的盘口边,整理时暂停幽灵剔除(见 rounds)。
+	// nil = 没有串城
+	Conflicted map[model.QuoteKey]time.Time
 }
 
 type cellKey struct {
@@ -441,7 +445,8 @@ func buildGrid(in gridInput) *LookupGrid {
 	}
 	maxQ = clampQuality(maxQ)
 	var kept []store.LiveOrder
-	for _, o := range in.Orders {
+	// 页满没满要按整次响应数(跨品质),所以在按城市筛之前、对这个物品的全部单数
+	for _, o := range book.WithPages(in.Orders) {
 		if !wanted[o.City] {
 			out.Capture.OtherLocations[o.City]++
 			continue
@@ -456,9 +461,10 @@ func buildGrid(in gridInput) *LookupGrid {
 	}
 	out.Capture.Orders = len(kept)
 	books := map[bookKey]BookSide{}
-	resp := countResponses(in.Orders) // 跨品质数页,见 respKey
+	r := lookupRounds(in.Cfg, in.Conflicted)
 	for k, orders := range splitOrders(kept) {
-		books[k] = buildSide(orders, k.Side, now, lookupSlack, lookupNearPct, resp)
+		slack, _ := r.slackOf(k.quoteKey(in.Item.ItemID))
+		books[k] = buildSide(orders, k.Side, now, slack, in.Cfg.Filters.NearPct)
 	}
 
 	// ② AODP 当前价。每个 物品×城市×品质 都回一行,没数据是 0
@@ -572,13 +578,13 @@ func buildGrid(in gridInput) *LookupGrid {
 		CaptureWindowHours:   in.Window.Hours(),
 		MaxHours:             in.Cfg.Freshness.MaxHours,
 		HighConfidenceHours:  in.Cfg.Freshness.HighConfidenceHours,
-		NearPct:              lookupNearPct,
-		SnapshotSlackMinutes: lookupSlack.Minutes(),
-		PageSize:             lookupPageSize,
+		NearPct:              in.Cfg.Filters.NearPct,
+		SnapshotSlackMinutes: in.Cfg.SnapshotSlack().Minutes(),
+		PageSize:             book.PageSize,
 		Friction:             makerMaker.Friction(in.Cfg.Economics),
 		Breakeven:            makerMaker.Breakeven(in.Cfg.Economics),
 		MaxMargin:            in.Cfg.Filters.MaxMargin,
-		MinBidDepth:          lookupMinBidDepth,
+		MinBidDepth:          in.Cfg.Filters.MinBidDepth,
 		BaselineDays:         baseline,
 		HistoryDays:          long,
 	}
@@ -607,14 +613,16 @@ func (s *Service) LookupGrid(ctx context.Context, itemID string) (*LookupGrid, e
 		}
 	}
 	cities := lookupCities(s.Cfg.Cities)
-	window := s.lookupWindow()
+	// 窗口和扫描读抓包同一个,见 LookupBook
+	window := s.Cfg.CaptureWindow()
 	historyDays := s.Cfg.Sizing.HistoryDays
 	if historyDays <= 0 {
 		historyDays = 30
 	}
 
 	// 先读库:快,而且不受 AODP 排队的影响
-	orders, err := s.Store.ItemOrders(ctx, itemID, now.Add(-window))
+	since := now.Add(-window)
+	orders, err := s.Store.ItemOrders(ctx, itemID, since)
 	if err != nil {
 		return nil, fmt.Errorf("读抓包挂单: %w", err)
 	}
@@ -626,6 +634,7 @@ func (s *Service) LookupGrid(ctx context.Context, itemID string) (*LookupGrid, e
 	in := gridInput{
 		Item: item, Cities: cities, Now: now, Cfg: s.Cfg, Window: window,
 		DBHistory: dbHist, Orders: orders,
+		Conflicted: s.itemConflicts(itemID, orders, since),
 	}
 	key := itemID + "|" + strings.Join(cities, ",")
 	waitCtx, cancel := context.WithTimeout(ctx, lookupAODPWait)

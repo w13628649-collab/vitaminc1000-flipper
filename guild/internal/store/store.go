@@ -37,8 +37,8 @@ func (s *Store) Close() { s.pool.Close() }
 // Flush 把 ingest 一轮攒下的东西在**一个事务**里写完:状态变了的单
 // (按上报人分组)写 live 和 event 两张表,状态没变的单只推 last_seen。
 //
-// 为什么必须是一个事务:读簿(BookSides)按 last_seen 判断哪些单是"最近一眼"
-// 看到的。同一眼里变了的单走 upsert、没变的单走 touch,以前两路分开提交,
+// 为什么必须是一个事务:读簿(BookOrders / ItemOrders 读出来交给 book.Build)
+// 按 last_seen 判断哪些单是"最近一眼"看到的。同一眼里变了的单走 upsert、没变的单走 touch,以前两路分开提交,
 // 中间被读到的话,变了的那几张已经把 newest 推到这一眼,没变的还停在上一眼,
 // 幽灵规则会把段内这些真实挂单全判成已成交,盘口最优那几档凭空消失。
 // 合成一个事务后,READ COMMITTED 下读簿是单语句快照:要么看到整眼,要么一点都看不到。
@@ -198,9 +198,6 @@ type BookLevel struct {
 	Price  int64 `json:"price"`
 	Depth  int64 `json:"depth"`
 	Orders int32 `json:"orders"`
-	// Seen 是这一档里最近被看到的那张单的 last_seen。只有 BookSides 填;
-	// 不进 JSON,/api/book 的输出不变
-	Seen time.Time `json:"-"`
 }
 
 // Book 读某个盘口的挂单深度,价格从优到劣。
@@ -236,7 +233,8 @@ func (s *Store) Book(ctx context.Context, k model.QuoteKey, fresh time.Duration,
 
 // 批量最优价(WS 推送和 /api/quotes)不在这里:以前这里有一条只按
 // last_seen > now−fresh 过滤的 BestQuotes,没有幽灵剔除,已经被买走的最优单会一直
-// 挂到过期。现在由 flip.Service.BestQuotes 走 BookSides 只取第一档,和扫描同一口径。
+// 挂到过期。现在由 flip.Service.BestQuotes 读 BookOrders、经 book.Build 整理后取第一档,
+// 和扫描、查价页同一套残单规则。
 
 // ItemName 取中文名,没有就回落到英文名再回落到 ID。
 func (s *Store) ItemName(ctx context.Context, itemID string) (string, error) {

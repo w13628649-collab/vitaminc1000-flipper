@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"albion-guild/internal/book"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
 	"albion-guild/internal/model"
@@ -12,6 +13,23 @@ import (
 )
 
 var t0 = time.Date(2026, 9, 23, 14, 22, 0, 0, time.UTC)
+
+// 查价页和扫描是同一份口径,测试直接用默认配置里的 slack(120s)和近价比例
+var (
+	testSlack   = conf.Default().SnapshotSlack()
+	testNearPct = conf.Default().Filters.NearPct
+)
+
+// qualityOf 从 orders 里挑出一个品质的单,顺序不变。
+func qualityOf(orders []store.LiveOrder, q int) []store.LiveOrder {
+	var out []store.LiveOrder
+	for _, o := range orders {
+		if o.Quality == q {
+			out = append(out, o)
+		}
+	}
+	return out
+}
 
 func ord(city string, q int, side model.Side, price, amt int64, first, last time.Time) store.LiveOrder {
 	return store.LiveOrder{City: city, Quality: q, Side: side, Price: price, Amount: amt,
@@ -40,7 +58,7 @@ func TestBuildSideDropsGhostBetterThanLatestWorst(t *testing.T) {
 		sellAt(4920, 5, latest),
 		sellAt(5100, 7, latest),
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 4909 {
 		t.Fatalf("最优价应是最近一轮的 4909,得到 %d", s.Support.Best)
 	}
@@ -61,7 +79,7 @@ func TestBuildSideKeepsDeeperOrdersAsStaleWhenTruncated(t *testing.T) {
 	latest := t0.Add(-1 * time.Minute)
 	prev := t0.Add(-40 * time.Minute)
 	var orders []store.LiveOrder
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(100+i, 1, latest))
 	}
 	orders = append(orders,
@@ -69,7 +87,7 @@ func TestBuildSideKeepsDeeperOrdersAsStaleWhenTruncated(t *testing.T) {
 		sellAt(155, 4, prev), // 比这一页最差的 149 还远 → stale
 		sellAt(160, 6, prev),
 	)
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if !s.Truncated {
 		t.Fatal("50 单应判为截断")
 	}
@@ -108,10 +126,10 @@ func TestBuildSideKeepsEarlierPageWhenLatestIsContinuation(t *testing.T) {
 	p1 := t0.Add(-10 * time.Minute)
 	p2 := t0.Add(-10 * time.Second)
 	var orders []store.LiveOrder
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(100+i, 1, p1), sellAt(150+i, 2, p2))
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 100 || s.DroppedOrders != 0 || s.PrevPageOrders != 50 {
 		t.Fatalf("best=%d dropped=%d prev_page=%d", s.Support.Best, s.DroppedOrders, s.PrevPageOrders)
 	}
@@ -126,13 +144,13 @@ func TestBuildSideKeepsEarlierPageWhenLatestIsContinuation(t *testing.T) {
 
 	// 第 2 页不满 = 翻到底了,不算截断
 	orders = orders[:0]
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(100+i, 1, p1))
 	}
 	for i := int64(0); i < 30; i++ {
 		orders = append(orders, sellAt(150+i, 1, p2))
 	}
-	s = buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s = buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 100 || s.Orders != 80 || s.Truncated || s.PrevPageOrders != 50 {
 		t.Fatalf("best=%d orders=%d truncated=%v prev=%d", s.Support.Best, s.Orders, s.Truncated, s.PrevPageOrders)
 	}
@@ -144,10 +162,10 @@ func TestBuildSideContinuationStillDropsGhostsAheadOfEarlierPage(t *testing.T) {
 	p1 := t0.Add(-10 * time.Minute)
 	p2 := t0.Add(-10 * time.Second)
 	orders := []store.LiveOrder{sellAt(99, 7, ghost)}
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(100+i, 1, p1), sellAt(150+i, 1, p2))
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 100 || s.DroppedOrders != 1 || s.DroppedQty != 7 || s.Orders != 100 {
 		t.Fatalf("best=%d dropped=%d/%d orders=%d", s.Support.Best, s.DroppedOrders, s.DroppedQty, s.Orders)
 	}
@@ -162,10 +180,10 @@ func TestBuildSideFewOrdersAheadAreGhostsNotAPage(t *testing.T) {
 	for i := int64(0); i < 5; i++ {
 		orders = append(orders, sellAt(100+i, 1, prev)) // 两轮之间被买走的
 	}
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(105+i, 1, latest))
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 105 || s.DroppedOrders != 5 || s.PrevPageOrders != 0 {
 		t.Fatalf("best=%d dropped=%d prev=%d", s.Support.Best, s.DroppedOrders, s.PrevPageOrders)
 	}
@@ -177,17 +195,17 @@ func TestBuildSideOrderAtWorstOfFullPageIsStale(t *testing.T) {
 	latest := t0.Add(-time.Minute)
 	prev := t0.Add(-30 * time.Minute)
 	var orders []store.LiveOrder
-	for i := int64(0); i < lookupPageSize; i++ {
+	for i := int64(0); i < book.PageSize; i++ {
 		orders = append(orders, sellAt(100+i, 1, latest))
 	}
 	orders = append(orders, sellAt(149, 4, prev))
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if !s.Truncated || s.StaleOrders != 1 || s.DroppedOrders != 0 || s.QtyTotal != 50 {
 		t.Fatalf("truncated=%v stale=%d dropped=%d total=%d", s.Truncated, s.StaleOrders, s.DroppedOrders, s.QtyTotal)
 	}
 
 	orders = []store.LiveOrder{sellAt(100, 1, latest), sellAt(101, 1, latest), sellAt(101, 4, prev)}
-	s = buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s = buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.Truncated || s.StaleOrders != 0 || s.DroppedOrders != 1 {
 		t.Fatalf("truncated=%v stale=%d dropped=%d", s.Truncated, s.StaleOrders, s.DroppedOrders)
 	}
@@ -212,24 +230,19 @@ func TestBuildSideTruncationCountsPageAcrossQualities(t *testing.T) {
 	// 上一轮翻到第 2 页才看到的 q1 单
 	all = append(all, ord("Brecilien", 1, model.SideOffer, 120_000, 2, prev, prev))
 
-	var q1 []store.LiveOrder
-	for _, o := range all {
-		if o.Quality == 1 {
-			q1 = append(q1, o)
-		}
-	}
-	s := buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	// 页先跨品质数好(book.WithPages),再挑 q1
+	s := buildSide(qualityOf(book.WithPages(all), 1), model.SideOffer, t0, testSlack, testNearPct)
 	if !s.Truncated || s.StaleOrders != 1 || s.DroppedOrders != 0 || s.Orders != 4 {
 		t.Fatalf("跨品质满页: truncated=%v stale=%d dropped=%d orders=%d",
 			s.Truncated, s.StaleOrders, s.DroppedOrders, s.Orders)
 	}
 	// buildBook 自己按全部品质数页
-	b := buildBook("T5_SHOES_LEATHER_HELL@2", "Brecilien", 1, all, t0, 6*time.Hour, 0, conf.Default().Economics)
+	b := buildBook("T5_SHOES_LEATHER_HELL@2", "Brecilien", 1, all, t0, 0, conf.Default(), nil)
 	if !b.Sell.Truncated || b.Sell.StaleOrders != 1 {
 		t.Fatalf("buildBook: truncated=%v stale=%d", b.Sell.Truncated, b.Sell.StaleOrders)
 	}
 	// 只按 q1 自己数(旧行为)就是 4 张、没截断
-	s = buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s = buildSide(qualityOf(all, 1), model.SideOffer, t0, testSlack, testNearPct)
 	if s.Truncated || s.DroppedOrders != 1 {
 		t.Fatalf("单品质口径: truncated=%v dropped=%d", s.Truncated, s.DroppedOrders)
 	}
@@ -239,13 +252,7 @@ func TestBuildSideTruncationCountsPageAcrossQualities(t *testing.T) {
 	add(1, 4, 80_000)
 	add(2, 26, 81_000)
 	all = append(all, ord("Brecilien", 1, model.SideOffer, 120_000, 2, prev, prev))
-	q1 = q1[:0]
-	for _, o := range all {
-		if o.Quality == 1 {
-			q1 = append(q1, o)
-		}
-	}
-	s = buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	s = buildSide(qualityOf(book.WithPages(all), 1), model.SideOffer, t0, testSlack, testNearPct)
 	if s.Truncated || s.DroppedOrders != 1 || s.StaleOrders != 0 {
 		t.Fatalf("不满页: truncated=%v dropped=%d stale=%d", s.Truncated, s.DroppedOrders, s.StaleOrders)
 	}
@@ -266,13 +273,7 @@ func TestBuildSideContinuationAcrossQualities(t *testing.T) {
 	for i := int64(0); i < 20; i++ {
 		all = append(all, ord("Martlock", 1, model.SideOffer, 1100+i, 1, p2, p2))
 	}
-	var q1 []store.LiveOrder
-	for _, o := range all {
-		if o.Quality == 1 {
-			q1 = append(q1, o)
-		}
-	}
-	s := buildSide(q1, model.SideOffer, t0, lookupSlack, lookupNearPct, countResponses(all))
+	s := buildSide(qualityOf(book.WithPages(all), 1), model.SideOffer, t0, testSlack, testNearPct)
 	if s.Support.Best != 1000 || s.Orders != 30 || s.PrevPageOrders != 10 || s.DroppedOrders != 0 {
 		t.Fatalf("best=%d orders=%d prev=%d dropped=%d", s.Support.Best, s.Orders, s.PrevPageOrders, s.DroppedOrders)
 	}
@@ -285,7 +286,7 @@ func TestBuildSideDropsDeeperOrdersWhenNotTruncated(t *testing.T) {
 		sellAt(100, 1, latest), sellAt(101, 1, latest),
 		sellAt(500, 8, prev), // 整本簿都看到了,它不在里面
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	if s.DroppedOrders != 1 || s.StaleOrders != 0 || len(s.Levels) != 2 {
 		t.Fatalf("dropped=%d stale=%d levels=%d", s.DroppedOrders, s.StaleOrders, len(s.Levels))
 	}
@@ -301,7 +302,7 @@ func TestBuildSideBuyLadder(t *testing.T) {
 		buyAt(269, 4, seen),
 		buyAt(200, 30, seen),
 	}
-	s := buildSide(orders, model.SideRequest, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideRequest, t0, testSlack, testNearPct)
 	want := []int64{269, 266, 260, 200, 1}
 	if len(s.Levels) != len(want) {
 		t.Fatalf("levels=%d", len(s.Levels))
@@ -337,7 +338,7 @@ func TestBuildSideAges(t *testing.T) {
 		ord("Martlock", 1, model.SideOffer, 100, 1, t0.Add(-3*time.Hour), t0.Add(-2*time.Minute)),
 		ord("Martlock", 1, model.SideOffer, 100, 1, t0.Add(-1*time.Hour), t0.Add(-1*time.Minute)),
 	}
-	s := buildSide(orders, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(orders, model.SideOffer, t0, testSlack, testNearPct)
 	l := s.Levels[0]
 	if !near(l.StandingHours, 3) || !near(l.AgeHours, 1.0/60) {
 		t.Fatalf("standing=%v age=%v", l.StandingHours, l.AgeHours)
@@ -348,7 +349,7 @@ func TestBuildSideAges(t *testing.T) {
 }
 
 func TestBuildSideEmpty(t *testing.T) {
-	s := buildSide(nil, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	s := buildSide(nil, model.SideOffer, t0, testSlack, testNearPct)
 	if s.has() || s.Levels == nil || len(s.Levels) != 0 || s.AgeHours != nil {
 		t.Fatalf("空的一侧: %+v", s)
 	}
@@ -368,7 +369,7 @@ func TestBuildBookFiltersCellAndSummarizes(t *testing.T) {
 		ord("Thetford", 1, model.SideOffer, 10, 1, seen, seen),
 		ord("Martlock", 2, model.SideRequest, 999, 1, seen, seen),
 	}
-	b := buildBook("T4_METALBAR", "Martlock", 1, orders, t0, 6*time.Hour, 60, cfg.Economics)
+	b := buildBook("T4_METALBAR", "Martlock", 1, orders, t0, 60, cfg, nil)
 	if b.Sell.Support.Best != 339 || b.Buy.Support.Best != 286 {
 		t.Fatalf("sell=%d buy=%d", b.Sell.Support.Best, b.Buy.Support.Best)
 	}
@@ -390,13 +391,51 @@ func TestBuildBookFiltersCellAndSummarizes(t *testing.T) {
 	if !near(s.Breakeven, 1.025/0.935-1) {
 		t.Fatalf("breakeven=%v", s.Breakeven)
 	}
-	if b.WindowHours != 6 || b.PageSize != lookupPageSize {
+	// 口径参数全部来自 conf,和扫描同一份
+	if b.WindowHours != 6 || b.PageSize != book.PageSize || b.SnapshotSlackMinutes != 2 ||
+		b.NearPct != cfg.Filters.NearPct || b.MinBidDepth != cfg.Filters.MinBidDepth {
 		t.Fatalf("params %+v", b)
 	}
 
 	// 一侧没有 → 不算价差
-	b = buildBook("T4_METALBAR", "Martlock", 1, orders[:2], t0, 6*time.Hour, 0, cfg.Economics)
+	b = buildBook("T4_METALBAR", "Martlock", 1, orders[:2], t0, 0, cfg, nil)
 	if b.Summary.Margin != nil || b.Summary.BestBuy != 0 || b.Sell.Fill != nil {
 		t.Fatalf("单侧 summary=%+v fill=%v", b.Summary, b.Sell.Fill)
+	}
+}
+
+// 查价页的残单口径跟着配置走:slack、近价比例、买方太薄阈值、窗口都读 conf,
+// 串过城的盘口边和扫描一样暂停剔除。以前这里是自己的常量(slack 5 分钟、近价 5%、20 件)
+func TestBuildBook口径读conf且串城暂停剔除(t *testing.T) {
+	// 100 是 4 分钟前看到的,最近一轮(101 / 110)从 101 起:默认 120s 下 100 是残单
+	orders := []store.LiveOrder{
+		sellAt(100, 5, t0.Add(-4*time.Minute)),
+		sellAt(101, 1, t0.Add(-time.Minute)), sellAt(110, 1, t0.Add(-time.Minute)),
+	}
+	cfg := conf.Default()
+	b := buildBook("T4_METALBAR", "Martlock", 1, orders, t0, 0, cfg, nil)
+	if b.Sell.Support.Best != 101 || b.Sell.DroppedOrders != 1 {
+		t.Fatalf("默认 slack 下 100 应被剔,得到 best=%d dropped=%d", b.Sell.Support.Best, b.Sell.DroppedOrders)
+	}
+
+	wide := conf.Default()
+	wide.Capture.SnapshotSlackSeconds = 300
+	wide.Filters.NearPct = 0.15
+	wide.Filters.MinBidDepth = 7
+	wide.Capture.MaxHours = 3
+	b = buildBook("T4_METALBAR", "Martlock", 1, orders, t0, 0, wide, nil)
+	if b.Sell.Support.Best != 100 || b.Sell.DroppedOrders != 0 || b.Sell.Support.QtyNear != 7 {
+		t.Fatalf("slack 5 分钟时三张是同一轮、近价 15%% 盖到 110,得到 best=%d dropped=%d near=%d",
+			b.Sell.Support.Best, b.Sell.DroppedOrders, b.Sell.Support.QtyNear)
+	}
+	if b.SnapshotSlackMinutes != 5 || b.NearPct != 0.15 || b.MinBidDepth != 7 || b.WindowHours != 3 {
+		t.Fatalf("回给界面的口径应是配置里的,得到 %+v", b)
+	}
+
+	// 串过城:最近一眼可能是错归的单,暂停剔除
+	k := model.QuoteKey{ItemID: "T4_METALBAR", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+	b = buildBook("T4_METALBAR", "Martlock", 1, orders, t0, 0, cfg, map[model.QuoteKey]time.Time{k: t0})
+	if b.Sell.Support.Best != 100 || b.Sell.DroppedOrders != 0 {
+		t.Fatalf("串过城应暂停剔除,得到 best=%d dropped=%d", b.Sell.Support.Best, b.Sell.DroppedOrders)
 	}
 }

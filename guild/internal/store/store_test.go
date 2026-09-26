@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"albion-guild/internal/book"
 	"albion-guild/internal/model"
 )
 
@@ -71,13 +72,10 @@ func TestFlush_一眼只提交一次(t *testing.T) {
 		return model.MarketOrder{OrderID: id, ItemID: k.ItemID, LocationID: k.LocationID,
 			Quality: k.Quality, Side: k.Side, UnitPrice: price, Amount: amount, ObservedAt: at}
 	}
-	read := func() BookSide {
+	// 和线上读簿同一条路:BookOrders 取数、book.Build 剔残单
+	read := func() book.Side {
 		t.Helper()
-		got, err := st.BookSides(ctx, []model.QuoteKey{k}, T.Add(-6*time.Hour), 120*time.Second, 128)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return got[k]
+		return readSide(t, st, k, T.Add(-6*time.Hour), 120*time.Second)
 	}
 
 	// 上一眼 @T−10m
@@ -126,8 +124,8 @@ func TestFlush_一眼只提交一次(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	if b := read(); b.Ghosts != 0 || !sameLevels(levelsOf(b), []lvl{{100, 5}, {105, 7}, {110, 3}}) {
-		t.Fatalf("Flush 没提交时只能看到完整的上一眼,读到了 %v / %d 幽灵", levelsOf(b), b.Ghosts)
+	if b := read(); b.Dropped != 0 || !sameLevels(levelsOf(b), []lvl{{100, 5}, {105, 7}, {110, 3}}) {
+		t.Fatalf("Flush 没提交时只能看到完整的上一眼,读到了 %v / %d 幽灵", levelsOf(b), b.Dropped)
 	}
 
 	if err := lock.Rollback(ctx); err != nil {
@@ -137,8 +135,8 @@ func TestFlush_一眼只提交一次(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := read()
-	if b.Ghosts != 0 || !sameLevels(levelsOf(b), []lvl{{100, 5}, {105, 7}, {110, 2}}) || !b.Newest.Equal(T) {
-		t.Fatalf("提交后应是完整的这一眼,得到 %v / %d 幽灵 / newest %v", levelsOf(b), b.Ghosts, b.Newest)
+	if b.Dropped != 0 || !sameLevels(levelsOf(b), []lvl{{100, 5}, {105, 7}, {110, 2}}) || !b.Newest.Equal(T) {
+		t.Fatalf("提交后应是完整的这一眼,得到 %v / %d 幽灵 / newest %v", levelsOf(b), b.Dropped, b.Newest)
 	}
 	if got := readLive(t, st, 3); got.reporter != "乙" {
 		t.Fatalf("变了的那张单 reporter 应为乙,得到 %q", got.reporter)

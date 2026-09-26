@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"albion-guild/internal/aodp"
+	"albion-guild/internal/book"
 	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/depth"
@@ -15,21 +16,61 @@ import (
 	"albion-guild/internal/screen"
 )
 
-// CapturedSide 是自建抓包里一个盘口边剔除幽灵单后的阶梯。
-// 字段和 store.BookSide 一一对应,换了个不依赖 store 的形状。
+// CapturedSide 是自建抓包里一个盘口边整理之后的阶梯,由 book.Side 转来(CapturedFrom)。
+// 残单剔除、续页和截断的规则全在 book.Build,扫描、WS 报价和查价页是同一份。
 type CapturedSide struct {
-	// Levels 从优到劣,LevelSeen[i] 是第 i 档最近一次被看到的时刻
+	// Levels 从优到劣,LevelSeen[i] 是第 i 档最近一次被看到的时刻。
+	// 最多 capture.book_levels 档;stale 的档不在里面
 	Levels    []depth.Level
 	LevelSeen []time.Time
 	// Newest 是这一边的"最近一眼"
 	Newest time.Time
-	// QtyTotal、LevelCount 不受档数截断;LevelCount > len(Levels) 说明截断了
+	// QtyTotal、LevelCount 不受档数截断;LevelCount > len(Levels) 说明截断了。
+	// 都不含 stale 的档
 	QtyTotal   int64
 	LevelCount int
-	Ghosts     int
+	// Ghosts 是判定为已成交 / 已撤单而剔掉的残单张数(book.Side.Dropped)
+	Ghosts int
+	// PageTruncated:最近一轮是满页、多半没翻完(book.Side.Truncated)。和上面按
+	// book_levels 截断是两回事,**不进** DepthView.Truncated:那个标记会让深度闸门
+	// 跳过这一边,理由是"件数阈值不超过 book_levels,截断时必然够深";满页只保证
+	// 一页 50 单,装备跨品质的一页里单个品质可能只有几张,拿它放行等于不判
+	PageTruncated bool
+	// StaleOrders / StaleQty 是 PageTruncated 时标成 stale 的更深旧单,不进 Levels
+	StaleOrders int
+	StaleQty    int64
+	// PrevPage 见 book.Side.PrevPage:>0 表示最近一轮是续页,前面几页更早翻到
+	PrevPage int
 	// Conflicted 说明这个盘口最近卷进过多开串城,读簿时暂停了幽灵剔除
 	// (最近一眼可能是错归的单,拿它当权威会把真实挂单剔掉)
 	Conflicted bool
+}
+
+// CapturedFrom 把 book.Build 的结果转成扫描用的形状,Levels 截到 maxLevels 档
+// (≤ 0 不截)。扫描读簿和查价页的逐边融合都经过它,两边喂给 PickCapture / MergeSide
+// 的是同一个东西。
+func CapturedFrom(s book.Side, maxLevels int) CapturedSide {
+	n := len(s.Levels)
+	if maxLevels > 0 && n > maxLevels {
+		n = maxLevels
+	}
+	cs := CapturedSide{
+		Levels:        make([]depth.Level, n),
+		LevelSeen:     make([]time.Time, n),
+		Newest:        s.Newest,
+		QtyTotal:      s.QtyTotal,
+		LevelCount:    len(s.Levels),
+		Ghosts:        s.Dropped,
+		PageTruncated: s.Truncated,
+		StaleOrders:   s.StaleOrders,
+		StaleQty:      s.StaleQty,
+		PrevPage:      s.PrevPage,
+	}
+	for i, l := range s.Levels[:n] {
+		cs.Levels[i] = depth.Level{Price: l.Price, Qty: l.Qty}
+		cs.LevelSeen[i] = l.Seen
+	}
+	return cs
 }
 
 // best 是第一档有货的下标,没有就是 -1。

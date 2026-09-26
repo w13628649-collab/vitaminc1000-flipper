@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"albion-guild/internal/aodp"
+	"albion-guild/internal/book"
 	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
@@ -38,7 +39,7 @@ func TestLookupCities(t *testing.T) {
 
 func TestMergeSidePicksNewerSide(t *testing.T) {
 	seen := t0.Add(-10 * time.Minute)
-	cb := buildSide([]store.LiveOrder{sellAt(100, 5, seen)}, model.SideOffer, t0, lookupSlack, lookupNearPct, nil)
+	cb := buildSide([]store.LiveOrder{sellAt(100, 5, seen)}, model.SideOffer, t0, testSlack, testNearPct)
 
 	cases := []struct {
 		name string
@@ -145,7 +146,9 @@ func TestBuildGridMergesPerSide(t *testing.T) {
 	if !g.AODP.PricesOK || g.AODP.Error != "" {
 		t.Fatalf("aodp=%+v", g.AODP)
 	}
-	if !near(g.Params.Breakeven, 1.025/0.935-1) || g.Params.CaptureWindowHours != 6 || g.Params.MinBidDepth != lookupMinBidDepth {
+	if !near(g.Params.Breakeven, 1.025/0.935-1) || g.Params.CaptureWindowHours != 6 ||
+		g.Params.MinBidDepth != cfg.Filters.MinBidDepth || g.Params.NearPct != cfg.Filters.NearPct ||
+		g.Params.SnapshotSlackMinutes != 2 || g.Params.PageSize != book.PageSize {
 		t.Fatalf("params=%+v", g.Params)
 	}
 }

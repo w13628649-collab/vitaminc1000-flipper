@@ -54,7 +54,7 @@ type Service struct {
 	lastBackfill atomic.Int64 // unix 纳秒,0 = 还没补过
 	// bookSrc 非 nil 时代替库做读簿来源,只给测试用
 	bookSrc scan.BookSource
-	// ladder 非 nil 时代替库做 BookSides/CapturedItems,只给测试用:
+	// ladder 非 nil 时代替库做 BookOrders/CapturedItems,只给测试用:
 	// 报价(BestQuotes)和扫描都经它走 storeBooks 那一层
 	ladder captureReader
 	icons  *http.Client
