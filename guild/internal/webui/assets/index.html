@@ -16,6 +16,7 @@
       <button data-view="desk" aria-current="page">总览</button>
       <button data-view="ideas">机会</button>
       <button data-view="lookup">查价</button>
+      <button data-view="craft">精炼</button>
       <button data-view="rank">销量榜</button>
       <button data-view="book">记账</button>
       <button data-view="live">实时</button>
@@ -231,6 +232,131 @@
     </div>
   </section>
 
+  <!-- ═══════════ 精炼:原料 → 半成品,怎么拿料最便宜、做出来赚多少 ═══════════
+       设计 §4.5。参数条 | 高级 | 校准 | 推荐卡片 | 原料来路 | 候选路线 | 整条线矩阵。
+       个人参数(专精、今日专注、站费、k)只存在本机 localStorage,每次请求带上;
+       服务端是全公会共用的,只放默认值 -->
+  <section class="view" id="v-craft" hidden>
+    <section class="controls c-bar">
+      <div class="ctrl"><label>精炼线</label>
+        <div class="seg" id="c-line">
+          <button data-line="ORE">矿 → 金属条</button>
+          <button data-line="HIDE">皮 → 皮革</button>
+          <button data-line="FIBER">纤维 → 布</button>
+          <button data-line="WOOD">木 → 木板</button>
+        </div>
+      </div>
+      <div class="ctrl c-gridwrap"><label>目标半成品 <span class="sub" id="c-target-name"></span></label>
+        <div class="tgrid" id="c-grid" role="grid" aria-label="目标:T4~T8 × 附魔 .0~.4"></div>
+      </div>
+      <div class="c-fields">
+        <div class="ctrl"><label for="c-city">生产城市</label><select id="c-city"></select></div>
+        <div class="ctrl"><label for="c-qty">数量(件)</label>
+          <input type="number" id="c-qty" min="1" max="10000" step="1" value="10"></div>
+        <div class="ctrl"><label for="c-focus">专注</label>
+          <select id="c-focus">
+            <option value="auto">自动:预算内最省</option>
+            <option value="off">全不开</option>
+            <option value="top">只开顶层</option>
+            <option value="all">整条链都开</option>
+            <option value="custom">自己选哪几级</option>
+          </select></div>
+        <div class="ctrl" id="c-custom-wrap" hidden><label>开专注的级</label><div class="checks" id="c-custom"></div></div>
+        <div class="ctrl"><label for="c-budget">今日可用专注</label>
+          <input type="number" id="c-budget" min="0" max="30000" step="100"></div>
+        <div class="ctrl"><label>出售方式</label>
+          <div class="seg" id="c-sell">
+            <button data-sell="post" title="挂卖单:卖一压 1 银挂上去,到手 ×(1 − 税 − 创建费),要等人来买">挂卖单</button>
+            <button data-sell="take" title="吃买单:直接卖给挂着的买单,到手 ×(1 − 税),遇到断崖就停">吃买单</button>
+          </div></div>
+        <div class="ctrl"><label for="c-sort">排序</label>
+          <select id="c-sort">
+            <option value="daily">日化收益</option>
+            <option value="unit">单根利润</option>
+            <option value="per_focus">每点专注值</option>
+            <option value="pct">利润率</option>
+          </select></div>
+        <button class="act" id="c-run">重算</button>
+      </div>
+    </section>
+
+    <details class="c-fold" id="c-adv">
+      <summary>高级参数 <em id="c-adv-sum"></em></summary>
+      <div class="c-adv">
+        <fieldset><legend>精炼专精 FCE <span class="sub" id="c-fce-line"></span></legend>
+          <div class="c-row" id="c-fce"></div>
+          <p class="sub">0~40000。每 10000 点专注消耗减半,满专精 40000 = 1/16。不知道自己多少,用下面「校准」按游戏里显示的专注消耗反推。</p>
+        </fieldset>
+        <fieldset><legend>站和费用</legend>
+          <div class="c-row">
+            <div class="ctrl"><label for="c-unlock">精炼已解锁到</label>
+              <select id="c-unlock">
+                <option value="8">T8(全部)</option><option value="7">T7</option><option value="6">T6</option>
+                <option value="5">T5</option><option value="4">T4</option><option value="3">T4 都没解锁</option>
+              </select></div>
+            <div class="ctrl"><label for="c-station">精炼站费 <span class="ubadge" id="c-station-badge"></span></label>
+              <input type="number" id="c-station" min="0" max="1000" step="10" title="银 / 100 营养。城内按 N 打开地图,悬停在精炼站上看"></div>
+            <div class="ctrl"><label for="c-k">转化系数 k <span class="ubadge" id="c-k-badge"></span></label>
+              <input type="number" id="c-k" min="0.5" max="3" step="0.001" title="游戏里转化实付 ÷ 基础价。用下面「校准」按转化确认框的明细算"></div>
+            <div class="ctrl"><label for="c-tstation">转化主人费率 <span class="ubadge" id="c-tstation-badge"></span></label>
+              <input type="number" id="c-tstation" min="0" max="1000" step="10" title="银 / 100 营养,按产物的物品价值计"></div>
+            <div class="ctrl"><label for="c-bonus">今日生产加成 <span class="ubadge" id="c-bonus-badge"></span></label>
+              <select id="c-bonus" title="游戏里「活动」窗口今天的每日生产加成落在哪些品类">
+                <option value="">服务端默认</option><option value="0">没有(0)</option>
+                <option value="10">+10</option><option value="20">+20</option>
+              </select></div>
+            <label class="c-check"><input type="checkbox" id="c-island"> 在个人岛上精炼</label>
+          </div>
+        </fieldset>
+        <fieldset><legend>买料和出售</legend>
+          <div class="c-row">
+            <div class="ctrl"><label for="c-sellcity">出售城市</label><select id="c-sellcity"></select></div>
+            <div class="ctrl c-srcwrap"><label>也从这些城买料(要运过来)</label><div class="checks" id="c-src"></div></div>
+            <div class="ctrl"><label for="c-transport">运费(% 货值)</label>
+              <input type="number" id="c-transport" min="0" max="100" step="0.5"></div>
+            <label class="c-check" title="挂买单收料:按买一 + 1 挂、多付 2.5% 创建费。收不收得到、要等多久都不知道,默认只当参照行"><input type="checkbox" id="c-bid"> 挂买单收料也进候选</label>
+            <div class="ctrl"><label for="c-bidmax">挂买单最多收(件,0 = 不限)</label>
+              <input type="number" id="c-bidmax" min="0" step="1"></div>
+          </div>
+        </fieldset>
+        <fieldset><legend>估值和约束</legend>
+          <div class="c-row">
+            <div class="ctrl"><label for="c-left">批末余料</label>
+              <select id="c-left" title="一批做完总会剩一点原料和下级料">
+                <option value="">服务端默认</option>
+                <option value="carry">结转下一批(按成本)</option>
+                <option value="bid">马上砸买单(×0.96)</option>
+                <option value="zero">按 0 算</option>
+              </select></div>
+            <div class="ctrl"><label for="c-maxage">数据最大年龄(小时)</label>
+              <input type="number" id="c-maxage" min="1" step="1"></div>
+            <div class="ctrl"><label for="c-capital">本金</label>
+              <input type="number" id="c-capital" min="0" step="1000000"></div>
+            <div class="ctrl"><label for="c-share">能吃到日成交量的几成(%)</label>
+              <input type="number" id="c-share" min="1" max="100" step="5"></div>
+            <div class="ctrl"><label for="c-gold">金价(算 premium 门槛)</label>
+              <input type="number" id="c-gold" min="1" step="100"></div>
+          </div>
+        </fieldset>
+        <div class="c-row"><button class="act ghost" id="c-reset">全部恢复成服务端默认</button>
+          <span class="sub">空着的格子用服务端默认值(灰字)。这些数只存在本机,不会传给别人。</span></div>
+      </div>
+    </details>
+
+    <details class="c-fold" id="c-cal">
+      <summary>校准:从游戏里读数,反推 k 和专精 <em id="c-cal-sum"></em></summary>
+      <div class="c-adv c-cal" id="c-cal-body"></div>
+    </details>
+
+    <div id="c-status" class="c-status"></div>
+    <div id="c-result"></div>
+
+    <details class="c-fold c-mx" id="c-mx">
+      <summary>整条线 25 档对比 <em id="c-mx-sum"></em></summary>
+      <div id="c-mx-body"></div>
+    </details>
+  </section>
+
   <!-- ═══════════ 销量榜 ═══════════ -->
   <section class="view" id="v-rank" hidden>
     <div class="bar">
@@ -349,5 +475,8 @@
 </dialog>
 
 <script src="app.js"></script>
+<!-- 精炼页单独一个文件:和 app.js 共用全局作用域(esc / num / getJSON / rt …),
+     app.js 在 DOMContentLoaded 才 boot,所以两个文件都执行完了才开始路由 -->
+<script src="craft.js"></script>
 </body>
 </html>

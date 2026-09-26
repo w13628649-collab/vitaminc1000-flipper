@@ -571,6 +571,91 @@ tr.detail td.why{white-space:normal; min-width:220px}
 .foot{padding-top:26px; font-size:11.5px; color:var(--ink-soft); max-width:86ch}
 .foot p{margin:0 0 5px}
 
+/* ══ 原料 / 半成品标签 ═════════════════════════════════════
+   「特异松木」和「特异松木板条」只差两个字,看错过。查价页、左栏、精炼页都挂这个标签:
+   原料是青铜描边(采来的东西),半成品是墨底纸字(炼出来的东西),一眼分得开 */
+.rtag{display:inline-block; font-size:10.5px; font-weight:700; line-height:1.35; padding:0 5px;
+  border-radius:var(--r); white-space:nowrap; vertical-align:1px; font-style:normal}
+.rtag.raw{color:var(--bronze-ink); background:color-mix(in oklab,var(--bronze),transparent 88%);
+  box-shadow:inset 0 0 0 1px var(--bronze)}
+.rtag.ref{color:var(--paper); background:var(--ink-mid)}
+.rtag.heart{color:var(--ink-mid); box-shadow:inset 0 0 0 1px var(--rule)}
+.rtag.big{font-size:12.5px; padding:2px 8px; vertical-align:3px; margin-left:6px}
+
+/* ══ 精炼页 ═══════════════════════════════════════════════
+   参数条 | 高级 / 校准(折叠) | 推荐卡片 | 原料来路 | 候选路线 | 整条线矩阵。
+   规则都挂在 #v-craft 下面,和别的页同名不同义的类不外溢 */
+#v-craft .controls{display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-start;
+  padding:18px 0 16px; border-bottom:1px solid var(--rule)}
+#v-craft .ctrl{display:flex; flex-direction:column; gap:4px}
+#v-craft .ctrl label{font-size:11px; color:var(--ink-soft); font-weight:500}
+#v-craft .ctrl select{min-width:110px}
+#v-craft input[type=number]{width:118px}
+#v-craft input[aria-invalid=true]{border-color:var(--warn); background:color-mix(in oklab,var(--warn),var(--surface) 90%)}
+#v-craft .seg{flex-wrap:wrap}
+.c-fields{display:flex; flex-wrap:wrap; gap:12px 16px; align-items:flex-end; flex:1 1 360px}
+.c-fields > .act{margin-left:auto}
+.checks{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--ink-mid); padding:4px 0}
+.checks label{display:flex; gap:4px; align-items:center; font-size:12.5px !important; color:var(--ink-mid) !important}
+/* 目标网格:T4~T8 × .0~.4,格子里写半成品名 */
+.tgrid{display:grid; grid-template-columns:auto repeat(5,minmax(76px,112px)); gap:3px; align-items:stretch}
+.tgrid .th{font-size:10.5px; font-weight:600; color:var(--ink-soft); align-self:center; text-align:center; padding:0 4px}
+.tgrid button{font:inherit; cursor:pointer; border:1px solid var(--rule-soft); border-radius:var(--r);
+  background:var(--surface); color:var(--ink); padding:3px 5px; text-align:left; min-width:0;
+  display:flex; flex-direction:column; line-height:1.2}
+.tgrid button b{font-size:12px; font-weight:700}
+.tgrid button i{font-style:normal; font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tgrid button:hover{border-color:var(--ink)}
+.tgrid button.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.tgrid button.on i{color:var(--paper); opacity:.75}
+#c-target-name{margin-left:6px; color:var(--ink); font-weight:600}
+
+/* 折叠区:高级参数、校准、数据说明、矩阵 */
+#v-craft details.c-fold{border-bottom:1px solid var(--rule); padding:10px 0}
+#v-craft details.c-fold > summary{cursor:pointer; font-weight:600; font-size:13px; list-style:none;
+  display:flex; gap:10px; align-items:baseline; flex-wrap:wrap}
+#v-craft details.c-fold > summary::-webkit-details-marker{display:none}
+#v-craft details.c-fold > summary::before{content:"▸"; color:var(--bronze); font-size:11px}
+#v-craft details.c-fold[open] > summary::before{content:"▾"}
+#v-craft details.c-fold > summary em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:12px}
+.c-adv{display:grid; gap:10px; padding:10px 0 4px}
+.c-adv fieldset{border:1px solid var(--rule-soft); border-radius:var(--r); padding:8px 12px 10px; margin:0}
+.c-adv legend{font-size:11.5px; font-weight:600; color:var(--ink-mid); padding:0 4px}
+.c-adv .sub{margin:6px 0 0}
+.c-row{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end}
+.c-check{display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--ink-mid); padding-bottom:6px}
+.c-srcwrap .checks{max-width:520px}
+.ubadge{font-size:9.5px; font-weight:700; padding:0 4px; margin-left:4px; border-radius:var(--r);
+  color:var(--warn); box-shadow:inset 0 0 0 1px currentColor; white-space:nowrap}
+.ubadge:empty{display:none}
+.ubadge.mine{color:var(--gain)}
+
+.c-status{padding:10px 0 0; font-size:12.5px; color:var(--ink-soft); min-height:28px}
+.c-status.busy{color:var(--bronze-ink)}
+.c-status.bad{color:var(--warn)}
+.c-status b.live{color:var(--gain); font-weight:600}
+#c-result.dim{opacity:.55; transition:opacity .2s}
+.c-head{display:flex; gap:14px; align-items:center; padding:12px 0 10px; flex-wrap:wrap}
+.c-head img{width:52px; height:52px; border-radius:var(--r); background:var(--surface-2)}
+.c-head h2{margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em}
+.c-head .sub{font-size:12px; margin-top:2px}
+.c-title{min-width:0}
+.warnish{color:var(--warn)}
+a.citem{color:inherit; text-decoration:none; border-bottom:1px solid var(--rule); margin-right:3px}
+a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
+/* 价格年龄:超过 6 小时黄、超过 24 小时红 */
+.agetag{font-style:normal; font-size:11px; font-weight:600; padding:0 4px; border-radius:var(--r); white-space:nowrap}
+.agetag.ok{color:var(--ink-mid)}
+.agetag.yellow{color:var(--bronze-ink); background:color-mix(in oklab,var(--bronze-lift),transparent 72%)}
+.agetag.red{color:var(--warn); background:color-mix(in oklab,var(--warn),transparent 84%)}
+.wtag{display:inline-block; font-size:10.5px; font-weight:600; padding:0 5px; margin:1px 3px 1px 0; border-radius:var(--r);
+  color:var(--bronze-ink); box-shadow:inset 0 0 0 1px var(--rule); white-space:nowrap; cursor:help}
+.wtag.bad{color:var(--warn); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--warn),transparent 50%)}
+.c-warns,.c-list{list-style:none; margin:8px 0 0; padding:0; font-size:12px; color:var(--ink-mid); max-width:110ch}
+.c-warns li,.c-list li{margin:3px 0}
+.c-list b{color:var(--ink); font-weight:600}
+#v-craft .c-data .sub{margin:8px 0 0; max-width:100ch}
+
 /* 媒体查询一律写在基础规则之后。旧版把 1180 那条写在 .bookside 前面,
    窄屏下 position/max-height 被后面的基础规则盖回去了 */
 @media (max-width:1180px){

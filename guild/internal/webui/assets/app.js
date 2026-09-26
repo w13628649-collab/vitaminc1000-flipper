@@ -112,8 +112,45 @@ async function getJSON(url, opts) {
   return resp.json();
 }
 
+// ── 精炼线的原料 / 半成品 ─────────────────────────────────────
+// 「特异松木」(原木)和「特异松木板条」(半成品)名字只差两个字,看错过一次、以为数据对不上。
+// 所以凡是这几条线的物品,查价页标题、左栏列表、精炼页都挂醒目的「原料」/「半成品」标签,
+// 并能一键跳到对应的另一半。石头线(石头 → 石块)也标,但精炼计算本期只做四条线(规则表 A8)
+const REFINE_FAMILIES = [
+  { line: "ORE", raw: "ORE", refined: "METALBAR", city: "Thetford", craft: true },
+  { line: "HIDE", raw: "HIDE", refined: "LEATHER", city: "Martlock", craft: true },
+  { line: "FIBER", raw: "FIBER", refined: "CLOTH", city: "Lymhurst", craft: true },
+  { line: "WOOD", raw: "WOOD", refined: "PLANKS", city: "Fort Sterling", craft: true },
+  { line: "ROCK", raw: "ROCK", refined: "STONEBLOCK", city: "Bridgewatch", craft: false },
+];
+// 市场 id:T8_ORE、T8_ORE_LEVEL4@4。_LEVEL 和 @ 对不上的不认(和服务端 refine.ParseItemID 一致)
+const REFINE_ID_RE = /^T(\d)_([A-Z]+)(?:_LEVEL(\d)@(\d))?$/;
+const refineID = (family, tier, ench) => `T${tier}_${family}` + (ench > 0 ? `_LEVEL${ench}@${ench}` : "");
+// 这件是不是某条精炼线的原料 / 半成品。craftable:能进精炼页算(T4~T8、四条线之一)
+function refineRole(id) {
+  const m = REFINE_ID_RE.exec(String(id || ""));
+  if (!m || (m[3] || "") !== (m[4] || "")) return null;
+  const tier = Number(m[1]), ench = Number(m[3] || 0);
+  const fam = REFINE_FAMILIES.find(f => f.raw === m[2] || f.refined === m[2]);
+  if (!fam || tier < 2 || (ench > 0 && tier < 4) || ench > 4) return null;
+  const role = fam.raw === m[2] ? "raw" : "refined";
+  return {
+    role, line: fam.line, tier, ench, fam,
+    rawID: refineID(fam.raw, tier, ench), refinedID: refineID(fam.refined, tier, ench),
+    // 对应的另一半:同 tier、同附魔(T8.4 钢条就是 T8.4 矿炼的)
+    other: refineID(role === "raw" ? fam.refined : fam.raw, tier, ench),
+    craftable: fam.craft && tier >= 4 && tier <= 8,
+  };
+}
+const ROLE_WORD = { raw: "原料", refined: "半成品" };
+const roleTag = (r, big) => (r ? `<span class="rtag ${r.role === "raw" ? "raw" : "ref"}${big ? " big" : ""}" title="${
+  r.role === "raw" ? "原料:采集来的,拿去精炼" : "半成品:原料精炼出来的"}">${ROLE_WORD[r.role]}</span>` : "");
+
 // ── 视图切换 ───────────────────────────────────────────────
-const views = ["desk", "ideas", "lookup", "rank", "book", "live"];
+const views = ["desk", "ideas", "lookup", "craft", "rank", "book", "live"];
+// 单独文件里的页面(精炼页 craft.js)登记自己的钩子:hash() 切过来时地址栏写什么、
+// route(arg) 地址栏带着参数进来、show() 切到这页、hide() 离开这页(退订实时)
+const viewHooks = {};
 let currentView = null;
 function show(name, push = true) {
   if (!views.includes(name)) name = "desk";
@@ -122,15 +159,23 @@ function show(name, push = true) {
     if (b.dataset.view === name) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   }
+  const hook = viewHooks[name];
   if (push) {
-    // 切回查价页时带上刚才看的那件,别让人重新找
+    // 切回查价页时带上刚才看的那件,别让人重新找;精炼页同理带上目标
     const want = name === "lookup" && lookup.itemId
-      ? "lookup/" + encodeURIComponent(lookup.itemId) : name;
+      ? "lookup/" + encodeURIComponent(lookup.itemId) : hook?.hash ? hook.hash() : name;
     if (location.hash.slice(1) !== want) location.hash = want;
   }
+  const prev = currentView;
   if (currentView !== name) {
     currentView = name;
     window.scrollTo(0, 0);   // 从机会表下面点物品名跳过来时,别停在半页
+  }
+  if (prev && prev !== name) {
+    try { viewHooks[prev]?.hide?.(); } catch (e) { console.error(e); }
+  }
+  if (hook?.show) {
+    try { hook.show(); } catch (e) { console.error(e); }
   }
   if (name === "lookup") {
     queueFit();   // 隐藏时量不出尺寸,切回来补一次
@@ -149,6 +194,15 @@ document.querySelector("nav").addEventListener("click", e => {
 window.addEventListener("hashchange", route);
 function route() {
   const [view, arg] = location.hash.slice(1).split("/");
+  // 带参数进来的页(#craft/T8_METALBAR_LEVEL4%404)先把参数交给它,再切过去:
+  // 切过去那一下就按新目标算,不用先按旧目标算一遍
+  if (arg && viewHooks[view]?.route) {
+    let a = "";
+    try { a = decodeURIComponent(arg); } catch (e) { /* 地址栏里手打坏了:当没带参数 */ }
+    if (a) {
+      try { viewHooks[view].route(a); } catch (e) { console.error(e); }
+    }
+  }
   show(view || "desk", false);
   if (view === "lookup" && arg) {
     let id = "";
@@ -2521,7 +2575,8 @@ const rt = {
   ws: null, up: false, backoff: 500, openedAt: 0, opens: 0,   // opens:第几次连上,>1 就是重连
   owners: new Map(),     // 登记方 → { keys: Set, snapshot: bool }("live" 实时页、"lookup" 查价页)
   subbed: new Set(),     // 这条连接上已经订上的 key
-  quoteFns: [], scanFns: [], openFns: [],
+  // resyncFns:服务端说丢过消息时,不要快照的登记方(精炼页)各自回拉一次
+  quoteFns: [], scanFns: [], openFns: [], resyncFns: [],
   resyncTimer: 0, resyncs: 0,   // 服务端 resync 通知的合并定时器、处理过几次(见 rtResync)
 };
 const SUB_CHUNK = 400;   // 服务端一条指令最多读 64KB,一个 key 四十来字节
@@ -2644,6 +2699,9 @@ function rtResync() {
     for (const o of rt.owners.values()) if (o.snapshot) for (const k of o.keys) snap.add(k);
     if (snap.size) liveResync([...snap]);
     if (lookup.data) lookupLiveKick();
+    for (const fn of rt.resyncFns) {
+      try { fn(); } catch (e) { console.error(e); }
+    }
   }, 300);
 }
 
@@ -3099,4 +3157,7 @@ $("quit").addEventListener("click", async () => {
   $("quit").disabled = true;
 });
 
-boot();
+// 等 craft.js 也执行完再路由:地址栏是 #craft/… 时,show() 要调到它登记的钩子。
+// 两个脚本都在 body 末尾同步加载,DOMContentLoaded 一定在它们之后
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+else boot();
