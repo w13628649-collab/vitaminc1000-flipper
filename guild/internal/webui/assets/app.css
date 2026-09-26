@@ -608,14 +608,15 @@ a.mini:hover{background:var(--ink); color:var(--paper)}
 .c-fields > .act{margin-left:auto}
 .checks{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--ink-mid); padding:4px 0}
 .checks label{display:flex; gap:4px; align-items:center; font-size:12.5px !important; color:var(--ink-mid) !important}
-/* 目标网格:T4~T8 × .0~.4,格子里写半成品名 */
-.tgrid{display:grid; grid-template-columns:auto repeat(5,minmax(76px,112px)); gap:3px; align-items:stretch}
+/* 目标网格:T4~T8 × .0~.4,格子里写半成品名。档位和名字排成一行:两行的格子让参数条高出
+   五六十像素,推荐卡片和「买料」那句就被挤到第一屏以下 */
+.tgrid{display:grid; grid-template-columns:auto repeat(5,minmax(76px,124px)); gap:3px; align-items:stretch}
 .tgrid .th{font-size:10.5px; font-weight:600; color:var(--ink-soft); align-self:center; text-align:center; padding:0 4px}
 .tgrid button{font:inherit; cursor:pointer; border:1px solid var(--rule-soft); border-radius:var(--r);
-  background:var(--surface); color:var(--ink); padding:3px 5px; text-align:left; min-width:0;
-  display:flex; flex-direction:column; line-height:1.2}
-.tgrid button b{font-size:12px; font-weight:700}
-.tgrid button i{font-style:normal; font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  background:var(--surface); color:var(--ink); padding:2px 5px; text-align:left; min-width:0;
+  display:flex; flex-direction:row; gap:4px; align-items:baseline; line-height:1.25}
+.tgrid button b{font-size:12px; font-weight:700; flex:none}
+.tgrid button i{font-style:normal; font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
 .tgrid button:hover{border-color:var(--ink)}
 .tgrid button.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 .tgrid button.on i{color:var(--paper); opacity:.75}
@@ -675,6 +676,22 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .c-card.empty{border-top-color:var(--warn)}
 .c-card-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
 .c-kicker{font-size:10.5px; font-weight:700; color:var(--paper); background:var(--ink); padding:1px 6px; border-radius:var(--r)}
+/* 拿不满料 / 所有路线都亏:卡片头不再写「推荐」,顶边和标签换成警示色 */
+.c-kicker.bad{background:var(--warn)}
+.c-card.unfilled,.c-card.losing{border-top-color:var(--warn)}
+/* 拿不满料时数字是下界:整排换成次要墨色,不和正常结果一样醒目 */
+.c-kpis.dimmed b{color:var(--ink-mid)}
+.c-buyln{margin:8px 0 0; font-size:13px; color:var(--ink); line-height:1.55}
+.c-buyln > b:first-child{color:var(--bronze-ink)}
+.c-head .verdict em{font-style:normal; font-size:11px; color:var(--ink-mid)}
+/* 专注开法对比(focus.pareto) */
+.c-focusfold{margin:6px 0 0; font-size:12.5px}
+.c-focusfold > summary{cursor:pointer; font-weight:600; color:var(--ink)}
+.c-focusfold > summary em{font-style:normal; font-weight:400; color:var(--ink-mid); margin-left:8px}
+.c-focusfold .sub{margin:4px 0 0; max-width:110ch}
+table.c-focust{margin:6px 0 2px}
+table.c-focust td.l{white-space:normal}
+table.c-focust tr.pick > td{background:color-mix(in oklab,var(--gain),var(--surface) 92%)}
 .c-route{font-weight:600}
 .c-kpis{margin:10px 0 6px}
 .c-kpis div{background:var(--surface)}
