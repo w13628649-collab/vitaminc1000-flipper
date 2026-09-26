@@ -36,6 +36,9 @@ type Service struct {
 	// Events 收"扫描结果重新发布了"的通知(见 events.go),推给订阅了 scan 的
 	// WS 连接。服务端 main 里设成 hub;不设就不推
 	Events TopicPublisher
+	// IngestStats 取入库口径的计数,每条扫描通知带上(ScanEvent.Ingest)。服务端 main 里
+	// 接 ingest.Ingestor.Stats;返回 any 是为了 flip 不依赖 ingest。不设就不带
+	IngestStats func() any
 
 	cat atomic.Pointer[catalog.Catalog]
 	// last 是对外的扫描结果,整份原子替换,发布之后不再改。

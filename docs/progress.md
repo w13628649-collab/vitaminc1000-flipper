@@ -116,7 +116,10 @@ POST /api/catalog/sync 重新同步物品目录
   `coverage[].within_*` 分桶、`stale`/`stale_history`/`future_timestamp` 拒绝的 `detail` 文案。
   所以覆盖率抓包列、`capture` 汇总和错误、被拒明细的来源、物品数和请求数单独变了也会换摘要;
   每次全量 `started_at` 都换,摘要必变。内容没变也照发
-  `full=true` 是 AODP 全量。订阅时如果已经发布过,立刻补发最近一条
+  `full=true` 是 AODP 全量。订阅时如果已经发布过,立刻补发最近一条。
+  接了 ingest 的服务端还带 `"ingest":{…}`,和 `/api/coverage` 的 `ingest` 段同形状
+  (`location_conflicts`、`last_conflict` 等):界面的多开串城横幅跟着通知走,
+  不用等下一次全量再去读很贵的 `/api/coverage`
 - 主题消息只扇给本实例的连接,不走 NATS(扫描是每个实例各跑各的)。
   背压和报价同一套:连接积压就丢、计进 `/api/stats` 的 `dropped`;
   `/api/stats` 的 `topic_subscribers.scan` 是订阅数,`last_scan_event` 是最近一条通知

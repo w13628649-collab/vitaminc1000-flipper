@@ -28,6 +28,11 @@ type ScanEvent struct {
 	Opportunities int       `json:"opportunities"`
 	Routes        int       `json:"routes"`
 	Full          bool      `json:"full"`
+	// Ingest 是发布这一刻入库口径的计数(线上是 ingest.Stats:多开串城次数、最近一次现场等),
+	// 形状和 /api/coverage 的 ingest 段一样。界面的串城横幅以前只读 /api/coverage,
+	// 那个接口很贵、只在启动和全量之后读,运行中新出的串城最长 30 分钟才露出来;
+	// 跟着每条通知带上,就和机会页同一个节奏(抓包快速重算默认每分钟)。没接 ingest 时不输出
+	Ingest any `json:"ingest,omitempty"`
 }
 
 // publish 把一份新结果换成对外结果,再通知 WS 订阅者。调用方持有 evalMu:
@@ -46,6 +51,9 @@ func (s *Service) publish(res *scan.Result, full bool) {
 		Opportunities: len(res.Opportunities),
 		Routes:        len(res.Routes),
 		Full:          full,
+	}
+	if s.IngestStats != nil {
+		ev.Ingest = s.IngestStats()
 	}
 	s.lastEvent.Store(&ev)
 	if s.Events == nil {

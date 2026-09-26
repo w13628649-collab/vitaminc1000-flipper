@@ -142,6 +142,49 @@ func TestPublish_通知的JSON形状(t *testing.T) {
 	}
 }
 
+// 接了入库计数时每条通知带上 ingest,取的是发布那一刻的值:运行中新出的串城,
+// 下一次重算的通知里就有,界面横幅不用等下一次全量去读 /api/coverage
+func TestPublish_通知带上入库计数(t *testing.T) {
+	s, _, _ := newRVService(t, rvConfig())
+	rec := &recPublisher{}
+	s.Events = rec
+	var mu sync.Mutex
+	conflicts := 0
+	s.IngestStats = func() any {
+		mu.Lock()
+		defer mu.Unlock()
+		return map[string]any{"location_conflicts": conflicts}
+	}
+	ctx := context.Background()
+	if _, err := s.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	conflicts = 2
+	mu.Unlock()
+	if _, err := s.Reevaluate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var got []float64
+	for _, m := range rec.msgs {
+		var v struct {
+			Ingest struct {
+				LocationConflicts float64 `json:"location_conflicts"`
+			} `json:"ingest"`
+		}
+		if err := json.Unmarshal(m, &v); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, v.Ingest.LocationConflicts)
+	}
+	if !slices.Equal(got, []float64{0, 2}) {
+		t.Fatalf("两条通知的串城计数应是 [0 2],得到 %v(%q)", got, rec.msgs)
+	}
+	if ev := s.LastScanEvent(); ev == nil || ev.Ingest == nil {
+		t.Fatalf("/api/stats 的 last_scan_event 也应带上,得到 %+v", ev)
+	}
+}
+
 // 接真的 hub:只有订了 scan 的连接收到;之后才订的连接一订阅就补到最近一条
 func TestPublish_经hub只推给订阅了scan的连接(t *testing.T) {
 	s, _, _ := newRVService(t, rvConfig())

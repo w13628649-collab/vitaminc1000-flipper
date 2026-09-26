@@ -875,7 +875,19 @@ function renderIdeasEmpty(err) {
 $("i-empty").addEventListener("click", e => { if (e.target.closest("[data-rescan]")) doRescan(); });
 
 let scanError = "";
-let ingestInfo = null;   // /api/coverage 的 ingest 段:只在启动和全量扫描之后读,不轮询
+// 入库口径的计数(串城次数、最近一次现场)。新服务端每条 scan 通知都带(ScanEvent.ingest,
+// 默认每分钟一条);/api/coverage 很贵,只在启动和全量扫描之后读,老服务端只有这一路
+let ingestInfo = null;
+// 换一份入库计数:串城计数或最近一次现场变了才重画两处横幅
+function noteIngest(g) {
+  if (!g || typeof g !== "object") return;
+  const was = ingestInfo;
+  ingestInfo = g;
+  if (was && (was.location_conflicts || 0) === (g.location_conflicts || 0) &&
+      (was.last_conflict?.at || "") === (g.last_conflict?.at || "")) return;
+  if (scan) renderIdeasBanners(scan);
+  renderDeskBanners(scan);
+}
 const conflictBanner = g => `<div class="banner"><b>多开串城:</b>入库时发现 ${num(g.location_conflicts)} 次同一张挂单被报成了不同城市。
   一台机器上多个客户端同时抓包、又分别在不同城市时,城市归属会串,那部分挂单的城市不可信。${
   g.last_conflict ? `最近一次:${esc(g.last_conflict.item_id)} 被报成 ${esc(g.last_conflict.location_id)}(原始地点 ${esc(g.last_conflict.raw_location_id)}),上报人 ${esc(g.last_conflict.reporter)}。` : ""}</div>`;
@@ -2512,6 +2524,7 @@ function onScanPush(msg) {
   sync.lastMsgAt = Date.now();
   stopPoll();
   noteEval(msg.evaluated_at, msg.started_at);
+  noteIngest(msg.ingest);   // 串城横幅跟着通知走,摘要没变也要看
   if (scan && msg.digest && msg.digest === sync.digest) return;   // 摘要没变,不重拉
   if (sync.busy) { sync.again = true; sync.want = msg.digest || ""; return; }
   pullScan("push");
@@ -2808,7 +2821,8 @@ function liveResyncNow() {
 }
 
 // /api/coverage 每次都对成交历史全表跑 COUNT(DISTINCT),**不能轮询**:
-// 只在启动和 AODP 全量扫描之后读一次。要的是销量榜的城市列表和入库的串城计数
+// 只在启动和 AODP 全量扫描之后读一次。要的是销量榜的城市列表;入库的串城计数新服务端
+// 跟着 scan 通知推(noteIngest),这里只是兜老服务端和启动那一刻
 async function loadServerCoverage() {
   try {
     const cov = await getJSON("/api/coverage");
@@ -2816,9 +2830,7 @@ async function loadServerCoverage() {
     sel.innerHTML = `<option value="__all__">全服</option>` +
       (cov.cities || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
     if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
-    ingestInfo = cov.ingest || null;
-    if (scan) renderIdeasBanners(scan);
-    renderDeskBanners(scan);
+    noteIngest(cov.ingest);
   } catch (e) { /* 服务端还没起来就先空着 */ }
 }
 
