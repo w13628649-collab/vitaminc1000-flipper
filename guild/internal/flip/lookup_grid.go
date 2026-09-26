@@ -19,6 +19,7 @@ import (
 	"albion-guild/internal/econ"
 	"albion-guild/internal/histagg"
 	"albion-guild/internal/model"
+	"albion-guild/internal/scan"
 	"albion-guild/internal/store"
 )
 
@@ -115,8 +116,9 @@ type GridCell struct {
 	History *GridHistory `json:"history"`
 }
 
-// GridSide 是逐边融合后的一侧:抓包最优档的 last_seen 和 AODP 的 *_date 比,
-// 谁新用谁,平手用抓包。被比下去的那一路照样放在子对象里,悬停能对照。
+// GridSide 是逐边融合后的一侧。选哪一路和扫描是同一个函数(scan.MergeSide →
+// scan.PickCapture):抓包最优档不比 AODP 旧 capture.prefer_slack_minutes 以上、
+// 或者两边同价 → 抓包;否则 AODP。被比下去的那一路照样放在子对象里,悬停能对照。
 type GridSide struct {
 	Pick     string       `json:"pick"`   // "capture" | "aodp" | ""(两边都没有)
 	Source   string       `json:"source"` // 同 pick,留着和其他接口的字段名一致
@@ -243,12 +245,18 @@ func ageOf(st aodp.Stamp, now time.Time) *float64 {
 	return nil
 }
 
-// mergeSide 逐边融合。capture 为 nil 表示这一侧没有抓包。
+// mergeSide 逐边融合。cb 为 nil 表示这一侧没有抓包。
+//
+// 选哪一路、选中抓包时报多大的龄,都交给 scan.MergeSide:扫描逐边融合用的就是它,
+// 同一个盘口在机会页和查价页上的最优价才是同一个数。以前这里自己写了一套
+// "谁新用谁、平手用抓包",抓包比 AODP 旧几分钟时两页一个用 AODP、一个用抓包
 func mergeSide(cb *BookSide, aodpBest int64, aodpDate aodp.Stamp, aodpFar int64,
-	aodpFarDate aodp.Stamp, now time.Time) GridSide {
+	aodpFarDate aodp.Stamp, cfg conf.Config, now time.Time) GridSide {
 
 	var g GridSide
+	var cs scan.CapturedSide
 	if cb != nil && cb.has() {
+		cs = scan.CapturedFrom(cb.raw, cfg.Capture.BookLevels)
 		g.Capture = &CaptureSide{
 			Best: cb.Support.Best, Far: cb.far,
 			AgeHours:      math.Max(0, now.Sub(cb.bestSeen).Hours()),
@@ -274,24 +282,14 @@ func mergeSide(cb *BookSide, aodpBest int64, aodpDate aodp.Stamp, aodpFar int64,
 		}
 	}
 
+	m := scan.MergeSide(aodpBest, aodpDate, cs, cfg, now)
 	switch {
-	case g.Capture != nil && g.AODP != nil:
-		// 平手用抓包:它带件数。AODP 没有有效日期就当它不新
-		if !aodpDate.Valid() || !cb.bestSeen.Before(aodpDate.T) {
-			g.Pick = "capture"
-		} else {
-			g.Pick = "aodp"
-		}
-	case g.Capture != nil:
-		g.Pick = "capture"
+	case m.UsedCapture:
+		// 龄按 MergeSide 给的时间戳算:两边同价时取较新的那个,和扫描一致
+		g.Pick, g.Best = "capture", m.Price
+		g.AgeHours = hoursPtr(math.Max(0, now.Sub(m.At.T).Hours()))
 	case g.AODP != nil:
-		g.Pick = "aodp"
-	}
-	switch g.Pick {
-	case "capture":
-		g.Best, g.AgeHours = g.Capture.Best, hoursPtr(g.Capture.AgeHours)
-	case "aodp":
-		g.Best, g.AgeHours = g.AODP.Best, g.AODP.AgeHours
+		g.Pick, g.Best, g.AgeHours = "aodp", g.AODP.Best, g.AODP.AgeHours
 	}
 	g.Source = g.Pick
 	return g
@@ -546,9 +544,9 @@ func buildGrid(in gridInput) *LookupGrid {
 			cell := GridCell{
 				City: city, Quality: q,
 				Sell: mergeSide(sellBook, p.SellPriceMin, p.SellPriceMinDate,
-					p.SellPriceMax, p.SellPriceMaxDate, now),
+					p.SellPriceMax, p.SellPriceMaxDate, in.Cfg, now),
 				Buy: mergeSide(buyBook, p.BuyPriceMax, p.BuyPriceMaxDate,
-					p.BuyPriceMin, p.BuyPriceMinDate, now),
+					p.BuyPriceMin, p.BuyPriceMinDate, in.Cfg, now),
 				History: history(k),
 			}
 			if cell.Sell.Best == 0 && cell.Buy.Best == 0 && cell.History == nil {

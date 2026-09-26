@@ -13,6 +13,7 @@ import (
 	"albion-guild/internal/conf"
 	"albion-guild/internal/econ"
 	"albion-guild/internal/model"
+	"albion-guild/internal/scan"
 	"albion-guild/internal/store"
 )
 
@@ -37,36 +38,52 @@ func TestLookupCities(t *testing.T) {
 	}
 }
 
-func TestMergeSidePicksNewerSide(t *testing.T) {
-	seen := t0.Add(-10 * time.Minute)
+// 查价格子选哪一路和扫描是同一个函数(scan.PickCapture):抓包不比 AODP 旧
+// prefer_slack(默认 10 分钟)以上、或者两边同价 → 抓包。以前这里是"谁新用谁",
+// AODP 新几分钟时格子报 AODP、机会页报抓包
+func TestMergeSide和扫描同一套择边(t *testing.T) {
+	cfg := conf.Default()
+	seen := t0.Add(-30 * time.Minute)
 	cb := buildSide([]store.LiveOrder{sellAt(100, 5, seen)}, model.SideOffer, t0, testSlack, testNearPct)
 
 	cases := []struct {
 		name string
+		px   int64
 		date aodp.Stamp
 		pick string
 		best int64
+		age  float64 // 选中那一路的龄,小时
 	}{
-		{"抓包更新", stamp(t0.Add(-2 * time.Hour)), "capture", 100},
-		{"AODP 更新", stamp(t0.Add(-1 * time.Minute)), "aodp", 120},
-		{"平手用抓包", stamp(seen), "capture", 100},
-		{"AODP 没日期", aodp.Stamp{}, "capture", 100},
+		{"抓包更新", 120, stamp(t0.Add(-2 * time.Hour)), "capture", 100, 0.5},
+		{"AODP 新 5 分钟:在 prefer_slack 内仍用抓包", 120, stamp(seen.Add(5 * time.Minute)), "capture", 100, 0.5},
+		{"AODP 新 20 分钟且价不同", 120, stamp(seen.Add(20 * time.Minute)), "aodp", 120, 10.0 / 60},
+		{"AODP 新 20 分钟但同价:用抓包,龄取较新的", 100, stamp(seen.Add(20 * time.Minute)), "capture", 100, 10.0 / 60},
+		{"平手用抓包", 120, stamp(seen), "capture", 100, 0.5},
+		{"AODP 没日期", 120, aodp.Stamp{}, "capture", 100, 0.5},
 	}
 	for _, c := range cases {
-		g := mergeSide(&cb, 120, c.date, 150, c.date, t0)
+		g := mergeSide(&cb, c.px, c.date, 150, c.date, cfg, t0)
 		if g.Pick != c.pick || g.Source != c.pick || g.Best != c.best {
 			t.Errorf("%s: pick=%s best=%d", c.name, g.Pick, g.Best)
+		}
+		if g.AgeHours == nil || !near(*g.AgeHours, c.age) {
+			t.Errorf("%s: age=%v,应为 %v", c.name, g.AgeHours, c.age)
 		}
 		if g.Capture == nil || g.AODP == nil {
 			t.Errorf("%s: 被比下去的那一路也要留着", c.name)
 		}
+		// 和扫描逐边融合的结论逐条一致
+		m := scan.MergeSide(c.px, c.date, scan.CapturedFrom(cb.raw, cfg.Capture.BookLevels), cfg, t0)
+		if m.UsedCapture != (g.Pick == "capture") || m.Price != g.Best {
+			t.Errorf("%s: 扫描选 capture=%v / %d,查价选 %s / %d", c.name, m.UsedCapture, m.Price, g.Pick, g.Best)
+		}
 	}
 
-	g := mergeSide(nil, 120, stamp(t0.Add(-time.Hour)), 0, aodp.Stamp{}, t0)
+	g := mergeSide(nil, 120, stamp(t0.Add(-time.Hour)), 0, aodp.Stamp{}, cfg, t0)
 	if g.Pick != "aodp" || g.AgeHours == nil || !near(*g.AgeHours, 1) || g.AODP.Far != 0 {
 		t.Fatalf("只有 AODP: %+v", g)
 	}
-	g = mergeSide(nil, 0, aodp.Stamp{}, 0, aodp.Stamp{}, t0)
+	g = mergeSide(nil, 0, aodp.Stamp{}, 0, aodp.Stamp{}, cfg, t0)
 	if g.Pick != "" || g.Best != 0 || g.AgeHours != nil {
 		t.Fatalf("两边都没有: %+v", g)
 	}
