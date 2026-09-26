@@ -290,6 +290,7 @@ function craftBadges() {
   if (p.leftover) mine.push("余料估值");
   if (p.capital != null) mine.push("本金");
   $("c-adv-sum").textContent = mine.length ? `你改过:${mine.join("、")}` : "全部用服务端默认";
+  craftCalSummary();
 }
 
 // ── 请求体:只带用户填了的字段,没填的让服务端用默认值 ──
@@ -370,6 +371,8 @@ function craftChanged(opts = {}) {
   clearTimeout(craft.timer);
   craft.timer = setTimeout(() => craftLoad(), opts.now ? 0 : 350);
   if (currentView === "craft" && opts.grid) history.replaceState(null, "", "#" + viewHooks.craft.hash());
+  // 校准开着时,换了线 / 目标就按新的配方树重画(基础专注、转化格子都跟着变)
+  if (opts.grid && $("c-cal").open) craftRenderCal();
 }
 // 拿到计划之后的事:实时订阅、矩阵等在后面的提交里接上
 function craftAfterPlan(res, opts) { /* 见下文 */ }
@@ -595,6 +598,191 @@ $("v-craft").addEventListener("change", e => {
     } else return;
     craftChanged();
   }
+});
+
+// ── 配方树(GET /api/refine/recipe):只读服务端内存里的配方表,不读库、不打 AODP ──
+const craftTrees = new Map();   // 物品 id → Promise<树>
+function craftTree(id) {
+  if (!craftTrees.has(id)) {
+    const p = getJSON("/api/refine/recipe?item=" + encodeURIComponent(id));
+    p.catch(() => craftTrees.delete(id));   // 失败了下次重拉,不把失败缓存住
+    craftTrees.set(id, p);
+  }
+  return craftTrees.get(id);
+}
+
+// ── 校准:从游戏里读数反推 k 和专精(design-questions 第 1、2 条) ──
+// 服务端的转化实付 = 基础银币 × k + 产物物品价值 × 0.1125 × 主人费率 / 100(规则表 B5、B6)。
+// 游戏确认框的明细是 基本花费 − 全局折扣 + 主人费用 + 地区税费:全局折扣(金价低于 5000 才有)
+// 和地区税费没有单独的模型,和服务端一样都归进 k;主人费用单独反推成主人费率
+const ITEM_VALUE_TO_NUTRITION = 0.1125;   // 规则表 E1 ✔
+const FCE_HALVING = 10000;                // 规则表 D2 ✔:每 10000 点 FCE 专注消耗减半
+const FCE_MAX = 40000;                    // 规则表 D3 ✔
+const STATION_WORD = { ORE: "冶炼厂", HIDE: "制革厂" };
+const craftCal = { edge: "", qty: 1, base: null, disc: null, owner: null, region: null, fItem: "", shown: null, levels: {} };
+
+async function craftRenderCal() {
+  const box = $("c-cal-body"), L = cLine();
+  const rawTop = refineID(L.raw, 8, 4);   // 转化格子取整条线(T8.4 原料的全部祖先),哪一格都能量 k
+  let rawTree = null, tgtTree = null;
+  try { [rawTree, tgtTree] = await Promise.all([craftTree(rawTop), craftTree(cTarget())]); } catch (e) {
+    box.innerHTML = `<p class="c-status bad">配方树没拉到:${esc(e.message || e)}</p>`;
+    return;
+  }
+  if (!$("c-cal").open) return;
+  const edges = rawTree.edges || [];
+  const defEdge = `${refineID(L.raw, 8, 3)}>${rawTop}`;
+  if (!edges.some(e => `${e.from}>${e.to}` === craftCal.edge)) craftCal.edge = defEdge;
+  const chain = (tgtTree.chain || []).filter(n => n.makeable && n.recipes?.length);
+  if (!chain.some(n => n.item === craftCal.fItem)) craftCal.fItem = chain[0]?.item || "";
+  const station = STATION_WORD[L.line] || "精炼站";
+  const v = x => (x == null ? "" : String(x));
+  box.innerHTML = `
+    <fieldset><legend>转化系数 k 和转化主人费率</legend>
+      <ol class="c-how">
+        <li>在 ${esc(L.city)} 的 T8 ${station}打开「转化」分页,选 <b>T8.3 → T8.4 ${esc(cName(rawTop) || "原料")}</b>、数量 1。</li>
+        <li>打开确认弹窗里的「计算 / 明细」,把<b>基本花费 / 全局折扣 / 主人费用 / 地区税费</b>四行照抄到下面。</li>
+        <li>可以的话再量一格 <b>T7.0 → T8.0</b>(在下拉里换一格):两格算出来的 k 应该差不多,差得多说明抄错了或者 k 不是一个常数。</li>
+      </ol>
+      <p class="sub">k 直接决定「原料直接买」还是「从低级转上来」:差一点就可能翻转结论。k 以前变过(随版本、随时间),量的时候记下日期。</p>
+      <div class="c-row">
+        <div class="ctrl"><label for="cal-edge">转化哪一格</label>
+          <select id="cal-edge">${edges.map(e => `<option value="${esc(e.from + ">" + e.to)}">${esc(cTier(e.from))} → ${esc(cTier(e.to))}(基础 ${num(e.silver)})</option>`).join("")}</select></div>
+        <div class="ctrl"><label for="cal-qty">数量</label><input type="number" id="cal-qty" min="1" step="1" value="${v(craftCal.qty)}"></div>
+        <div class="ctrl"><label for="cal-base">基本花费</label><input type="number" id="cal-base" min="0" step="1" value="${v(craftCal.base)}"></div>
+        <div class="ctrl"><label for="cal-disc">全局折扣</label><input type="number" id="cal-disc" min="0" step="1" value="${v(craftCal.disc)}" placeholder="0"></div>
+        <div class="ctrl"><label for="cal-owner">主人费用</label><input type="number" id="cal-owner" min="0" step="1" value="${v(craftCal.owner)}" placeholder="0"></div>
+        <div class="ctrl"><label for="cal-region">地区税费</label><input type="number" id="cal-region" min="0" step="1" value="${v(craftCal.region)}" placeholder="0"></div>
+      </div>
+      <div class="c-calout" id="cal-k-out"></div>
+    </fieldset>
+    <fieldset><legend>精炼专精 FCE(${esc(L.line === "ORE" ? "矿石" : L.line === "HIDE" ? "兽皮" : L.line === "FIBER" ? "纤维" : "木材")}精炼)</legend>
+      <ol class="c-how">
+        <li>最快:在${station}里选中 <b>${esc(cLabel(chain[0]?.item || cTarget()))}</b>,看显示的<b>专注消耗</b>是多少,填到下面「方法一」。</li>
+        <li>或者:命运之轮里 T4~T8 五个精炼节点各自的等级,填到「方法二」,五个 tier 一起算出来。</li>
+      </ol>
+      <p class="sub">专注消耗 = 基础 × 0.5^(FCE ÷ 10000)(规则表 D2)。0 专精和满专精差 16 倍,每点专注值多少银、每天能做几件都取决于它。</p>
+      <div class="c-row">
+        <div class="ctrl"><label for="cal-fitem">方法一:哪一件</label>
+          <select id="cal-fitem">${chain.map(n => `<option value="${esc(n.item)}">${esc(cLabel(n.item))}(基础专注 ${num(n.recipes[0].focus)})</option>`).join("")}</select></div>
+        <div class="ctrl"><label for="cal-shown">游戏里显示的专注消耗</label><input type="number" id="cal-shown" min="1" step="1" value="${v(craftCal.shown)}"></div>
+      </div>
+      <div class="c-calout" id="cal-f-out"></div>
+      <div class="c-row">${CRAFT_TIERS.map(t => `<div class="ctrl"><label for="cal-lv-${t}">方法二:T${t} 节点等级</label>
+        <input type="number" id="cal-lv-${t}" data-lv="${t}" min="0" max="100" step="1" value="${v(craftCal.levels[t])}" placeholder="0"></div>`).join("")}</div>
+      <div class="c-calout" id="cal-l-out"></div>
+    </fieldset>`;
+  $("cal-edge").value = craftCal.edge;
+  $("cal-fitem").value = craftCal.fItem;
+  craftCal.edges = edges;
+  craftCal.chain = chain;
+  craftCalCompute();
+}
+
+function craftCalCompute() {
+  const edges = craftCal.edges || [], chain = craftCal.chain || [];
+  const out = $("cal-k-out");
+  if (!out) return;
+  // ① k
+  const e = edges.find(x => `${x.from}>${x.to}` === craftCal.edge);
+  const n = craftCal.qty > 0 ? craftCal.qty : 1;
+  if (!e || craftCal.base == null) {
+    out.innerHTML = `<span class="sub">填上「基本花费」就能算。这一格的基础价(配方数据)是 ${e ? num(e.silver) : "—"},产物物品价值 ${e ? fq(e.to_iv) : "—"}。</span>`;
+  } else {
+    const disc = craftCal.disc || 0, owner = craftCal.owner || 0, region = craftCal.region || 0;
+    const paid = craftCal.base - disc + owner + region;
+    const k = (craftCal.base - disc + region) / (n * e.silver);
+    const fee = e.to_iv > 0 ? owner / (n * e.to_iv * ITEM_VALUE_TO_NUTRITION) * 100 : null;
+    const kOK = isFinite(k) && k >= 0.5 && k <= 3;
+    const feeOK = fee != null && isFinite(fee) && fee >= 0 && fee <= 1000;
+    craftCal.k = kOK ? Math.round(k * 10000) / 10000 : null;
+    craftCal.fee = feeOK ? Math.round(fee) : null;
+    out.innerHTML = `实付合计 ${num(paid)}(${num(n)} 次)。
+      <b>k = (${num(craftCal.base)} − ${num(disc)} + ${num(region)}) ÷ (${num(n)} × ${num(e.silver)}) = ${kOK ? k.toFixed(4) : "—"}</b>
+      ${kOK ? "" : `<span class="warnish">算出来不在 0.5~3 之间,多半抄错了一行或数量不对</span>`}
+      · 主人费率 ≈ ${num(owner)} ÷ (${num(n)} × ${fq(e.to_iv)} × 0.1125) × 100 = <b>${feeOK ? num(fee) : "—"}</b> 银/100 营养
+      <div class="c-row"><button class="act" id="cal-k-apply"${kOK ? "" : " disabled"}>写入 k(记今天 ${cToday()})</button>
+        <button class="act ghost" id="cal-fee-apply"${feeOK ? "" : " disabled"}>写入主人费率(${esc(cCity())})</button></div>`;
+  }
+  // ② 按显示的专注消耗反推 FCE
+  const node = chain.find(x => x.item === craftCal.fItem);
+  const fOut = $("cal-f-out");
+  const base = node?.recipes?.[0]?.focus;
+  if (!node || !base || !craftCal.shown) {
+    fOut.innerHTML = `<span class="sub">填上显示的专注消耗就能算${base ? `(这一件基础 ${num(base)},满专精是 ${fq(base / 16)})` : ""}。</span>`;
+    craftCal.fce = null;
+  } else {
+    const s = craftCal.shown;
+    const f = x => FCE_HALVING * Math.log2(base / x);
+    // 游戏里显示的是整数:真实值落在 [s − 0.5, s + 0.5) 里,反推出来是一个区间
+    const lo = Math.max(0, f(s + 0.5)), hi = Math.min(FCE_MAX, s > 0.5 ? f(s - 0.5) : FCE_MAX);
+    const mid = Math.min(FCE_MAX, Math.max(0, f(s)));
+    craftCal.fce = Math.round(mid);
+    craftCal.fTier = node.tier;
+    const odd = s > base ? "比基础值还高:是不是选错了物品?" : s < base / 16 - 0.5 ? "比满专精(1/16)还低:是不是看错了?" : "";
+    fOut.innerHTML = `<b>T${node.tier} 的 FCE ≈ ${num(mid)}</b>(显示是整数,真实值在 ${num(lo)} ~ ${num(hi)} 之间)
+      ${odd ? `<span class="warnish">${odd}</span>` : ""}
+      <div class="c-row"><button class="act" id="cal-f-apply">写入 T${node.tier} 专精</button></div>`;
+  }
+  // ③ 按命运之轮节点等级算五个 tier:每级给整条线 +30、给本 tier 另加 +250(规则表 D3 ✔)
+  const lv = CRAFT_TIERS.map(t => Math.max(0, Math.min(100, Number(craftCal.levels[t]) || 0)));
+  const sum = lv.reduce((a, b) => a + b, 0);
+  const fces = CRAFT_TIERS.map((t, i) => Math.min(FCE_MAX, 30 * sum + 250 * lv[i]));
+  craftCal.fces = fces;
+  $("cal-l-out").innerHTML = `FCE = 30 × 五个节点等级之和(${num(sum)})+ 250 × 本 tier 等级:${
+    CRAFT_TIERS.map((t, i) => `T${t} <b>${num(fces[i])}</b>`).join(" · ")}
+    <div class="c-row"><button class="act ghost" id="cal-l-apply"${sum > 0 ? "" : " disabled"}>写入全部五个 tier</button></div>`;
+}
+
+function craftCalSummary() {
+  const p = craft.p, fce = cFCE();
+  const parts = [p.k != null ? `k=${p.k}(${p.kSrc === "calib" ? "实测" : "手填"} ${p.kAt || ""})` : "k 未核实"];
+  const set = CRAFT_TIERS.filter(t => fce[t] > 0);
+  parts.push(set.length ? `专精 ${set.map(t => `T${t} ${num(fce[t])}`).join("、")}` : "专精按 0 算");
+  $("c-cal-sum").textContent = parts.join(" · ");
+}
+
+$("c-cal").addEventListener("toggle", () => { if ($("c-cal").open) craftRenderCal(); });
+$("c-cal-body").addEventListener("input", e => {
+  const el = e.target;
+  const val = el.value.trim() === "" ? null : Number(el.value);
+  const ok = val == null || isFinite(val);
+  if (!ok) return;
+  switch (el.id) {
+    case "cal-qty": craftCal.qty = val || 1; break;
+    case "cal-base": craftCal.base = val; break;
+    case "cal-disc": craftCal.disc = val; break;
+    case "cal-owner": craftCal.owner = val; break;
+    case "cal-region": craftCal.region = val; break;
+    case "cal-shown": craftCal.shown = val; break;
+    default:
+      if (el.dataset.lv) craftCal.levels[el.dataset.lv] = val;
+      else return;
+  }
+  craftCalCompute();
+});
+$("c-cal-body").addEventListener("change", e => {
+  if (e.target.id === "cal-edge") { craftCal.edge = e.target.value; craftCalCompute(); }
+  if (e.target.id === "cal-fitem") { craftCal.fItem = e.target.value; craftCalCompute(); }
+});
+$("c-cal-body").addEventListener("click", e => {
+  const b = e.target.closest("button[id]");
+  if (!b || b.disabled) return;
+  const p = craft.p;
+  if (b.id === "cal-k-apply" && craftCal.k != null) {
+    Object.assign(p, { k: craftCal.k, kAt: cToday(), kSrc: "calib", kGold: craftGold() });
+  } else if (b.id === "cal-fee-apply" && craftCal.fee != null) {
+    p.tstation[cCity()] = craftCal.fee;
+  } else if (b.id === "cal-f-apply" && craftCal.fce != null) {
+    p.fce[p.line] = { ...cFCE(), [craftCal.fTier]: craftCal.fce };
+  } else if (b.id === "cal-l-apply" && craftCal.fces) {
+    const f = {};
+    CRAFT_TIERS.forEach((t, i) => { f[t] = craftCal.fces[i]; });
+    p.fce[p.line] = f;
+  } else return;
+  b.textContent = "已写入 ✓";
+  b.disabled = true;
+  craftChanged();
 });
 
 // ── 页面钩子(app.js 的 show / route 调) ──
