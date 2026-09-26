@@ -26,6 +26,8 @@ $.candidates[].daily.binding: string
 $.candidates[].daily.limits: object
 $.candidates[].daily.limits.capital: null|number
 $.candidates[].daily.limits.focus: null|number
+$.candidates[].daily.limits.qty: number
+$.candidates[].daily.limits.take: null|number
 $.candidates[].daily.limits.volume: number
 $.candidates[].daily.profit: number
 $.candidates[].daily.units: number
@@ -53,11 +55,15 @@ $.candidates[].profit: object
 $.candidates[].profit.post: null|object
 $.candidates[].profit.post.net: number
 $.candidates[].profit.post.pct: number
+$.candidates[].profit.post.sold: number
+$.candidates[].profit.post.total: number
 $.candidates[].profit.post.unit: number
 $.candidates[].profit.take: null|object
 $.candidates[].profit.take.max_qty: number
 $.candidates[].profit.take.net: number
 $.candidates[].profit.take.pct: number
+$.candidates[].profit.take.sold: number
+$.candidates[].profit.take.total: number
 $.candidates[].profit.take.unit: number
 $.candidates[].reference: string
 $.candidates[].silver_per_focus: null|number
@@ -94,6 +100,7 @@ $.candidates[].steps[].source: string
 $.candidates[].steps[].station_fee: number
 $.candidates[].steps[].to: string
 $.candidates[].steps[].unit_fee: number
+$.candidates[].steps[].unsold: number
 $.candidates[].steps[].variant: number
 $.candidates[].total_cost: number
 $.candidates[].unit_cost: number

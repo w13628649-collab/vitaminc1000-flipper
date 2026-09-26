@@ -316,6 +316,20 @@ func Test真实抓包出售专注本金日化(t *testing.T) {
 		if mode == LeftoverBid {
 			assertNear(t, "余料砸买单每批多亏", ev.tailLoss, x.v(t, key("capital.tail_loss_bid_n3", 0, "A")), 1)
 		}
+
+		// 用户的本金 1000 万(conf.capital):一批 3 根的开工本金超过它(实例 §3「每次只能做 2 根左右」),
+		// 本金上限要先扣掉余料占着的钱(审查 finding 3)
+		e3c := captureEngine(t, books, barT84, 1.154, func(p *Params) { p.Qty = 3; p.Leftover = mode; p.Daily.Capital = 10_000_000 })
+		cc := e3c.candidate(e3c.run(scenario[idA], nil), e3c.sellInfo(), nil, "")
+		tied := 0.0
+		for _, lo := range cc.Leftover {
+			tied += lo.Cost
+		}
+		steady := cc.UpfrontCapital - tied
+		assertNear(t, mode+" 本金上限", *cc.Daily.Limits.Capital, (10_000_000-tied)/(steady/3), 1e-9)
+		if *cc.Daily.Limits.Capital >= 3 || !hasWarning(cc.Warnings, WarnCapitalShort, "") {
+			t.Fatalf("%s:一批 3 根备不齐,本金上限应当不到 3 根/天并警告: %v %+v", mode, *cc.Daily.Limits.Capital, cc.Warnings)
+		}
 	}
 
 	// 日化(实例 §3):成交量卡住;专注上限:FCE=0 每天 10,000 专注,A 每根 4714

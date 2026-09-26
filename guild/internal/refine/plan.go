@@ -30,6 +30,8 @@ const (
 	WarnSellCliff    = "sell_cliff"        // 吃买单卖不完这一批,后面是断崖
 	WarnNoSellPrice  = "no_sell_price"     // 出售城市没有挂单,算不出利润
 	WarnLocked       = "locked"            // 目标 tier 没解锁,只能买不能炼
+	WarnQtyBound     = "qty_bound"         // 日化卡在这一批的件数:别的上限还允许做更多,但成本只按这一批算过
+	WarnCapitalShort = "capital_short"     // 开工本金超过本金,这一批一次备不齐料
 )
 
 // Warning 是一条警告。
@@ -84,13 +86,21 @@ type Step struct {
 	Mode  string  `json:"mode,omitempty"`
 	Price int64   `json:"price,omitempty"`
 	Net   float64 `json:"net,omitempty"`
+	// Unsold 是这一批做出来、按这种卖法卖不掉的件数(吃买单撞上断崖或盘口见底)。
+	// 它们按成本留在手里,不进这一批的利润(ProfitLine.Total)
+	Unsold float64 `json:"unsold,omitempty"`
 }
 
 // ProfitLine 是一种卖法下的利润。
 type ProfitLine struct {
-	Net  float64 `json:"net"`  // 每件到手
-	Unit float64 `json:"unit"` // 每件利润
+	Net  float64 `json:"net"`  // 每件到手(吃买单是卖掉的那几件的均价)
+	Unit float64 `json:"unit"` // 每件利润 = Net − 单根成本,按卖掉的件算
 	Pct  float64 `json:"pct"`  // 利润 ÷ 单根成本
+	// Sold 是这一批按这种卖法卖得掉几件:挂卖按整批;吃买单只到断崖之前、盘口上够得着的那些
+	Sold float64 `json:"sold"`
+	// Total 是这一批的利润 = Sold × Unit。吃买单卖不完的那几件不在里面:
+	// 它们按成本留在手里(和批末余料 carry 一个口径),不能拿断崖之前的均价去外推
+	Total float64 `json:"total"`
 	// MaxQty 只有吃买单有:断崖之前最多卖几件
 	MaxQty *float64 `json:"max_qty,omitempty"`
 }
@@ -111,18 +121,25 @@ type FocusUse struct {
 	OverBudget  bool    `json:"over_budget"`
 }
 
-// DailyLimits 是日化的三个上限,每天能做几件。nil = 这一项不设限。
+// DailyLimits 是日化的几个上限,每天能做几件。nil = 这一项不设限。
 type DailyLimits struct {
-	Focus   *float64 `json:"focus"`
-	Volume  *float64 `json:"volume"`
+	Focus  *float64 `json:"focus"`
+	Volume *float64 `json:"volume"`
+	// Capital = (本金 − 批末余料占着的钱) ÷ 稳态单根成本 ÷ 周转天数
 	Capital *float64 `json:"capital"`
+	// Qty = 这一批的件数 ÷ 周转天数。单根成本和利润只在这个量上沿阶梯算过,
+	// 做得更多就要往阶梯深处吃、成本会变,不能拿这一批的单根利润外推。永远有值
+	Qty *float64 `json:"qty"`
+	// Take 只在主出售方式是吃买单时有:这一批断崖之前卖得掉的件数 ÷ 周转天数
+	Take *float64 `json:"take"`
 }
 
 // Daily 是日化(设计 §2.5):每天件数 = min(今日专注 ÷ 每根专注, 成交份额 × 日成交量,
-// 本金 ÷ 单根成本 ÷ 周转天数),标出卡在哪一项。
+// 本金 ÷ 单根成本 ÷ 周转天数, 这一批的件数 ÷ 周转天数[, 吃买单卖得掉的件数 ÷ 周转天数]),
+// 标出卡在哪一项。
 type Daily struct {
 	Units float64 `json:"units"`
-	// Binding:focus | volume | capital;三项都不设限时是 none,按一天做完这一批算
+	// Binding:focus | volume | capital | qty | take
 	Binding string      `json:"binding"`
 	Profit  float64     `json:"profit"`
 	Limits  DailyLimits `json:"limits"`
@@ -563,12 +580,16 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 	c.UnitCost = c.TotalCost / N
 
 	if si.Post != nil {
-		c.Profit.Post = &ProfitLine{Net: si.Post.Net, Unit: si.Post.Net - c.UnitCost}
+		c.Profit.Post = &ProfitLine{Net: si.Post.Net, Unit: si.Post.Net - c.UnitCost, Sold: N}
 		c.Profit.Post.Pct = pct(c.Profit.Post.Unit, c.UnitCost)
+		c.Profit.Post.Total = c.Profit.Post.Sold * c.Profit.Post.Unit
 	}
 	if si.Take != nil && si.Take.Fill.Got > 0 {
-		c.Profit.Take = &ProfitLine{Net: si.Take.Fill.NetAvg, Unit: si.Take.Fill.NetAvg - c.UnitCost, MaxQty: si.Take.MaxQty}
+		// 每件利润按卖掉的那几件的均价算;断崖之后的不外推(见 ProfitLine.Total)
+		c.Profit.Take = &ProfitLine{Net: si.Take.Fill.NetAvg, Unit: si.Take.Fill.NetAvg - c.UnitCost,
+			Sold: si.Take.Fill.Got, MaxQty: si.Take.MaxQty}
 		c.Profit.Take.Pct = pct(c.Profit.Take.Unit, c.UnitCost)
+		c.Profit.Take.Total = c.Profit.Take.Sold * c.Profit.Take.Unit
 	}
 	if p.Sell.Modes[0] == SellTake {
 		c.primary = c.Profit.Take
@@ -601,12 +622,13 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 		c.SilverPerFocus = &v
 	}
 	if hasProfit {
-		c.Daily = e.daily(c, primary)
+		c.Daily = e.daily(c, ev, primary)
 	}
 
 	c.Steps = e.steps(ev, si)
 	c.sig = signature(c.Steps)
 	e.ageAndWarnings(&c, ev, si)
+	e.dailyWarnings(&c)
 	return c
 }
 
@@ -617,16 +639,28 @@ func pct(profit, cost float64) float64 {
 	return profit / cost
 }
 
-// daily 是日化(设计 §2.5)。
-func (e *engine) daily(c Candidate, profit float64) *Daily {
+// daily 是日化(设计 §2.5)。profit 是主出售方式下的每件利润。
+//
+// 几个上限取最小,平局时先登记的那一项算「卡住」的:
+//   - focus:今日专注 ÷ 每根专注
+//   - volume:成交份额 × 日成交量(没有成交数据时不设限,不当成 0)
+//   - capital:(本金 − 批末余料占着的钱) ÷ 稳态单根成本 ÷ 周转天数。批末余料(§2.4)开工前
+//     就得备齐、做完还留在手里结转,这部分本金周转不起来;不扣的话开工本金明明超过本金,
+//     日化照样按整份本金报件数(审查 finding 3)。按稳态成本除,是因为本金要备的是
+//     买料的钱,余料的估值损失(bid / zero)不占本金
+//   - qty:这一批的件数 ÷ 周转天数。单根成本是按这一批沿阶梯吃出来的,做得更多就吃得更深、
+//     更贵;不封顶的话低 tier 不开专注的格子按成交量能外推出一天上万件,日化又是默认排序键
+//     (审查 finding 1)。要看更大的量,把 qty 调大重算
+//   - take:主出售方式是吃买单时,这一批断崖之前卖得掉的件数 ÷ 周转天数(finding 4)
+func (e *engine) daily(c Candidate, ev *evalResult, profit float64) *Daily {
 	p := e.p
-	d := &Daily{Binding: "none"}
+	d := &Daily{}
 	units := math.Inf(1)
 	consider := func(v float64, name string, slot **float64) {
-		vv := v
+		vv := math.Max(0, v)
 		*slot = &vv
-		if v < units {
-			units, d.Binding = v, name
+		if vv < units {
+			units, d.Binding = vv, name
 		}
 	}
 	if c.Focus.PerUnit > 0 {
@@ -635,15 +669,47 @@ func (e *engine) daily(c Candidate, profit float64) *Daily {
 	if e.volume.Known {
 		consider(p.Daily.VolumeShare*e.volume.PerDay, "volume", &d.Limits.Volume)
 	}
-	if p.Daily.Capital > 0 && c.UnitCost > 0 {
-		consider(p.Daily.Capital/c.UnitCost/p.Daily.TurnoverDays, "capital", &d.Limits.Capital)
+	if steady := ev.total / float64(p.Qty); p.Daily.Capital > 0 && steady > 0 {
+		tied := c.UpfrontCapital - ev.total // 批末余料的取得成本;不算余料时是 0
+		consider((p.Daily.Capital-tied)/steady/p.Daily.TurnoverDays, "capital", &d.Limits.Capital)
 	}
-	if math.IsInf(units, 1) {
-		units = float64(p.Qty) // 三项都不设限:按一天做完这一批算
+	consider(float64(p.Qty)/p.Daily.TurnoverDays, "qty", &d.Limits.Qty)
+	if p.Sell.Modes[0] == SellTake && c.Profit.Take != nil {
+		consider(c.Profit.Take.Sold/p.Daily.TurnoverDays, "take", &d.Limits.Take)
 	}
 	d.Units = units
 	d.Profit = units * profit
 	return d
+}
+
+// dailyWarnings:日化卡在批量上、开工本金超过本金,这两种要让人知道。
+func (e *engine) dailyWarnings(c *Candidate) {
+	p := e.p
+	if p.Daily.Capital > 0 && c.UpfrontCapital > p.Daily.Capital+costEps {
+		c.Warnings = append(c.Warnings, Warning{Code: WarnCapitalShort,
+			Msg: fmt.Sprintf("开工要先备齐 %.0f 银的料(含批末余料),超过本金 %.0f:这一批一次备不齐,日化按扣掉余料占用之后的本金算",
+				c.UpfrontCapital, p.Daily.Capital)})
+	}
+	d := c.Daily
+	if d == nil || d.Binding != "qty" {
+		return
+	}
+	// 别的上限里最小的那个:比批量大才值得提示
+	other := math.Inf(1)
+	for _, v := range []*float64{d.Limits.Focus, d.Limits.Volume, d.Limits.Capital, d.Limits.Take} {
+		if v != nil && *v < other {
+			other = *v
+		}
+	}
+	if other > d.Units+qtyEps {
+		room := "专注、成交量、本金都没封顶"
+		if !math.IsInf(other, 1) {
+			room = "专注、成交量、本金还允许每天做 " + fmtQty(other) + " 件"
+		}
+		c.Warnings = append(c.Warnings, Warning{Code: WarnQtyBound,
+			Msg: fmt.Sprintf("日化只算到这一批的 %s 件/天(%s),但单根成本只按这一批的量沿阶梯算过;要看更大的量,把件数调大重算",
+				fmtQty(d.Units), room)})
+	}
 }
 
 // ── 步骤清单 ────────────────────────────────────────────────────────────
@@ -706,6 +772,9 @@ func (e *engine) steps(ev *evalResult, si SellInfo) []Step {
 	case sell.Mode == SellTake && si.Take != nil:
 		sell.Price, sell.Net = int64(math.Round(si.Take.Fill.VWAP)), si.Take.Fill.NetAvg
 		sell.Qty = si.Take.Fill.Got
+		if u := float64(e.p.Qty) - si.Take.Fill.Got; u > qtyEps {
+			sell.Unsold = u // 做了 Qty 件、只卖得掉 Got 件:剩下的按成本留在手里
+		}
 		sell.SeenAt, sell.AgeH, sell.Source = si.Take.SeenAt, si.Take.AgeH, si.Take.Source
 	}
 	out = append(out, sell)
