@@ -6,6 +6,10 @@
 #
 #   wsl -d Ubuntu -u root -- bash guild/dev-up.sh
 #
+# 只想把服务拉起来、不想拿工作区里没写完的代码编译时:
+#
+#   wsl -d Ubuntu -u root -- env NOBUILD=1 bash guild/dev-up.sh
+#
 # 和 release.sh 的区别:不跑 gofmt/vet/test 门禁(Windows 检出是 CRLF,
 # gofmt -l 会把每个文件都列出来),客户端连本机,数据库也归它管。
 set -euo pipefail
@@ -42,8 +46,15 @@ for _ in $(seq 60); do
 done
 docker exec flipper-pg pg_isready -U postgres -d flipper
 
-echo "→ 编服务端和客户端(版本 $VERSION)"
 mkdir -p "$DEPLOY/release" ../dist
+if [ "${NOBUILD:-}" = "1" ]; then
+  # WSL 重启后只想把服务拉起来、工作区里又有没写完的代码时用:
+  # 不编译,直接用上次部署的二进制(/opt 在 WSL 自己的盘上,重启不丢)
+  [ -x "$DEPLOY/guild-server" ] || { echo "✗ $DEPLOY/guild-server 不存在,去掉 NOBUILD 编一次" >&2; exit 1; }
+  VERSION="$(cat "$DEPLOY/VERSION" 2>/dev/null || echo "$VERSION")"
+  echo "→ 不编译,沿用上次部署的服务端(版本 $VERSION)"
+else
+echo "→ 编服务端和客户端(版本 $VERSION)"
 CGO_ENABLED=0 go build -ldflags "-X main.version=$VERSION" -o "$DEPLOY/guild-server.new" ./cmd/server
 # 客户端交叉编译:gopacket 在 Windows 上运行时加载 wpcap.dll,go-webview2 是纯 Go,
 # 都不需要 cgo。defaultServer 写死成本机,双击就能连上
@@ -65,11 +76,13 @@ if [ -e ../dist/flipper-client.exe ]; then
 fi
 mv -f ../dist/flipper-client.exe.new ../dist/flipper-client.exe
 cp ../dist/flipper-client.exe "$DEPLOY/release/flipper-client.exe"
+echo "$VERSION" > "$DEPLOY/VERSION"
+fi
 
 echo "→ 重启服务端 :$PORT"
 pkill -x guild-server 2>/dev/null || true
 for _ in $(seq 20); do pgrep -x guild-server >/dev/null || break; sleep 0.5; done
-mv -f "$DEPLOY/guild-server.new" "$DEPLOY/guild-server"
+[ -e "$DEPLOY/guild-server.new" ] && mv -f "$DEPLOY/guild-server.new" "$DEPLOY/guild-server"
 # 必须绑 127.0.0.1,不能写 0.0.0.0。Go 对通配地址开的是 [::] 双栈 socket,
 # WSL 的 localhost 转发看到 IPv6 监听就只在 Windows 上挂 ::1,
 # 客户端连 127.0.0.1 会直接 connection refused
