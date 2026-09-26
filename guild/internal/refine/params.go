@@ -3,6 +3,8 @@ package refine
 import (
 	"fmt"
 	"math"
+	"slices"
+	"strings"
 	"time"
 
 	"albion-guild/internal/conf"
@@ -35,6 +37,12 @@ type Params struct {
 	Leftover string `json:"leftover"`
 	// IncludeTail:把批末余料算进开工本金,bid / zero 时把余料的损失摊进成本
 	IncludeTail bool `json:"include_tail"`
+
+	// Confirmed 是用户说「在游戏里核对过了」的待核实参数(UnverifiedParams 的 Key)。
+	// 核对出来的值常常正好等于默认值(矿 / 皮专精真的是 0、站费真的是 500):光拿值和默认值比,
+	// 分不出「没填」和「填了、恰好一样」,「未核实」的标就永远去不掉。所以由客户端明说。
+	// 只影响标注(params_used.unverified[].confirmed、候选路线的 unverified 警告),不影响计算
+	Confirmed []string `json:"confirmed"`
 
 	// Top 是候选路线最多列几条(不含两条参照行)
 	Top int `json:"top"`
@@ -244,8 +252,18 @@ func (p Params) normalized() Params {
 	if p.Focus.CustomTiers == nil {
 		p.Focus.CustomTiers = []int{} // JSON 里给 [] 不给 null
 	}
+	// 排序去重:同一组核对过的参数换个顺序发,缓存键也要一样
+	confirmed := slices.Clone(p.Confirmed)
+	slices.Sort(confirmed)
+	p.Confirmed = slices.Compact(confirmed)
+	if p.Confirmed == nil {
+		p.Confirmed = []string{}
+	}
 	return p
 }
+
+// confirmed:用户说这个待核实参数在游戏里核对过了。
+func (p Params) confirmed(key string) bool { return slices.Contains(p.Confirmed, key) }
 
 // finite:不是 NaN、不是 ±Inf。查询参数的 ParseFloat 认 "Inf" / "NaN",
 // 光比大小挡不住 +Inf(+Inf >= 0 为真),之后缓存键的 json.Marshal 会失败成 500。
@@ -352,15 +370,29 @@ func (p Params) validate() (Line, int, int, error) {
 	if !(p.Daily.TurnoverDays > 0 && p.Daily.TurnoverDays <= MaxTurnoverDays) {
 		return line, 0, 0, fmt.Errorf("周转天数要在 (0, %g] 内,得到 %g", MaxTurnoverDays, p.Daily.TurnoverDays)
 	}
+	// 键拼错时悄悄忽略的话,界面以为核对过的标已经去掉了,其实服务端没认
+	for _, k := range p.Confirmed {
+		if !slices.ContainsFunc(UnverifiedParams, func(u Unverified) bool { return u.Key == k }) {
+			keys := make([]string, 0, len(UnverifiedParams))
+			for _, u := range UnverifiedParams {
+				keys = append(keys, u.Key)
+			}
+			return line, 0, 0, fmt.Errorf("confirmed 里的 %q 不是待核实参数,只有 %s", k, strings.Join(keys, " / "))
+		}
+	}
 	return line, tier, enchant, nil
 }
 
 // UnverifiedUsed 是结果里 params_used.unverified 的一项:没核实的参数、这次用的值、
 // 是不是默认值。界面据此给数字打「未核实」徽章。
+//
+// IsDefault 只说值和默认值一样不一样;Confirmed 说用户核对过没有(Params.Confirmed)。
+// 核对过、值恰好等于默认值时两个都是 true,界面按 Confirmed 算「核对过」
 type UnverifiedUsed struct {
 	Unverified
 	Value     any  `json:"value"`
 	IsDefault bool `json:"is_default"`
+	Confirmed bool `json:"confirmed"`
 }
 
 // unverifiedUsed 按 UnverifiedParams 的顺序列出这次用的值。
@@ -388,7 +420,7 @@ func (p Params) unverifiedUsed(chainTiers []int) []UnverifiedUsed {
 	out := make([]UnverifiedUsed, 0, len(UnverifiedParams))
 	for _, u := range UnverifiedParams {
 		v := value[u.Key]
-		out = append(out, UnverifiedUsed{Unverified: u, Value: v.v, IsDefault: v.def})
+		out = append(out, UnverifiedUsed{Unverified: u, Value: v.v, IsDefault: v.def, Confirmed: p.confirmed(u.Key)})
 	}
 	return out
 }

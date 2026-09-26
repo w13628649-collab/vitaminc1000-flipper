@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -45,6 +46,8 @@ func TestPlan参数校验(t *testing.T) {
 		{"加价太大", func(p *Params) { p.Fees.Outbid = 2_000_000 }, "outbid"},
 		{"FCE 的键不是 tier", func(p *Params) { p.Focus.FCE[99] = 1000 }, "FCE 的键"},
 		{"FCE 的键是 T3", func(p *Params) { p.Focus.FCE[3] = 1000 }, "FCE 的键"},
+		// 核对过的参数键拼错:悄悄忽略的话界面以为标已经去掉了
+		{"confirmed 的键拼错", func(p *Params) { p.Confirmed = []string{"focus.fce", "fees.k"} }, "confirmed"},
 	}
 	for _, c := range cases {
 		p := params("T8_METALBAR_LEVEL4@4")
@@ -219,6 +222,73 @@ func TestPlan列出未核实参数(t *testing.T) {
 			t.Fatalf("params_used 的 JSON 里没有 %s:%s", key, raw)
 		}
 	}
+}
+
+// 核对过的参数(Params.Confirmed):值恰好等于默认值也不再算「没核实」。
+// 以前只拿值和默认值比,专精真的是 0、站费真的是 500 的人,「参数未核实」永远去不掉。
+func TestPlan核对过的参数不再标未核实(t *testing.T) {
+	l := Lines[0]
+	used := []string{"fees.transmute_factor", "fees.transmute_station_per100", "fees.station_per100", "focus.fce"}
+	plan := func(confirmed []string) *Result {
+		t.Helper()
+		p := params(l.RefinedID(8, 4))
+		p.Confirmed = confirmed
+		res, err := Plan(Input{Params: p, Books: synthBooks(l, l.City, 1), Recipes: EmbeddedRecipes()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	unverifiedWarn := func(res *Result) bool {
+		for _, c := range res.Candidates {
+			if hasWarning(c.Warnings, WarnUnverified, "") {
+				return true
+			}
+		}
+		return false
+	}
+	if res := plan(nil); !unverifiedWarn(res) {
+		t.Fatal("全用默认值、没核对过:应当有「参数未核实」")
+	}
+	// 顺序打乱、带重复:按排好序的集合认
+	res := plan([]string{"focus.fce", "fees.station_per100", "fees.transmute_station_per100", "fees.transmute_factor", "focus.fce"})
+	if unverifiedWarn(res) {
+		t.Fatal("路线用到的待核实参数都核对过了,不该再有「参数未核实」")
+	}
+	if got := res.ParamsUsed.Confirmed; len(got) != len(used) || !sortedStrings(got) {
+		t.Fatalf("params_used.confirmed 应当排序去重: %v", got)
+	}
+	for _, u := range res.ParamsUsed.Unverified {
+		want := slices.Contains(used, u.Key)
+		if u.Confirmed != want {
+			t.Fatalf("%s: confirmed=%v,期望 %v", u.Key, u.Confirmed, want)
+		}
+		// is_default 还是只看值:核对过、值恰好是默认值,两个都是 true
+		if want && !u.IsDefault {
+			t.Fatalf("%s 用的是默认值,is_default 应当还是 true", u.Key)
+		}
+	}
+	// 只核对了一部分:剩下的照样报
+	res = plan([]string{"focus.fce"})
+	if !unverifiedWarn(res) {
+		t.Fatal("k 和站费没核对,应当还有「参数未核实」")
+	}
+	for _, c := range res.Candidates {
+		for _, w := range c.Warnings {
+			if w.Code == WarnUnverified && strings.Contains(w.Msg, "FCE") {
+				t.Fatalf("FCE 核对过了,警告里不该再提: %s", w.Msg)
+			}
+		}
+	}
+}
+
+func sortedStrings(xs []string) bool {
+	for i := 1; i < len(xs); i++ {
+		if xs[i-1] >= xs[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // JSON 形状:界面和 API 靠这些字段名。

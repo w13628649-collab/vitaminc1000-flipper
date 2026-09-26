@@ -230,6 +230,7 @@ func TestRefine接口参数不合法回400且不读数据(t *testing.T) {
 		`{"target":"T8_METALBAR_LEVEL4@4","focus":{"fce":{"99":1000}}}`,
 		`{"target":"T8_METALBAR_LEVEL4@4","daily":{"turnover_days":1e300}}`,
 		`{"target":"T8_METALBAR_LEVEL4@4","sources":{"bid_max_qty":-1}}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","confirmed":["fees.k"]}`, // 核对过的参数键拼错
 	} {
 		resp, raw := postPlan(t, srv, body)
 		if resp.StatusCode != http.StatusBadRequest {
@@ -255,6 +256,8 @@ func TestRefine接口参数不合法回400且不读数据(t *testing.T) {
 		"/api/refine/matrix?line=ORE&fce=Inf",
 		"/api/refine/matrix?line=ORE&fce=8:NaN",
 		"/api/refine/matrix?line=ORE&max_age_hours=Inf",
+		"/api/refine/matrix?line=ORE&sell_city=Atlantis",
+		"/api/refine/matrix?line=ORE&confirmed=focus.fce,fees.k",
 		"/api/refine/recipe",
 		"/api/refine/recipe?item=T8_MAIN_FIRESTAFF",
 		"/api/refine/recipe?item=T8_ORE&k=abc",
@@ -371,6 +374,37 @@ func TestRefine接口个人参数照请求算(t *testing.T) {
 	}
 }
 
+// 矩阵认出售城市和核对过的参数:精炼页设了出售城市、核对过参数,矩阵要和上面的卡片同一套口径
+func TestRefine矩阵带出售城市和核对过的参数(t *testing.T) {
+	srv := refineServer(fullSrc(time.Now()))
+	defer srv.Close()
+	resp, raw := get(t, srv, "/api/refine/matrix?line=ORE&city=Thetford&sell_city=Martlock&confirmed=focus.fce,+fees.station_per100")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("状态 %d: %s", resp.StatusCode, raw)
+	}
+	var m flip.RefineMatrix
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.City != "Thetford" || m.ParamsUsed.Sell.City != "Martlock" {
+		t.Fatalf("生产 %s、出售 %s,期望 Thetford / Martlock", m.City, m.ParamsUsed.Sell.City)
+	}
+	// 造的盘口只在 Thetford:在 Martlock 卖就没有卖价 —— 说明每一格确实按出售城市读了盘口
+	for _, c := range m.Cells {
+		if c.Sell == nil || c.Sell.City != "Martlock" || c.Sell.Post != nil {
+			t.Fatalf("%s 的出售应当按 Martlock 算: %+v", c.Target, c.Sell)
+		}
+	}
+	if !slices.Equal(m.ParamsUsed.Confirmed, []string{"fees.station_per100", "focus.fce"}) {
+		t.Fatalf("confirmed: %v", m.ParamsUsed.Confirmed)
+	}
+	for _, u := range m.Unverified {
+		if want := u.Key == "focus.fce" || u.Key == "fees.station_per100"; u.Confirmed != want {
+			t.Fatalf("%s: confirmed=%v,期望 %v", u.Key, u.Confirmed, want)
+		}
+	}
+}
+
 // ── JSON 形状快照 ───────────────────────────────────────────────────────
 
 // 界面照着这些字段写。形状 = 每个字段的路径和类型(数组元素合并成 []),不管具体数值,
@@ -390,7 +424,7 @@ func TestRefine接口JSON形状(t *testing.T) {
 	// 数据全过期、整条线没数据 —— 可选字段都能露出来
 	planShape := map[string]map[string]bool{}
 	for _, body := range []string{
-		`{"target":"T5_METALBAR_LEVEL1@1","qty":10,"sources":{"bid_orders":true}}`,
+		`{"target":"T5_METALBAR_LEVEL1@1","qty":10,"sources":{"bid_orders":true},"confirmed":["focus.fce"]}`,
 		`{"target":"T8_METALBAR_LEVEL4@4","qty":600,"sell":{"modes":["take","post"]},"leftover":"bid","daily":{"capital":0}}`,
 		`{"target":"T6_METALBAR_LEVEL4@4","qty":10,"sources":{"max_age_hours":0.5}}`,
 		`{"target":"T8_LEATHER_LEVEL4@4","qty":10}`,

@@ -855,19 +855,20 @@ func (e *engine) ageAndWarnings(c *Candidate, ev *evalResult, si SellInfo) {
 		c.Warnings = append(c.Warnings, Warning{Code: WarnOverFocus,
 			Msg: fmt.Sprintf("这一批要 %.0f 专注,今日可用 %.0f", c.Focus.Effective, p.Focus.Budget)})
 	}
+	// 值等于默认值、用户又没说核对过(Params.Confirmed)的才算「没核实」
 	var keys []string
 	if len(ev.trans) > 0 {
-		if p.Fees.TransmuteFactor == DefaultTransmuteFactor {
+		if p.Fees.TransmuteFactor == DefaultTransmuteFactor && !p.confirmed("fees.transmute_factor") {
 			keys = append(keys, fmt.Sprintf("转化系数 k=%g", p.Fees.TransmuteFactor))
 		}
-		if p.Fees.TransmuteStationPer100 == DefaultTransmuteStationFeePer100 {
+		if p.Fees.TransmuteStationPer100 == DefaultTransmuteStationFeePer100 && !p.confirmed("fees.transmute_station_per100") {
 			keys = append(keys, fmt.Sprintf("转化主人费率 %g/100 营养", p.Fees.TransmuteStationPer100))
 		}
 	}
-	if len(ev.refines) > 0 && p.Fees.StationPer100 == DefaultStationFeePer100 {
+	if len(ev.refines) > 0 && p.Fees.StationPer100 == DefaultStationFeePer100 && !p.confirmed("fees.station_per100") {
 		keys = append(keys, fmt.Sprintf("精炼站费 %g/100 营养", p.Fees.StationPer100))
 	}
-	if ev.focusEff > 0 {
+	if ev.focusEff > 0 && !p.confirmed("focus.fce") {
 		zero := true
 		for _, t := range c.Focus.Tiers {
 			if p.Focus.FCE[t] != DefaultFCE {
@@ -879,7 +880,7 @@ func (e *engine) ageAndWarnings(c *Candidate, ev *evalResult, si SellInfo) {
 		}
 	}
 	for _, r := range ev.refines {
-		if r.heart && p.HeartReturns == DefaultHeartReturns {
+		if r.heart && p.HeartReturns == DefaultHeartReturns && !p.confirmed("heart_returns") {
 			keys = append(keys, "心按返还算")
 			break
 		}

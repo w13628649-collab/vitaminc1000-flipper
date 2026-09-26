@@ -103,6 +103,8 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 //	island                   1 = 在个人岛上精炼(rrr.island)
 //	max_age_hours            数据最大年龄(sources.max_age_hours)
 //	capital                  本金(daily.capital)
+//	sell_city                出售城市(sell.city),默认同生产城市
+//	confirmed                核对过的待核实参数,逗号分隔(confirmed)
 func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	lineKey := strings.TrimSpace(q.Get("line"))
@@ -197,6 +199,19 @@ func matrixParams(q url.Values, p *refine.Params) error {
 	}
 	if v := strings.TrimSpace(q.Get("sort")); v != "" {
 		p.Sort = v
+	}
+	// 精炼页设了出售城市,矩阵不跟着的话,矩阵里当前目标那一格和上面的卡片就是两套数
+	// (界面审查 finding 17)。城市认不认识由 checkRefine 按服务端城市列表查
+	if v := strings.TrimSpace(q.Get("sell_city")); v != "" {
+		p.Sell.City = v
+	}
+	if v := strings.TrimSpace(q.Get("confirmed")); v != "" {
+		p.Confirmed = nil
+		for _, k := range strings.Split(v, ",") {
+			if k = strings.TrimSpace(k); k != "" {
+				p.Confirmed = append(p.Confirmed, k)
+			}
+		}
 	}
 	switch v := strings.TrimSpace(q.Get("sell")); v {
 	case "":
