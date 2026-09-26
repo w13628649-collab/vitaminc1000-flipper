@@ -445,6 +445,12 @@ async function craftLoad(opts = {}) {
     craftLiveAfter(res, opts);
     craftStatus("ok", opts);
     craftAfterPlan(res);
+    // 实时重算过的计划旁边摆一张旧矩阵,当前目标那一格就对不上了:矩阵开着就跟着重算
+    // (攒 3 秒:矩阵是 25 次计算,推送连着来时不用每条都算)
+    if (opts.live && $("c-mx").open) {
+      clearTimeout(mx.liveTimer);
+      mx.liveTimer = setTimeout(() => craftMatrixLoad({ force: true }), 3000);
+    }
     // 实时重算后推荐那条的单根成本变了就闪一下:涨红跌绿(成本涨是坏事)
     if (opts.live && prev?.target === res.target) {
       const a = prev.candidates?.find(c => !c.reference), b = res.candidates?.find(c => !c.reference);
@@ -1444,12 +1450,15 @@ $("v-craft").addEventListener("change", e => {
 });
 
 // ── 整条线矩阵(GET /api/refine/matrix):25 档各取最好的一条,替代表格的排行榜 ──
-// 矩阵接口只认查询参数里那几项个人参数(k、站费、专注、专精、解锁、出售方式、生产加成、个人岛、
-// 数据年龄、本金);跨城买料、挂买单收料、余料估值、成交份额按服务端默认 —— 页面上写明
-const mx = { data: null, sig: "", seq: 0, pending: false, err: null, sort: { key: "level", dir: "asc" }, qty: null };
+// 矩阵接口只认查询参数里那几项个人参数(k、站费、专注、专精、解锁、出售方式和出售城市、生产加成、
+// 个人岛、数据年龄、本金、核对过的参数);跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 页面上写明。
+// 默认按日化从高到低排:它替代的是表格的排行榜,排序主键是日化绝对收益(不是档位)
+const mx = { data: null, sig: "", seq: 0, pending: false, err: null, sort: { key: "daily", dir: "desc" }, qty: null, liveTimer: 0 };
 function craftMatrixQuery() {
   const p = craft.p, body = craftBody();
   const q = new URLSearchParams({ line: p.line, city: body.city, qty: String(mx.qty || p.qty) });
+  // 出售城市不带的话,矩阵按生产城市卖,当前目标那一格和上面的卡片就是两套数
+  if (body.sell.city && body.sell.city !== body.city) q.set("sell_city", body.sell.city);
   const f = body.fees;
   if (f.transmute_factor != null) q.set("k", String(f.transmute_factor));
   if (f.station_per100 != null) q.set("station_per100", String(f.station_per100));
@@ -1510,12 +1519,14 @@ function mxRows(res) {
   const m0 = res.params_used?.sell?.modes?.[0] || "post";
   return (res.cells || []).map(c => {
     const b = c.best, pl = b?.profit?.[m0];
+    // 拿不满料的格子:成本是下界,利润、每点专注值、日化都不能当真,按「算不出」处理(排序时排最后)
+    const lb = !!b && !b.filled;
     return {
-      c, b, target: c.target, level: c.tier * 10 + c.enchant,
+      c, b, lb, target: c.target, level: c.tier * 10 + c.enchant,
       label: b?.label || c.error || "",
-      unit_cost: b?.unit_cost ?? null, profit: pl?.unit ?? null, pct: pl?.pct ?? null,
-      spf: b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
-      daily: b?.daily?.profit ?? null, binding: b?.daily ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
+      unit_cost: b?.unit_cost ?? null, profit: lb ? null : pl?.unit ?? null, pct: lb ? null : pl?.pct ?? null,
+      spf: lb ? null : b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
+      daily: lb ? null : b?.daily?.profit ?? null, binding: b?.daily && !lb ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
       age: b?.oldest_age_h ?? c.data?.oldest_age_h ?? null,
     };
   });
@@ -1523,8 +1534,9 @@ function mxRows(res) {
 function craftMatrixRender() {
   const box = $("c-mx-body");
   const res = mx.data, L = cLine();
+  const sellAt = res?.params_used?.sell?.city;
   $("c-mx-sum").textContent = mx.pending ? "正在算 25 档…(每档一次完整计算,第一次要几秒)"
-    : res ? `${res.line === L.line ? "" : "(还是上一条线的)"}${res.city} · 每档 ${num(res.qty)} 件 · 点一行切到那个目标`
+    : res ? `${res.line === L.line ? "" : "(还是上一条线的)"}${res.city} 生产${sellAt && sellAt !== res.city ? ` · 在 ${sellAt} 卖` : ""} · 每档 ${num(res.qty)} 件 · 算于 ${hms(res.now)} · 点一行切到那个目标`
     : "点开算这条线全部 25 档";
   if (mx.err) {
     box.innerHTML = `<p class="c-status bad">${mx.err.status === 504 ? "服务端还没算完(多半在等 AODP),计算在后台继续,过几秒点「重算这张表」。" : esc(mx.err.message || mx.err)}</p>
@@ -1549,8 +1561,11 @@ function craftMatrixRender() {
       <div class="ctrl"><label for="c-mx-qty">每档按几件算</label>
         <input type="number" id="c-mx-qty" min="1" max="10000" step="1" value="${esc(mx.qty || "")}" placeholder="${esc(craft.p.qty)}"></div>
       <button class="act ghost" data-mx-reload>重算这张表</button>
-      <span class="sub">利润按${MODE_WORD[m0]}算;专注${craft.p.focusMode === "custom" ? "按「自动」(矩阵不支持自选哪几级)" : "照参数条"};
-        跨城买料、挂买单收料、余料估值、成交份额按服务端默认。${qtyBound ? `有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。` : ""}</span>
+      <span class="sub">利润按${MODE_WORD[m0]}算${sellAt && sellAt !== res.city ? `,在 ${esc(sellAt)} 卖` : ""};专注${craft.p.focusMode === "custom" ? "按「自动」(矩阵不支持自选哪几级)" : "照参数条"};
+        跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 这几项改过的话,当前目标这一格和上面的卡片会对不上。
+        ${qtyBound ? `有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。` : ""}
+        ${rows.some(r => r.lb) ? "浅红底的格子拿不满料:成本是下界,利润和日化算不准,排在最后。" : ""}
+        推送命中当前目标的配方树时,这张表也跟着重算。</span>
     </div>
     <div class="tablewrap"><table class="tight c-mxt">
       <thead><tr>${MX_COLS.map(c => `<th data-mxk="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}<th class="l">警告</th></tr></thead>
@@ -1559,8 +1574,8 @@ function craftMatrixRender() {
         for (const w of [...(r.c.warnings || []), ...(r.b?.warnings || [])]) if (!ws.has(w.code)) ws.set(w.code, w);
         return `<tr class="main${r.target === cur ? " cur" : ""}${r.b && !r.b.filled ? " unfilled" : ""}" data-mxt="${esc(r.target)}">
           <td class="l"><b>${esc(cTier(r.target))}</b> <span class="sub">${esc(cName(r.target))}</span></td>
-          <td class="l">${esc(r.label || "—")}</td>
-          <td>${num(r.unit_cost)}</td>
+          <td class="l">${esc(r.label || "—")}${r.lb ? ` <span class="wtag bad">拿不满料</span>` : ""}</td>
+          <td${r.lb ? ` title="拿不满料:只按拿得到的料算,是下界"` : ""}>${r.lb ? "≥ " : ""}${num(r.unit_cost)}</td>
           <td class="${r.profit == null ? "" : r.profit >= 0 ? "pos" : "neg"}">${sgn(r.profit)}</td>
           <td>${spct(r.pct)}</td>
           <td class="${r.spf != null && r.spf >= th ? "pos" : ""}">${snum(r.spf)}</td>
@@ -1814,6 +1829,7 @@ function craftShow() {
 function craftHide() {
   clearTimeout(craft.timer);
   clearTimeout(craft.liveTimer);
+  clearTimeout(mx.liveTimer);
   craft.liveTimer = 0;
   craft.liveFirst = 0;
   rtSetKeys("craft", []);
