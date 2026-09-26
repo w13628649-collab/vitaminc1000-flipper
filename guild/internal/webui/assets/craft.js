@@ -42,6 +42,8 @@ const craft = {
   open: new Set(),   // 候选表里展开着的行(按候选 id)
   rawAll: new Set(), // 原料来路里「显示全部起点」的那几种原料
   rawOpen: false,    // 「下级链自炼用到的原料」展开着没有(重算、实时刷新后照旧)
+  keys: new Set(),   // 实时订阅的盘口 key(配方树上的全部物品,见 craftKeysOf)
+  liveTimer: 0, liveFirst: 0, liveQuote: null, liveNote: "",
   items: new Map(),  // 物品 id → { zh, en }:按物品族一次拉全,精炼页的名字都从这来
   families: new Set(),
 };
@@ -349,14 +351,22 @@ async function craftLoad(opts = {}) {
     });
     if (seq !== craft.seq) return;   // 连着改参数时,先发的请求晚到不能盖掉后发的
     craft.pending = false;
+    const prev = craft.data;
     craft.data = res;
     craft.loadedAt = Date.now();
     if (res.server_defaults) craft.sd = res.server_defaults;
     craft.tries = 0;
     craftSyncForm();
     craftRender(res);
+    craftLiveAfter(res, opts);
     craftStatus("ok", opts);
-    craftAfterPlan(res, opts);
+    craftAfterPlan(res);
+    // 实时重算后推荐那条的单根成本变了就闪一下:涨红跌绿(成本涨是坏事)
+    if (opts.live && prev?.target === res.target) {
+      const a = prev.candidates?.find(c => !c.reference), b = res.candidates?.find(c => !c.reference);
+      const el = $("c-result").querySelector(".c-kpis > div");
+      if (a && b && el && Math.abs(a.unit_cost - b.unit_cost) > 0.5) flash(el, b.unit_cost < a.unit_cost ? "up" : "down");
+    }
   } catch (e) {
     if (seq !== craft.seq) return;
     craft.pending = false;
@@ -384,8 +394,83 @@ function craftChanged(opts = {}) {
   clearTimeout(mx.timer);
   mx.timer = setTimeout(() => craftMatrixLoad(), 600);
 }
-// 拿到计划之后的事:实时订阅、矩阵等在后面的提交里接上
-function craftAfterPlan(res, opts) { /* 见下文 */ }
+// ── 实时:把配方树上所有物品的盘口交给统一的 WS 模块(设计 §4.5「实时」) ──
+// WS 只推最优价,所以它只当「触发器」:命中这些 key 就防抖 1.5 秒、整份计划找服务端重算,
+// 阶梯以服务端为准。订阅不要快照(snapshot:false):计划本身就是整份拉的
+const CRAFT_LIVE_MS = 1500;      // 同一波推送攒 1.5 秒再重算(一次翻页会连着推好几条)
+const CRAFT_LIVE_MAX_MS = 5000;  // 推送一直不停时最多攒 5 秒,不能一直不算
+const cUniq = xs => [...new Set(xs.filter(Boolean))];
+// 要订的盘口 = 服务端读的那一批(flip/refine.go 的 refineKeys):配方树上的物品(链上每一级、
+// 每级配方里的原料和心、原料的全部转化起点)× 买料城市 × 两边,加上目标在出售城市的两边
+function craftKeysOf(res, tree) {
+  const items = new Set([res.target]);
+  for (const n of tree.chain || []) {
+    items.add(n.item);
+    if (!n.makeable) continue;
+    for (const r of n.recipes || []) for (const i of r.inputs || []) items.add(i.item);
+  }
+  for (const r of tree.raws || []) for (const rt of r.routes || []) items.add(rt.start);
+  const pu = res.params_used || {};
+  const buy = cUniq([res.city, ...(pu.sources?.cities || [])]);
+  const keys = [];
+  for (const it of items) for (const c of buy) for (const s of [0, 1]) keys.push(`${it}|${c}|1|${s}`);
+  const sellCity = pu.sell?.city || res.city;
+  for (const s of [0, 1]) keys.push(`${res.target}|${sellCity}|1|${s}`);
+  return cUniq(keys);
+}
+async function craftAfterPlan(res) {
+  let tree;
+  try { tree = await craftTree(res.target); } catch (e) { return; }   // 配方树没拉到:这一轮不订,下次算完再试
+  if (craft.data !== res) return;   // 等配方树的时候又算了一份新的
+  craft.keys = new Set(craftKeysOf(res, tree));
+  if (currentView === "craft") rtSetKeys("craft", [...craft.keys], { snapshot: false });
+  craftStatus("ok", { keep: true });
+}
+function onCraftQuote(q, pushed) {
+  // 快照不触发(那是刚订阅时补的);不在这页时已经退订,晚到的也不管
+  if (!pushed || currentView !== "craft" || !craft.data || !craft.keys.has(q.k)) return;
+  craft.liveQuote = q;
+  const now = Date.now();
+  if (!craft.liveFirst) craft.liveFirst = now;
+  clearTimeout(craft.liveTimer);
+  const wait = Math.max(0, Math.min(CRAFT_LIVE_MS, craft.liveFirst + CRAFT_LIVE_MAX_MS - now));
+  craft.liveTimer = setTimeout(() => craftLiveKick("quote"), wait);
+}
+function craftLiveKick(why) {
+  clearTimeout(craft.liveTimer);
+  craft.liveTimer = 0;
+  craft.liveFirst = 0;
+  if (currentView !== "craft" || !craft.data) return;
+  // 正在算(用户刚改了参数):那一份算完就是新的,不用再补
+  if (craft.pending) return;
+  const q = why === "quote" ? craft.liveQuote : null;
+  craft.liveQuote = null;
+  craftLoad({ force: true, live: true, why, quote: q });
+}
+rt.quoteFns.push(onCraftQuote);
+// 断线重连:断开那段时间的推送收不到了,补拉一次(第一次连上不用,那时刚算过)
+rt.openFns.push(() => { if (rt.opens > 1 && craft.data && currentView === "craft") craftLiveKick("reconnect"); });
+// 服务端说这条连接丢过消息:丢的是哪几条不知道,整份重算一次
+rt.resyncFns.push(() => { if (craft.data && currentView === "craft") craftLiveKick("resync"); });
+const cKeyText = k => {
+  const [item, city, , side] = String(k).split("|");
+  return `${cLabel(item) || item} @ ${city} ${side === "0" ? "卖单" : "买单"}`;
+};
+// 拿到计划之后:实时的说明文字、防止拿到服务端 2 秒缓存里的旧计划
+function craftLiveAfter(res, opts) {
+  if (!opts.live) { craft.liveNote = ""; return; }
+  const q = opts.quote;
+  craft.liveNote = q ? `已按 ${hms(q.t)} 报价重算(${cKeyText(q.k)})`
+    : opts.why === "reconnect" ? `断线重连后已补拉(${hms(new Date())})`
+    : opts.why === "resync" ? `推送丢过消息,已整份重算(${hms(new Date())})`
+    : `已重算(${hms(new Date())})`;
+  // 服务端同样的参数 2 秒内回缓存:读簿时刻早于这条报价,说明拿到的是报价之前算的那份,过一会儿再要一次
+  const readAt = Date.parse(res.books?.read_at || ""), qt = Date.parse(q?.t || "");
+  if (q && isFinite(readAt) && isFinite(qt) && readAt < qt && !opts.retried) {
+    craft.liveNote = `收到 ${hms(q.t)} 的报价,服务端还是旧的一份,马上再算一次…`;
+    setTimeout(() => { if (!craft.pending) craftLoad({ ...opts, retried: true }); }, 2200);
+  }
+}
 
 function craftStatus(state, opts = {}) {
   const el = $("c-status");
@@ -414,7 +499,10 @@ function craftStatus(state, opts = {}) {
   if (!d) { el.className = "c-status"; el.innerHTML = ""; return; }
   const at = d.params_used?.now || d.books?.read_at;
   el.className = "c-status";
-  el.innerHTML = `算于 ${hms(at)}${craft.liveNote ? ` · <b class="live">${craft.liveNote}</b>` : ""}`;
+  const liveInfo = craft.keys.size
+    ? (rt.up ? `实时:订了配方树上 ${num(craft.keys.size)} 个盘口,有成员翻到这些市场就自动重算`
+      : `实时:推送断开了,重连后会自动补拉`) : "";
+  el.innerHTML = `算于 ${hms(at)}${craft.liveNote ? ` · <b class="live">${esc(craft.liveNote)}</b>` : ""}${liveInfo ? ` · <span class="sub">${liveInfo}</span>` : ""}`;
 }
 
 // ── 结果 ──
@@ -1296,11 +1384,17 @@ function craftShow() {
   craftRenderGrid();
   craftSyncForm();
   craftNames(craft.p.line).then(() => { craftRenderGrid(); if (craft.data) craftRender(craft.data); });
-  // 不在这页时退订了实时:回来时手上那份可能旧了,隔得久就强制重算一次
+  // 回到这页:照上次的树重新订阅;不在这页时退订了实时,手上那份可能旧了,隔得久就强制重算一次
+  if (craft.keys.size) rtSetKeys("craft", [...craft.keys], { snapshot: false });
   craftLoad({ force: !!craft.data && Date.now() - craft.loadedAt > 15000 });
 }
+// 离开这页:退订(设计 §4.5),攒着的实时重算也取消。keys 留着,回来时照它重新订
 function craftHide() {
   clearTimeout(craft.timer);
+  clearTimeout(craft.liveTimer);
+  craft.liveTimer = 0;
+  craft.liveFirst = 0;
+  rtSetKeys("craft", []);
 }
 viewHooks.craft = {
   hash: () => "craft/" + encodeURIComponent(cTarget()),
