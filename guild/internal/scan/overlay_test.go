@@ -253,7 +253,8 @@ func TestOverlay_买方镜像与汇总计数(t *testing.T) {
 }
 
 func TestCaptureKeys(t *testing.T) {
-	keys := captureKeys([]string{"A", "B", "C"}, []string{"Lymhurst", "Martlock"}, []int{1, 2})
+	items := []string{"A", "B", "C"}
+	keys := captureKeys(Pairs{Items: items, Qualities: uniform(items, []int{2, 1, 1})}, []string{"Lymhurst", "Martlock"})
 	if len(keys) != 3*2*2*2 {
 		t.Fatalf("应为 物品×城市×品质×2 = 24,得到 %d", len(keys))
 	}
@@ -266,6 +267,17 @@ func TestCaptureKeys(t *testing.T) {
 			t.Fatalf("重复的 key %v", k)
 		}
 		seen[k] = true
+	}
+
+	// 每个物品按自己的品质表拼:A 只抓到杰出,B 是普通 + 不凡
+	keys = captureKeys(Pairs{Items: []string{"A", "B"}, Qualities: QualitySet{"A": {4}, "B": {1, 5}}}, []string{"Lymhurst"})
+	var got []string
+	for _, k := range keys {
+		got = append(got, k.String())
+	}
+	want := []string{"A|Lymhurst|4|0", "A|Lymhurst|4|1", "B|Lymhurst|1|0", "B|Lymhurst|1|1", "B|Lymhurst|5|0", "B|Lymhurst|5|1"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("应为 %v,得到 %v", want, got)
 	}
 }
 

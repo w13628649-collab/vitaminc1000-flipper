@@ -376,6 +376,10 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 		return itemID + "|" + city + "|" + strconv.Itoa(quality)
 	}
 
+	// 候选的 Key 带上品质:扫描会并入抓到的别的品质,同一物品同一城的普通和杰出是两条机会,
+	// 以前 Key 里没有品质,两条仓位同名,界面和测试按 Key 认不出谁是谁
+	qTag := func(q int) string { return "|q" + strconv.Itoa(q) }
+
 	var pool []portfolio.Candidate
 	for _, o := range res.Opportunities {
 		if o.AbsorbableQty < 1 {
@@ -383,7 +387,7 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 		}
 		// 同城买卖两端在同一个市场里,只占一个桶
 		pool = append(pool, portfolio.Candidate{
-			Key:         "flip:" + o.ItemID + "|" + o.City,
+			Key:         "flip:" + o.ItemID + qTag(o.Quality) + "|" + o.City,
 			Label:       o.ItemName + " · " + o.City,
 			Kind:        "flip",
 			CostPerUnit: o.CostPerUnit, ProfitPerUnit: o.ProfitPerUnit,
@@ -420,7 +424,7 @@ func (s *Service) Portfolio(opt portfolio.Options) portfolio.Plan {
 				Key: poolKey(r.ItemID, r.ToCity, r.Quality) + "|bid", Capacity: float64(r.SellDepthQty), Ladder: true})
 		}
 		pool = append(pool, portfolio.Candidate{
-			Key:         "arb:" + r.ItemID + "|" + r.FromCity + "->" + r.ToCity,
+			Key:         "arb:" + r.ItemID + qTag(r.Quality) + "|" + r.FromCity + "->" + r.ToCity,
 			Label:       r.ItemName + " · " + r.FromCity + " → " + r.ToCity,
 			Kind:        "arb",
 			CostPerUnit: r.CostPerUnit, ProfitPerUnit: r.ProfitPerUnit,

@@ -112,7 +112,7 @@ func TestRun_默认城市里有Brecilien同城跨城都参与(t *testing.T) {
 // 抓包那边读簿的 key 也由 cfg.Cities 拼,默认配置下 Brecilien 的盘口会被读
 func TestCaptureKeys_默认城市含Brecilien(t *testing.T) {
 	cfg := conf.Default()
-	keys := captureKeys([]string{"T5_WOOD"}, cfg.Cities, cfg.Qualities)
+	keys := captureKeys(Pairs{Items: []string{"T5_WOOD"}, Qualities: uniform([]string{"T5_WOOD"}, cfg.Qualities)}, cfg.Cities)
 	n := 0
 	for _, k := range keys {
 		if k.LocationID == conf.Brecilien {

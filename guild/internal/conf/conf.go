@@ -115,10 +115,14 @@ type Capture struct {
 	// BookLevels 是每个盘口最多读多少档
 	BookLevels int `yaml:"book_levels"`
 	// MaxExtraItems 是扫描最多并入多少个"配置清单外、但抓包窗口里有挂单"的物品。
-	// 成员翻市场翻的是自己关心的货(T7/T8 精炼材料、附魔资源……),配置清单
-	// 盖不全;不并进来的话抓得再多机会板也看不见。这些物品也要向 AODP 拉价和
-	// 历史(troll 过滤和成交量离不开),所以要有上限:超出时按抓包件数从多到少截断。
-	// 0 = 不并入
+	// 成员翻市场翻的是自己关心的货(T7/T8 精炼材料、附魔资源、良好~不凡品质的装备……),
+	// 配置清单和 qualities 盖不全;不并进来的话抓得再多机会板也看不见。这些也要向 AODP
+	// 拉价和历史(troll 过滤和成交量离不开),所以要有上限:超出时按抓包件数从多到少截断。
+	//
+	// **名额按物品计,不按 (物品, 品质)**:并进来的物品带上它抓到的全部品质,清单物品抓到的
+	// 别的品质不占名额。成本在 id 上——多一个物品就多一个 id 塞进 AODP 的 URL,多一档品质
+	// 只是 qualities 参数里多个数;一个物品最多五档,组合数封顶在 5 × (清单 + 上限)。
+	// 0 = 抓包不扩扫描集合(物品和品质都不扩),扫描就是配置清单 × qualities
 	MaxExtraItems int `yaml:"max_extra_items"`
 	// ReevalSeconds 是两次 AODP 全量扫描之间,多久用缓存的 AODP 快照 + 最新抓包
 	// 重算一次机会板。全量扫描 30 分钟一次(要打 AODP、受配额限制),成员刚翻完
@@ -267,7 +271,8 @@ func Default() Config {
 			PreferSlackMinutes:   10,
 			BookLevels:           128,
 			// id 批量塞进 URL:300 个 id 约 6.6k 字符,按 3500 的 URL 预算每个端点
-			// 多两三次请求,prices + history 合计多 4~6 次,280 次/5 分钟的配额里不算什么
+			// 多两三次请求,prices + history 合计多 4~6 次;抓到别的品质的物品另成一组
+			// (scan.fetchAODP),至多再多两次。280 次/5 分钟的配额里不算什么
 			MaxExtraItems: 300,
 			ReevalSeconds: 60,
 		},
@@ -349,6 +354,16 @@ func (c Config) Validate() error {
 	}
 	if len(c.Cities) == 0 {
 		return fmt.Errorf("cities 不能为空")
+	}
+	// qualities 是清单物品评估的品质,也是扫描拉 AODP 时分组的基准(scan.fetchAODP):
+	// 空着的话清单物品一档都不评估;0、6 这种 AODP 不认,只会白占请求
+	if len(c.Qualities) == 0 {
+		return fmt.Errorf("qualities 不能为空(1 普通 / 2 良好 / 3 优秀 / 4 杰出 / 5 不凡)")
+	}
+	for _, q := range c.Qualities {
+		if q < 1 || q > 5 {
+			return fmt.Errorf("qualities 只能是 1..5,得到 %v", c.Qualities)
+		}
 	}
 
 	f, cp := c.Filters, c.Capture

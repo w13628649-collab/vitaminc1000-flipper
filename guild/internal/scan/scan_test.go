@@ -67,7 +67,9 @@ func run(t *testing.T) *Result {
 	cfg := conf.Default()
 	cfg.Cities = []string{"Lymhurst"}
 	cfg.Capital = 10_000_000
-	cfg.Items.Patterns = []string{"T5_CLOTH"}
+	// 三个都要在清单里:扫描只留请求过的 (物品, 品质)(fetchAODP),假服务器回的
+	// 没请求过的物品不再进评估
+	cfg.Items.Patterns = []string{"T5_CLOTH", "T5_WOOD", "T5_ORE"}
 
 	cat := catalog.New([]catalog.Item{
 		{ItemID: "T5_CLOTH", NameZH: "精布", NameEN: "Ornate Cloth"},

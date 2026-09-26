@@ -17,7 +17,8 @@ import (
 
 // digestSnap 是两城一物品的快照:同城各有机会,Lymhurst → Martlock 有跨城路线。
 func digestSnap(items ...string) *Snapshot {
-	s := &Snapshot{FetchedAt: now, ItemIDs: items, Stats: map[histagg.QualityKey]histagg.Stats{}}
+	s := &Snapshot{FetchedAt: now, ItemIDs: items, Qualities: uniform(items, []int{1}),
+		Stats: map[histagg.QualityKey]histagg.Stats{}}
 	for _, item := range items {
 		for _, c := range []struct {
 			city      string
@@ -114,6 +115,9 @@ func TestDigest_随时间走的分桶和拒绝文案不进摘要(t *testing.T) {
 	cat := catalog.New([]catalog.Item{{ItemID: "T5_WOOD"}, {ItemID: "T4_WOOD"}, {ItemID: "T6_WOOD"}, {ItemID: "T7_WOOD"}}, nil, "")
 	snap := digestSnap("T5_WOOD")
 	snap.ItemIDs = append(snap.ItemIDs, "T4_WOOD", "T6_WOOD", "T7_WOOD")
+	for _, id := range []string{"T4_WOOD", "T6_WOOD", "T7_WOOD"} {
+		snap.Qualities[id] = []int{1}
+	}
 	// T4_WOOD:AODP 8 小时前的价 → stale,detail 是 "8.0h > 6h",10 分钟后是 "8.2h > 6h"
 	snap.Prices = append(snap.Prices, aodp.PriceRecord{ItemID: "T4_WOOD", City: "Lymhurst", Quality: 1,
 		SellPriceMin: 1120, SellPriceMinDate: ago(8 * time.Hour), BuyPriceMax: 1000, BuyPriceMaxDate: ago(8 * time.Hour)})
@@ -202,6 +206,8 @@ func TestDigest_界面渲染的每一块单独变了都要变(t *testing.T) {
 		"request_count":         func(r *Result) { r.RequestCount++ },
 		"price_rows":            func(r *Result) { r.PriceRows++ },
 		"item_ids":              func(r *Result) { r.ItemIDs = append(append([]string(nil), r.ItemIDs...), "T6_BAG") },
+		"pairs(覆盖率分母)":          func(r *Result) { r.Pairs++ },
+		"capture.extra_pairs":   func(r *Result) { r.Capture.ExtraPairs = 2 },
 		"extra_item_ids":        func(r *Result) { r.ExtraItemIDs = []string{"T6_BAG"} },
 		"missing_item_ids":      func(r *Result) { r.MissingItemIDs = []string{"T9_NOPE"} },
 		"coverage.capture_used": func(r *Result) {

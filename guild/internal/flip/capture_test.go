@@ -55,7 +55,7 @@ func (f *fakeLadder) CapturedItems(_ context.Context, cities []string, qualities
 	if f.err != nil {
 		return nil, f.err
 	}
-	return []store.CapturedItem{{ItemID: "T7_LEATHER", Qty: 60, Orders: 3, LastSeen: since}}, nil
+	return []store.CapturedItem{{ItemID: "T7_LEATHER", Quality: 2, Qty: 60, Orders: 3, LastSeen: since}}, nil
 }
 
 type fakeConflicts map[model.QuoteKey]time.Time
@@ -262,8 +262,8 @@ func TestStoreBooks_读簿出错原样返回(t *testing.T) {
 func TestStoreBooks_列抓包物品转换形状(t *testing.T) {
 	sb := &storeBooks{st: &fakeLadder{}}
 	got, err := sb.CapturedItems(context.Background(), []string{"Martlock"}, []int{1}, capT)
-	if err != nil || len(got) != 1 || got[0].ItemID != "T7_LEATHER" || got[0].Qty != 60 {
-		t.Fatalf("应转成 scan.CapturedItem,得到 %+v / %v", got, err)
+	if err != nil || len(got) != 1 || got[0].ItemID != "T7_LEATHER" || got[0].Quality != 2 || got[0].Qty != 60 {
+		t.Fatalf("应转成 scan.CapturedItem(带品质),得到 %+v / %v", got, err)
 	}
 }
 

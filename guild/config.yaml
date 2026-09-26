@@ -11,7 +11,8 @@ cities:
   - Brecilien             # 迷雾里的城:同城照常算;跨城路线带 mists 风险标记,置信度最高 medium
 
 capital: 10_000_000       # 银币
-qualities: [1]            # 1 普通 / 2 良好 / 3 优秀 / 4 杰出 / 5 不凡
+qualities: [1]            # 1 普通 / 2 良好 / 3 优秀 / 4 杰出 / 5 不凡。清单物品一律扫这几档;
+                          # 抓包窗口里有挂单的别的品质会另外并进扫描(见 capture.max_extra_items)
 
 freshness:
   max_hours: 6.0          # 超过这个时间的报价直接丢弃
@@ -44,7 +45,8 @@ capture:
   snapshot_slack_seconds: 120   # 多宽算"同一眼";扫描、WS 报价、查价页共用。设成 ≥ 窗口 = 关掉残单剔除
   prefer_slack_minutes: 10      # 抓包比 AODP 旧不超过这么多,仍用抓包;扫描和查价页共用
   book_levels: 128        # 每个盘口最多读多少档
-  max_extra_items: 300    # 配置清单外、抓包窗口里有挂单的物品最多并进扫描多少个(按件数截断);0 = 不并入
+  max_extra_items: 300    # 配置清单外、抓包窗口里有挂单的物品最多并进扫描多少个(按物品计、按件数截断,
+                          # 每个物品带上抓到的全部品质;清单物品抓到的别的品质不占名额);0 = 抓包不扩扫描
   reeval_seconds: 60      # 两次全量扫描之间,多久用缓存的 AODP 快照 + 最新抓包重算一次;不打 AODP。0 = 关闭
 
 economics:

@@ -657,12 +657,14 @@ $("kind-seg").addEventListener("click", e => {
 for (const id of ["i-conf", "i-city", "i-src", "i-age"]) $(id).addEventListener("change", () => renderIdeas());
 
 // ── 覆盖率:机会页和总览共用 ──
-// 分母是"每城可能的报价点数" = 物品数 × 2(买卖两侧)。以前总览按 with_data 当分母,
-// 一座城只有 1 个点、1 个新鲜也显示 100%
+// 分母是"每城可能的报价点数" = 评估的 (物品, 品质) 组合数 × 2(买卖两侧)。以前总览按
+// with_data 当分母,一座城只有 1 个点、1 个新鲜也显示 100%;后来写死成物品数 × 2,
+// 扫描并进抓到的别的品质之后又不对了。组合数用服务端的 pairs,老服务端没有就退回物品数
 function renderCoverage(res, ids) {
   const cov = res.coverage || [];
   const items = (res.item_ids || []).length;
-  let max = items * 2;
+  const pairs = res.pairs || items;
+  let max = pairs * 2;
   for (const c of cov) max = Math.max(max, c.with_data || 0, c.capture_sides || 0);
   const w = n => (max ? Math.max(0, n) / max * 100 : 0).toFixed(2) + "%";
   const hasCap = cov.some(c => c.capture_sides !== undefined);
@@ -690,8 +692,10 @@ function renderCoverage(res, ids) {
   const usable = cov.reduce((s, c) => s + (c.within_threshold || 0), 0);
   const fresh = cov.reduce((s, c) => s + (c.within_2h || 0), 0);
   const extra = (res.extra_item_ids || []).length;
+  const extraPairs = res.capture?.extra_pairs || 0;
   const capUsed = res.capture ? (res.capture.asks_used || 0) + (res.capture.bids_used || 0) : 0;
-  $(ids.note).textContent = `${items} 个物品${extra ? `(其中 ${extra} 个是抓包并进来的)` : ""} × ${cov.length} 城 = ${num(max * cov.length)} 个可能的报价点 · ` +
+  $(ids.note).textContent = `${num(items)} 个物品${extra ? `(其中 ${num(extra)} 个是抓包并进来的)` : ""}、` +
+    `${num(pairs)} 个物品×品质组合${extraPairs ? `(其中 ${num(extraPairs)} 个是抓包并进来的)` : ""} × 2 边 × ${cov.length} 城 = ${num(max * cov.length)} 个可能的报价点 · ` +
     `${num(usable)} 个在 ${FRESH_MAX} 小时新鲜度内,其中 ${num(fresh)} 个在 ${FRESH_HI} 小时内` +
     (hasCap ? ` · 抓包盖掉 ${num(capUsed)} 个价` : "");
   $(ids.legend).innerHTML = `
@@ -936,8 +940,11 @@ function renderScanMeta(res) {
   const extra = (res.extra_item_ids || []).length, missing = (res.missing_item_ids || []).length;
   const hm = s => new Date(s).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   const ev = later(res.evaluated_at, sync.evalAt);   // 同 renderIdeasFoot
+  const items = (res.item_ids || []).length, extraPairs = res.capture?.extra_pairs || 0;
   $("scan-meta").textContent =
-    `${(res.item_ids || []).length} 个物品${extra ? `(抓包并入 ${extra})` : ""}` +
+    `${num(items)} 个物品${extra ? `(抓包并入 ${num(extra)})` : ""}` +
+    // 组合数和物品数不一样时才写:扫描并进了抓到的别的品质
+    (res.pairs && res.pairs !== items ? `・${num(res.pairs)} 个物品×品质${extraPairs ? `(抓包并入 ${num(extraPairs)})` : ""}` : "") +
     `${missing ? `・目录里查不到 ${missing} 个` : ""}・${num(res.price_rows)} 条报价・${num(res.request_count)} 次请求` +
     (res.started_at ? `・AODP 全量 ${hm(res.started_at)}` : "") +
     (ev && ev !== res.started_at ? `・最近重算 ${hm(ev)}` : "");
@@ -969,8 +976,10 @@ const CAP_FIELDS = [
   ["synthesized", "格只靠抓包补出来", () => "AODP 没返回这一格,全靠成员抓包"],
   ["ghosts", "张幽灵单被剔掉", () => "上一轮翻到、这一轮没再出现的单(多半已成交或撤单)"],
   ["conflict_keys", "个边最近串过城", () => "多开串城的盘口暂停了幽灵单剔除"],
-  ["extra_items", "个物品因抓包并进扫描", c => (c.extra_dropped ? `超上限截掉 ${num(c.extra_dropped)} 个` : "")],
-  ["extra_pending", "个新物品等着补拉 AODP", c => (c.backfilled_at ? `最近补拉 ${new Date(c.backfilled_at).toLocaleTimeString("zh-CN")}` : "")],
+  ["extra_items", "个物品因抓包并进扫描", c => (c.extra_dropped ? `超上限截掉 ${num(c.extra_dropped)} 个(名额按物品算)` : "名额按物品算,每个物品带上抓到的全部品质")],
+  ["extra_pairs", "个物品×品质组合因抓包并进扫描", () => "配置清单里的物品抓到的别的品质,加上抓包并进来的物品抓到的品质。配置里的品质照扫,不算在内"],
+  ["extra_pending", "个新组合等着补拉 AODP", c => "新抓到的物品,或者已有物品抓到的新品质;补拉之前不在机会板上" +
+    (c.backfilled_at ? `。最近补拉 ${new Date(c.backfilled_at).toLocaleTimeString("zh-CN")}` : "")],
 ];
 function renderCaptureSummary(c) {
   const box = $("cap-sum");
@@ -1079,8 +1088,9 @@ function renderPlan(p) {
     const chk = pl.depth_checked === false ? ' <span class="tag medium" title="两条腿的深度没都核过">未核深度</span>' : "";
     return `<span class="tag ${c}">${CONFIDENCE[pl.confidence] || "低"}</span>${chk}${mists}`;
   };
+  // 同一物品同一城的不同品质是两个仓位,label 里没有品质:非普通的挂个品质标
   $("p-rows").innerHTML = slices.map(s => `<tr>
-    <td class="l">${esc(s.label)}</td>
+    <td class="l">${esc(s.label)}${s.payload?.quality > 1 ? " " + qualityTag(s.payload.quality) : ""}</td>
     <td class="l"><span class="kind ${s.kind === "arb" ? "arb" : "flip"}">${s.kind === "arb" ? "跨城" : "同城"}</span></td>
     <td>${num(s.qty)}</td>
     <td class="sub">${s.daily_qty != null ? num(s.daily_qty) : "—"}</td>

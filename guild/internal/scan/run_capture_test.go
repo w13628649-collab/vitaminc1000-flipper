@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -210,21 +211,46 @@ func TestRunWithCapture_开关关着时和Run逐字相同(t *testing.T) {
 	}
 }
 
-func TestExtraItems_去重查目录按件数截断(t *testing.T) {
+func TestMergeCaptured_去重查目录按物品件数截断(t *testing.T) {
 	cat := catalog.New([]catalog.Item{{ItemID: "A"}, {ItemID: "B"}, {ItemID: "C"}, {ItemID: "D"}}, nil, "")
 	captured := []CapturedItem{
-		{"B", 50}, {"A", 1000}, {"X", 900}, {"D", 500}, {"C", 500}, {"C", 1},
+		{"B", 1, 50}, {"A", 1, 1000}, {"X", 1, 900}, {"D", 1, 500}, {"C", 1, 499}, {"C", 3, 1},
 	}
-	extra, dropped, unknown := extraItems(captured, []string{"A"}, cat, 2)
-	// A 已在清单里;X 目录里没有;C、D 同件数按 id;B 超上限
+	add, extra, dropped, unknown := mergeCaptured(captured, uniform([]string{"A"}, []int{1}), cat, 2)
+	// A 已在清单里、q1 也有;X 目录里没有;C 两档合计 500、和 D 同件数按 id;B 超上限
 	if strings.Join(extra, ",") != "C,D" || dropped != 1 || unknown != 1 {
 		t.Fatalf("应为 [C D] / 丢 1 / 不认识 1,得到 %v / %d / %d", extra, dropped, unknown)
 	}
-	if e, d, u := extraItems(captured, nil, cat, 0); e != nil || d != 0 || u != 0 {
-		t.Fatalf("上限 0 = 不并入,得到 %v / %d / %d", e, d, u)
+	if strings.Join(add.Items, ",") != "C,D" || !slices.Equal(add.Qualities["C"], []int{1, 3}) ||
+		!slices.Equal(add.Qualities["D"], []int{1}) || add.Count() != 3 {
+		t.Fatalf("并进来的物品带上抓到的全部品质,得到 %v / %v", add.Items, add.Qualities)
+	}
+	if a, e, d, u := mergeCaptured(captured, uniform([]string{"A"}, []int{1}), cat, 0); a.Count() != 0 || e != nil || d != 3 || u != 1 {
+		t.Fatalf("上限 0 = 一个物品都不并入,得到 %v / %v / %d / %d", a, e, d, u)
 	}
 	if captured[0].ItemID != "B" {
 		t.Fatal("不该改调用方的切片顺序")
+	}
+}
+
+// 名额按物品算:清单物品、已经并进来的物品抓到新品质不占名额,也不受上限截断
+func TestMergeCaptured_已有物品的新品质不占名额(t *testing.T) {
+	cat := catalog.New([]catalog.Item{{ItemID: "STAFF"}, {ItemID: "ROBE"}, {ItemID: "NEW"}}, nil, "")
+	have := uniform([]string{"STAFF", "ROBE"}, []int{1})
+	captured := []CapturedItem{
+		{"STAFF", 4, 30}, {"STAFF", 1, 5}, {"STAFF", 2, 7}, // 清单物品:q1 已有,q2、q4 是新的
+		{"ROBE", 1, 900},  // 清单里已有这一档:什么都不加
+		{"NEW", 5, 100},   // 名额 0:整个物品截掉
+		{"STAFF", 0, 999}, // 品质 0 是解析出错的单:不认
+		{"STAFF", 6, 999},
+	}
+	add, extra, dropped, _ := mergeCaptured(captured, have, cat, 0)
+	if !slices.Equal(add.Items, []string{"STAFF"}) || !slices.Equal(add.Qualities["STAFF"], []int{2, 4}) ||
+		len(extra) != 0 || dropped != 1 {
+		t.Fatalf("应只给 STAFF 加 q2、q4,NEW 被截掉,得到 %v / %v / extra %v / 丢 %d", add.Items, add.Qualities, extra, dropped)
+	}
+	if !slices.Equal(have["STAFF"], []int{1}) {
+		t.Fatalf("have 不该被改,得到 %v", have["STAFF"])
 	}
 }
 
@@ -235,7 +261,7 @@ func TestRunWithCapture_抓到的物品并进扫描(t *testing.T) {
 	cfg := captureCfg()
 	cfg.Items.Patterns = []string{"T5_CLOTH"}
 	books := woodBooks()
-	books.items = []CapturedItem{{"T5_WOOD", 800}, {"T9_NOT_IN_CATALOG", 99}, {"T5_CLOTH", 50}, {"T5_ORE", 5}}
+	books.items = []CapturedItem{{"T5_WOOD", 1, 800}, {"T9_NOT_IN_CATALOG", 1, 99}, {"T5_CLOTH", 1, 50}, {"T5_ORE", 1, 5}}
 
 	f := newFakeAODP(t)
 	res, err := RunWithCapture(context.Background(), aodp.New(f.srv.URL, cfg.API), cfg, testCatalog(), books, now)
@@ -254,9 +280,13 @@ func TestRunWithCapture_抓到的物品并进扫描(t *testing.T) {
 			t.Fatalf("prices 和 history 都要带上并进来的物品、不带目录外的: %s", p)
 		}
 	}
-	if strings.Join(books.itemCities, ",") != "Lymhurst" || len(books.itemQuals) != 1 || books.itemQuals[0] != 1 ||
+	// 品质五档都列:抓到的别的品质也要并进扫描,不止配置那几档
+	if strings.Join(books.itemCities, ",") != "Lymhurst" || !slices.Equal(books.itemQuals, GameQualities) ||
 		!books.itemSince.Equal(now.Add(-6*time.Hour)) {
-		t.Fatalf("列抓包物品应按配置的城市/品质和抓包窗口,得到 %v %v %v", books.itemCities, books.itemQuals, books.itemSince)
+		t.Fatalf("列抓包物品应按配置的城市、五档品质和抓包窗口,得到 %v %v %v", books.itemCities, books.itemQuals, books.itemSince)
+	}
+	if res.Pairs != 3 || res.Capture.ExtraPairs != 2 {
+		t.Fatalf("3 个物品各 1 档,其中 2 个组合是抓包并进来的,得到 %d / %d", res.Pairs, res.Capture.ExtraPairs)
 	}
 	// 读簿也覆盖到并进来的物品,T5_WOOD 的抓包卖价照样融合
 	if len(books.lastKeys) != 3*2 {
@@ -274,14 +304,14 @@ func TestRunWithCapture_并入物品超上限按件数截断(t *testing.T) {
 	cfg := captureCfg()
 	cfg.Items.Patterns = []string{"T5_CLOTH"}
 	cfg.Capture.MaxExtraItems = 1
-	books := &fakeBooks{items: []CapturedItem{{"T5_ORE", 5}, {"T5_WOOD", 800}}}
+	books := &fakeBooks{items: []CapturedItem{{"T5_ORE", 1, 5}, {"T5_WOOD", 1, 800}}}
 	res := runCapture(t, cfg, books)
 	if strings.Join(res.ExtraItemIDs, ",") != "T5_WOOD" || res.Capture.ExtraDropped != 1 {
 		t.Fatalf("应只留件数最多的 T5_WOOD、丢 1 个,得到 %v / %+v", res.ExtraItemIDs, res.Capture)
 	}
 
 	cfg.Capture.MaxExtraItems = 0
-	books = &fakeBooks{items: []CapturedItem{{"T5_WOOD", 800}}}
+	books = &fakeBooks{items: []CapturedItem{{"T5_WOOD", 1, 800}}}
 	res = runCapture(t, cfg, books)
 	if len(res.ExtraItemIDs) != 0 || books.itemCalls != 0 {
 		t.Fatalf("上限 0 时不并入、也不查库,得到 %v / %d 次", res.ExtraItemIDs, books.itemCalls)

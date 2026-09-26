@@ -19,9 +19,10 @@ const backfillEvery = 5 * time.Minute
 
 // Reevaluate 用缓存的 AODP 快照配上当下的抓包盘口重算一遍机会板,原子替换对外结果。
 //
-// 两次全量之间新抓到、快照里还没有的物品,到点了就批量补拉它们的 AODP
-// 价格和历史并进快照(至多每 5 分钟一次);没到点的在 capture.extra_pending 里报数。
-// 除了补拉,重算不打 AODP;查价页现取过的 AODP 当前价会并进来(evalSnapshot)。
+// 两次全量之间新抓到、快照里还没有的 (物品, 品质)——新物品,或者已有物品抓到的新品质——
+// 到点了就批量补拉它们的 AODP 价格和历史并进快照(至多每 5 分钟一次);没到点的在
+// capture.extra_pending 里报数。除了补拉,重算不打 AODP;查价页现取过的 AODP 当前价
+// 会并进来(evalSnapshot)。
 func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 	cat := s.cat.Load()
 	if cat == nil || s.snap.Load() == nil {
@@ -33,7 +34,7 @@ func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 	captured, listErr := scan.ListCaptured(ctx, s.Cfg, books, time.Now().UTC())
 	var ext *scan.Extension
 	var fillErr error
-	if pending := s.snap.Load().PendingExtras(captured, s.Cfg, cat); len(pending) > 0 {
+	if pending := s.snap.Load().PendingExtras(captured, s.Cfg, cat); pending.Count() > 0 {
 		ext, fillErr = s.backfill(ctx, pending)
 	}
 
@@ -49,16 +50,16 @@ func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 		// 这份降级结果不该盖掉手上那份好的。重算便宜,不像全量那样值得收尾
 		return nil, err
 	}
-	res.Capture.ExtraPending = len(snap.PendingExtras(captured, s.Cfg, cat))
+	res.Capture.ExtraPending = snap.PendingExtras(captured, s.Cfg, cat).Count()
 	res.Capture.AddError(listErr)
 	res.Capture.AddError(fillErr)
 	s.publish(res, false)
 	return res, nil
 }
 
-// backfill 给快照里还没有的物品补拉 AODP。没到点、全量正在跑、上一轮补拉
+// backfill 给快照里还没有的 (物品, 品质) 补拉 AODP。没到点、全量正在跑、上一轮补拉
 // 还没完时什么都不做(返回 nil, nil)。
-func (s *Service) backfill(ctx context.Context, pending []string) (*scan.Extension, error) {
+func (s *Service) backfill(ctx context.Context, pending scan.Pairs) (*scan.Extension, error) {
 	now := time.Now().UTC()
 	if last := s.lastBackfill.Load(); last != 0 && now.Sub(time.Unix(0, last)) < backfillEvery {
 		return nil, nil
@@ -75,10 +76,11 @@ func (s *Service) backfill(ctx context.Context, pending []string) (*scan.Extensi
 
 	ext, history, err := scan.FetchExtension(ctx, s.aodp, s.Cfg, pending, now)
 	if err != nil {
-		slog.Warn("给新抓到的物品补拉 AODP 失败", "items", len(pending), "err", err)
+		slog.Warn("给新抓到的物品 / 品质补拉 AODP 失败", "items", len(pending.Items), "pairs", pending.Count(), "err", err)
 		return nil, fmt.Errorf("补拉 AODP: %w", err)
 	}
-	slog.Info("给新抓到的物品补拉了 AODP", "items", len(pending), "requests", ext.RequestCount)
+	slog.Info("给新抓到的物品 / 品质补拉了 AODP", "items", len(pending.Items), "pairs", pending.Count(),
+		"requests", ext.RequestCount)
 	s.writeHistory(ctx, history)
 	return ext, nil
 }

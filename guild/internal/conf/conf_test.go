@@ -101,6 +101,9 @@ func TestValidate_深度与抓包段的边界(t *testing.T) {
 		{"优先宽容度为负", func(c *Config) { c.Capture.PreferSlackMinutes = -1 }, "prefer_slack_minutes"},
 		{"并入物品上限为负", func(c *Config) { c.Capture.MaxExtraItems = -1 }, "max_extra_items"},
 		{"重算间隔为负", func(c *Config) { c.Capture.ReevalSeconds = -1 }, "reeval_seconds"},
+		// 清单物品一档都不评估;以前空着是给 AODP 发 qualities=,由它自己解释
+		{"品质为空", func(c *Config) { c.Qualities = nil }, "qualities"},
+		{"品质越界", func(c *Config) { c.Qualities = []int{1, 6} }, "qualities"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

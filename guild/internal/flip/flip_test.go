@@ -7,7 +7,26 @@ import (
 	"albion-guild/internal/conf"
 	"albion-guild/internal/portfolio"
 	"albion-guild/internal/scan"
+	"albion-guild/internal/screen"
 )
+
+// 扫描会并入抓到的别的品质:同一物品同一城的普通和杰出是两条机会、两份流动性,
+// 仓位的 key 得分得开,不然界面上是两行同名的仓位
+func TestPortfolio_同物品同城不同品质的仓位分得开(t *testing.T) {
+	opp := func(q int) screen.Opportunity {
+		return screen.Opportunity{ItemID: "T6_MAIN_FIRESTAFF", ItemName: "火焰法杖", City: "Lymhurst", Quality: q,
+			AbsorbableQty: 10, CostPerUnit: 10_000, ProfitPerUnit: 500, HoursPerTurn: 4}
+	}
+	s := &Service{Cfg: conf.Default()}
+	s.last.Store(&scan.Result{Opportunities: []screen.Opportunity{opp(1), opp(4)}})
+	keys := map[string]bool{}
+	for _, sl := range s.Portfolio(portfolio.DefaultOptions(10_000_000)).Slices {
+		keys[sl.Key] = true
+	}
+	if !keys["flip:T6_MAIN_FIRESTAFF|q1|Lymhurst"] || !keys["flip:T6_MAIN_FIRESTAFF|q4|Lymhurst"] {
+		t.Fatalf("两档品质应各有一个仓位,得到 %v", keys)
+	}
+}
 
 // 从 Thetford 同一个卖单簿往两个方向秒买,盘口上一共只有 11 件。
 // 两条路线各自都说"我能买 11 件",组合页要是只记成交量桶(一天 1000 件),
@@ -68,7 +87,7 @@ func TestPortfolio_深浅两条路线共用一个卖单簿时深的不被浅的�
 		}
 		return out
 	}
-	const kDeep, kShallow = "arb:T5_CLOTH|Lymhurst->Martlock", "arb:T5_CLOTH|Lymhurst->Thetford"
+	const kDeep, kShallow = "arb:T5_CLOTH|q1|Lymhurst->Martlock", "arb:T5_CLOTH|q1|Lymhurst->Thetford"
 
 	// 深的回报率高,先分:吃满自己限价以内的 1105 件;浅的限价以内的货已经被吃光
 	got := plan(deep, shallow)

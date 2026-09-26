@@ -8,7 +8,6 @@ import (
 
 	"albion-guild/internal/aodp"
 	"albion-guild/internal/book"
-	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/depth"
 	"albion-guild/internal/histagg"
@@ -92,10 +91,11 @@ func (cs CapturedSide) seenAt(i int) time.Time {
 	return cs.Newest
 }
 
-// CapturedItem 是抓包窗口里有挂单的一个物品,Qty 是件数合计。
+// CapturedItem 是抓包窗口里有挂单的一个 (物品, 品质),Qty 是两边、各城加起来的件数。
 type CapturedItem struct {
-	ItemID string
-	Qty    int64
+	ItemID  string
+	Quality int
+	Qty     int64
 }
 
 // BookSource 给扫描提供抓包数据。仿照 hub.QuoteSource:scan 不 import store,
@@ -104,7 +104,8 @@ type BookSource interface {
 	// CaptureBooks 读一批盘口边。请求了但窗口内没有挂单的 key 不出现在结果里,
 	// 当成"没有抓包"
 	CaptureBooks(ctx context.Context, keys []model.QuoteKey, since time.Time) (map[model.QuoteKey]CapturedSide, error)
-	// CapturedItems 列出 since 之后在 cities × qualities 里有挂单的物品,件数从多到少
+	// CapturedItems 列出 since 之后在 cities × qualities 里有挂单的 (物品, 品质),
+	// 每个组合一行,件数从多到少
 	CapturedItems(ctx context.Context, cities []string, qualities []int, since time.Time) ([]CapturedItem, error)
 }
 
@@ -128,11 +129,14 @@ type CaptureSummary struct {
 	// ConflictKeys 是因为最近有多开串城、暂停了幽灵剔除的盘口边数
 	ConflictKeys int `json:"conflict_keys"`
 	// ExtraItems 是配置清单外、因为抓包窗口里有挂单才并进扫描的物品数;
-	// ExtraDropped 是超出 capture.max_extra_items、按件数截掉的个数
+	// ExtraDropped 是超出 capture.max_extra_items、按件数截掉的物品数。名额按物品算
 	ExtraItems   int `json:"extra_items"`
 	ExtraDropped int `json:"extra_dropped"`
-	// ExtraPending 是全量之后新抓到、还在等补拉 AODP 的物品数(补拉有节流)。
-	// 它们这一轮还不在机会板上
+	// ExtraPairs 是评估的 (物品, 品质) 里不在"配置清单 × qualities"之内、因为抓包才进来的
+	// 组合数:清单物品抓到的别的品质,加上并进来的物品抓到的全部品质
+	ExtraPairs int `json:"extra_pairs"`
+	// ExtraPending 是全量之后新抓到、还在等补拉 AODP 的 (物品, 品质) 组合数(补拉有节流),
+	// 含已有物品抓到的新品质。它们这一轮还不在机会板上
 	ExtraPending int `json:"extra_pending"`
 	// BackfilledAt 是最近一次给新抓到的物品补拉 AODP 的时刻,没补过不输出
 	BackfilledAt time.Time `json:"backfilled_at,omitzero"`
@@ -152,55 +156,15 @@ func (s *CaptureSummary) AddError(err error) {
 	s.Error += err.Error()
 }
 
-// extraItems 从抓到的物品里挑出要并进扫描的:不在 base 里、目录里查得到,
-// 按件数从多到少(同件数按 id)截到 limit 个。
-//
-// 目录里查不到的跳过:多半是游戏更新后的新物品还没同步目录,或者客户端
-// 解析出了怪 id,拿去问 AODP 只会白占 URL 预算。
-func extraItems(captured []CapturedItem, base []string, cat *catalog.Catalog,
-	limit int) (extra []string, dropped, unknown int) {
-	if limit <= 0 {
-		return nil, 0, 0
-	}
-	have := make(map[string]bool, len(base)+len(captured))
-	for _, id := range base {
-		have[id] = true
-	}
-	sorted := append([]CapturedItem(nil), captured...)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		if sorted[i].Qty != sorted[j].Qty {
-			return sorted[i].Qty > sorted[j].Qty
-		}
-		return sorted[i].ItemID < sorted[j].ItemID
-	})
-	for _, c := range sorted {
-		if c.ItemID == "" || have[c.ItemID] {
-			continue
-		}
-		have[c.ItemID] = true
-		if cat != nil {
-			if _, ok := cat.Get(c.ItemID); !ok {
-				unknown++
-				continue
-			}
-		}
-		if len(extra) >= limit {
-			dropped++
-			continue
-		}
-		extra = append(extra, c.ItemID)
-	}
-	return extra, dropped, unknown
-}
-
-// captureKeys 拼出要读的盘口边。城市只取 cfg.Cities:3003(黑市)、没收敛成
-// 城市名的原始地点 id 都进不来,和 AODP 那边的口径一致。Brecilien 在默认城市里
-// (抓包的 5003 已收敛成这个名字),不在 cfg.Cities 里时同样进不来。
-func captureKeys(itemIDs, cities []string, qualities []int) []model.QuoteKey {
-	keys := make([]model.QuoteKey, 0, len(itemIDs)*len(cities)*len(qualities)*2)
-	for _, item := range itemIDs {
+// captureKeys 拼出要读的盘口边:每个 (物品, 品质) × 城市 × 两边,按 p.Items 的顺序。
+// 城市只取 cfg.Cities:3003(黑市)、没收敛成城市名的原始地点 id 都进不来,和 AODP
+// 那边的口径一致。Brecilien 在默认城市里(抓包的 5003 已收敛成这个名字),不在
+// cfg.Cities 里时同样进不来。
+func captureKeys(p Pairs, cities []string) []model.QuoteKey {
+	keys := make([]model.QuoteKey, 0, p.Count()*len(cities)*2)
+	for _, item := range p.Items {
 		for _, city := range cities {
-			for _, q := range qualities {
+			for _, q := range p.Qualities[item] {
 				for _, side := range []model.Side{model.SideOffer, model.SideRequest} {
 					keys = append(keys, model.QuoteKey{
 						ItemID: item, LocationID: city, Quality: int16(q), Side: side,
@@ -348,10 +312,6 @@ func overlay(prices []aodp.PriceRecord, books map[model.QuoteKey]CapturedSide,
 	for _, c := range cfg.Cities {
 		cities[c] = true
 	}
-	qualities := map[int]bool{}
-	for _, q := range cfg.Qualities {
-		qualities[q] = true
-	}
 
 	out := append([]aodp.PriceRecord(nil), prices...)
 	index := make(map[cell]int, len(out))
@@ -362,12 +322,13 @@ func overlay(prices []aodp.PriceRecord, books map[model.QuoteKey]CapturedSide,
 		}
 	}
 
-	// 有抓包的格子。读簿来源理应只返回请求过的 key,这里再按配置过一遍,
-	// 防的是别的来源塞进黑市或别的品质
+	// 有抓包的格子。读簿来源理应只返回请求过的 key,这里再按配置的城市过一遍,
+	// 防的是别的来源塞进黑市。品质不在这里挡:评估哪几档品质按物品各不相同
+	// (QualitySet),evaluate 在调用之前已经只留了请求过的 key
 	var cells []cell
 	seen := map[cell]bool{}
 	for k, cs := range books {
-		if !cities[k.LocationID] || !qualities[int(k.Quality)] {
+		if !cities[k.LocationID] {
 			continue
 		}
 		if cs.best() >= 0 {

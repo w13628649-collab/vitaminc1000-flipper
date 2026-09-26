@@ -164,7 +164,7 @@ func (b *storeBooks) bestQuotes(ctx context.Context, keys []model.QuoteKey, now 
 	return out, nil
 }
 
-// CapturedItems 列出抓包窗口里有挂单的物品,给扫描扩物品集。
+// CapturedItems 列出抓包窗口里有挂单的 (物品, 品质),给扫描扩 (物品, 品质) 集。
 func (b *storeBooks) CapturedItems(ctx context.Context, cities []string, qualities []int,
 	since time.Time) ([]scan.CapturedItem, error) {
 	rows, err := b.st.CapturedItems(ctx, cities, qualities, since)
@@ -173,7 +173,7 @@ func (b *storeBooks) CapturedItems(ctx context.Context, cities []string, qualiti
 	}
 	out := make([]scan.CapturedItem, len(rows))
 	for i, r := range rows {
-		out[i] = scan.CapturedItem{ItemID: r.ItemID, Qty: r.Qty}
+		out[i] = scan.CapturedItem{ItemID: r.ItemID, Quality: r.Quality, Qty: r.Qty}
 	}
 	return out, nil
 }

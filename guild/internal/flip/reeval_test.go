@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,12 +35,14 @@ var rvMarkets = map[string]rvMarket{
 	"T5_ORE":   {40_000, 1000, 50_000, 1050}, // troll 卖单,上不了榜
 }
 
-// rvAODP 只回请求到的物品,时间戳按真实时钟算(Service 用 time.Now)。
+// rvAODP 只回请求到的物品 × 请求到的品质(每档品质同一份行情),时间戳按真实时钟算
+// (Service 用 time.Now)。
 type rvAODP struct {
-	srv  *httptest.Server
-	mu   sync.Mutex
-	reqs []string
-	fail atomic.Bool // 为 true 时一律 500
+	srv     *httptest.Server
+	mu      sync.Mutex
+	reqs    []string
+	queries []string    // 每次请求的 qualities 参数,和 reqs 一一对应
+	fail    atomic.Bool // 为 true 时一律 500
 }
 
 func newRVAODP(t *testing.T) *rvAODP {
@@ -48,6 +51,7 @@ func newRVAODP(t *testing.T) *rvAODP {
 	a.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a.mu.Lock()
 		a.reqs = append(a.reqs, r.URL.Path)
+		a.queries = append(a.queries, r.URL.Query().Get("qualities"))
 		a.mu.Unlock()
 		if a.fail.Load() {
 			http.Error(w, "boom", http.StatusInternalServerError)
@@ -61,25 +65,28 @@ func newRVAODP(t *testing.T) *rvAODP {
 			if !ok {
 				continue
 			}
-			if strings.Contains(r.URL.Path, "/history/") {
-				var data []map[string]any
-				for n := 1; n <= 5; n++ {
-					data = append(data, map[string]any{
-						"timestamp":  now.AddDate(0, 0, -n).Format("2006-01-02T00:00:00"),
-						"item_count": m.histQty, "avg_price": m.histP,
+			for _, qs := range strings.Split(r.URL.Query().Get("qualities"), ",") {
+				q, _ := strconv.Atoi(qs)
+				if strings.Contains(r.URL.Path, "/history/") {
+					var data []map[string]any
+					for n := 1; n <= 5; n++ {
+						data = append(data, map[string]any{
+							"timestamp":  now.AddDate(0, 0, -n).Format("2006-01-02T00:00:00"),
+							"item_count": m.histQty, "avg_price": m.histP,
+						})
+					}
+					payload = append(payload, map[string]any{
+						"location": "Lymhurst", "item_id": id, "quality": q, "data": data,
 					})
+					continue
 				}
+				at := now.Add(-time.Hour).Format("2006-01-02T15:04:05")
 				payload = append(payload, map[string]any{
-					"location": "Lymhurst", "item_id": id, "quality": 1, "data": data,
+					"item_id": id, "city": "Lymhurst", "quality": q,
+					"sell_price_min": m.sell, "sell_price_min_date": at,
+					"buy_price_max": m.buy, "buy_price_max_date": at,
 				})
-				continue
 			}
-			at := now.Add(-time.Hour).Format("2006-01-02T15:04:05")
-			payload = append(payload, map[string]any{
-				"item_id": id, "city": "Lymhurst", "quality": 1,
-				"sell_price_min": m.sell, "sell_price_min_date": at,
-				"buy_price_max": m.buy, "buy_price_max_date": at,
-			})
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(payload)
@@ -92,6 +99,12 @@ func (a *rvAODP) requests() []string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return append([]string(nil), a.reqs...)
+}
+
+func (a *rvAODP) qualityParams() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]string(nil), a.queries...)
 }
 
 // rvBooks 是可以在测试中途改的抓包来源。
@@ -120,12 +133,16 @@ func (b *rvBooks) CapturedItems(context.Context, []string, []int, time.Time) ([]
 }
 
 func (b *rvBooks) setAsk(item string, price, qty int64, seen time.Time) {
+	b.setAskQ(item, 1, price, qty, seen)
+}
+
+func (b *rvBooks) setAskQ(item string, quality int16, price, qty int64, seen time.Time) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.data == nil {
 		b.data = map[model.QuoteKey]scan.CapturedSide{}
 	}
-	b.data[model.QuoteKey{ItemID: item, LocationID: "Lymhurst", Quality: 1, Side: model.SideOffer}] = scan.CapturedSide{
+	b.data[model.QuoteKey{ItemID: item, LocationID: "Lymhurst", Quality: quality, Side: model.SideOffer}] = scan.CapturedSide{
 		Levels: []depth.Level{{Price: price, Qty: qty}}, LevelSeen: []time.Time{seen},
 		Newest: seen, QtyTotal: qty, LevelCount: 1,
 	}
@@ -242,7 +259,7 @@ func TestReevaluate_新抓到的物品节流补拉(t *testing.T) {
 	}
 
 	// 全量之后翻到了 T5_WOOD:第一次重算就补拉,只请求新物品
-	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Qty: 800})
+	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Quality: 1, Qty: 800})
 	res, err := s.Reevaluate(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +284,7 @@ func TestReevaluate_新抓到的物品节流补拉(t *testing.T) {
 	}
 
 	// 紧接着又翻到 T5_ORE:5 分钟节流内不补,报成待补
-	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Qty: 800}, scan.CapturedItem{ItemID: "T5_ORE", Qty: 5})
+	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Quality: 1, Qty: 800}, scan.CapturedItem{ItemID: "T5_ORE", Quality: 1, Qty: 5})
 	res, _ = s.Reevaluate(ctx)
 	if len(a.requests()) != 4 || res.Capture.ExtraPending != 1 || len(res.ItemIDs) != 2 {
 		t.Fatalf("节流期内不该补拉,应报 1 个待补,得到 请求 %d / %+v", len(a.requests()), res.Capture)
@@ -291,6 +308,77 @@ func TestReevaluate_新抓到的物品节流补拉(t *testing.T) {
 	}
 }
 
+// 清单物品抓到了配置之外的品质(T5_CLOTH 配置只扫普通,成员翻到了优秀):快速重算补拉
+// 只拉那一档、不占 max_extra_items 名额,补完之后重算就用抓包价评估它;下一次全量把它和
+// 普通那档塞进同一批请求
+func TestReevaluate_清单物品的新品质补拉并评估(t *testing.T) {
+	cfg := rvConfig()
+	cfg.Capture.MaxExtraItems = 1
+	s, a, books := newRVService(t, cfg)
+	ctx := context.Background()
+	if _, err := s.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if res := s.LastScan(); res.Pairs != 1 {
+		t.Fatalf("全量后只有 T5_CLOTH 普通,得到 %d 个组合", res.Pairs)
+	}
+
+	books.setItems(scan.CapturedItem{ItemID: "T5_CLOTH", Quality: 3, Qty: 40},
+		scan.CapturedItem{ItemID: "T5_WOOD", Quality: 1, Qty: 800})
+	books.setAskQ("T5_CLOTH", 3, 1400, 50, time.Now().UTC().Add(-time.Minute))
+	res, err := s.Reevaluate(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqs, quals := a.requests(), a.qualityParams()
+	if len(reqs) != 6 {
+		t.Fatalf("补拉应分两组(新物品 T5_WOOD 普通、T5_CLOTH 优秀)各 prices + history,累计 %d: %v", len(reqs), reqs)
+	}
+	for i := 2; i < 6; i++ {
+		switch {
+		case strings.Contains(reqs[i], "T5_CLOTH"):
+			if quals[i] != "3" || strings.Contains(reqs[i], "T5_WOOD") {
+				t.Fatalf("T5_CLOTH 只补优秀这一档,得到 %s ? %s", reqs[i], quals[i])
+			}
+		case !strings.Contains(reqs[i], "T5_WOOD") || quals[i] != "1":
+			t.Fatalf("T5_WOOD 按配置品质补,得到 %s ? %s", reqs[i], quals[i])
+		}
+	}
+	// 名额 1 被 T5_WOOD 用了,T5_CLOTH 的新品质不占名额
+	if strings.Join(res.ItemIDs, ",") != "T5_CLOTH,T5_WOOD" || strings.Join(res.ExtraItemIDs, ",") != "T5_WOOD" ||
+		res.Pairs != 3 || res.Capture.ExtraPairs != 2 || res.Capture.ExtraPending != 0 {
+		t.Fatalf("应评估 T5_CLOTH@1、@3、T5_WOOD@1,得到 %v / %v / %d 组合 / %+v",
+			res.ItemIDs, res.ExtraItemIDs, res.Pairs, res.Capture)
+	}
+	var q3 *screen.Opportunity
+	for i, o := range res.Opportunities {
+		if o.ItemID == "T5_CLOTH" && o.Quality == 3 {
+			q3 = &res.Opportunities[i]
+		}
+	}
+	if q3 == nil || q3.Ask.Source != screen.SourceCapture || q3.SellPrice != 1400 {
+		t.Fatalf("T5_CLOTH 优秀应上榜且卖价取抓包 1400,得到 %+v(拒绝 %v)", q3, res.RejectCounts)
+	}
+	if o := rvOpp(res, "T5_CLOTH"); o == nil {
+		t.Fatal("普通那档照旧在")
+	}
+
+	// 下一次全量:T5_CLOTH 的品质表是 [1 3],和 T5_WOOD 分两组;T5_CLOTH 那组一次问 1,3
+	full, err := s.Scan(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqs, quals = a.requests()[6:], a.qualityParams()[6:]
+	if len(reqs) != 4 || full.Pairs != 3 || full.RequestCount != 4 {
+		t.Fatalf("全量应 2 组 × 2 端点、评估 3 个组合,得到 %d 次 %v / %d", len(reqs), reqs, full.Pairs)
+	}
+	for i, p := range reqs {
+		if strings.Contains(p, "T5_CLOTH") && quals[i] != "1,3" {
+			t.Fatalf("T5_CLOTH 那组应一次问 1,3,得到 %s", quals[i])
+		}
+	}
+}
+
 func TestReevaluate_补拉失败报进摘要并照样出结果(t *testing.T) {
 	s, a, books := newRVService(t, rvConfig())
 	ctx := context.Background()
@@ -298,7 +386,7 @@ func TestReevaluate_补拉失败报进摘要并照样出结果(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.fail.Store(true)
-	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Qty: 800})
+	books.setItems(scan.CapturedItem{ItemID: "T5_WOOD", Quality: 1, Qty: 800})
 	res, err := s.Reevaluate(ctx)
 	if err != nil {
 		t.Fatal(err)

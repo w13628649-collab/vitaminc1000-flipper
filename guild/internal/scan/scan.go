@@ -139,6 +139,10 @@ type Result struct {
 	EvaluatedAt time.Time `json:"evaluated_at"`
 	// ItemIDs 是这次扫描的全部物品:配置清单展开的,加上抓包并进来的
 	ItemIDs []string `json:"item_ids"`
+	// Pairs 是这次评估的 (物品, 品质) 组合数:配置清单 × qualities,并上抓包窗口里
+	// 实际有挂单的组合(见 QualitySet)。每城可能的报价点 = Pairs × 2(卖一、买一),
+	// 覆盖率按它当分母——以前界面写死 物品数 × 2,抓到的别的品质算不进去
+	Pairs int `json:"pairs"`
 	// ExtraItemIDs 是 ItemIDs 里因为抓包窗口里有挂单才并进来的那部分
 	ExtraItemIDs   []string             `json:"extra_item_ids"`
 	MissingItemIDs []string             `json:"missing_item_ids"`
@@ -280,24 +284,30 @@ func RunWithCapture(ctx context.Context, client *aodp.Client, cfg conf.Config,
 
 // evaluate 是扫描里不打 AODP 的那一半:读抓包盘口、逐边融合、过滤、算账、排序。
 //
+// 读簿只读 pairs 里的 (物品, 品质):每个物品评估哪几档由快照定(配置那几档 + 抓到的),
+// 不是一律 cfg.Qualities。
+//
 // 读簿失败不让整次扫描白跑:报进 Capture.Error,退回纯 AODP 继续。
 // 融合之后同城(screen)和跨城(findRoutes)用的是同一份价格;
 // 覆盖率仍按 AODP 原始价格算,抓包口径另列。
 func evaluate(ctx context.Context, raw []aodp.PriceRecord, stats map[histagg.QualityKey]histagg.Stats,
-	itemIDs []string, cfg conf.Config, cat *catalog.Catalog, books BookSource, now time.Time) *Result {
+	pairs Pairs, cfg conf.Config, cat *catalog.Catalog, books BookSource, now time.Time) *Result {
 
 	prices := raw
 	var sides map[histagg.QualityKey]screen.Sides
 	var got map[model.QuoteKey]CapturedSide
 	var sum CaptureSummary
 	if cfg.Capture.Enabled && books != nil {
-		keys := captureKeys(itemIDs, cfg.Cities, cfg.Qualities)
+		keys := captureKeys(pairs, cfg.Cities)
 		var err error
 		got, err = books.CaptureBooks(ctx, keys, now.Add(-cfg.CaptureWindow()))
 		if err != nil {
 			slog.Warn("读抓包盘口失败,这次扫描退回纯 AODP", "err", err)
 			got = nil
 		}
+		// 读簿来源理应只回请求过的 key,这里再按请求过一遍:别的品质、别的物品混进来,
+		// 会在 overlay 里合成出快照里没有 AODP 数据、也不在评估集合里的格子
+		got = onlyRequested(got, keys)
 		prices, sides, sum = overlay(raw, got, cfg, now)
 		sum.Enabled, sum.RequestedKeys = true, len(keys)
 		sum.AddError(err)
@@ -335,7 +345,8 @@ func evaluate(ctx context.Context, raw []aodp.PriceRecord, stats map[histagg.Qua
 
 	// StartedAt/EvaluatedAt 和快照那几项由 EvaluateSnapshot 填
 	return &Result{
-		ItemIDs:       itemIDs,
+		ItemIDs:       pairs.Items,
+		Pairs:         pairs.Count(),
 		Opportunities: opportunities,
 		Rejected:      rejected,
 		PriceRows:     len(raw),
@@ -344,4 +355,22 @@ func evaluate(ctx context.Context, raw []aodp.PriceRecord, stats map[histagg.Qua
 		Routes:        routes,
 		Capture:       sum,
 	}
+}
+
+// onlyRequested 只留 got 里请求过的 key。
+func onlyRequested(got map[model.QuoteKey]CapturedSide, keys []model.QuoteKey) map[model.QuoteKey]CapturedSide {
+	if len(got) == 0 {
+		return got
+	}
+	want := make(map[model.QuoteKey]struct{}, len(keys))
+	for _, k := range keys {
+		want[k] = struct{}{}
+	}
+	out := make(map[model.QuoteKey]CapturedSide, len(got))
+	for k, v := range got {
+		if _, ok := want[k]; ok {
+			out[k] = v
+		}
+	}
+	return out
 }
