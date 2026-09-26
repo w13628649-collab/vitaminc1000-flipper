@@ -348,6 +348,18 @@ function confidenceReason(r) {
     (age > r.max_age_hours + 0.05 ? `(现在是 ${age.toFixed(1)} 小时,算这份结果时是 ${r.max_age_hours.toFixed(1)})` : "");
 }
 
+// 查价格子一侧的 depth / note:和机会页卡片同一边的 depth / note 是同一份(服务端
+// scan.MergeSide)。选中抓包、最优档在可信窗口内时有 depth;太旧时 depth 为空、note 说明
+// "未参与判定";选了 AODP 时两个都空。查价格子和右栏共用这句
+function gateText(s, depthH) {
+  const d = s?.depth;
+  if (!d) return s?.note || "";
+  return `最优档 ${num(d.qty_at_best)} 件 · 最优价 ${pct(d.near_pct, 0)} 以内 ${num(d.qty_near)} 件(${Number(d.levels_near)} 档)` +
+    (d.gap_after_near > 0 ? ` · 近价窗口外下一档差 ${pct(d.gap_after_near, 0)}${d.gap_after_near >= 0.2 ? ",断崖" : ""}` : "") +
+    (d.truncated ? " · 阶梯截断,近价件数只是下限" : "") +
+    `。只算 ${depthH} 小时内看到的档,和机会页卡片同一份判定`;
+}
+
 // 一条腿依托的那一边盘口的近价件数。只有抓包、而且在深度可信窗口内才有
 function legDepth(leg, word) {
   const s = leg.side;
@@ -1523,6 +1535,10 @@ function renderPrices(d) {
   const nearTxt = pct(P.near_pct ?? 0.05, 0);   // 近价窗口:服务端给的,以前文案里写死 5%
   const qualities = d.qualities?.length ? d.qualities : [1];
   const fresh = s => s && s.best > 0 && s.age_hours != null && s.age_hours <= maxH;
+  // 择边的宽容度和深度闸门的可信窗口:服务端给的,老服务端没有就用默认值
+  const slackMin = P.prefer_slack_minutes ?? 10;
+  const depthH = P.depth_max_hours ?? 2;
+  const pickRule = `抓包不比 AODP 旧 ${slackMin} 分钟以上、或者两边同价就用抓包,否则用 AODP`;
 
   // 最优点按品质分别算。不同品质是不同的商品:杰出品质的长袍卖得比普通贵三倍,
   // 那不是价差,那是另一件东西。只在新鲜数据里挑:30 小时前的低价没有意义
@@ -1569,14 +1585,36 @@ function renderPrices(d) {
     </div>
   </div>`;
 
+  // 两路都有时,这一侧为什么用了那一路。规则和机会页卡片是同一个函数(scan.PickCapture):
+  // 以前这里写的是"两路谁新用谁、一样新用抓包",抓包比 AODP 旧几分钟时照旧用抓包,和文案对不上
+  const pickWhy = s => {
+    if (s.pick !== "capture") return `抓包比 AODP 旧 ${slackMin} 分钟以上、价也不同,用 AODP`;
+    if (s.aodp.age_hours == null) return "AODP 没有时间戳,用抓包";
+    if (s.aodp.best === s.capture.best) return "两边同价,用抓包(数据龄取两边里新的那个)";
+    return s.capture.age_hours <= s.aodp.age_hours ? "抓包比 AODP 新,用抓包"
+      : `抓包比 AODP 旧,但没超过 ${slackMin} 分钟,仍用抓包`;
+  };
   // 一侧的来源说明:两路都列出来,说清楚用的是哪一路、为什么
   const srcHint = s => {
     const lines = [];
     if (s.capture) lines.push(`抓包 ${num(s.capture.best)}(${ageText(s.capture.age_hours)} 前)· 最优档 ${num(s.capture.qty_at_best)} 件 / ${Number(s.capture.orders_at_best)} 单 · ${nearTxt} 以内 ${num(s.capture.qty_near)} 件`);
     if (s.capture?.prev_page_orders) lines.push(`最近一次只翻到了后面的页,前面 ${Number(s.capture.prev_page_orders)} 张单是更早那一页看到的,照样算在内`);
     if (s.aodp) lines.push(`AODP ${num(s.aodp.best)}(${s.aodp.age_hours == null ? "没有时间戳" : ageText(s.aodp.age_hours) + " 前"})`);
-    if (s.capture && s.aodp) lines.push(`用的是${s.pick === "capture" ? "抓包" : "AODP"}:两路谁新用谁,一样新用抓包`);
+    if (s.capture && s.aodp) lines.push(`用的是${s.pick === "capture" ? "抓包" : "AODP"}:${pickWhy(s)}。规则:${pickRule},和机会页同一个规则`);
+    if (s.depth || s.note) lines.push(`深度闸门:${gateText(s, depthH)}`);
     return lines.join("\n");
+  };
+  // 深度闸门对这一侧的看法(见 gateText)。上面 ×N/M 是整本簿的口径(全部当前档,不管多旧),
+  // 两边都有数时一样,不一样的是"有没有数":最优档太旧时闸门不判,卡片上写着"未参与判定",
+  // 格子上也得写,不能只给一个件数
+  const gateLine = s => {
+    const d = s.depth;
+    if (d) {
+      const cliff = d.gap_after_near >= 0.2;
+      return `<div class="ln3${cliff ? " cliff" : ""}" title="${esc("深度闸门:" + gateText(s, depthH))}">闸门 近价 ${num(d.qty_near)}${d.truncated ? "+" : ""} 件 · ${Number(d.levels_near)} 档</div>`;
+    }
+    if (s.note) return `<div class="ln3 off" title="${esc("深度闸门没有判这一侧,机会页卡片上同一边也是这句")}">${esc(s.note)}</div>`;
+    return "";
   };
   // 买卖两侧的时间戳常常差很远,各报各的龄。标签用游戏里市场那两个页签的说法
   const side = (label, s, hint, kind) => {
@@ -1594,7 +1632,7 @@ function renderPrices(d) {
     if (cap) {
       const dim = s.pick !== "capture";
       parts.push(`<em class="qty${dim ? " dim" : ""}" title="${esc(`最优档 ${num(cap.qty_at_best)} 件,最优价 ${nearTxt} 以内共 ${num(cap.qty_near)} 件` +
-        (dim ? "\n抓包比 AODP 旧,价格用的是 AODP,件数只作参考" : ""))}">×${num(cap.qty_at_best)}${cap.qty_near > cap.qty_at_best ? "/" + num(cap.qty_near) : ""}</em>`);
+        (dim ? `\n抓包比 AODP 旧 ${slackMin} 分钟以上、价也不同,价格用的是 AODP,件数只作参考` : ""))}">×${num(cap.qty_at_best)}${cap.qty_near > cap.qty_at_best ? "/" + num(cap.qty_near) : ""}</em>`);
     }
     const far = s.pick === "capture" ? cap.far : s.pick === "aodp" ? s.aodp.far : 0;
     if (far && far !== s.best) {
@@ -1649,8 +1687,8 @@ function renderPrices(d) {
       : thin ? `<div class="ctag warn">买方只有 ${num(bc.qty_near)} 件在收${gap ? `,再往下断崖 ${pct(bc.gap_after_near, 0)}` : ""} —— 挂买单多半收不到货</div>`
       : gap ? `<div class="ctag warn">买一附近吃完,下一档就低 ${pct(bc.gap_after_near, 0)},最高买价没支撑</div>` : "";
     return `<div class="${cls}">
-      ${side("卖单最低", c.sell, "市场上最便宜的那张卖单。你想马上买到货,就付这个价", "sell")}${extra(c.sell, "sell")}
-      ${side("买单最高", c.buy, "市场上出价最高的那张买单。你想马上出货,就拿这个价", "buy")}${extra(c.buy, "buy")}
+      ${side("卖单最低", c.sell, "市场上最便宜的那张卖单。你想马上买到货,就付这个价", "sell")}${extra(c.sell, "sell")}${gateLine(c.sell)}
+      ${side("买单最高", c.buy, "市场上出价最高的那张买单。你想马上出货,就拿这个价", "buy")}${extra(c.buy, "buy")}${gateLine(c.buy)}
       <div class="meta">${spread}${histLines(c.history)}</div>
       ${tags ? `<div class="ctag">${tags}</div>` : ""}
       ${bidNote}
@@ -1701,7 +1739,8 @@ function renderPrices(d) {
       <p><b>卖单最低</b>就是游戏里市场「销售订单」页签最上面那一行 —— 别人挂着卖的最低价,
       你想马上买到货付的就是它。<b>买单最高</b>是「购买订单」页签最上面那一行 —— 别人挂着收的最高价,
       你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 ${nearTxt} 以内的件数,只有自建抓包拿得到;
-      带 <i class="src" style="margin:0">抓</i> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
+      带 <i class="src" style="margin:0">抓</i> 的那一侧用的是抓包,没带的是 AODP:${pickRule} —— 和机会页卡片同一个规则。
+      <b>闸门</b>那一行是机会页深度闸门对这一侧的判定,只信 ${depthH} 小时内看到的档;最优档比这更旧时写"未参与判定"。</p>
       <p>所以<b>卖单价总是比买单价高</b>,这段差就是倒爷的利润空间。<b>同城价差</b>已经替你把
       ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了:在这座城挂买单收货、再挂卖单出货,
       一轮下来的净毛利率,为正就不亏。它已经是扣完费的数,别再拿它和盈亏平衡比 ——
@@ -1987,9 +2026,17 @@ function renderLadder() {
   const stat = (k, v, hint) => `<div class="bstat" title="${esc(hint || "")}"><b>${v}</b><span>${k}</span></div>`;
   const srcOf = s => s.pick === "capture" ? `来源:抓包,${ageText(s.age_hours)} 前`
     : s.pick === "aodp" ? `来源:AODP,${s.age_hours == null ? "没有时间戳" : ageText(s.age_hours) + " 前"}` : "";
+  // 深度闸门对两侧的判定,和格子上"闸门"那一行、机会页卡片同一份
+  const depthH = P.depth_max_hours ?? 2;
+  const gateVal = s => s.depth ? `${num(s.depth.qty_near)}${s.depth.truncated ? "+" : ""} 件`
+    : s.note ? "未参与" : s.pick === "aodp" ? "不判" : "—";
+  const gateTip = (s, word) => s.depth || s.note ? `${word}深度闸门:${gateText(s, depthH)}`
+    : s.pick === "aodp" ? `${word}的价来自 AODP,不给件数,深度闸门对这一侧不生效` : "";
   const stats = [
     stat("最低卖价", cs.best ? num(cs.best) : "—", `别人挂着卖的最低价。${srcOf(cs)}`),
     stat("最高买价", cb.best ? num(cb.best) : "—", `别人挂着收的最高价。${srcOf(cb)}`),
+    stat("卖方闸门近价", gateVal(cs), gateTip(cs, "卖方")),
+    stat("买方闸门近价", gateVal(cb), gateTip(cb, "买方")),
     stat("买卖价差", sp ? pct(sp.raw) : "—", "未扣税费的原始价差"),
     stat("税后毛利", sp ? pct(sp.margin) : "—",
       `挂买收货再挂卖出货,扣掉 ${pct(P.friction ?? 0.09)} 摩擦后的净毛利率;真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}`),

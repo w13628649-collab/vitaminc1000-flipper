@@ -307,6 +307,10 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 .cell .ln s{text-decoration:none; font-size:10px; color:var(--ink-soft)}
 .cell .ln s.stale{color:var(--warn); opacity:.75}
 .cell .ln2{font-size:10.5px; color:var(--ink-soft); text-align:right; margin:-1px 0 3px}
+/* 深度闸门对这一侧的判定(和机会页卡片同一份):有件数时淡色一行,没参与判定时写那句说明 */
+.cell .ln3{font-size:10px; color:var(--ink-soft); text-align:right; margin:-2px 0 3px}
+.cell .ln3.cliff{color:var(--warn)}
+.cell .ln3.off{color:var(--warn); opacity:.8}
 .cell .meta{font-size:10.5px; color:var(--ink-soft); margin-top:4px; padding-top:4px;
   border-top:1px solid var(--rule-soft)}
 .cell .spread{font-weight:600}

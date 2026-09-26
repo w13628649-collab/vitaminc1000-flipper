@@ -92,6 +92,11 @@ type GridParams struct {
 	MinBidDepth          int64   `json:"min_bid_depth"`
 	BaselineDays         int     `json:"baseline_days"`
 	HistoryDays          int     `json:"history_days"`
+	// PreferSlackMinutes / DepthMaxHours 是择边(scan.PickCapture)和深度闸门的两个窗口。
+	// 界面写"这一侧为什么用了那一路""闸门只信多近的档"时要用:以前文案里写的是
+	// "两路谁新用谁",和实际规则对不上
+	PreferSlackMinutes float64 `json:"prefer_slack_minutes"`
+	DepthMaxHours      float64 `json:"depth_max_hours"`
 }
 
 type GridAODP struct {
@@ -597,6 +602,8 @@ func buildGrid(in gridInput) *LookupGrid {
 		MinBidDepth:          in.Cfg.Filters.MinBidDepth,
 		BaselineDays:         baseline,
 		HistoryDays:          long,
+		PreferSlackMinutes:   in.Cfg.PreferSlack().Minutes(),
+		DepthMaxHours:        in.Cfg.Capture.DepthMaxHours,
 	}
 	return out
 }

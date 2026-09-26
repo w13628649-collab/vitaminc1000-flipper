@@ -165,7 +165,8 @@ func TestBuildGridMergesPerSide(t *testing.T) {
 	}
 	if !near(g.Params.Breakeven, 1.025/0.935-1) || g.Params.CaptureWindowHours != 6 ||
 		g.Params.MinBidDepth != cfg.Filters.MinBidDepth || g.Params.NearPct != cfg.Filters.NearPct ||
-		g.Params.SnapshotSlackMinutes != 2 || g.Params.PageSize != book.PageSize {
+		g.Params.SnapshotSlackMinutes != 2 || g.Params.PageSize != book.PageSize ||
+		g.Params.PreferSlackMinutes != cfg.Capture.PreferSlackMinutes || g.Params.DepthMaxHours != cfg.Capture.DepthMaxHours {
 		t.Fatalf("params=%+v", g.Params)
 	}
 }
