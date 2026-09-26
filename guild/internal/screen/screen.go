@@ -18,17 +18,22 @@
 //	| 交叉盘    | 买一 ≥ 卖一                                                 | crossed_book |
 //	| 深度闸门  | 四种执行方式各过一遍 LegGate,只拦挂单腿、只看抓包那一边;   | no_bid_side / thin_book |
 //	|           | 赚钱的模式全被拦下时,报日收益最高那个被拦的原因            |          |
-//	| 利润      | 四种执行方式没一种税后赚钱(挂单腿按带宽钳过的价算)        | unprofitable |
-//	| 毛利率    | 按不钳的盘口价算 Margin > MaxMargin,两边多半同时是 troll    | implausible_margin |
+//	| 利润      | 四种执行方式按盘口价没一种税后赚钱                          | unprofitable |
+//	| 毛利率    | 按盘口价挑中的那个 Margin > MaxMargin,两边多半同时是 troll  | implausible_margin |
+//	| 带宽      | 挂单腿按带宽钳过之后没一种赚钱                              | unprofitable |
 //	| 吃单量    | 可吃量不足 1 件                                             | too_thin |
 //
 // 挂单腿带宽(filters.maker_price_band,econ.QuoteBanded):吃单腿的价是盘口上真挂着的单,
-// 挂单腿的价是假设有人按它成交。挂卖价最多到 7 日成交均价 ×(1 + band),挂买价至少出到
-// ×(1 − band),税费、盈亏平衡、利润、日收益全按钳过的价算。钳制只让账变差,不放行任何东西;
-// 偏离度、深度闸门、毛利率上限这些 troll 判据照旧判盘口本身。
+// 挂单腿的价是假设有人按它成交。挂卖价最多到参考价 ×(1 + band),挂买价至少出到
+// ×(1 − band);参考价是 7 日成交均价,盘口整体越过均价时跟着对面盘口走。税费、盈亏平衡、
+// 利润、日收益全按钳过的价算。钳制只让账变差,不放行任何东西。
 //
-// 通过之后定置信度:贴着任何一道阈值(含深度闸门的 edge)→ low;
-// 否则两侧都在 HighConfidenceHours 内 → high;其余 medium。
+// 深度闸门、利润、毛利率上限这三层先按**不钳**的账判,也就是 band = 0 时的判定原样复现:
+// 它们判的是盘口本身,同一本盘口带宽开着关着、开多宽都得是同一个拒绝原因。
+// 过了这三层,再按钳过的账挑执行方式。
+//
+// 通过之后定置信度:贴着任何一道阈值(含深度闸门的 edge)、或者两条挂单腿都被封
+// (两个挂价都是按带宽推出来的)→ low;否则两侧都在 HighConfidenceHours 内 → high;其余 medium。
 package screen
 
 import (
@@ -339,8 +344,9 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	type sized struct {
 		q    ModeQuote
 		unit econ.Unit
-		// raw 是不钳的账,只给毛利率上限(troll 判据)用,见 econ.Banded.Raw
+		// raw/rawQ 是不钳的账和按它算的日收益、单件利润:第一步拿它们复现 band = 0 时的判定
 		raw  econ.Unit
+		rawQ ModeQuote
 		qty  int64
 		mode econ.Mode
 		// 深度闸门对这个模式的判定
@@ -348,8 +354,9 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 		warns  []string
 		detail string
 	}
-	// profitable 是赚钱且没被拦的;blocked 是赚钱但被深度闸门拦下的
-	var profitable, blocked []sized
+	// rawOK 是不钳也赚钱、没被拦的;rawBlocked 是不钳赚钱、但被深度闸门拦下的。
+	// 不钳都不赚的模式,钳了只会更不赚,两步里都用不上
+	var rawOK, rawBlocked []sized
 	for _, m := range econ.Modes {
 		bq := econ.QuoteBanded(book, book, m, cfg.Economics, band)
 		u := bq.Unit
@@ -368,64 +375,108 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 			Clamp:   bq.Clamp,
 		}
 		modes = append(modes, q)
-		if u.ProfitPerUnit <= 0 {
+		if bq.Raw.ProfitPerUnit <= 0 {
 			continue
 		}
-		s := sized{q: q, unit: u, raw: bq.Raw, qty: qty, mode: m, edge: gEdge, warns: gWarns, detail: detail}
+		rawQ := q
+		if bq.Clamp != nil {
+			_, _, rawDaily := econ.Turnover(bq.Raw, absorbable, cfg.Capital, hours)
+			rawQ.ProfitPerUnit, rawQ.DailyProfit = bq.Raw.ProfitPerUnit, rawDaily
+		}
+		s := sized{q: q, unit: u, raw: bq.Raw, rawQ: rawQ, qty: qty, mode: m, edge: gEdge, warns: gWarns, detail: detail}
 		if reason != "" {
-			blocked = append(blocked, s)
+			rawBlocked = append(rawBlocked, s)
 		} else {
-			profitable = append(profitable, s)
+			rawOK = append(rawOK, s)
 		}
 	}
 	sort.SliceStable(modes, func(i, j int) bool { return modes[i].DailyProfit > modes[j].DailyProfit })
 	// 按日收益挑。量不足时日收益全是 0,退回按单件利润挑——
-	// 这时候要报的是"吃不下"而不是"不赚钱",两者的处置完全不同
-	byDaily := func(s []sized) {
+	// 这时候要报的是"吃不下"而不是"不赚钱",两者的处置完全不同。
+	// key 选按哪份账排:第一步按不钳的(rawQ),第二步按钳过的(q)
+	byDaily := func(s []sized, key func(sized) ModeQuote) {
 		sort.SliceStable(s, func(i, j int) bool {
-			if s[i].q.DailyProfit != s[j].q.DailyProfit {
-				return s[i].q.DailyProfit > s[j].q.DailyProfit
+			a, b := key(s[i]), key(s[j])
+			if a.DailyProfit != b.DailyProfit {
+				return a.DailyProfit > b.DailyProfit
 			}
-			return s[i].q.ProfitPerUnit > s[j].q.ProfitPerUnit
+			return a.ProfitPerUnit > b.ProfitPerUnit
 		})
 	}
+	rawKey := func(s sized) ModeQuote { return s.rawQ }
+	bandKey := func(s sized) ModeQuote { return s.q }
 
-	if len(profitable) == 0 && len(blocked) > 0 {
+	// ---- 第一步:按不钳的账复现 band = 0 时的判定 ------------------------
+	// 深度闸门、不赚钱、毛利率上限这三个拒绝原因判的都是盘口本身,和带宽无关:同一本盘口,
+	// 带宽开着关着、开多宽,都得是同一个结论。以前先按钳过的账判"赚不赚钱",钳完不赚钱的
+	// troll 盘(买 1,100 / 卖 2,450 / 均价 1,000,盘口毛利 103%)被改报成 unprofitable,
+	// 深度闸门拦下的也一样,拒绝明细里看不出它是假单、还是没人在收。
+	// band = 0 时这一步就是以前的整个判定,逐位不变
+	if len(rawOK) == 0 && len(rawBlocked) > 0 {
 		// 纸面上赚钱,只是盘口撑不住。报被拦的原因而不是"不赚钱":
 		// 前者是没人在收、或卖一是张孤单,后者是价差本身不够,处置完全不同
-		byDaily(blocked)
-		return reject(blocked[0].q.Blocked, blocked[0].detail)
+		byDaily(rawBlocked, rawKey)
+		return reject(rawBlocked[0].q.Blocked, rawBlocked[0].detail)
 	}
-	if len(profitable) == 0 {
-		// 四种方式没一种赚钱。报最保守那种的亏损,让人看得懂为什么被拒。
+	spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1
+	// 亏损写成正数:以前是"税后亏 -9.5",负号和"亏"叠成双重否定,读着像赚了
+	lossText := func(u econ.Unit) string {
+		if u.ProfitPerUnit < 0 {
+			return fmt.Sprintf("税后每件亏 %s 银", thousands1(-u.ProfitPerUnit))
+		}
+		return "税后每件刚好打平"
+	}
+	if len(rawOK) == 0 {
+		// 四种方式没一种赚钱(不钳都不赚)。报最保守那种的亏损,让人看得懂为什么被拒。
 		//
 		// 门槛报**真实盈亏平衡**而不是名义摩擦:名义是几个比例直接相加,
 		// 而买侧的费乘在 my_bid 上、卖侧的费乘在 my_ask 上,基数不同。
 		// 挂买挂卖名义 9.0%、真实要 9.63% —— 中间那 0.63 个百分点的价差
 		// 会被"摩擦 9%"这句话说成够用,实际每件都在亏。
 		mm := econ.Mode{Buy: econ.Maker, Sell: econ.Maker}
-		mq := econ.QuoteBanded(book, book, mm, cfg.Economics, band)
-		u := mq.Unit
-		spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1
-		// 亏损写成正数:以前是"税后亏 -9.5",负号和"亏"叠成双重否定,读着像赚了
-		loss := "税后每件刚好打平"
-		if u.ProfitPerUnit < 0 {
-			loss = fmt.Sprintf("税后每件亏 %s 银", thousands1(-u.ProfitPerUnit))
-		}
-		be := mm.Breakeven(cfg.Economics) * 100
-		if mq.Clamp != nil {
-			// 盘口价差本身可能够,是挂单价封回成交均价附近之后不够了。只报盘口价差的话,
-			// "价差 80% 还说不赚钱"读不懂
-			return reject("unprofitable", fmt.Sprintf(
-				"%s:挂单价按 7 日成交均价封过,%s → %s 价差 %.2f%%,%s 要 %.2f%% 才打平(盘口价差 %.2f%%)",
-				loss, Thousands(u.MyBid), Thousands(u.MyAsk), (float64(u.MyAsk)/float64(u.MyBid)-1)*100,
-				mm.Label(), be, spread*100))
-		}
 		return reject("unprofitable", fmt.Sprintf(
 			"%s:买卖价差 %.2f%%,%s 要 %.2f%% 才打平",
-			loss, spread*100, mm.Label(), be))
+			lossText(econ.Quote(book, book, mm, cfg.Economics)), spread*100, mm.Label(), mm.Breakeven(cfg.Economics)*100))
 	}
-	byDaily(profitable)
+	byDaily(rawOK, rawKey)
+	// 毛利率上限是 troll 判据,判的是盘口本身离不离谱,所以按**不钳**的价、判**不钳时会挑中**
+	// 的那个模式(见 econ.Banded.Raw)。按钳过的判,挂买挂卖的毛利被带宽封在 ~37% 以内,
+	// 这一层对挂单模式就永远不响了
+	if top := rawOK[0]; top.raw.Margin > f.MaxMargin {
+		detail := fmt.Sprintf("毛利率 %.0f%% 高得不真实", top.raw.Margin*100)
+		switch {
+		case top.q.Clamp != nil && top.unit.ProfitPerUnit <= 0:
+			// 封过之后已经不赚钱。原因照样报 troll:它是盘口本身的毛病,带宽只是顺带把账算低了
+			detail = fmt.Sprintf("按盘口价算毛利率 %.0f%% 高得不真实(挂单价封回参考价附近之后已经不赚钱,两边盘口多半有 troll 单)",
+				top.raw.Margin*100)
+		case top.q.Clamp != nil:
+			detail = fmt.Sprintf("按盘口价算毛利率 %.0f%% 高得不真实(挂单价封回参考价附近之后是 %.0f%%,但两边盘口多半有 troll 单)",
+				top.raw.Margin*100, top.unit.Margin*100)
+		}
+		return reject("implausible_margin", detail)
+	}
+
+	// ---- 第二步:按钳过的账挑 --------------------------------------------
+	// 钳前毛利超上限的模式也不挑:盘口作为整体放行了(不钳时挑中的那个没超),但这个模式
+	// 自己依托的那两个价离谱。band = 0 时它本来就挑不上(挑中的是上面那个),逐位不变
+	var profitable []sized
+	for _, s := range rawOK {
+		if s.unit.ProfitPerUnit > 0 && s.raw.Margin <= f.MaxMargin {
+			profitable = append(profitable, s)
+		}
+	}
+	if len(profitable) == 0 {
+		// 盘口价差够,是挂单价封回参考价附近之后不够了。报不钳时会挑中的那个模式封过的账,
+		// 并把盘口价差一起写上:只报盘口价差的话,"价差 80% 还说不赚钱"读不懂。
+		// 走到这里说明那个模式一定被封过:没封的话钳过的账和不钳的一样,是赚的
+		top := rawOK[0]
+		u := top.unit
+		return reject("unprofitable", fmt.Sprintf(
+			"%s:挂单价按参考价 ±%s 封过,%s → %s 价差 %.2f%%,%s 要 %.2f%% 才打平(盘口价差 %.2f%%)",
+			lossText(u), bandPct(f.MakerPriceBand), Thousands(u.MyBid), Thousands(u.MyAsk),
+			(float64(u.MyAsk)/float64(u.MyBid)-1)*100, top.mode.Label(), top.mode.Breakeven(cfg.Economics)*100, spread*100))
+	}
+	byDaily(profitable, bandKey)
 	best, unit, bestQty, bestMode := profitable[0].q, profitable[0].unit, profitable[0].qty, profitable[0].mode
 	// 选中模式贴着深度阈值:并进 edge 和警告,置信度规则本身不变
 	if profitable[0].edge {
@@ -433,19 +484,13 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	}
 	warnings = append(warnings, profitable[0].warns...)
 
-	// 毛利率上限是 troll 判据,判的是盘口本身离不离谱,所以按**不钳**的价判(见 econ.Banded.Raw)。
-	// 按钳过的判,挂买挂卖的毛利被带宽封在 ~37% 以内,这一层对挂单模式就永远不响了
-	if raw := profitable[0].raw; raw.Margin > f.MaxMargin {
-		detail := fmt.Sprintf("毛利率 %.0f%% 高得不真实", raw.Margin*100)
-		if best.Clamp != nil {
-			detail = fmt.Sprintf("按盘口价算毛利率 %.0f%% 高得不真实(挂单价封回成交均价附近之后是 %.0f%%,但两边盘口多半有 troll 单)",
-				raw.Margin*100, unit.Margin*100)
-		}
-		return reject("implausible_margin", detail)
-	}
-	// 选中模式的挂单腿被封过:说清楚封在哪、为什么。不降置信——封过的价本来就更保守
+	// 选中模式的挂单腿被封过:说清楚封在哪、为什么。只封一边不降置信——封过的价本来就更保守;
+	// 两边都封时两个挂价都是按带宽推出来的,毛利跟着带宽走,压到 low
 	warnings = append(warnings, ClampWarnings(best.Clamp, unit.MyBid, unit.MyAsk,
 		rec.BuyPriceMax, rec.SellPriceMin, "", "")...)
+	if best.Clamp.Both() {
+		edge = true
+	}
 
 	// ---- 吃单量 -----------------------------------------------------------
 	pos := econ.SizePosition(unit, stats.DailyVolumeQty, cfg.Capital, cfg.Sizing)

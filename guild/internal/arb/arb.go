@@ -14,7 +14,8 @@
 //     吃单腿沿阶梯逐档试边际价,吃到的件数当日容量——最优价只是第一件的价格
 //  4. **挂单腿的价是假设的。** 挂卖价按销地、挂买价按产地的 7 日成交均价做带宽钳制
 //     (filters.maker_price_band,和同城同一个 econ.QuoteBanded):销地卖一是成交均价
-//     两倍时,照它压一档挂上去没人买。troll 判据(逐腿偏离、excessMargin)照旧判盘口本身
+//     两倍时,照它压一档挂上去没人买。troll 判据(逐腿偏离、excessMargin)照旧判盘口本身,
+//     结论和带宽无关;两条挂单腿都被封时价差是带宽推出来的,可信度压到 low
 //
 // 风险(红区劫道、货砸手里)不建模成数字——那是玩家自己的判断,
 // 工具能做的是把量、价、时间摆清楚。唯一的例外是一端是 Brecilien 的路线:
@@ -154,9 +155,7 @@ type ModeQuote struct {
 
 	mode econ.Mode
 	unit econ.Unit
-	// raw 是不钳的账,只给 excessMargin(troll 判据)用,见 econ.Banded.Raw
-	raw econ.Unit
-	qty int64
+	qty  int64
 	// buyCap/sellCap 是吃单腿按阶梯走到的那一档为止的件数,没按阶梯算是 +Inf
 	buyCap, sellCap float64
 	// edge/warns 是深度闸门对这个模式的判定:贴着阈值、要降置信
@@ -221,7 +220,8 @@ type Options struct {
 	// 只砍超了的那个模式;判之前先除掉两城均价之比,结构性价差不算"高得不真实"。
 	// 两城是同一个均价时 excessMargin 就是毛利率本身,和同城第五层逐字同一个判据。
 	//
-	// 判的是**不钳**的毛利率(见 econ.Banded.Raw):它是 troll 判据,问的是盘口本身离不离谱
+	// 判的是**不钳**的毛利率、**不钳时会挑中**的那一档(见 bestFill):它是 troll 判据,
+	// 问的是盘口本身离不离谱,带宽开着关着都得是同一个结论
 	MaxMargin float64
 	// MakerPriceBand 是挂单腿的价格带宽(filters.maker_price_band),0 = 关。
 	// 挂买价按产地 7 日成交均价钳、挂卖价按销地的钳,吃单腿不动。和同城同一个函数
@@ -350,14 +350,11 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		if !playable(m, from.Book, to.Book) {
 			continue
 		}
+		// 扣掉两城均价之差还高得不真实(excessMargin)的模式,bestFill 里就砍掉了:
+		// 这个模式依托的那两边多半有一头是假单或旧单。只砍这个模式,别的模式用的是另外两边,
+		// 照样能做。判的是不钳时会挑中的那一档,和带宽无关
 		q, ok := bestFill(m, from, to, byMarket, cfg, opt)
 		if !ok {
-			continue
-		}
-		// 扣掉两城均价之差还高得不真实:这个模式依托的那两边多半有一头是假单或旧单。
-		// 只砍这个模式,别的模式用的是另外两边,照样能做。
-		// 按不钳的毛利判:钳过的毛利被带宽封住了,拿它判这一层对挂单模式永远不响
-		if opt.MaxMargin > 0 && excessMargin(q.raw.Margin, from.Stats, to.Stats) > opt.MaxMargin {
 			continue
 		}
 		// 挂买排在产地的买单簿上,挂卖排在销地的卖单簿上
@@ -454,6 +451,11 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 	// 挂买排在产地买单簿上、挂卖排在销地卖单簿上:说"买一 / 卖一是均价几倍"用的是那两边
 	r.Warnings = append(r.Warnings, screen.ClampWarnings(best.Clamp, unit.MyBid, unit.MyAsk,
 		from.Book.BuyMax, to.Book.SellMin, "产地", "销地")...)
+	// 两条挂单腿都被封:挂买价、挂卖价都是按带宽推出来的,毛利跟着带宽走、不跟着盘口走,
+	// 和同城一样压到 low
+	if best.Clamp.Both() {
+		r.Confidence = screen.Low
+	}
 	return r, true
 }
 
@@ -484,7 +486,51 @@ func ladder(s screen.Side, walk bool, top int64) []rung {
 }
 
 // bestFill 算一个执行方式在这两端能做成什么样:吃单腿沿阶梯逐档试边际价,
-// 挑日收益最高的那个前缀。不可行(价不合理、不赚钱、一件都做不成)返回 false。
+// 挑日收益最高的那个前缀。不可行(价不合理、不赚钱、一件都做不成、扣掉两城均价之差
+// 还高得不真实)返回 false。
+//
+// 分两遍挑,因为 troll 判据(excessMargin)和带宽要各管各的:
+//
+//  1. 不钳挑一遍。这一遍和加带宽之前逐位一致,挑中的那一档拿去判 excessMargin——
+//     判的是"这个模式依托的盘口离不离谱",超了整个模式砍掉(以前就是这么判的)。
+//     带宽开着关着都判这同一档,band 只改账、不改 troll 判定
+//  2. 挂单腿被封了,再按钳过的账挑一遍,钳前毛利超上限的前缀跳过。不能直接拿第二遍
+//     挑中的去判:钳制让每件利润少一个常数,浅档件数少、受的影响小,第二遍往往改挑浅档,
+//     而浅档的钳前毛利最高——同一本盘口会因为开了带宽被整个砍掉(审查实测:产地卖方
+//     100×10、150×20,均价 150,销地卖一 250:band 0 时秒买挂卖按 150 买能做,
+//     band 0.2 时改挑 100 那档、钳前毛利 133% 超上限,整条路线没了)
+//
+// 第二遍 clamp 里的钳前价换成第一遍挑中的那一档:那才是 band = 0 时界面上显示的数。
+//
+// 挂单腿的价和吃单腿走到第几档无关(econ.QuoteBanded 的对面盘口也只取挂单腿那一边),
+// 最优价上钳不钳,每一档都一样;一条挂单腿都没被封时第二遍和第一遍逐位相同,不用跑。
+func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics, opt Options) (ModeQuote, bool) {
+	raw, ok := searchFill(m, from, to, byMarket, cfg, opt, econ.Band{}, nil)
+	if !ok || (opt.MaxMargin > 0 && excessMargin(raw.Margin, from.Stats, to.Stats) > opt.MaxMargin) {
+		return ModeQuote{}, false
+	}
+	// 挂买腿按产地 7 日成交均价钳、挂卖腿按销地的钳
+	band := screen.MakerBand(opt.MakerPriceBand, from.Stats, to.Stats)
+	if econ.QuoteBanded(from.Book, to.Book, m, cfg, band).Clamp == nil {
+		return raw, true
+	}
+	sane := func(u econ.Unit) bool {
+		return opt.MaxMargin <= 0 || excessMargin(u.Margin, from.Stats, to.Stats) <= opt.MaxMargin
+	}
+	q, ok := searchFill(m, from, to, byMarket, cfg, opt, band, sane)
+	if !ok {
+		return ModeQuote{}, false
+	}
+	if q.Clamp != nil {
+		c := *q.Clamp
+		c.RawBuyPrice, c.RawSellPrice, c.RawMargin = raw.BuyPrice, raw.SellPrice, raw.Margin
+		q.Clamp = &c
+	}
+	return q, true
+}
+
+// searchFill 是 bestFill 的一遍:按 band 算账,在吃单腿的阶梯前缀里挑日收益最高的那个。
+// sane 非 nil 时,钳前的账(econ.Banded.Raw)过不了它的前缀跳过。
 //
 // 口径:
 //   - 整轮按吃到的最差那一档计价(不是 VWAP),只会低估
@@ -498,13 +544,14 @@ func ladder(s screen.Side, walk bool, top int64) []rung {
 //     是故意的——最优档本身离谱,多半是 troll 或幽灵单,这一整边都不该信
 //   - 容量已经顶到别的约束,再往深吃容量不涨、价只更差。这一条也是精确的
 //     (有测试拿暴力枚举对过)
-func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics, opt Options) (ModeQuote, bool) {
+//   - sane 的单调性正好反过来:越浅的前缀钳前毛利越高、越容易超,更深的反而可能过。
+//     所以被它跳过的前缀既不收手,也不能拿来做容量剪枝——那两条的前提都是
+//     "眼前这个前缀是个候选,更深的比不过它"
+func searchFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics, opt Options,
+	band econ.Band, sane func(econ.Unit) bool) (ModeQuote, bool) {
 	buys := ladder(from.Ask, m.Buy == econ.Taker, from.Book.SellMin)
 	sells := ladder(to.Bid, m.Sell == econ.Taker, to.Book.BuyMax)
 	hours := opt.routeHours(m, from.City, to.City)
-	// 挂买腿按产地 7 日成交均价钳、挂卖腿按销地的钳。只动挂单腿,吃单腿沿阶梯走的价不变,
-	// 所以下面"更深的前缀只会更差"那条剪枝照样精确:挂单腿的价和走到第几档无关
-	band := screen.MakerBand(opt.MakerPriceBand, from.Stats, to.Stats)
 
 	var best ModeQuote
 	found := false
@@ -513,6 +560,7 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 		if m.Buy == econ.Taker {
 			bk.SellMin = b.price
 		}
+		skipped := false
 		for j, s := range sells {
 			sk := to.Book
 			if m.Sell == econ.Taker {
@@ -528,6 +576,10 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 				}
 				break
 			}
+			if sane != nil && !sane(bq.Raw) {
+				skipped = true
+				continue
+			}
 			absorbable := math.Min(byMarket, math.Min(b.qty, s.qty))
 			q, trips, daily := econ.Turnover(u, absorbable, opt.Capital, hours)
 			if q >= 1 && (!found || daily > best.DailyProfit) {
@@ -542,7 +594,7 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 					TripsPerDay:  trips,
 					DailyProfit:  daily,
 					Clamp:        bq.Clamp,
-					mode:         m, unit: u, raw: bq.Raw, qty: q,
+					mode:         m, unit: u, qty: q,
 					buyCap: b.qty, sellCap: s.qty,
 				}
 			}
@@ -550,8 +602,11 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 				break
 			}
 		}
-		// 卖侧最深的前缀也就这么多件:买侧已经不比它少,再往深买容量不涨
-		if b.qty >= math.Min(byMarket, sells[len(sells)-1].qty) {
+		// 卖侧最深的前缀也就这么多件:买侧已经不比它少,再往深买容量不涨。
+		// 这一行有前缀被 sane 跳过时不收手:更深的买价钳前毛利更低,那几个卖侧前缀可能就过了。
+		// (眼下第二遍只在有挂单腿时跑,只有一条腿走阶梯,推得出这种情形到不了这里——
+		// 第一遍挑中的那一档本身过了 sane。searchFill 不假设这一点,照样守着)
+		if !skipped && b.qty >= math.Min(byMarket, sells[len(sells)-1].qty) {
 			break
 		}
 	}

@@ -98,6 +98,88 @@ func TestQuoteBanded_T4特异松木挂卖封到5724(t *testing.T) {
 	}
 }
 
+// 审查复现:卖一已经跌破 均价 × (1 − band) 时,按均价抬的挂买价会越过卖一。
+// 产地卖一 7,500、买一 5,000、7 日均价 10,000:以前抬到 8,000,比卖一还高——这时秒买 7,500
+// 更便宜,还不付创建费、不用等,"照抄"的挂买价是错单。对称的,销地买一 1,300 已经高过
+// 均价 1,000 × 1.2,以前挂卖价被压到 1,200,比直接砸给买一还便宜。
+//
+// 卖一 < 均价说明整本盘口已经跌到均价下面、均价是旧的:下沿改按卖一算(卖一上真有人在卖);
+// 买一 > 均价同理,上限改按买一算
+func TestQuoteBanded_钳过的挂价不越过对面盘口(t *testing.T) {
+	cfg := conf.Default().Economics
+	mm := Mode{Maker, Maker}
+
+	// 挂买腿:参考价 min(均价 10,000, 卖一 7,500) = 7,500,下沿 6,000
+	got := QuoteBanded(Book{SellMin: 7500, BuyMax: 5000}, Book{SellMin: 13_000, BuyMax: 11_000}, mm, cfg,
+		Band{Width: 0.2, BuyRef: 10_000, SellRef: 12_000})
+	if c := got.Clamp; got.MyBid != 6000 || c == nil || !c.BuyClamped || c.BuyRef != 7500 || c.BuyRefFrom != RefSellMin {
+		t.Fatalf("挂买价应按卖一 7,500 下浮到 6,000、标明参考价取自卖一,得到 %d / %+v", got.MyBid, c)
+	}
+	// 挂卖腿:参考价 max(均价 1,000, 买一 1,300) = 1,300,上限 1,560
+	got = QuoteBanded(Book{SellMin: 800, BuyMax: 700}, Book{SellMin: 2000, BuyMax: 1300}, mm, cfg,
+		Band{Width: 0.2, BuyRef: 750, SellRef: 1000})
+	if c := got.Clamp; got.MyAsk != 1560 || c == nil || !c.SellClamped || c.SellRef != 1300 || c.SellRefFrom != RefBuyMax {
+		t.Fatalf("挂卖价应按买一 1,300 上浮到 1,560、标明参考价取自买一,得到 %d / %+v", got.MyAsk, c)
+	}
+	// 参考价取自均价时照旧标 avg_7d(截图那条)
+	got = QuoteBanded(Book{SellMin: 4700, BuyMax: 4357}, Book{SellMin: 9996, BuyMax: 4550}, mm, cfg,
+		Band{Width: 0.2, BuyRef: 4378, SellRef: 4770})
+	if c := got.Clamp; c == nil || c.SellRefFrom != RefAvg7d || c.BuyRefFrom != "" || got.MyAsk != 5724 {
+		t.Fatalf("Thetford 买一 4,550 低于均价 4,770,参考价仍是均价,得到 %+v", c)
+	}
+
+	// 随机:含小价格、窄带宽(取整后可能碰到对面价)。被封的腿,挂买价一定低于同本卖一、
+	// 挂卖价一定高于同本买一
+	rng := rand.New(rand.NewSource(29))
+	hits := 0
+	for i := 0; i < 20_000; i++ {
+		p := func() int64 {
+			if rng.Intn(4) == 0 {
+				return rng.Int63n(6) // 0 = 这一侧没价;1~5 专门试取整
+			}
+			return rng.Int63n(20_000) + 1
+		}
+		buy, sell := Book{SellMin: p(), BuyMax: p()}, Book{SellMin: p(), BuyMax: p()}
+		b := Band{Width: rng.Float64() * 0.95, BuyRef: float64(rng.Int63n(30_000)), SellRef: float64(rng.Int63n(30_000))}
+		for _, m := range Modes {
+			got := QuoteBanded(buy, sell, m, cfg, b)
+			c := got.Clamp
+			if c == nil {
+				continue
+			}
+			hits++
+			if c.BuyClamped && buy.SellMin > 0 && got.MyBid >= buy.SellMin {
+				t.Fatalf("%s %+v %+v:挂买价 %d 越过了同本卖一 %d", m.Label(), buy, b, got.MyBid, buy.SellMin)
+			}
+			if c.SellClamped && sell.BuyMax > 0 && got.MyAsk <= sell.BuyMax {
+				t.Fatalf("%s %+v %+v:挂卖价 %d 越过了同本买一 %d", m.Label(), sell, b, got.MyAsk, sell.BuyMax)
+			}
+		}
+	}
+	if hits < 1000 {
+		t.Fatalf("随机样本没怎么覆盖到钳制:%d", hits)
+	}
+}
+
+// 单边行情里 7 日均价是旧的。稀有钢条.2 @ Bridgewatch(审查影子库):买一 1,992、卖一 2,367、
+// 7 日均价 2,549,整本盘口都在均价下面。按均价定下沿是 2,039,会把挂买价抬高、毛利 8.3% → 5.8%;
+// 卖一上真有人按 2,367 在卖,按它定下沿是 1,894,买一 1,992 在带里,不钳。
+// 反方向:买一高过均价(特异松木.3 @ Lymhurst 那种,买一是均价的 1.02 倍),上限跟着买一走
+func TestQuoteBanded_单边行情参考价跟着对面盘口走(t *testing.T) {
+	cfg := conf.Default().Economics
+	mm := Mode{Maker, Maker}
+	book := Book{SellMin: 2367, BuyMax: 1992}
+	if got := QuoteBanded(book, book, mm, cfg, Band{Width: 0.2, BuyRef: 2549, SellRef: 2549}); got.Clamp != nil ||
+		got.Unit != Quote(book, book, mm, cfg) {
+		t.Fatalf("盘口整体跌到均价下面、价差 18.8%%,不该钳,得到 %+v / %+v", got.Unit, got.Clamp)
+	}
+	up := Book{SellMin: 1500, BuyMax: 1020}
+	got := QuoteBanded(up, up, mm, cfg, Band{Width: 0.2, BuyRef: 1000, SellRef: 1000})
+	if c := got.Clamp; c == nil || c.BuyClamped || !c.SellClamped || got.MyAsk != 1224 || c.SellRef != 1020 {
+		t.Fatalf("买一 1,020 高过均价,上限应按买一 × 1.2 = 1,224,得到 %d / %+v", got.MyAsk, c)
+	}
+}
+
 // 钳制只会让账变差:买价只升、卖价只降、利润只少。否则它就能把本来不在榜上的东西放进来
 func TestQuoteBanded_只会让账变差(t *testing.T) {
 	cfg := conf.Default().Economics

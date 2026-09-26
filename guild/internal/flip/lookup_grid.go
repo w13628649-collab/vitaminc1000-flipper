@@ -177,8 +177,9 @@ type AODPSide struct {
 }
 
 // GridSpread 是同城挂买→挂卖一轮的账,和机会页同城同一个函数(econ.QuoteBanded):
-// 挂单价按这一格的 7 日成交均价做带宽钳制,MyBid/MyAsk/Margin/ProfitPerUnit 都是钳过的。
-// Raw 是盘口本身的价差,不钳。
+// 挂单价按这一格的 7 日成交均价(盘口整体越过均价时改按对面盘口)做带宽钳制,
+// MyBid/MyAsk/Margin/ProfitPerUnit 都是钳过的。Raw 是盘口本身的价差,不钳。
+// 两边都被封(Clamp.Both)时价差是按带宽推出来的,界面上要说清楚——这里没有可信度字段。
 type GridSpread struct {
 	Raw           float64 `json:"raw"`    // 卖一/买一 − 1,未扣税费
 	Margin        float64 `json:"margin"` // 税后毛利率

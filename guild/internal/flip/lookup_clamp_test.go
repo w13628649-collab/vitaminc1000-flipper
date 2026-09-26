@@ -91,6 +91,20 @@ func TestGridSpread_挂单带宽和机会页同城一致(t *testing.T) {
 	}
 }
 
+// 审查复现(真实库只读查询):T4_CLOTH_LEVEL1@1 @ Bridgewatch 买一 417、卖一 450、7 日均价 587。
+// 以前按均价把挂买价抬到 470,比卖一还高,"进游戏照抄"的数是错单。现在下沿按 min(均价, 卖一) 算,
+// 360 < 418,不钳;两边都封的格子要带着 Both,界面据此说"按带宽推出来的"
+func TestGridSpread_挂买价不越过卖一(t *testing.T) {
+	cfg := gridCfg()
+	sp := spreadOf(450, 417, &GridHistory{Avg7d: 587}, cfg)
+	if sp.Clamp != nil || sp.MyBid != 418 || sp.MyAsk != 449 {
+		t.Fatalf("盘口整体在均价下面,不该钳,得到 %+v / %+v", sp, sp.Clamp)
+	}
+	if sp := spreadOf(359, 172, &GridHistory{Avg7d: 288}, cfg); !sp.Clamp.Both() || sp.MyBid != 230 || sp.MyAsk != 346 {
+		t.Fatalf("栗木板条那种应两边都封成 230 → 346,得到 %+v / %+v", sp, sp.Clamp)
+	}
+}
+
 // 没有成交历史的格子不钳(参考价缺失),band = 0 时也不钳:都退回盘口价压一档
 func TestGridSpread_无历史或带宽为0时不钳(t *testing.T) {
 	cfg := gridCfg()

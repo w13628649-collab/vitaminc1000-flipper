@@ -182,6 +182,115 @@ func TestClamp_栗木板条两条腿都封(t *testing.T) {
 	if !anyContains(opp.Warnings, "抬到 230") || !anyContains(opp.Warnings, "封到 344:卖一 359 是均价的 1.25 倍") {
 		t.Fatalf("两条腿都要有说明,得到 %v", opp.Warnings)
 	}
+	// 两边都封:这 36% 是带宽推出来的,要压到 low 并说一句
+	if opp.Confidence != Low || !anyContains(opp.Warnings, "按带宽推出来的") {
+		t.Fatalf("两边都封应是 low 并带说明,得到 %s / %v", opp.Confidence, opp.Warnings)
+	}
+}
+
+// 审查复现:两边盘口都离均价超过带宽时,两个挂价都不是盘口给的,毛利只由带宽决定
+// (同城 band 0.2 时恒约 37%)。松木 T4_WOOD @ Fort Sterling(影子库):买一 120、卖一 187、
+// 7 日均价 152,各自离均价 0.79 / 1.23 倍,不贴任何阈值,以前照样 high 排进榜单。
+// 现在压到 low;只封一边的不因此降级
+func TestClamp_两边都封时可信度封顶low(t *testing.T) {
+	rec := cityPrice("T4_WOOD", "Fort Sterling", 1, 120, 187)
+	st := cityStats("T4_WOOD", "Fort Sterling", 152, 50_000)
+	old, rej := Evaluate(rec, st, noBand(config()), names, now)
+	if rej != nil || old.Confidence != High {
+		t.Fatalf("前提:band 0 应上榜、high,得到 %+v / %+v", old, rej)
+	}
+	opp, rej := Evaluate(rec, st, config(), names, now)
+	if rej != nil {
+		t.Fatalf("不该被拒: %+v", rej)
+	}
+	if !opp.Clamp.Both() || opp.MyBid != 122 || opp.MyAsk != 182 {
+		t.Fatalf("应挂 122 收、182 卖,两边都封,得到 %d → %d / %+v", opp.MyBid, opp.MyAsk, opp.Clamp)
+	}
+	if opp.Confidence != Low || !anyContains(opp.Warnings, "两边盘口都离参考价超过 ±20%:挂买价、挂卖价都是按带宽推出来的") {
+		t.Fatalf("两边都封应压到 low 并说明,得到 %s / %v", opp.Confidence, opp.Warnings)
+	}
+
+	// 只封买一侧(买一 750 是均价 0.75 倍,卖一 1,150 在带里):不降级
+	one, rej := Evaluate(cityPrice("T5_CLOTH", "Lymhurst", 1, 750, 1150), cityStats("T5_CLOTH", "Lymhurst", 1000, 50_000), config(), names, now)
+	if rej != nil || one.Clamp == nil || !one.Clamp.BuyClamped || one.Clamp.SellClamped || one.Confidence != High ||
+		anyContains(one.Warnings, "按带宽推出来的") {
+		t.Fatalf("只封一边不该降级,得到 %+v / %+v", one, rej)
+	}
+}
+
+// 审查复现:卖一已经跌破 均价 × 0.8 时,按均价抬挂买价会越过卖一。
+// T4_CLOTH_LEVEL1@1 @ Bridgewatch(真实库):买一 417、卖一 450、7 日均价 587,以前下沿 470
+// 高过卖一——进游戏照抄等于挂一张比秒买还贵的买单。现在参考价取 min(均价, 卖一) = 450,
+// 下沿 360,买一 418 在带里,不钳
+func TestClamp_钳过的挂买价不越过卖一(t *testing.T) {
+	rec := cityPrice("T4_CLOTH_LEVEL1@1", "Bridgewatch", 1, 417, 450)
+	st := cityStats("T4_CLOTH_LEVEL1@1", "Bridgewatch", 587, 50_000)
+	on, rej1 := Evaluate(rec, st, config(), names, now)
+	off, rej2 := Evaluate(rec, st, noBand(config()), names, now)
+	if !reflect.DeepEqual(on, off) || !reflect.DeepEqual(rej1, rej2) {
+		t.Fatalf("盘口整体在均价下面、价差 7.9%%,不该钳\n开 %+v / %+v\n关 %+v / %+v", on, rej1, off, rej2)
+	}
+
+	// 盘口跌到均价下面、买卖价差又宽:下沿按卖一算。买 5,000 / 卖 7,900 / 均价 10,000,
+	// 以前挂买价抬到 8,000 高过卖一、整条报 unprofitable;现在按卖一 7,900 下浮到 6,320
+	rec = cityPrice("T5_CLOTH", "Lymhurst", 1, 5000, 7900)
+	st = cityStats("T5_CLOTH", "Lymhurst", 10_000, 5000)
+	opp, rej := Evaluate(rec, st, config(), names, now)
+	if rej != nil {
+		t.Fatalf("按卖一定下沿之后还赚,不该被拒: %s %s", rej.Reason, rej.Detail)
+	}
+	if opp.MyBid != 6320 || opp.MyBid >= opp.SellPrice || opp.Clamp == nil || opp.Clamp.BuyRefFrom != econ.RefSellMin {
+		t.Fatalf("挂买价应按卖一 7,900 下浮到 6,320,得到 %d / %+v", opp.MyBid, opp.Clamp)
+	}
+	if !anyContains(opp.Warnings, "挂买价按卖一 7,900 下浮 20% 抬到 6,320:整本盘口已跌到 7 日成交均价以下") {
+		t.Fatalf("说明要写清按卖一抬,得到 %v", opp.Warnings)
+	}
+}
+
+// 单边行情:整本盘口都跌到均价下面时,均价是旧的。稀有钢条.2 T4_METALBAR_LEVEL2@2 @ Bridgewatch
+// (影子库):买一 1,992、卖一 2,367(价差 18.8%)、7 日均价 2,549、日量 4,447。以前按均价把挂买价
+// 抬到 2,039,毛利 8.3% → 5.8%;带宽再窄一点(0.15)直接判 unprofitable。现在下沿按卖一算,
+// band 0.2 下不钳、和 band 0 逐位一样;更窄的带宽照样按卖一收紧,但不会再因为旧均价被砍
+func TestClamp_单边下跌的正常盘口不被压薄(t *testing.T) {
+	rec := cityPrice("T4_METALBAR_LEVEL2@2", "Bridgewatch", 1, 1992, 2367)
+	st := cityStats("T4_METALBAR_LEVEL2@2", "Bridgewatch", 2549, 4447)
+	off, rej := Evaluate(rec, st, noBand(config()), names, now)
+	if rej != nil || math.Abs(off.Margin-0.0829) > 0.0001 {
+		t.Fatalf("前提:band 0 应是 8.29%%,得到 %+v / %+v", off, rej)
+	}
+	on, rej := Evaluate(rec, st, config(), names, now)
+	if rej != nil || !reflect.DeepEqual(on, off) {
+		t.Fatalf("band 0.2:不该有任何变化,得到 %+v / %+v", on, rej)
+	}
+	for _, band := range []float64{0.1, 0.15} {
+		cfg := config()
+		cfg.Filters.MakerPriceBand = band
+		on, rej := Evaluate(rec, st, cfg, names, now)
+		if rej != nil || on.Clamp == nil || on.Clamp.BuyRefFrom != econ.RefSellMin || on.Margin <= 0 {
+			t.Fatalf("band %v:下沿应按卖一 2,367 算、仍上榜,得到 %+v / %+v", band, on, rej)
+		}
+	}
+}
+
+// 审查复现:深度闸门、毛利率上限这两个拒绝原因判的是盘口本身,同一本盘口带宽开着关着、
+// 开多宽,都得是同一个结论。以前先按钳过的账判"赚不赚钱":
+//   - 买 1,100 / 卖 2,450 / 均价 1,000,盘口毛利 103%:band 0 报 implausible_margin,
+//     band 0.2 报 unprofitable("税后每件亏 6.5 银"),看不出是假单
+//   - T6 买方薄(近价 11 件):band 0 报 no_bid_side,band 0.05 报 unprofitable
+func TestClamp_troll判定不随带宽变(t *testing.T) {
+	sides := Sides{Ask: capSide(t6AskLadder...), Bid: capSide(t6BidLadder...)}
+	for _, band := range []float64{0, 0.05, 0.1, 0.2, 0.3} {
+		cfg := config()
+		cfg.Filters.MakerPriceBand = band
+		_, rej := Evaluate(makePrice(priceOpt{buy: 1100, sell: 2450}), makeStats(statsOpt{avg7d: 1000}), cfg, names, now)
+		if rej == nil || rej.Reason != "implausible_margin" || !strings.Contains(rej.Detail, "103%") {
+			t.Fatalf("band %v:盘口毛利 103%%,应判 implausible_margin,得到 %+v", band, rej)
+		}
+		_, rej = EvaluateSides(t6Price(), sides, makeStats(t6Stats()), cfg, names, now)
+		if rej == nil || rej.Reason != "no_bid_side" || !strings.Contains(rej.Detail, "11 件") {
+			t.Fatalf("band %v:买方近价只有 11 件,应判 no_bid_side,得到 %+v", band, rej)
+		}
+	}
 }
 
 // 带宽不能替 troll 单开门:买价 0.45×、卖价 2.4×,封回均价 ±20% 之后毛利只剩 37%,
@@ -197,23 +306,31 @@ func TestClamp_毛利率上限仍按盘口价判(t *testing.T) {
 	}
 }
 
-// 盘口价差够、封回成交价之后不够:判 unprofitable,理由里要写封过的价,
-// 否则"盘口价差 60% 还说不赚钱"读不懂
+// 盘口价差够、封回参考价之后不够:判 unprofitable,理由里要写封过的价,
+// 否则"盘口价差 48% 还说不赚钱"读不懂。
+//
+// 同城参考价跟着对面盘口走之后,band 0.2 下挂买挂卖钳过的价差至少约 20%(挂卖上限 ≥ 买一 × 1.2、
+// 挂买下沿 ≤ 卖一 × 0.8),钳过之后不会再掉到 9.63% 以下。这里用窄带宽 0.05 造这个情形
 func TestClamp_封过之后不赚钱的理由写封过的价(t *testing.T) {
-	// 均价 1000,买一 1150、卖一 1700(1.7×):挂买 1,151 在带宽里不动,挂卖封到 1,200,
-	// 价差剩 4.26%,不到挂买挂卖的 9.63%
+	// 均价 1000,买一 1150、卖一 1700:买一高过均价,卖侧参考价取买一 1,150,上限 1,208;
+	// 挂买 1,151 在带宽里不动。价差剩 4.95%,不到挂买挂卖的 9.63%
 	rec := makePrice(priceOpt{buy: 1150, sell: 1700})
-	_, rej := Evaluate(rec, makeStats(statsOpt{avg7d: 1000}), config(), names, now)
+	cfg := config()
+	cfg.Filters.MakerPriceBand = 0.05
+	_, rej := Evaluate(rec, makeStats(statsOpt{avg7d: 1000}), cfg, names, now)
 	if rej == nil || rej.Reason != "unprofitable" {
 		t.Fatalf("封过之后不赚钱,应判 unprofitable,得到 %+v", rej)
 	}
-	for _, want := range []string{"封过", "1,151 → 1,200", "9.63%", "盘口价差 47.83%"} {
+	for _, want := range []string{"封过", "±5%", "1,151 → 1,208", "9.63%", "盘口价差 47.83%"} {
 		if !strings.Contains(rej.Detail, want) {
 			t.Fatalf("理由应含 %q,得到 %q", want, rej.Detail)
 		}
 	}
-	// 同一个盘口不钳是赚的——证明拦它的是带宽
+	// 同一个盘口不钳是赚的——证明拦它的是带宽;默认带宽 0.2 下也赚(1,151 → 1,380)
 	if _, rej := Evaluate(rec, makeStats(statsOpt{avg7d: 1000}), noBand(config()), names, now); rej != nil {
 		t.Fatalf("前提:band=0 时应上榜,却被 %s 拒了", rej.Reason)
+	}
+	if opp, rej := Evaluate(rec, makeStats(statsOpt{avg7d: 1000}), config(), names, now); rej != nil || opp.MyAsk != 1380 {
+		t.Fatalf("band 0.2 应按买一 1,150 上浮封到 1,380 并上榜,得到 %+v / %+v", opp, rej)
 	}
 }
