@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"albion-guild/internal/book"
+	"albion-guild/internal/catalog"
 	"albion-guild/internal/conf"
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
@@ -153,6 +154,59 @@ func TestStoreBooks_串过城的盘口暂停剔除(t *testing.T) {
 	}
 	if cb := got[b]; cb.Conflicted || cb.Ghosts != 1 || cb.Levels[0].Price != 104 {
 		t.Fatalf("b 的串城在窗口之前:照常剔除,得到 %+v", cb)
+	}
+}
+
+// 审查 low:串城往回看多远要和读单窗口脱钩。1 小时前串过城的盘口边(100 是 20 分钟前
+// 看到的、这一轮没再出现),扫描和查价按 6 小时窗口判"串过城"、暂停剔除,卖一 100;
+// WS 报价以前按 −fresh(30 分钟)判,看不见 1 小时前那次串城,照常把 100 剔成 104。
+// 现在三处都按抓包窗口判,WS 只是读单的窗口还是 30 分钟
+func TestStoreBooks_串城按抓包窗口回看不跟读单窗口走(t *testing.T) {
+	cfg := conf.Default()
+	now := time.Now().UTC()
+	k := model.QuoteKey{ItemID: "T5_CLOTH", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+	orders := []store.LiveOrder{
+		lo(k, 100, 5, now.Add(-20*time.Minute)),
+		lo(k, 104, 4, now.Add(-time.Minute)),
+		lo(k, 105, 7, now),
+	}
+	cf := fakeConflicts{k: now.Add(-time.Hour)}
+	s := &Service{Cfg: cfg, ladder: &fakeLadder{orders: orders}, Conflicts: cf}
+	ctx := context.Background()
+	since := now.Add(-cfg.CaptureWindow())
+
+	books, err := s.storeBooks().CaptureBooks(ctx, []model.QuoteKey{k}, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	quotes, err := s.BestQuotes(ctx, []model.QuoteKey{k}, 30*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := buildGrid(gridInput{
+		Item: catalog.Item{ItemID: k.ItemID, MaxQuality: 1}, Cities: lookupCities(cfg.Cities), Now: now,
+		Cfg: cfg, Window: cfg.CaptureWindow(), Orders: orders,
+		Conflicted: s.itemConflicts(k.ItemID, orders, since),
+	})
+	c := findCell(g, k.LocationID, 1)
+	if !books[k].Conflicted || books[k].Levels[0].Price != 100 || len(quotes) != 1 || quotes[0].Price != 100 ||
+		c == nil || c.Sell.Best != 100 {
+		t.Fatalf("扫描、WS、查价格子都应暂停剔除、卖一 100,得到 扫描 %+v / WS %+v / 格子 %+v", books[k], quotes, c)
+	}
+
+	// 读单窗口仍是 fresh:30 分钟前以外的单 WS 读都不读(只在 fakeLadder 的 since 里体现)
+	lr := &fakeLadder{orders: orders}
+	s.ladder = lr
+	if _, err := s.BestQuotes(ctx, []model.QuoteKey{k}, 30*time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if d := now.Add(-30 * time.Minute).Sub(lr.calls[0].since); d < -time.Second || d > time.Second {
+		t.Fatalf("WS 读单的窗口应仍是 now−fresh,得到 since=%v", lr.calls[0].since)
+	}
+	// 窗口之前的串城三处都不算
+	s.Conflicts = fakeConflicts{k: now.Add(-7 * time.Hour)}
+	if q, _ := s.BestQuotes(ctx, []model.QuoteKey{k}, 30*time.Minute); len(q) != 1 || q[0].Price != 104 {
+		t.Fatalf("7 小时前的串城不算,WS 照常剔除,得到 %+v", q)
 	}
 }
 

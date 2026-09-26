@@ -68,11 +68,12 @@ type storeBooks struct {
 	levels    int
 }
 
-// CaptureBooks 读一批盘口边,转成扫描用的形状。
+// CaptureBooks 读一批盘口边,转成扫描用的形状。since 就是扫描的 now − 抓包窗口,
+// 串城也往回看这么远。
 func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 	since time.Time) (map[model.QuoteKey]scan.CapturedSide, error) {
 
-	got, flagged, err := b.readSides(ctx, keys, since)
+	got, flagged, err := b.readSides(ctx, keys, since, since)
 	if err != nil {
 		return nil, err
 	}
@@ -91,15 +92,20 @@ func (b *storeBooks) CaptureBooks(ctx context.Context, keys []model.QuoteKey,
 //
 // 请求了但窗口内没有挂单的 key 不在结果里。串城的 key 放宽 slack(见 rounds),
 // 第二个返回值标出它们。
+//
+// since 是读单的窗口起点,conflictSince 是串城往回看到哪:两者分开,是因为 WS 报价
+// 只读 −fresh(30 分钟)的单,可"这个盘口边最近串没串过城"要和扫描、查价按同一个
+// 抓包窗口判。以前跟着读单窗口走,30 分钟到 6 小时之前串过城的盘口边扫描和查价暂停剔除、
+// WS 照常剔,同一个盘口 WS 推的卖一和机会页、查价格子不一样,一直到 6 小时窗口过完
 func (b *storeBooks) readSides(ctx context.Context, keys []model.QuoteKey,
-	since time.Time) (map[model.QuoteKey]book.Side, map[model.QuoteKey]bool, error) {
+	since, conflictSince time.Time) (map[model.QuoteKey]book.Side, map[model.QuoteKey]bool, error) {
 
 	out := make(map[model.QuoteKey]book.Side)
 	flagged := make(map[model.QuoteKey]bool)
 	if len(keys) == 0 {
 		return out, flagged, nil
 	}
-	r := rounds{slack: b.slack, window: b.window, conflicted: conflictsOf(b.conflicts, keys, since)}
+	r := rounds{slack: b.slack, window: b.window, conflicted: conflictsOf(b.conflicts, keys, conflictSince)}
 	orders, err := b.st.BookOrders(ctx, keys, since)
 	if err != nil {
 		return nil, nil, err
@@ -133,8 +139,17 @@ func (b *storeBooks) readSides(ctx context.Context, keys []model.QuoteKey,
 // (q.At 早于上一条就丢)会把这条合法更新当成旧消息吞掉。newest 只进不退。
 //
 // 续页的情形(book.Side.PrevPage > 0)第一档来自更早那一页,价和查价页、扫描一致。
-func (b *storeBooks) bestQuotes(ctx context.Context, keys []model.QuoteKey, since time.Time) ([]model.Quote, error) {
-	got, _, err := b.readSides(ctx, keys, since)
+//
+// 单只读 now − fresh 之后的,串城却按抓包窗口往回看(见 readSides)。
+func (b *storeBooks) bestQuotes(ctx context.Context, keys []model.QuoteKey, now time.Time,
+	fresh time.Duration) ([]model.Quote, error) {
+
+	since := now.Add(-fresh)
+	conflictSince := since
+	if w := now.Add(-b.window); b.window > 0 && w.Before(conflictSince) {
+		conflictSince = w
+	}
+	got, _, err := b.readSides(ctx, keys, since, conflictSince)
 	if err != nil {
 		return nil, err
 	}
@@ -202,12 +217,14 @@ func (s *Service) storeBooks() *storeBooks {
 // 已经被买走的最优单在行情推送和 /api/quotes 里一直挂到 30 分钟过期,同一个盘口在
 // 实时页上是一个价、在机会页上是另一个价。
 //
-// 窗口仍是 fresh(服务端 -fresh,默认 30m),不是扫描的 6h:实时页只要"现在还看得到"的。
+// 读单的窗口仍是 fresh(服务端 -fresh,默认 30m),不是扫描的 6h:实时页只要"现在还看得到"的。
+// 所以最优档要是一张 30 分钟前到 6 小时前之间看到的单(比如续页之前那一页),
+// WS 和机会页仍会不同,这是 -fresh 本来的语义。串城与否不跟这个窗口走,和扫描同一个判断。
 // 没有库时返回空。
 func (s *Service) BestQuotes(ctx context.Context, keys []model.QuoteKey, fresh time.Duration) ([]model.Quote, error) {
 	b := s.storeBooks()
 	if b == nil || len(keys) == 0 {
 		return nil, nil
 	}
-	return b.bestQuotes(ctx, keys, time.Now().Add(-fresh))
+	return b.bestQuotes(ctx, keys, time.Now(), fresh)
 }
