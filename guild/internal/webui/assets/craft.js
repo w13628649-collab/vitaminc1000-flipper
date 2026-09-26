@@ -582,7 +582,7 @@ function craftRender(res) {
 // ── 原料来路:直接回答「买 8.4 矿,还是 8.3/8.2/8.1/8.0,还是从低级转上来」(设计 §4.5) ──
 // 按推荐那条路线的需求量,列每个起点「全部从这里买、再转化上来」的等效单价和可用件数,
 // 再给混合最优的拆分(便宜的那几档直接买、其余从最便宜的起点转)。数来自 raw_sources
-const RAW_ROWS = 8;   // 起点多(T8.4 矿有二十几个),默认只列最便宜的几个,直接买那一行总是列出来
+const RAW_ROWS = 8;   // 起点多(T8.4 矿有二十几个),默认列 8 行左右:直接买、同阶、低一阶必列(见 rawShown)
 const levelOf = id => { const m = REFINE_ID_RE.exec(id); return m ? Number(m[1]) + Number(m[3] || 0) : -1; };
 const pathText = path => (path || []).map(cTier).join(" → ");
 const priceRange = s => (s.price_from === s.price_to || !s.price_to ? num(s.price_from) : `${num(s.price_from)} ~ ${num(s.price_to)}`);
@@ -602,32 +602,73 @@ function rawVerdict(id, src, res, main) {
   if (!splits.length) {
     return `<b>缺价</b>:${esc(cLabel(id))} 和能转化到它的起点,在可买城市都没有挂单(或者超过了数据最大年龄)。`;
   }
-  const split = s => s.bid ? `挂买单收 ${fq(s.qty)} 个(${priceRange(s)})`
-    : s.start === id ? `直接买 ${fq(s.qty)} 个(${priceRange(s)})`
-    : `从 ${esc(cTier(s.start))} 买 ${fq(s.qty)} 个(买价 ${priceRange(s)})转 ${Math.max(0, (s.path || []).length - 1)} 次上来`;
-  // 直接买的那一段放前面,读起来是「先买卖一附近那几件,其余从低级转」
-  const ordered = [...splits].sort((a, b) => (b.start === id) - (a.start === id));
-  if (splits.length === 1 && splits[0].start === id && !splits[0].bid) {
-    v = `<b>直接买 ${esc(T)} 最划算</b>:${fq(need)} 个均价 ${num(mixedU)}。` + (bestTrans
+  const fees = res.params_used?.fees || {};
+  const at = s => (s.city && s.city !== res.city ? `在 ${esc(s.city)} ` : "");
+  const split = s => s.bid ? `${at(s)}挂买单收 ${fq(s.qty)} 个(${priceRange(s)})`
+    : s.start === id ? `${at(s)}直接买 ${fq(s.qty)} 个(${priceRange(s)})`
+    : `${at(s)}从 ${esc(cTier(s.start))} 买 ${fq(s.qty)} 个(买价 ${priceRange(s)})转 ${Math.max(0, (s.path || []).length - 1)} 次上来`;
+  // 拆分分三种来路:直接买、从别的起点转化、挂买单收。结论按实际有哪几种来写 ——
+  // 以前只看「起点是不是它自己」,混合最优只有一段挂买单时落进「混着买最省」,
+  // 说的「卖一附近直接买、再往上改从低级转」一样都没发生
+  const directS = splits.filter(s => !s.bid && s.start === id);
+  const transS = splits.filter(s => !s.bid && s.start !== id);
+  const bidS = splits.filter(s => s.bid);
+  // 读起来是「先买卖一附近那几件,其余从低级转,再挂买单收一些」
+  const ordered = [...directS, ...transS, ...bidS];
+  const both = directS.length && transS.length
+    ? "卖一附近那几件便宜货直接买,再往上的挂单比转化贵,就改从低级转。" : "";
+  let mentionsTrans = transS.length > 0;
+  if (bidS.length) {
+    const setup = fees.buy_order_setup === false ? 0 : fees.setup;
+    v = `<b>${directS.length || transS.length ? "一部分挂买单收" : `挂买单收 ${esc(T)}`}</b>(纸面价):${ordered.map(split).join(" + ")};`
+      + `纸面均价 ${num(mixedU)}(买一 + ${num(fees.outbid)} 银挂,含 ${pct(setup)} 创建费)。`
+      + `<span class="neg">收不收得到、要等多久都不知道,挂上去没人卖也照扣创建费</span>`
+      + (directU != null ? `;全部直接买(吃卖一)均价 ${num(directU)},这个纸面价${mixedU < directU ? `低 ${pct(1 - mixedU / directU)}` : `高 ${pct(mixedU / directU - 1)}`}。`
+        : `;${directWhy}。`) + both;
+  } else if (!transS.length) {
+    // 只有直接买(可能分在几个城市买)
+    v = `<b>直接买 ${esc(T)} 最划算</b>:${directS.length > 1 ? ordered.map(split).join(" + ") + ";" : ""}${fq(src.mixed?.got ?? need)} 个均价 ${num(mixedU)}。` + (bestTrans
       ? `转化上来最便宜的是从 ${esc(cTier(bestTrans.start))} 走(均价 ${num(bestTrans.unit)}),贵 ${pct(bestTrans.unit / mixedU - 1)}。`
       : "没有别的起点凑得齐这个量。");
-  } else if (splits.every(s => s.start !== id)) {
+    mentionsTrans = !!bestTrans;
+  } else if (!directS.length) {
     v = `<b>别直接买 ${esc(T)}</b>:${ordered.map(split).join(" + ")},均价 ${num(mixedU)}` + (directU != null
       ? `,比全部直接买(均价 ${num(directU)})便宜 ${pct(1 - mixedU / directU)}。` : `;${directWhy}。`);
   } else {
     v = `<b>混着买最省</b>:${ordered.map(split).join(" + ")};均价 ${num(mixedU)}` + (directU != null
       ? `,比全部直接买(均价 ${num(directU)})每个省 ${num(directU - mixedU)}(${pct(1 - mixedU / directU)})。`
-      : `;${directWhy}。`) + `卖一附近那几件便宜货直接买,再往上的挂单比转化贵,就改从低级转。`;
+      : `;${directWhy}。`) + both;
   }
   if (src.mixed && !src.mixed.filled) v += ` <span class="neg">所有起点加起来也只凑到 ${fq(src.mixed.got)} 个,不够 ${fq(need)} 个。</span>`;
-  const usesTrans = splits.some(s => s.start !== id && !s.bid);
+  // 只有 AODP 价的起点按不限量算(不知道挂了几件):AODP 的最低卖价可能只对应 1 件,结论得打个问号
+  const unknown = cUniq(splits.filter(s => !s.bid && pure.find(p => p.start === s.start)?.available == null).map(s => s.start));
+  if (unknown.length) {
+    v += ` <span class="warnish"><b>${unknown.map(x => esc(cTier(x))).join("、")} 的价只有 AODP,不知道挂了几件</b>:按不限量算的,实际可能只有 1 件。`
+      + `下单前进游戏看一眼,或者让成员去翻一下这个市场(翻过就有抓包件数)。</span>`;
+  }
+  // k 的提示只在结论里真的比了转化时给(直接买最划算却没有别的起点、纯挂买单,都和 k 无关)
   const k = res.params_used?.fees?.transmute_factor;
-  const kDefault = (res.params_used?.unverified || []).find(u => u.key === "fees.transmute_factor")?.is_default;
-  if (main && (usesTrans || bestTrans)) {
-    v += ` <span class="sub">这个结论取决于转化系数 k(现在按 ${esc(k)}${kDefault ? ",服务端默认、没核实" : ""}):k 一变,直接买和转化谁便宜可能反过来。</span>`
-      + (kDefault ? ` <button class="act ghost mini-act" data-open-cal>去量 k</button>` : "");
+  const ku = (res.params_used?.unverified || []).find(u => u.key === "fees.transmute_factor");
+  const kOpen = ku && !ku.confirmed;
+  if (main && mentionsTrans) {
+    v += ` <span class="sub">这个结论取决于转化系数 k(现在按 ${esc(k)}${kOpen ? (ku.is_default ? ",服务端默认、没核实" : ",服务端配置的、没核实") : ",你填的"}):k 一变,直接买和转化谁便宜可能反过来。</span>`
+      + (kOpen ? ` <button class="act ghost mini-act" data-open-cal>去量 k</button>` : "");
   }
   return v;
+}
+
+// 原料来路表默认列哪些起点:用户问的就是「直接买 8.4,还是 8.3/8.2/8.1/8.0 升上来,还是 7.4 跨阶」,
+// 所以直接买、同阶的每一档、低一阶同附魔那一档永远列出来(设计 §4.5);剩下的位置给最便宜的其它起点。
+// 以前只按单价取前 8 个,8.x 同阶的几档常常比低 tier 的起点贵一点,全被折进「显示全部」
+function rawShown(id, pure) {
+  const m = REFINE_ID_RE.exec(id);
+  if (!m) return pure.slice(0, RAW_ROWS);
+  const t = Number(m[1]), e = Number(m[3] || 0), fam = m[2];
+  const must = new Set([id, refineID(fam, t - 1, e)]);
+  for (let x = 0; x < e; x++) must.add(refineID(fam, t, x));
+  const extra = Math.max(2, RAW_ROWS - pure.filter(p => must.has(p.start)).length);
+  let n = 0;
+  return pure.filter(p => must.has(p.start) || n++ < extra);
 }
 
 function rawBlock(id, src, res, main) {
@@ -635,8 +676,7 @@ function rawBlock(id, src, res, main) {
   const direct = pure.find(p => p.start === id);
   const directU = direct?.unit ?? null;
   const all = craft.rawAll.has(id);
-  let shown = all ? pure : pure.slice(0, RAW_ROWS);
-  if (direct && !shown.includes(direct)) shown = [...shown, direct];
+  const shown = all ? pure : rawShown(id, pure);
   const cheapest = pure.find(p => p.unit != null);
   const vs = u => (u == null || directU == null || !directU ? "—" : Math.abs(u / directU - 1) < 0.0005 ? "±0" : spct(u / directU - 1));
   const mixedDesc = splits.map(s => `${cityDot(s.city)} ${s.bid ? "挂买单收" : s.start === id ? "直接买" : `${esc(cTier(s.start))} 买来转`} <b>${fq(s.qty)}</b> 个 · ${priceRange(s)}${
@@ -652,11 +692,14 @@ function rawBlock(id, src, res, main) {
       <td>${p.unit == null ? `<span class="neg">凑不齐</span>` : num(p.unit)}</td>
       <td class="${p.unit != null && directU != null && p.unit < directU ? "pos" : ""}">${isDirect ? "—" : vs(p.unit)}</td>
       <td title="${p.available == null ? "只有 AODP 价、不知道挂了多少件,按不限量算" : "可买城市里这个起点的可见件数合计"}">${p.available == null ? "深度未知" : num(p.available)}</td>
-      <td>${p.filled ? "够" : `<span class="neg">不够</span>`}</td>
+      <td>${p.available == null
+        // 深度未知时服务端按不限量算,filled 一定是 true —— 不能跟着写「够」
+        ? `<span class="warnish" title="只有 AODP 价、不知道挂了几件:按不限量算的,实际可能只有 1 件">不知道</span>`
+        : p.filled ? "够" : `<span class="neg">不够</span>`}</td>
     </tr>`;
   }).join("");
-  const more = pure.length > RAW_ROWS
-    ? `<button class="act ghost mini-act" data-raw-all="${esc(id)}">${all ? "只看最便宜的几个" : `显示全部 ${pure.length} 个起点`}</button>` : "";
+  const more = pure.length > shown.length || all
+    ? `<button class="act ghost mini-act" data-raw-all="${esc(id)}">${all ? "只看常用的几个起点" : `显示全部 ${pure.length} 个起点`}</button>` : "";
   return `<div class="c-rawblk${main ? " main" : ""}">
     <h4>${cItem(id)} <em>按推荐路线要 <b>${fq(src.need)}</b> 个</em></h4>
     <p class="c-verdict">${rawVerdict(id, src, res, main)}</p>
@@ -666,7 +709,10 @@ function rawBlock(id, src, res, main) {
       <tbody>
         <tr class="mixed"><td class="l"><b>混合最优</b> <span class="wtag good">推荐</span></td><td class="l">${mixedDesc || "—"}</td>
           <td><b>${src.mixed?.unit == null ? "—" : num(src.mixed.unit)}</b></td><td class="${src.mixed?.unit != null && directU != null && src.mixed.unit < directU ? "pos" : ""}">${vs(src.mixed?.unit)}</td>
-          <td>${fq(src.mixed?.got)}</td><td>${src.mixed?.filled ? "够" : `<span class="neg">不够</span>`}</td></tr>
+          <td title="混合最优实际拿到的件数(不是盘口深度)">拿到 ${fq(src.mixed?.got)}</td>
+          <td>${!src.mixed?.filled ? `<span class="neg">不够</span>`
+            : splits.some(s => !s.bid && pure.find(p => p.start === s.start)?.available == null)
+              ? `<span class="warnish" title="用到了只有 AODP 价的起点,按不限量算的">不知道</span>` : "够"}</td></tr>
         ${rows}
       </tbody></table></div>${more}
   </div>`;
