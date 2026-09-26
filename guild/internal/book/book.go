@@ -19,6 +19,8 @@ import (
 //
 // **从数据形态推出来的,没看协议源码确认**:24 小时里 149 组 last_seen 完全相同的单
 // 恰好 50 张、没有一组超过;103 个盘口恰好 50 单;T1_WOOD @ Martlock 分 7 次首尾相接到达。
+// 按首次看到的时刻分组,卖单 183 组、买单 14 组恰好 50,50 以下是平滑分布,
+// 没有别的"页大小"尖峰(详情页的买单一栏也是 50 封顶)。
 // 游戏哪天改了分页大小,这里不改的话续页和截断都会认错(满页认不出来)。
 const PageSize = 50
 
@@ -35,45 +37,86 @@ type Order struct {
 	// INCLUDE 里,取了就要回表。没取时是零值
 	FirstSeen time.Time
 	LastSeen  time.Time
-	// Page 是这张单所在那次响应一共回了多少张单,**跨品质数**(见 WithPages)。
-	// 0 = 调用方没给,Build 退回按传进来的单自己数,只适合单品质的物品和单测
+	// Page 是这张单所在那次响应一共回了多少张单,**跨物品、跨品质数**(见 respKey)。
+	// 线上由 store 在 SQL 里对整张表数好;0 = 调用方没给,Build / WithPages 退回按传进来的单
+	// 自己数,只适合单测
 	Page int
+	// PageWorst 是那次响应整页最差的价(卖单最高、买单最低),同样跨物品、跨品质。
+	// 续页判定靠它:列表按价排序,真正的续页接在前一页整页最差价之后(见 Build)。
+	// 0 = 调用方没给,同 Page 一样退回自己算
+	PageWorst int64
 }
 
-// respKey 标识游戏的一次响应:同一 物品 × 城市 × 方向、last_seen 完全相同的那批单。
+// respKey 标识游戏的一次响应:同一 城市 × 方向、last_seen 完全相同的那批单,**不分物品、不分品质**。
 //
-// 装备不筛品质时一页是跨品质的(实测 Brecilien 一次 50 单横跨 q1~q4),
-// 所以"这一页满没满"必须跨品质数,在 城市 × 品质 里数永远凑不到 50。
-// 物品要分开:两个物品同一时刻各翻一页,不能数成一页 100 张。
+// 为什么这样分:客户端每解析一次挂单响应取一次 time.Now()(protocol.handleOrders),
+// 入库时新单和只刷新 last_seen 的单用的都是这个时刻(ingest.Normalize 之后整批平移),
+// 所以同一个时间戳就是同一次响应。一次响应本身会跨物品、跨品质:
+//   - 装备不筛品质时一页横跨几个品质(实测 Brecilien T5_SHOES_LEATHER_HELL@2 一次 50 单 q1~q4)
+//   - 按分类 / 搜索翻列表页时一页横跨几个物品。实测 Martlock 13:56:53 起 21 页、每页 50 单、
+//     每页 2~12 个物品(T1_HIDE、T4_ROCK、T2_FIBER…),0.5 秒一页,价格首尾相接:
+//     15-30、31-35、35-45 … 121-123。T5_MEAL_SOUP @ Brecilien 那一页 50 单里 33 张是它、
+//     17 张是 T5_MEAL_SOUP_FISH
+//
+// 以前按物品分,跨物品的满页被数成 33、17,判成"翻完了",下一页那 10 张更深的单就被当残单剔掉。
+// 两次响应恰好落在同一个时间戳(同一个时钟刻度里解析了两次)会被数成一页,
+// 代价只是把"没翻完"多认几回,更深的旧单标 stale 而不是剔除。
 type respKey struct {
-	Item string
 	City string
 	Side model.Side
 	Seen int64 // UnixMicro:库里是微秒精度
 }
 
-func keyOf(o Order) respKey { return respKey{o.ItemID, o.City, o.Side, o.LastSeen.UnixMicro()} }
+func keyOf(o Order) respKey { return respKey{o.City, o.Side, o.LastSeen.UnixMicro()} }
 
-func countPages(orders []Order) map[respKey]int {
-	n := make(map[respKey]int, len(orders)/8+1)
-	for _, o := range orders {
-		n[keyOf(o)]++
-	}
-	return n
+// pageStat 是一次响应的张数和整页最差价。
+type pageStat struct {
+	n     int
+	worst int64
 }
 
-// WithPages 按整次响应数单,返回一份填好 Page 的拷贝,输入不动。
-// 传进来的应是一个物品在各城市、**所有品质**、两个方向上的单(查价页的 ItemOrders 就是)。
-//
-// 批量读簿(store.BookOrders)在 SQL 里按同一个口径数好了才返回,不用再调它:
-// 它只回请求的品质,在 Go 里数就漏了别的品质
-func WithPages(orders []Order) []Order {
-	n := countPages(orders)
-	out := make([]Order, len(orders))
-	for i, o := range orders {
-		o.Page = n[keyOf(o)]
-		out[i] = o
+func pageStats(orders []Order) map[respKey]pageStat {
+	st := make(map[respKey]pageStat, len(orders)/8+1)
+	for _, o := range orders {
+		k := keyOf(o)
+		s := st[k]
+		if s.n == 0 || Better(o.Side, s.worst, o.Price) {
+			s.worst = o.Price
+		}
+		s.n++
+		st[k] = s
 	}
+	return st
+}
+
+// fillPages 给没带 Page / PageWorst 的单按 orders 自己数,原地改。带了的不动:
+// 线上的数是 store 对整张表数的,比这里只看得到的几个物品准
+func fillPages(orders []Order) {
+	var st map[respKey]pageStat
+	for i := range orders {
+		o := &orders[i]
+		if o.Page > 0 && o.PageWorst > 0 {
+			continue
+		}
+		if st == nil {
+			st = pageStats(orders)
+		}
+		s := st[keyOf(*o)]
+		if o.Page <= 0 {
+			o.Page = s.n
+		}
+		if o.PageWorst <= 0 {
+			o.PageWorst = s.worst
+		}
+	}
+}
+
+// WithPages 返回一份补齐了 Page / PageWorst 的拷贝,输入不动。已经带了的(store 在 SQL 里
+// 对整张表数好的)原样保留;没带的按传进来的单数,所以传进来的应是一次读出的全部单
+// (一个物品各城市、所有品质、两个方向)。
+func WithPages(orders []Order) []Order {
+	out := append([]Order(nil), orders...)
+	fillPages(out)
 	return out
 }
 
@@ -124,21 +167,33 @@ type Side struct {
 }
 
 // Build 是「最近一轮」规则,专门对付上一轮浏览留下的幽灵单。
-// orders 是一个盘口边(物品 × 城市 × 品质 × 方向)在窗口内的全部单,Page 由调用方数好。
+// orders 是一个盘口边(物品 × 城市 × 品质 × 方向)在窗口内的全部单,Page / PageWorst
+// 由调用方数好(store 对整张表跨物品数)。
+//
+// 规则的前提是游戏的挂单列表**按价排序、一页至多 50 张**(卖单从低到高,买单从高到低),
+// 一次响应里这个盘口边的单就是它在那一页价格范围里的全部单。成交和撤单都不会有消息,
+// 库里的单只在被看到时刷新 last_seen,所以只能拿"最近一轮看到了什么"反推其余的还在不在:
 //
 //   - newest = 所有单里最新的 last_seen;last_seen ≥ newest − slack 的算最近一轮,
 //     best / worst 是这一轮的最优 / 最差价
 //   - 旧单落在 (best, worst] 里 → 剔除。用户翻过的页里本该有它,没出现就是没了
 //   - 旧单比 worst 更差(或正好压在满页的 worst 上)→ 这一轮没翻到那么深:
-//     没截断就剔除(整本簿都看到了),截断了就保留但标 stale,不进 best / qty_near / support
-//   - 旧单不比 best 差 → 两种可能,看更早那几张单自己是不是满页:
-//     ① 不是满页:本轮是从第一页重新翻的,这些单要是还在就一定会出现 → 剔除
-//     (实测 T6_LEATHER @ Martlock 上一轮有张 4906 的卖单,比最近一轮的最低价 4909
-//     还便宜);② 是满页:本轮只是它的**续页**(第 2 页晚到了超过 slack),
-//     那一页仍是对盘口前半截最新的一眼 → 递归地照同一套规则整理后保留。
-//     唯一分不开的是"两轮之间有人一口气扫掉了整整一页",那种情况会按续页处理
+//     没截断就剔除(列表翻到了底,它还在的话一定在这一页里),截断了就保留但标 stale,
+//     不进 best / qty_near / support
+//   - 旧单不比 best 差 → 两种可能:
+//     ① 本轮是从第一页重新翻的,这些单要是还在就一定会出现 → 剔除
+//     (实测 T6_LEATHER @ Martlock 上一轮有张 4906 的卖单,比最近一轮的最低价 4909 还便宜);
+//     ② 本轮只是**续页**(第 2 页晚到了超过 slack),更早那一页仍是对盘口前半截最新的一眼
+//     → 递归地照同一套规则整理后保留。
+//     判成续页要同时满足:更早那一页是满页(没翻完才会有下一页),而且本轮最优价不比那一页
+//     **整页**(跨物品、跨品质)的最差价更优 —— 按价排序的列表,下一页只能接在上一页末尾之后。
+//     实测续页都是这样首尾相接的(见 respKey);不接着的是另一次浏览:比如先不筛品质翻了一页
+//     (q1 5 张 + q2 45 张,满页),过后又筛 q1 从头翻,旧那页满着,可 q1 新的卖一比 q2 那几十张
+//     便宜得多,不可能是它的下一页 → 旧的 q1 单照 ① 剔除。
+//     仍然分不开的是"两轮之间有人一口气扫掉了整整一页、新挂的单又都比那页贵",那种会按续页处理
+//   - 例外:最近一轮是满页而且整页一个价(best == worst),同价的旧单可能只是排到了下一页 → stale
 //
-// 为什么"更早那几张单是不是满页"能分开这两种:还在的单被重新看到时 last_seen 会前进,
+// 为什么"更早那几张单是不是满页"能区分:还在的单被重新看到时 last_seen 会前进,
 // 离开原来那次响应。从第一页重翻的话,旧响应里只剩被买走的那几张,凑不满一页;
 // 续页不会重新看到前一页的单,前一页原样满着。
 //
@@ -149,25 +204,16 @@ type Side struct {
 // 留着会被当成最优卖价,也不能拿它当"最近一眼"。
 func Build(orders []Order, side model.Side, slack time.Duration) Side {
 	valid := make([]Order, 0, len(orders))
-	missing := false
 	for _, o := range orders {
 		if o.Amount <= 0 || o.Price <= 0 {
 			continue
 		}
-		missing = missing || o.Page <= 0
 		valid = append(valid, o)
 	}
 	if len(valid) == 0 {
 		return Side{}
 	}
-	if missing {
-		n := countPages(valid)
-		for i := range valid {
-			if valid[i].Page <= 0 {
-				valid[i].Page = n[keyOf(valid[i])]
-			}
-		}
-	}
+	fillPages(valid)
 	if slack < 0 {
 		slack = 0
 	}
@@ -205,15 +251,13 @@ func newestOf(orders []Order) time.Time {
 
 // pageTruncated 判一轮是不是没翻完。两条满足一条就算:
 //
-//   - 这一轮的单数是页大小的整数倍。同一页里有几张单几秒后被详情页又看了一眼,
-//     last_seen 挪走了,按响应数就不满 50,按轮数还是 50
-//   - 这一轮最深那一档所在的响应是满页。装备一页跨品质,单个品质的单数凑不齐 50,
+//   - 这一轮的单数是页大小的整数倍。同一页里有几张单几秒后又被另一次响应看到
+//     (比如从列表点进详情页),last_seen 挪走了,按响应数就不满 50,按轮数还是 50
+//   - 这一轮最深那一档所在的响应是满页。一页跨物品、跨品质,单个盘口边的单数凑不齐 50,
 //     只能看整页
 //
-// 第二条在"满页 + 不满的下一页"而这个品质恰好没落在下一页时会误报为截断,
+// 第二条在"满页 + 不满的下一页"而这个盘口边恰好没落在下一页时会误报为截断,
 // 代价只是更深的旧单标成 stale(灰掉、不进统计)而不是直接剔掉。
-// 反过来,最深那一档要是来自另一次零星的响应(比如详情页只回了一张),就认不出截断。
-// 要分清得按响应先后和价格区间把页串成链,等看过协议、确认分页单位再做。
 func pageTruncated(latest []Order, worst int64) bool {
 	if n := len(latest); n >= PageSize && n%PageSize == 0 {
 		return true
@@ -226,6 +270,23 @@ func pageTruncated(latest []Order, worst int64) bool {
 	return false
 }
 
+// pageEdge 是最近一轮最深那一页的整页最差价(跨物品、跨品质)。几次响应里取最差的:
+// 按价排序翻页,越往后的页越差,最差的那个就是最后一页的末尾。
+// PageWorst 不会比单子自己的价更优,万一是(调用方给错了)按单价算
+func pageEdge(latest []Order, side model.Side) int64 {
+	edge := latest[0].Price
+	for _, o := range latest {
+		w := o.PageWorst
+		if w <= 0 || Better(side, w, o.Price) {
+			w = o.Price
+		}
+		if Better(side, edge, w) {
+			edge = w
+		}
+	}
+	return edge
+}
+
 // split 是 splitRounds 的结果:当前盘口、stale、剔除三份。
 type split struct {
 	cur, stale []Order
@@ -233,7 +294,8 @@ type split struct {
 	droppedQty int64
 	prevPage   int   // cur 里来自续页之前那几页的单数
 	truncated  bool  // 最近一轮(最深那一页)没翻完
-	worst      int64 // 最近一轮里最差的价
+	worst      int64 // 最近一轮里这个盘口边最差的价
+	edge       int64 // 最近一轮最深那一页整页最差的价(跨物品、跨品质),判续页用
 }
 
 func (sp *split) drop(o Order) {
@@ -269,6 +331,9 @@ func splitRounds(orders []Order, side model.Side, slack time.Duration, bounded b
 	}
 	sp.cur, sp.worst = latest, worst
 	sp.truncated = pageTruncated(latest, worst)
+	sp.edge = pageEdge(latest, side)
+	// 截断了、又不是在整理续页之前那几页:更深的旧单可能只是没翻到,标 stale
+	keepDeeper := sp.truncated && !bounded
 
 	var ahead []Order
 	for _, o := range older {
@@ -276,7 +341,7 @@ func splitRounds(orders []Order, side model.Side, slack time.Duration, bounded b
 		case !Better(side, best, o.Price):
 			ahead = append(ahead, o) // 不比本轮最优价差
 		case Better(side, worst, o.Price) || (o.Price == worst && sp.truncated):
-			if sp.truncated && !bounded {
+			if keepDeeper {
 				sp.stale = append(sp.stale, o)
 			} else {
 				sp.drop(o)
@@ -288,17 +353,25 @@ func splitRounds(orders []Order, side model.Side, slack time.Duration, bounded b
 	if len(ahead) == 0 {
 		return sp
 	}
+	// 续页:更早那一页没翻完,而且本轮接在它整页的末尾之后(见 Build)
 	prev := splitRounds(ahead, side, slack, true)
-	if !prev.truncated {
-		for _, o := range ahead {
-			sp.drop(o)
-		}
+	if prev.truncated && !Better(side, best, prev.edge) {
+		sp.cur = append(sp.cur, prev.cur...)
+		sp.prevPage = len(prev.cur)
+		sp.dropped += prev.dropped
+		sp.droppedQty += prev.droppedQty
 		return sp
 	}
-	sp.cur = append(sp.cur, prev.cur...)
-	sp.prevPage = len(prev.cur)
-	sp.dropped += prev.dropped
-	sp.droppedQty += prev.droppedQty
+	for _, o := range ahead {
+		// ahead 里的单不比 best 差,等于 worst 就只能是 best == worst:本轮满页、整页一个价
+		// (实测 T4_RUNE @ Martlock 50 张全是 9 银),同价的旧单可能只是排到了下一页。
+		// 按"比 best 还优"一律剔掉的话,这一档底下几十张真单每次都被记成残单
+		if o.Price == worst && keepDeeper {
+			sp.stale = append(sp.stale, o)
+		} else {
+			sp.drop(o)
+		}
+	}
 	return sp
 }
 

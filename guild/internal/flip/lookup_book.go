@@ -85,8 +85,8 @@ type BookSide struct {
 func (b BookSide) has() bool { return b.Orders > 0 }
 
 // buildSide 把一侧的挂单(调用方已按 城市 × 品质 × 方向 过滤)整理成阶梯,
-// 取舍规则见 book.Build。orders 的 Page 要由调用方跨品质数好(book.WithPages);
-// 没数的话按 orders 自己数,只适合单品质的物品和单测。
+// 取舍规则见 book.Build。orders 的 Page / PageWorst 要按整次响应跨物品、跨品质数好
+// (线上是 store.ItemOrders 在 SQL 里数的);没数的话按 orders 自己数,只适合单测。
 func buildSide(orders []store.LiveOrder, side model.Side, now time.Time,
 	slack time.Duration, nearPct float64) BookSide {
 
@@ -253,7 +253,7 @@ type LookupBook struct {
 }
 
 // buildBook 是 LookupBook 的全部业务逻辑。orders 是这个物品所有城市、所有品质的单
-// (页满没满要跨品质数),conflicted 是其中最近串过城的盘口边。
+// (没带 Page 的按它们跨品质补数,见 book.WithPages),conflicted 是其中最近串过城的盘口边。
 func buildBook(itemID, city string, quality int, orders []store.LiveOrder,
 	now time.Time, want int64, cfg conf.Config, conflicted map[model.QuoteKey]time.Time) *LookupBook {
 

@@ -86,6 +86,8 @@ func TestItemOrdersIntegration(t *testing.T) {
 	insert(4, "T4_LEATHER", "Martlock", 1, 0, 305, 0, now, now)                                     // 0 件不算
 	insert(5, "T5_LEATHER", "Martlock", 1, 0, 700, 3, now, now)                                     // 别的物品
 	insert(6, "T4_LEATHER", "Lymhurst", 1, 0, 450, 1, now.Add(-9*time.Hour), now.Add(-8*time.Hour)) // 窗口外
+	// 别的物品、和 1 号单同一次响应(列表页一页跨物品):不读回来,但要算进 1 号单那一页
+	insert(7, "T5_LEATHER", "Martlock", 2, 0, 320, 4, now.Add(-time.Hour), now.Add(-time.Minute))
 
 	got, err := st.ItemOrders(ctx, "T4_LEATHER", now.Add(-6*time.Hour))
 	if err != nil {
@@ -93,6 +95,9 @@ func TestItemOrdersIntegration(t *testing.T) {
 	}
 	if len(got) != 3 {
 		t.Fatalf("应读到 3 张单,得到 %d: %+v", len(got), got)
+	}
+	if got[0].Page != 2 || got[0].PageWorst != 320 || got[1].Page != 1 || got[1].PageWorst != 301 {
+		t.Fatalf("page / page_worst 要跨物品按整次响应数(卖单取最高、买单取最低),得到 %+v", got[:2])
 	}
 	// ORDER BY location_id, quality, side, unit_price
 	o := got[0]

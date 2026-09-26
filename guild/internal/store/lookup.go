@@ -24,20 +24,26 @@ const itemOrdersCap = 20000
 // 就是 book.Order:读出来直接喂给 book.Build,不用再转一道形状。
 type LiveOrder = book.Order
 
+// itemOrdersSQL 见 ItemOrders。page / page_worst 和 BookOrders 是同一段 SQL(pagedSQL)数的
+var itemOrdersSQL = pagedSQL(`
+WITH o AS (
+  SELECT location_id, quality, side, unit_price, amount, first_seen, last_seen
+  FROM market_order_live
+  WHERE item_id = $1 AND last_seen > $2 AND amount > 0 AND unit_price > 0
+  ORDER BY location_id, quality, side, unit_price
+  LIMIT $3
+)`, []string{"location_id", "quality", "side", "unit_price", "amount", "first_seen", "last_seen"},
+	"$2", "location_id, quality, side, unit_price")
+
 // ItemOrders 读一个物品在所有城市、所有品质、两个方向上 since 之后还看得到的挂单。
-// Page 不填:调用方拿到的就是这个物品的全部单,用 book.WithPages 数,口径和
-// BookOrders 在 SQL 里数的一样。过滤条件(amount > 0、unit_price > 0)也和它一样,
-// 查价页和扫描看到的才是同一批单。
+// Page / PageWorst 和 BookOrders 一样在 SQL 里对整张表跨物品数好:一页跨物品,
+// 只拿这一个物品的单在 Go 里数会数少(见 book.respKey)。过滤条件(amount > 0、
+// unit_price > 0)也和它一样,查价页和扫描看到的才是同一批单。
 //
 // 走 idx_live_book 的 item_id 前缀;first_seen 不在索引的 INCLUDE 里要回表,
 // 单个物品几百到几千行,可以接受。
 func (s *Store) ItemOrders(ctx context.Context, itemID string, since time.Time) ([]LiveOrder, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT location_id, quality, side, unit_price, amount, first_seen, last_seen
-		FROM market_order_live
-		WHERE item_id = $1 AND last_seen > $2 AND amount > 0 AND unit_price > 0
-		ORDER BY location_id, quality, side, unit_price
-		LIMIT $3`, itemID, since, itemOrdersCap)
+	rows, err := s.pool.Query(ctx, itemOrdersSQL, itemID, since, itemOrdersCap)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +55,7 @@ func (s *Store) ItemOrders(ctx context.Context, itemID string, since time.Time) 
 		var quality, side int16
 		var amount int32
 		if err := rows.Scan(&o.City, &quality, &side, &o.Price, &amount,
-			&o.FirstSeen, &o.LastSeen); err != nil {
+			&o.FirstSeen, &o.LastSeen, &o.Page, &o.PageWorst); err != nil {
 			return nil, err
 		}
 		o.Quality = int(quality)

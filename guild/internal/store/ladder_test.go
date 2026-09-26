@@ -135,6 +135,9 @@ func TestBookOrders(t *testing.T) {
 	kAskQ3 := kAsk
 	kAskQ3.Quality = 3
 	sd.put(kAskQ3, fx{50, 99, T})
+	// 没请求的**物品**在同一次响应里(列表页一页跨物品):同样要算进 page 和整页最差价
+	sd.put(model.QuoteKey{ItemID: "T5_CLOTH_LEVEL1@1", LocationID: "Lymhurst", Quality: 1, Side: model.SideOffer},
+		fx{130, 2, T})
 
 	kEmpty := model.QuoteKey{ItemID: "T5_CLOTH", LocationID: "Thetford", Quality: 1, Side: model.SideOffer}
 	keys := []model.QuoteKey{kT6, kT6Ghost, kAsk, kBid, kEmpty, kAsk} // kAsk 重复一次,件数不能翻倍
@@ -163,34 +166,43 @@ func TestBookOrders(t *testing.T) {
 		}
 	})
 
-	t.Run("page跨品质按整次响应数", func(t *testing.T) {
+	t.Run("page跨品质跨物品按整次响应数", func(t *testing.T) {
 		for _, o := range orders {
 			switch {
 			case o.ItemID == kT6.ItemID && o.LastSeen.Equal(T):
-				if o.Page != 18 { // q1、q2 各 9 张同一时刻
-					t.Fatalf("T6 同一眼跨品质应是 18 张,得到 %+v", o)
+				// q1、q2 各 9 张同一时刻;买单整页最差是最低的 1 银
+				if o.Page != 18 || o.PageWorst != 1 {
+					t.Fatalf("T6 同一眼跨品质应是 18 张、整页最低 1,得到 %+v", o)
 				}
 			case o.ItemID == kAsk.ItemID && o.Side == model.SideOffer && o.LastSeen.Equal(T):
-				if o.Page != 2 { // 105×7 和没请求的 q3 那张 50×99
-					t.Fatalf("没请求的品质也要算进 page,得到 %+v", o)
+				// 105×7、没请求的 q3 那张 50×99、没请求的物品那张 130×2
+				if o.Page != 3 || o.PageWorst != 130 {
+					t.Fatalf("没请求的品质和物品也要算进 page 和整页最差价,得到 %+v", o)
 				}
+			case o.PageWorst < o.Price && o.Side == model.SideOffer:
+				t.Fatalf("卖单整页最差价不会比自己便宜: %+v", o)
 			}
 		}
-		// 和查价页的口径(ItemOrders 全读 + book.WithPages)逐张一致
+		// 和查价页的口径(ItemOrders)逐张一致:两边是同一段 SQL 对整张表数的,
+		// 在 Go 里补数(WithPages)不会改它们
 		all, err := st.ItemOrders(ctx, kAsk.ItemID, since)
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := map[[3]int64]int{}
+		type pg struct {
+			page  int
+			worst int64
+		}
+		want := map[[3]int64]pg{}
 		for _, o := range book.WithPages(all) {
-			want[[3]int64{int64(o.Side), o.Price, o.LastSeen.UnixMicro()}] = o.Page
+			want[[3]int64{int64(o.Side), o.Price, o.LastSeen.UnixMicro()}] = pg{o.Page, o.PageWorst}
 		}
 		for _, o := range orders {
 			if o.ItemID != kAsk.ItemID {
 				continue
 			}
-			if p := want[[3]int64{int64(o.Side), o.Price, o.LastSeen.UnixMicro()}]; p != o.Page {
-				t.Fatalf("SQL 数的 page %d 和 WithPages 的 %d 不一致: %+v", o.Page, p, o)
+			if p := want[[3]int64{int64(o.Side), o.Price, o.LastSeen.UnixMicro()}]; p != (pg{o.Page, o.PageWorst}) {
+				t.Fatalf("BookOrders 数的 %d/%d 和 ItemOrders 的 %+v 不一致: %+v", o.Page, o.PageWorst, p, o)
 			}
 		}
 	})
@@ -288,22 +300,112 @@ func TestBookOrders_第二眼没再看到的卖一被剔除(t *testing.T) {
 	}
 }
 
+// 审查 high 的原样(经真 SQL):2 小时前不筛品质翻了一页(q1 5 张 + q2 45 张 = 满页),
+// 现在筛 q1 从头翻,q1 只剩 1010..1017。旧页的 q2 单没被重看,旧页一直"满页";
+// 以前 q1 那 5 张被当成续页之前那一页保留,1000 成了扫描的卖一(旧 SQL 规则是 1010)。
+// 对照的真续页:第 1 页(q1 10 张 + q2 40 张)10 分钟前,第 2 页接在整页最贵的那张之后
+func TestBookOrders_筛品质重翻和真续页(t *testing.T) {
+	st := openTestStore(t)
+	T := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
+	sd := &seeder{t: t, st: st}
+	run := func(k model.QuoteKey, from int64, n int, at time.Time) {
+		rows := make([]fx, n)
+		for i := range rows {
+			rows[i] = fx{from + int64(i), 1, at}
+		}
+		sd.put(k, rows...)
+	}
+	a1 := model.QuoteKey{ItemID: "T5_SHOES_LEATHER_HELL@2", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+	a2 := a1
+	a2.Quality = 2
+	run(a1, 1000, 5, T.Add(-2*time.Hour))
+	run(a2, 2000, 45, T.Add(-2*time.Hour))
+	run(a1, 1010, 8, T)
+
+	b1 := model.QuoteKey{ItemID: "T6_SHOES_LEATHER_HELL@2", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+	b2 := b1
+	b2.Quality = 2
+	run(b1, 1000, 10, T.Add(-10*time.Minute))
+	run(b2, 1010, 40, T.Add(-10*time.Minute)) // 整页最贵 1049
+	run(b1, 1100, 20, T.Add(-30*time.Second))
+
+	got := readSide(t, st, a1, T.Add(-6*time.Hour), 120*time.Second)
+	if got.Levels[0].Price != 1010 || got.Dropped != 5 || got.PrevPage != 0 {
+		t.Fatalf("筛品质重翻:卖一应是 1010、旧的 5 张剔除,得到 %d / 剔 %d / prev %d",
+			got.Levels[0].Price, got.Dropped, got.PrevPage)
+	}
+	got = readSide(t, st, b1, T.Add(-6*time.Hour), 120*time.Second)
+	if got.Levels[0].Price != 1000 || got.Dropped != 0 || got.PrevPage != 10 {
+		t.Fatalf("真续页:第 1 页的 1000 应保留,得到 %d / 剔 %d / prev %d", got.Levels[0].Price, got.Dropped, got.PrevPage)
+	}
+}
+
+// 审查 medium 的原样(经真 SQL):T−3m 这个物品自己满页 50 张(100..149),T 时刻最优 5 张
+// 被重看、其余 45 张没有。
+//   - 这 5 张所在的那次响应是跨物品的满页(另一个物品 45 张占满了这一页):没翻完,
+//     45 张 stale,合计和近价件数照旧只算这一轮 —— 以前按物品数成 5 张,判成翻完了,45 张被剔
+//   - 那次响应就只有这 5 张:列表翻到底了,另外 45 张要是还在就在这一页里 → 剔除
+func TestBookOrders_满页之后隔几分钟只重看最优几张(t *testing.T) {
+	for _, crossItem := range []bool{true, false} {
+		st := openTestStore(t)
+		ctx := context.Background()
+		T := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
+		k := model.QuoteKey{ItemID: "T6_LEATHER", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+		other := model.QuoteKey{ItemID: "T6_LEATHER_LEVEL1@1", LocationID: "Martlock", Quality: 1, Side: model.SideOffer}
+		var orders []model.MarketOrder
+		for i := int64(0); i < 50; i++ {
+			orders = append(orders, model.MarketOrder{OrderID: i + 1, ItemID: k.ItemID, LocationID: k.LocationID, Quality: 1,
+				Side: k.Side, UnitPrice: 100 + i, Amount: 1, ObservedAt: T.Add(-3 * time.Minute)})
+		}
+		if crossItem {
+			for i := int64(0); i < 45; i++ {
+				orders = append(orders, model.MarketOrder{OrderID: 100 + i, ItemID: other.ItemID, LocationID: other.LocationID,
+					Quality: 1, Side: other.Side, UnitPrice: 100 + i%5, Amount: 1, ObservedAt: T})
+			}
+		}
+		if err := st.WriteOrders(ctx, "测试", orders); err != nil {
+			t.Fatal(err)
+		}
+		touch := map[int64]time.Time{}
+		for i := int64(1); i <= 5; i++ {
+			touch[i] = T
+		}
+		if err := st.TouchOrders(ctx, touch); err != nil {
+			t.Fatal(err)
+		}
+		b := readSide(t, st, k, T.Add(-6*time.Hour), 120*time.Second)
+		if b.Levels[0].Price != 100 || len(b.Levels) != 5 || b.QtyTotal != 5 {
+			t.Fatalf("crossItem=%v:当前盘口是这一轮的 5 张、卖一 100,得到 %d / %d 档 / %d 件",
+				crossItem, b.Levels[0].Price, len(b.Levels), b.QtyTotal)
+		}
+		if crossItem && (!b.Truncated || b.StaleOrders != 45 || b.Dropped != 0) {
+			t.Fatalf("跨物品满页:45 张应 stale、不剔,得到 truncated=%v stale %d 剔 %d", b.Truncated, b.StaleOrders, b.Dropped)
+		}
+		if !crossItem && (b.Truncated || b.StaleOrders != 0 || b.Dropped != 45) {
+			t.Fatalf("整页只有 5 张:45 张剔除,得到 truncated=%v stale %d 剔 %d", b.Truncated, b.StaleOrders, b.Dropped)
+		}
+	}
+}
+
 // TestBookOrders_查询计划 是手工检查,只在 FLIPPER_TEST_EXPLAIN=1 时跑:
 // 对 1750 个 key(125 物品 × 7 城 × 1 品质 × 2 边,扫描实际的量级)跑
 // EXPLAIN (ANALYZE, BUFFERS),确认走 idx_live_book 的 Index Only Scan,
 // 再量 BookOrders 往返和 Go 侧 Group + Build 的耗时。
 //
 // 数据:85 个材料只有 q1、40 件装备 q1~q5,每个盘口边 30 张单、每 15 分钟一张,
-// 24 张在 6h 窗口内。共 11.97 万行;请求 q1,SQL 要扫全部品质(数 page),只回 q1。
+// 24 张在 6h 窗口内。共 11.97 万行;一次响应一个时间戳(同 城市 × 方向 × 轮次、每 5 个物品一页),
+// 窗口里 9100 页。请求 q1,page 由 pagedSQL 按 last_seen 回表对整张表数(跨物品、跨品质)。
 //
 // 2026-09-26 在 flipper-pg(timescaledb / pg16,WSL docker)上,VACUUM ANALYZE 之后:
-//   - 临时库里请求的 key 盖住了整张表,规划器选了 Parallel Index Only Scan + Merge Join
-//     (Heap Fetches: 0),之后 Incremental Sort + WindowAgg 数 page,Execution Time ≈ 147ms
-//   - Go 侧 BookOrders 往返 ≈ 220ms(4.2 万行经 WSL 端口转发),Group + Build ≈ 17ms,合计 ≈ 240ms。
-//     同一份数据上旧的 BookSides(SQL 里剔幽灵)是 ≈ 380ms
-//   - WS 标脏的量级(14 个 key、30 分钟窗口)BookOrders + Build ≈ 2.5ms
-//   - 对照真库(1.67 万行、175 个物品,只读 EXPLAIN ANALYZE):1750 个 key 走
-//     Nested Loop → Index Only Scan using idx_live_book(loops=1750),Execution Time 39ms
+//   - 取挂单:Nested Loop → Index Only Scan using idx_live_book(loops=1750,Heap Fetches: 0)
+//   - 数整页:9100 页各一次 Index Scan using idx_live_stale(每页约 11 行),GroupAggregate 成一行,
+//     和 4.4 万张单 Merge Append 之后 WindowAgg;排序都在内存里。Execution Time ≈ 267ms
+//   - Go 侧 BookOrders 往返 ≈ 275~320ms(4.4 万行经 WSL 端口转发),Group + Build ≈ 17ms,合计 ≈ 300ms
+//   - WS 标脏的量级(14 个 key、30 分钟窗口)BookOrders + Build ≈ 3ms
+//   - 对照真库(1.67 万行、175 个物品,只读 EXPLAIN ANALYZE,READ ONLY 事务):1750 个 key、
+//     1.56 万张单、458 页,Execution Time 76ms(页数不跨物品之前是 39ms)
+//   - 反例:把数出来的页 JOIN 回挂单那一版,规划器估 o 只有 10 行,选了嵌套循环 + 连接过滤,
+//     同一份数据 56 秒。所以这里断言计划里没有 "Rows Removed by Join Filter"
 //
 // live 表没有清理,这个数会随时间涨,上线后要定期复查。
 func TestBookOrders_查询计划(t *testing.T) {
@@ -314,15 +416,19 @@ func TestBookOrders_查询计划(t *testing.T) {
 	ctx := context.Background()
 	T := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
 
-	// 直接用 SQL 灌,WriteOrders 一条条走太慢。卖单从 1000 往上、买单往下
+	// 直接用 SQL 灌,WriteOrders 一条条走太慢。卖单从 1000 往上、买单往下。
+	// 一次响应一个时间戳(同 城市 × 方向 × 轮次、每 5 个物品一页):装备那几页 25 张、
+	// 材料那几页 5 张,和实测"一页至多 50 张"同一个量级。所有物品共用 30 个时间戳的话,
+	// 按 last_seen 回表数整页那一步每个时间戳要翻 4000 行,测出来的是一个不存在的最坏情况
 	if _, err := st.pool.Exec(ctx, `
 		INSERT INTO market_order_live (order_id, item_id, location_id, quality, enchant, side,
 		       unit_price, amount, expires_at, first_seen, last_seen, reporter, raw_location)
 		SELECT row_number() OVER (), 'ITEM_' || i, 'CITY_' || c, q, 0, s,
-		       1000 + (CASE WHEN s = 0 THEN n ELSE -n END) * 3, 1 + n % 7, NULL,
-		       $1::timestamptz - n * interval '15 minutes', $1::timestamptz - n * interval '15 minutes', '', ''
+		       1000 + (CASE WHEN s = 0 THEN n ELSE -n END) * 3, 1 + n % 7, NULL, at, at, '', ''
 		FROM generate_series(1, 125) i, generate_series(1, 7) c, generate_series(1, 5) q,
-		     generate_series(0, 1) s, generate_series(0, 29) n
+		     generate_series(0, 1) s, generate_series(0, 29) n,
+		     LATERAL (SELECT $1::timestamptz - n * interval '15 minutes' + (c * 2 + s) * interval '1 second'
+		                     + (i / 5) * interval '1 millisecond' AS at) ts
 		WHERE q = 1 OR i <= 40`, T); err != nil {
 		t.Fatal(err)
 	}
@@ -365,6 +471,9 @@ func TestBookOrders_查询计划(t *testing.T) {
 	t.Log("\n" + text)
 	if !strings.Contains(text, "Index Only Scan using idx_live_book") {
 		t.Error("没走 idx_live_book 的 Index Only Scan")
+	}
+	if strings.Contains(text, "Rows Removed by Join Filter") {
+		t.Error("计划里出现了连接过滤:数整页那一步被接成了嵌套循环 JOIN(见上面的反例)")
 	}
 
 	for round := 0; round < 3; round++ {
