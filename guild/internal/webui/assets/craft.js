@@ -34,6 +34,11 @@ const craft = {
     bonus: {},                  // 线 → { v, d }:今日生产加成和填的那天。过了那天就不算(每天变)
     island: false, sellCity: "", srcCities: [], transport: null,
     bid: false, bidMax: null, leftover: "", maxAge: null, capital: null, share: null, gold: null,
+    heart: "",                  // 心也参与返还:"" 服务端默认 | "1" 返还 | "0" 不返还
+    // 待核实参数哪天填的:「station:城市」「tstation:城市」「fce:线」「unlocked:线」「heart」→ 日期。
+    // 填了就算核对过(请求里带 confirmed),哪怕填的正好是默认值 —— 专精真是 0、站费真是 500 的人,
+    // 以前「未核实」的标永远去不掉。k 和生产加成自己带日期(kAt、bonus[线].d)
+    confAt: {},
   },
   sd: null,          // 服务端默认值(响应里的 server_defaults)
   data: null,        // 最近一次 plan 响应
@@ -88,6 +93,39 @@ const cToday = () => {
 function cBonus() {
   const b = craft.p.bonus[craft.p.line];
   return b && b.d === cToday() && typeof b.v === "number" ? b.v : null;
+}
+// 记下 / 清掉某个待核实参数是哪天填的(p.confAt 的键见上)
+function cMark(key, on) {
+  if (on) craft.p.confAt[key] = cToday();
+  else delete craft.p.confAt[key];
+}
+// 专精填全了没有:目标 tier 及以下每一级都填了(0 也算填了)。只填一部分不算核对过
+const cFCEFull = () => { const f = cFCE(); return CRAFT_TIERS.filter(t => t <= craft.p.tier).every(t => typeof f[t] === "number"); };
+// 用户填过的待核实参数(UnverifiedParams 的键)。请求里带上,服务端就不再把它们标成「未核实」
+function craftConfirmed() {
+  const p = craft.p, city = cCity(), out = [];
+  if (p.k != null) out.push("fees.transmute_factor");
+  if (cFCEFull()) out.push("focus.fce");
+  if (p.unlocked[p.line] != null) out.push("focus.unlocked_tier");
+  if (p.station[city] != null) out.push("fees.station_per100");
+  if (p.tstation[city] != null) out.push("fees.transmute_station_per100");
+  if (cBonus() != null) out.push("rrr.daily_bonus");
+  if (p.heart) out.push("heart_returns");
+  return out;
+}
+// 某个待核实参数是哪天填的(显示用);没填是 ""
+function cConfDate(key) {
+  const p = craft.p, city = cCity(), line = p.line;
+  switch (key) {
+    case "fees.transmute_factor": return p.k != null ? p.kAt || "" : "";
+    case "focus.fce": return p.confAt[`fce:${line}`] || "";
+    case "focus.unlocked_tier": return p.confAt[`unlocked:${line}`] || "";
+    case "fees.station_per100": return p.confAt[`station:${city}`] || "";
+    case "fees.transmute_station_per100": return p.confAt[`tstation:${city}`] || "";
+    case "rrr.daily_bonus": return cBonus() != null ? cToday() : "";
+    case "heart_returns": return p.confAt.heart || "";
+  }
+  return "";
 }
 // 精炼页能用的城市:扫描覆盖率里的(就是服务端配置的城市),没有就用默认那 7 座
 function craftCities() {
@@ -224,7 +262,11 @@ function craftSyncForm() {
       <input type="number" id="c-fce-${t}" data-fce="${t}" min="0" max="40000" step="100" placeholder="0"></div>`).join("");
   }
   for (const t of CRAFT_TIERS) setVal(`c-fce-${t}`, fce[t] || fce[t] === 0 ? fce[t] : null);
-  $("c-unlock").value = String(p.unlocked[p.line] ?? 8);
+  // 「服务端默认」和「T8(全部)」分开:选了 T8 才算核对过
+  $("c-unlock").value = p.unlocked[p.line] == null ? "" : String(p.unlocked[p.line]);
+  const heartDef = craft.data?.params_used && !p.heart ? craft.data.params_used.heart_returns : null;
+  $("c-heart").options[0].textContent = `服务端默认${heartDef == null ? "" : heartDef ? "(返还)" : "(不返还)"}`;
+  $("c-heart").value = p.heart || "";
   setVal("c-station", p.station[city]);
   setPh("c-station", sd.station_fee_by_city?.[city] ?? sd.station_fee_per100);
   setVal("c-k", p.k);
@@ -283,22 +325,35 @@ function craftBadges() {
     badge("c-k-badge", false, `未核实 · 录入 ${sd.transmute_measured_at || "日期不明"}`,
       `服务端默认 k=${sd.transmute_factor ?? "—"},是从亚服表格反推的,没在游戏里核对过。用下面「校准」量一次`);
   }
+  // 填了就是「你填的 · 日期」:填的值正好等于默认值也一样(那正是核对过的意思)
+  const filled = key => `你填的 · ${cConfDate(key) || "日期不明"}`;
   const st = p.station[city];
-  badge("c-station-badge", st != null, st != null ? "你填的" : "未核实",
+  badge("c-station-badge", st != null, st != null ? filled("fees.station_per100") : "未核实",
     st != null ? `${city} 的精炼站费按你填的 ${st} 算` : "服务端默认的站费是表格作者用的数,没核实。进城按 N 看地图,悬停在精炼站上");
   const ts = p.tstation[city];
-  badge("c-tstation-badge", ts != null, ts != null ? "你填的" : "未核实",
+  badge("c-tstation-badge", ts != null, ts != null ? filled("fees.transmute_station_per100") : "未核实",
     ts != null ? `${city} 的转化主人费率按你填的 ${ts} 算` : "服务端默认值,没核实。校准里填主人费用可以反推");
   const b = cBonus(), stale = craft.p.bonus[craft.p.line] && b == null;
   badge("c-bonus-badge", b != null, b != null ? `今天 · ${cToday()}` : stale ? "昨天填的,已作废" : "未核实",
     "每日生产加成每天换品类,只能看游戏里的「活动」窗口手填;只对填的那一天有效");
+  const ul = p.unlocked[p.line];
+  badge("c-unlock-badge", ul != null, ul != null ? filled("focus.unlocked_tier") : "未核实",
+    ul != null ? `按你选的:精炼解锁到 T${ul}` : "服务端默认按 T8 全解锁算。命运之轮里看 T8 精炼节点解锁没有,选一下就算核对过");
+  const fceKeys = Object.keys(cFCE()).length;
+  badge("c-fce-badge", cFCEFull(), cFCEFull() ? filled("focus.fce") : fceKeys ? "只填了一部分" : "未核实",
+    cFCEFull() ? "这条线的专精按你填的算(0 也是填了)"
+      : `T4~T${p.tier} 每一级都填了才算核对过;没填的按 0 算。没点过这条线的专精就点「全填 0」`);
+  badge("c-heart-badge", !!p.heart, p.heart ? filled("heart_returns") : "未核实",
+    p.heart ? `按你选的:心${p.heart === "1" ? "" : "不"}参与返还` : "只影响用心的那几条配方(.4 没有心配方);用心、开专注精炼一小批,看有没有返还心");
   // 高级区的摘要:折起来也看得到改过哪些
   const mine = [];
-  if (Object.values(cFCE()).some(v => v > 0)) mine.push("专精");
+  if (fceKeys) mine.push("专精");
   if (p.k != null) mine.push("k");
+  if (ul != null) mine.push("解锁");
   if (st != null) mine.push("站费");
   if (ts != null) mine.push("主人费率");
   if (b != null) mine.push("生产加成");
+  if (p.heart) mine.push("心返还");
   if (p.island) mine.push("个人岛");
   if (p.srcCities.length) mine.push("跨城买料");
   if (p.bid) mine.push("挂买单收料");
@@ -334,6 +389,9 @@ function craftBody() {
   if (p.leftover) body.leftover = p.leftover;
   if (p.capital != null) body.daily.capital = p.capital;
   if (p.share != null) body.daily.volume_share = p.share / 100;
+  if (p.heart) body.heart_returns = p.heart === "1";
+  const confirmed = craftConfirmed();
+  if (confirmed.length) body.confirmed = confirmed;
   return body;
 }
 
@@ -661,6 +719,48 @@ function spfBar(v) {
     <span class="sub">${v >= th ? "高于" : "低于"} premium 门槛 ${num(th)} 银/点${v >= th ? ":为专注开小号也划算" : ":只为这点专注开 premium 小号不划算"}</span>`;
 }
 
+// 推荐那条路线用得着哪些待核实参数:没有转化就不管 k 和主人费率,不开专注就不管专精,
+// 没用心配方就不管心返还。以前 7 条全列,用不到的也挂着「没核实」,真该核的淹在里面
+const UNV_APPLIES = {
+  "fees.transmute_factor": c => c.steps?.some(s => s.op === "transmute"),
+  "fees.transmute_station_per100": c => c.steps?.some(s => s.op === "transmute"),
+  "focus.fce": c => c.focus?.tiers?.length > 0,
+  "focus.unlocked_tier": () => true,   // 解锁到哪决定哪几级能自炼,永远用得着
+  "fees.station_per100": c => c.steps?.some(s => s.op === "refine"),
+  "rrr.daily_bonus": c => c.steps?.some(s => s.op === "refine"),
+  heart_returns: c => c.steps?.some(s => s.op === "refine" && s.heart),
+};
+function unvValue(u) {
+  return typeof u.value === "object" && u.value
+    ? Object.entries(u.value).map(([t, f]) => `T${t} ${num(f)}`).join(" ")
+    : typeof u.value === "boolean" ? (u.value ? "是" : "否")
+    : u.key === "focus.unlocked_tier" ? `T${u.value}`
+    : u.key === "rrr.daily_bonus" ? `+${u.value}`
+    : /station_per100$/.test(u.key) ? `${num(u.value)} 银/100 营养` : String(u.value);
+}
+// 卡片上的「待核实参数」:用得着的逐项列(没核实的红、你填过的绿),用不着的一行带过,
+// 怎么核对直接写出来(以前只在悬停提示里)
+function craftUnvHTML(res, c) {
+  const unv = res.params_used?.unverified || [];
+  if (!unv.length) return "";
+  const used = unv.filter(u => (UNV_APPLIES[u.key] || (() => true))(c));
+  const unused = unv.filter(u => !used.includes(u));
+  const open = used.filter(u => !u.confirmed);
+  const items = used.map(u => {
+    const when = cConfDate(u.key);
+    const tag = u.confirmed ? `你填的${when ? " · " + when : ""}` : u.is_default ? "默认值,没核实" : "服务端配置的值,没核实";
+    return `<li class="${u.confirmed ? "mine" : "def"}" title="${esc(`规则表 ${u.rule}。怎么核对:${u.check}`)}">
+      <b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b> ${esc(unvValue(u))} <em>${esc(tag)}</em></li>`;
+  }).join("");
+  const how = open.length ? `<details class="c-howto"><summary>怎么核对这 ${open.length} 项</summary><ul>${open.map(u =>
+    `<li><b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b>:${esc(u.check)} <span class="sub">(规则表 ${esc(u.rule)})</span></li>`).join("")}</ul>
+    <p class="sub">核对完把数填进「高级参数」(填的正好是默认值也要填上),这里就变成「你填的」。</p></details>` : "";
+  return `<div class="c-unv"><span>${open.length ? `这条路线用到 <b>${open.length} 项没核实的参数</b>:` : "这条路线用到的待核实参数<b>都是你填的</b>:"}</span>
+      <ul>${items}</ul>${open.length ? `<button class="act ghost mini-act" data-open-cal>去校准</button>` : ""}</div>
+    ${unused.length ? `<p class="c-unv-skip sub">这条路线用不到:${unused.map(u => esc(UNVERIFIED_WORD[u.key] || u.key)).join("、")}</p>` : ""}
+    ${how}`;
+}
+
 function craftCardHTML(res) {
   const c = (res.candidates || []).find(x => !x.reference);
   if (!c) {
@@ -678,17 +778,7 @@ function craftCardHTML(res) {
     : `${MODE_WORD[mode]} <span class="${pl.unit >= 0 ? "pos" : "neg"}">${sgn(pl.unit)}(${spct(pl.pct)})</span>${
       pl.sold != null && pl.sold < res.qty - 0.005 ? `,只出得掉 ${fq(pl.sold)} 件` : ""}`;
   const d = c.daily;
-  const unv = res.params_used?.unverified || [];
-  const unvHTML = unv.map(u => {
-    const val = typeof u.value === "object" && u.value
-      ? Object.entries(u.value).map(([t, f]) => `T${t} ${num(f)}`).join(" ")
-      : typeof u.value === "boolean" ? (u.value ? "是" : "否")
-      : u.key === "focus.unlocked_tier" ? `T${u.value}`
-      : u.key === "rrr.daily_bonus" ? `+${u.value}`
-      : /station_per100$/.test(u.key) ? `${num(u.value)} 银/100 营养` : String(u.value);
-    return `<li class="${u.is_default ? "def" : "mine"}" title="${esc(`规则表 ${u.rule}。怎么核对:${u.check}`)}">
-      <b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b> ${esc(val)} <em>${u.is_default ? "默认值,没核实" : "你填的"}</em></li>`;
-  }).join("");
+  const unvHTML = craftUnvHTML(res, c);
   const f = c.focus || {};
   return `<section class="c-card">
     <div class="c-card-head">
@@ -713,8 +803,7 @@ function craftCardHTML(res) {
       res.data?.missing?.length ? `缺价的:${res.data.missing.map(x => esc(cLabel(x) || x)).join("、")}。` : ""}换个城市、打开「跨城买料」,或者让成员去游戏里翻一下这些市场。</p>`}
     <p class="c-focusln">专注:${f.tiers?.length ? `T${esc(f.tiers.join("、T"))} 开,每根 ${num(f.per_unit)}(没有专精时 ${num(f.base_per_unit)})· 这一批 ${num(f.effective)}` : "不开"}
       · 今日可用 ${num(res.focus?.budget)}${f.over_budget ? ` <span class="wtag bad">这一批要的专注超过今日可用</span>` : ""}</p>
-    ${unv.length ? `<div class="c-unv"><span>用到的<b>未核实参数</b>:</span><ul>${unvHTML}</ul>
-      <button class="act ghost mini-act" data-open-cal>去校准</button></div>` : ""}
+    ${unvHTML}
     ${warnList(c.warnings)}
   </section>`;
 }
@@ -960,8 +1049,15 @@ $("c-reset").addEventListener("click", () => {
   Object.assign(p, {
     fce: {}, unlocked: {}, station: {}, tstation: {}, k: null, kAt: "", kSrc: "", kGold: null, bonus: {},
     island: false, sellCity: "", srcCities: [], transport: null, bid: false, bidMax: null, leftover: "",
-    maxAge: null, capital: null, share: null, gold: null,
+    maxAge: null, capital: null, share: null, gold: null, heart: "", confAt: {},
   });
+  craftChanged();
+});
+// 没点过这条线的专精(火法 + 纤维采集,矿 / 皮多半就是这样):一键全填 0,算核对过
+$("c-fce-zero").addEventListener("click", () => {
+  const p = craft.p;
+  p.fce[p.line] = Object.fromEntries(CRAFT_TIERS.map(t => [t, 0]));
+  cMark(`fce:${p.line}`, true);
   craftChanged();
 });
 
@@ -985,8 +1081,12 @@ $("v-craft").addEventListener("input", e => {
   switch (el.id) {
     case "c-qty": r = cNum(el, 1, 10000, { int: true }); if (r.ok && r.v != null) p.qty = r.v; break;
     case "c-budget": r = cNum(el, 0, sd.focus_cap || CRAFT_FALLBACK.focus_cap); if (r.ok) p.budget = r.v; break;
-    case "c-station": r = cNum(el, 0, 1000); if (r.ok) { if (r.v == null) delete p.station[city]; else p.station[city] = r.v; } break;
-    case "c-tstation": r = cNum(el, 0, 1000); if (r.ok) { if (r.v == null) delete p.tstation[city]; else p.tstation[city] = r.v; } break;
+    case "c-station": r = cNum(el, 0, 1000);
+      if (r.ok) { if (r.v == null) delete p.station[city]; else p.station[city] = r.v; cMark(`station:${city}`, r.v != null); }
+      break;
+    case "c-tstation": r = cNum(el, 0, 1000);
+      if (r.ok) { if (r.v == null) delete p.tstation[city]; else p.tstation[city] = r.v; cMark(`tstation:${city}`, r.v != null); }
+      break;
     case "c-k": r = cNum(el, 0.5, 3);
       if (r.ok) { p.k = r.v; p.kAt = r.v == null ? "" : cToday(); p.kSrc = r.v == null ? "" : "manual"; p.kGold = r.v == null ? null : craftGold(); }
       break;
@@ -1003,6 +1103,7 @@ $("v-craft").addEventListener("input", e => {
           const f = { ...cFCE() };
           if (r.v == null) delete f[el.dataset.fce]; else f[el.dataset.fce] = r.v;
           p.fce[p.line] = f;
+          cMark(`fce:${p.line}`, Object.keys(f).length > 0);
         }
       } else return;
   }
@@ -1034,9 +1135,12 @@ $("v-craft").addEventListener("change", e => {
         break;
       case "c-sort": p.sort = el.value; break;
       case "c-unlock":
-        if (Number(el.value) === 8) delete p.unlocked[p.line];
+        // 「服务端默认」才是没填;选了「T8(全部)」也记下来,那就是核对过
+        if (el.value === "") delete p.unlocked[p.line];
         else p.unlocked[p.line] = Number(el.value);
+        cMark(`unlocked:${p.line}`, el.value !== "");
         break;
+      case "c-heart": p.heart = el.value; cMark("heart", !!el.value); break;
       case "c-bonus":
         if (el.value === "") delete p.bonus[p.line];
         else p.bonus[p.line] = { v: Number(el.value), d: cToday() };
@@ -1084,6 +1188,11 @@ function craftMatrixQuery() {
   if (p.island) q.set("island", "1");
   if (body.sources.max_age_hours != null) q.set("max_age_hours", String(body.sources.max_age_hours));
   if (body.daily.capital != null) q.set("capital", String(body.daily.capital));
+  // 心返还矩阵不收(按服务端默认算),所以它不能跟着标「核对过」;矩阵一直算到 T8,
+  // 专精要五级都填了才算
+  const fce = cFCE(), fceAll = CRAFT_TIERS.every(t => typeof fce[t] === "number");
+  const conf = (body.confirmed || []).filter(k => k !== "heart_returns" && (k !== "focus.fce" || fceAll));
+  if (conf.length) q.set("confirmed", conf.join(","));
   return q.toString();
 }
 async function craftMatrixLoad(opts = {}) {
@@ -1356,7 +1465,8 @@ function craftCalSummary() {
   const p = craft.p, fce = cFCE();
   const parts = [p.k != null ? `k=${p.k}(${p.kSrc === "calib" ? "实测" : "手填"} ${p.kAt || ""})` : "k 未核实"];
   const set = CRAFT_TIERS.filter(t => fce[t] > 0);
-  parts.push(set.length ? `专精 ${set.map(t => `T${t} ${num(fce[t])}`).join("、")}` : "专精按 0 算");
+  parts.push(set.length ? `专精 ${set.map(t => `T${t} ${num(fce[t])}`).join("、")}`
+    : cFCEFull() ? "专精全是 0(你填的)" : "专精没填(按 0 算)");
   $("c-cal-sum").textContent = parts.join(" · ");
 }
 
@@ -1391,12 +1501,15 @@ $("c-cal-body").addEventListener("click", e => {
     Object.assign(p, { k: craftCal.k, kAt: cToday(), kSrc: "calib", kGold: craftGold() });
   } else if (b.id === "cal-fee-apply" && craftCal.fee != null) {
     p.tstation[cCity()] = craftCal.fee;
+    cMark(`tstation:${cCity()}`, true);
   } else if (b.id === "cal-f-apply" && craftCal.fce != null) {
     p.fce[p.line] = { ...cFCE(), [craftCal.fTier]: craftCal.fce };
+    cMark(`fce:${p.line}`, true);
   } else if (b.id === "cal-l-apply" && craftCal.fces) {
     const f = {};
     CRAFT_TIERS.forEach((t, i) => { f[t] = craftCal.fces[i]; });
     p.fce[p.line] = f;
+    cMark(`fce:${p.line}`, true);
   } else return;
   b.textContent = "已写入 ✓";
   b.disabled = true;

@@ -283,15 +283,17 @@
     <details class="c-fold" id="c-adv">
       <summary>高级参数 <em id="c-adv-sum"></em></summary>
       <div class="c-adv">
-        <fieldset><legend>精炼专精 FCE <span class="sub" id="c-fce-line"></span></legend>
+        <fieldset><legend>精炼专精 FCE <span class="sub" id="c-fce-line"></span> <span class="ubadge" id="c-fce-badge"></span></legend>
           <div class="c-row" id="c-fce"></div>
           <p class="sub">0~40000。每 10000 点专注消耗减半,满专精 40000 = 1/16。不知道自己多少,按站里显示的专注消耗反推:
-            <button class="act ghost mini-act" id="c-fce-cal" type="button">去校准 ↓</button></p>
+            <button class="act ghost mini-act" id="c-fce-cal" type="button">去校准 ↓</button>
+            没点过这条线的专精:<button class="act ghost mini-act" id="c-fce-zero" type="button">全填 0</button></p>
         </fieldset>
         <fieldset><legend>站和费用</legend>
           <div class="c-row">
-            <div class="ctrl"><label for="c-unlock">精炼已解锁到</label>
+            <div class="ctrl"><label for="c-unlock">精炼已解锁到 <span class="ubadge" id="c-unlock-badge"></span></label>
               <select id="c-unlock">
+                <option value="">服务端默认(T8)</option>
                 <option value="8">T8(全部)</option><option value="7">T7</option><option value="6">T6</option>
                 <option value="5">T5</option><option value="4">T4</option><option value="3">T4 都没解锁</option>
               </select></div>
@@ -305,6 +307,10 @@
               <select id="c-bonus" title="游戏里「活动」窗口今天的每日生产加成落在哪些品类">
                 <option value="">服务端默认</option><option value="0">没有(0)</option>
                 <option value="10">+10</option><option value="20">+20</option>
+              </select></div>
+            <div class="ctrl"><label for="c-heart">心也按回收率返还 <span class="ubadge" id="c-heart-badge"></span></label>
+              <select id="c-heart" title="用心的那几条配方(.4 没有心配方):心是不是也按回收率返还">
+                <option value="">服务端默认</option><option value="1">返还</option><option value="0">不返还</option>
               </select></div>
             <label class="c-check"><input type="checkbox" id="c-island"> 在个人岛上精炼</label>
           </div>
