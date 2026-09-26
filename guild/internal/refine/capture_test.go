@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,69 @@ import (
 //
 // 2026-09-26 那份和 worked example 用的 scratchpad rf_books.json 逐档比对过(424 个盘口边
 // 全部一致),并多了纤维 / 木两条线和 T2 的盘口。
-const captureFile = "testdata/local/capture_20260926.json"
+//
+// expect_20260926.json 是回归要断言的数:worked example 里的单根成本、利润、断点等等。
+// **它们也只放本机**:这些数都是从用户的抓包算出来的,几个数一组合就能倒推出挂单价
+// (比如挂卖到手 ÷ 0.935 + 1 就是卖一),所以和抓包一样不进 git。提交的测试代码里
+// 只写断言的逻辑和期望值的键名,不写任何由抓包算出来的数。
+const (
+	captureFile = "testdata/local/capture_20260926.json"
+	expectFile  = "testdata/local/expect_20260926.json"
+)
+
+// expect 是本地期望值:键 → 数。键的写法见 key()。
+type expect map[string]float64
+
+// loadExpect 读本地期望值;没有就跳过调用它的测试(和 loadCapture 一样)。
+func loadExpect(t *testing.T) expect {
+	t.Helper()
+	raw, err := os.ReadFile(expectFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		t.Skipf("没有本地期望值 %s(不进仓库,见 capture_test.go 的说明),跳过真实抓包回归", expectFile)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f struct {
+		Values map[string]float64 `json:"values"`
+	}
+	if err := json.Unmarshal(raw, &f); err != nil {
+		t.Fatal(err)
+	}
+	return f.Values
+}
+
+// v 取一个期望值;文件里没有这个键说明期望值文件和测试对不上,直接失败而不是按 0 比。
+func (x expect) v(t *testing.T, key string) float64 {
+	t.Helper()
+	v, ok := x[key]
+	if !ok {
+		t.Fatalf("期望值文件 %s 里没有 %q", expectFile, key)
+	}
+	return v
+}
+
+// key 拼期望值的键:name|k=1.154|A 这种;k 为 0 时不写 k 那一段。
+func key(name string, k float64, parts ...string) string {
+	s := name
+	if k != 0 {
+		s += "|k=" + strconv.FormatFloat(k, 'g', -1, 64)
+	}
+	for _, p := range parts {
+		s += "|" + p
+	}
+	return s
+}
+
+// asks 取抓包里一个盘口边的卖单阶梯(从优到劣,导出时就排好了)。
+func (d *captureDump) asks(item, city string) []depth.Level {
+	return d.Books[item+"|"+city].Asks.Levels
+}
+
+// bids 取买单阶梯。
+func (d *captureDump) bids(item, city string) []depth.Level {
+	return d.Books[item+"|"+city].Bids.Levels
+}
 
 type captureLadder struct {
 	Levels    []depth.Level `json:"levels"`

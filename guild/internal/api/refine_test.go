@@ -271,8 +271,8 @@ func TestRefine接口缺价和深度不够回200带警告(t *testing.T) {
 	now := time.Now()
 	src := &refineSrc{}
 	seen := now.Add(-2 * time.Hour)
-	src.add("T8_METALBAR_LEVEL4@4", "Thetford", model.SideOffer, seen, 3_259_999, 5)
-	src.add("T8_ORE_LEVEL4@4", "Thetford", model.SideOffer, seen, 1_042_319, 2) // 要 23 个,只有 2 个
+	src.add("T8_METALBAR_LEVEL4@4", "Thetford", model.SideOffer, seen, 3_000_000, 5)
+	src.add("T8_ORE_LEVEL4@4", "Thetford", model.SideOffer, seen, 1_000_000, 2) // 要 23 个,只有 2 个
 	srv := refineServer(src)
 	defer srv.Close()
 

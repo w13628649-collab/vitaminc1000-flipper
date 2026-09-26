@@ -361,7 +361,7 @@ func (o ordersOnly) CapturedItems(context.Context, []string, []int, time.Time) (
 // 每个盘口边按 scan.MergeSide 择边(扫描、查价页同一个函数),但有一处不同:
 // **抓包有阶梯时一律用抓包**,哪怕 MergeSide 因为 AODP 更新、价不同而选了 AODP。
 // 精炼要沿阶梯吃深度,AODP 只有一个价、没有件数,换成它等于假设那个价有无限件
-// (8.4 矿卖一只有 3 件时,这会把 23 件全按卖一算)。所以留着阶梯,把这种边列进
+// (卖一只有几件、却要吃二十几件时,会全按卖一算)。所以留着阶梯,把这种边列进
 // books.aodp_newer、加一条 aodp_newer 警告,让人知道阶梯顶上可能已经变了。
 func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line refine.Line,
 	cities []string, now time.Time) (refine.Books, RefineBooks, []refine.Warning, error) {

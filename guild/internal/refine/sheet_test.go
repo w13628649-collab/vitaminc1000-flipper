@@ -10,14 +10,15 @@ import (
 )
 
 // 表格口径复算(设计 §4.7 第 5 条):用原始模板「制作计算器」钢条块的算法和作者手填的 J/K/N/O 值,
-// 跑同一份 09-26 抓包价,应当得到 3,338,630 / 根。
+// 跑同一份 09-26 抓包价,应当得到 spreadsheet_diff 里那个单根成本(期望值在 testdata/local)。
 //
 // 这个测试**不是**说表格对:它是「为什么和表格不同」的证据(spreadsheet_diff.md)。
-// 表格原样:8.4 矿全部按卖一 1,042,319 算(实际这个价只有 3 件)、每级强制自炼、
-// 每级加尾常数 +(n−1)、返还率整条链 0.539。同一组输入本引擎全链专注自动比价是 2,900,775。
+// 表格原样:8.4 矿全部按卖一算(实际卖一附近只有几件)、每级强制自炼、
+// 每级加尾常数 +(n−1)、返还率整条链 0.539。同一组输入本引擎全链专注自动比价要便宜得多。
 //
 // J/K/N/O 从用户本机的 xlsx 导出(scratchpad rf3_sheet_export.py,openpyxl 只读),
-// 放在 testdata/local/sheet_template.json,不进仓库;没有就跳过。
+// 放在 testdata/local/sheet_template.json,不进仓库;没有就跳过。期望值同样只在本机
+// (expect_20260926.json,见 capture_test.go)。
 const sheetFile = "testdata/local/sheet_template.json"
 
 type sheetRow struct {
@@ -99,6 +100,7 @@ func sheetBlock(rows map[[2]int]sheetRow, bestAsk map[[2]int]float64, q, rr floa
 func Test表格口径复算(t *testing.T) {
 	d := loadCapture(t)
 	rows := loadSheet(t)
+	x := loadExpect(t)
 	l := Lines[0]
 	bestAsk := map[[2]int]float64{}
 	for tier := 4; tier <= 8; tier++ {
@@ -108,19 +110,19 @@ func Test表格口径复算(t *testing.T) {
 			}
 		}
 	}
-	// 表格的 T3 条价:rf_sheet.py 用的是 Martlock 的卖一 195(Thetford 没有)
-	p3 := float64(d.Books["T3_METALBAR|Martlock"].Asks.Levels[0].Price)
-	assertNear(t, "T3 条", p3, 195, 0)
+	// 表格的 T3 条价:rf_sheet.py 用的是 Martlock 的卖一(Thetford 没有)
+	p3 := float64(d.asks("T3_METALBAR", "Martlock")[0].Price)
+	assertNear(t, "T3 条", p3, x.v(t, "sheet.t3_price"), 0)
 
-	// 表格原样(含尾常数):Q=10 3,338,630;Q=1 8,551,760
-	assertNear(t, "表格原样 Q=10", sheetBlock(rows, bestAsk, 10, 0.539, true, p3), 3_338_630, 1)
-	assertNear(t, "表格原样 Q=1", sheetBlock(rows, bestAsk, 1, 0.539, true, p3), 8_551_760, 1)
-	// 去掉尾常数:2,759,393
-	assertNear(t, "表格去尾常数", sheetBlock(rows, bestAsk, 10, 0.539, false, p3), 2_759_393, 1)
+	// 表格原样(含尾常数):Q=10、Q=1
+	assertNear(t, "表格原样 Q=10", sheetBlock(rows, bestAsk, 10, 0.539, true, p3), x.v(t, "sheet.q10"), 1)
+	assertNear(t, "表格原样 Q=1", sheetBlock(rows, bestAsk, 1, 0.539, true, p3), x.v(t, "sheet.q1"), 1)
+	// 去掉尾常数
+	assertNear(t, "表格去尾常数", sheetBlock(rows, bestAsk, 10, 0.539, false, p3), x.v(t, "sheet.no_tail"), 1)
 
 	// 表格的挂卖到手是 卖一 × (1 − 2% − 4.5%),碰巧也是 0.935(spreadsheet_diff D7)
-	sell := float64(d.Books[barT84+"|Thetford"].Asks.Levels[0].Price) * (1 - 0.02 - 0.045)
-	assertNear(t, "表格挂卖利", sell-sheetBlock(rows, bestAsk, 10, 0.539, true, p3), -290_531, 1)
+	sell := float64(d.asks(barT84, "Thetford")[0].Price) * (1 - 0.02 - 0.045)
+	assertNear(t, "表格挂卖利", sell-sheetBlock(rows, bestAsk, 10, 0.539, true, p3), x.v(t, "sheet.post_profit"), 1)
 
 	// 表格的 J/K 和本引擎的 k=1.154 是同一口径:每步转化费相差不超过 6.4 银(规则表 B5)
 	e := captureEngine(t, oreBooks(d), barT84, DefaultTransmuteFactor, nil)
@@ -145,7 +147,10 @@ func Test表格口径复算(t *testing.T) {
 		}
 	}
 
-	// 同一组输入,本引擎全链专注自动比价:2,900,775(差在 8.4 矿按阶梯吃、没有尾常数)
+	// 同一组输入,本引擎全链专注自动比价(差在 8.4 矿按阶梯吃、没有尾常数)
 	ev := e.evaluate(scenario[idD])
-	assertNear(t, "本引擎", e.unitCost(ev), 2_900_775, 1)
+	assertNear(t, "本引擎", e.unitCost(ev), x.v(t, key("bar.unit", DefaultTransmuteFactor, "D")), 1)
+	if e.unitCost(ev) >= sheetBlock(rows, bestAsk, 10, 0.539, true, p3) {
+		t.Fatal("本引擎按阶梯吃、不加尾常数,应当比表格原样便宜")
+	}
 }

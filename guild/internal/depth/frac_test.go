@@ -20,14 +20,14 @@ func TestWalkFrac整数件数和Walk一致(t *testing.T) {
 
 // 小数件数:23.0415 个矿不进成 24 个,最后一档只吃 0.0415 件。
 func TestWalkFrac小数件数(t *testing.T) {
-	// T8.4 矿 @ Thetford 09-26 的前几档
-	levels := []Level{{1_042_319, 2}, {1_042_320, 1}, {1_142_320, 1}, {1_142_321, 4}, {1_199_938, 4}}
+	// 合成的阶梯:卖一附近两档只有 3 件,往上一跳再接着几档
+	levels := []Level{{1_000_000, 2}, {1_000_001, 1}, {1_100_000, 1}, {1_100_001, 4}, {1_150_000, 4}}
 	f := WalkFrac(levels, 3.5)
 	if !f.Filled || f.Got != 3.5 {
 		t.Fatalf("%+v", f)
 	}
-	want := 2*1_042_319.0 + 1_042_320 + 0.5*1_142_320
-	if math.Abs(f.Total-want) > 1e-6 || f.Worst != 1_142_320 || len(f.Levels) != 3 || f.Levels[2].Qty != 0.5 {
+	want := 2*1_000_000.0 + 1_000_001 + 0.5*1_100_000
+	if math.Abs(f.Total-want) > 1e-6 || f.Worst != 1_100_000 || len(f.Levels) != 3 || f.Levels[2].Qty != 0.5 {
 		t.Fatalf("总价 %.2f 想要 %.2f,%+v", f.Total, want, f)
 	}
 	// 吃穿:Filled=false,Got 是盘口全部件数
