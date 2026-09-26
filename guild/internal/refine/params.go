@@ -233,6 +233,9 @@ func (p Params) normalized() Params {
 	if p.Focus.FCE == nil {
 		p.Focus.FCE = map[int]float64{}
 	}
+	if p.Focus.CustomTiers == nil {
+		p.Focus.CustomTiers = []int{} // JSON 里给 [] 不给 null
+	}
 	return p
 }
 

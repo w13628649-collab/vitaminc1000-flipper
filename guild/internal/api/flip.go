@@ -38,6 +38,7 @@ func (s *Server) registerFlip(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/trades/{id}", s.handleDeleteTrade)
 	mux.HandleFunc("GET /api/calibration", s.handleCalibration)
 	s.registerLookup(mux)
+	s.registerRefine(mux)
 }
 
 func (s *Server) handleMenu(w http.ResponseWriter, r *http.Request) {

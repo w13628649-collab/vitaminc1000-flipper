@@ -312,11 +312,19 @@ func Plan(in Input) (*Result, error) {
 			if _, dup := res.RawSources[u.target]; dup {
 				continue
 			}
-			res.RawSources[u.target] = RawSource{
+			rs := RawSource{
 				Need:  u.need,
 				Pure:  e.pureRoutes(u.target, u.need),
 				Mixed: mixedFromTakes(e.routes(u.target), u.takes, u.need),
 			}
+			// 缺价时两张表都是空的:给 [] 不给 null,界面不用分两种情况判
+			if rs.Pure == nil {
+				rs.Pure = []PureRoute{}
+			}
+			if rs.Mixed.Split == nil {
+				rs.Mixed.Split = []MixedSplit{}
+			}
+			res.RawSources[u.target] = rs
 		}
 	}
 	res.Data = e.dataInfo(res.Candidates, kept)
