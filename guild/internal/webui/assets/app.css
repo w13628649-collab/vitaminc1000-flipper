@@ -524,6 +524,12 @@ table.ideas>tbody>tr.main:hover>td:last-child{background:var(--surface)}
 .pip.high{background:var(--gain)} .pip.medium{background:var(--bronze-lift)} .pip.low{background:var(--warn)}
 .legtxt .cliff{color:var(--warn)}
 .legtxt i{font-style:normal; color:var(--ink-soft); padding:0 2px}
+/* 挂单腿被 7 日成交均价封过(econ.QuoteBanded):价后面一个青铜小字「封」,
+   钳前的价放在下一行、被封那一侧划掉。机会页和查价页共用 */
+.clampmark{font-size:9.5px; font-weight:600; color:var(--bronze-ink); margin-left:1px; cursor:help; vertical-align:super; line-height:0}
+.rawpx{font-weight:400}
+.rawpx s{text-decoration-color:var(--warn)}
+.rawpx i{font-style:normal; color:var(--ink-soft); padding:0 2px}
 .nodata{opacity:.35}
 .tag.risk{color:var(--warn)}
 td.flash-up .profit,td.flash-down .profit{border-radius:var(--r)}

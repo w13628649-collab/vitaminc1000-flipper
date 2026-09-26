@@ -200,11 +200,14 @@ func TestEvaluateSides_AODP那一边不过深度闸门(t *testing.T) {
 	}
 }
 
-// 阈值全设 0 = 深度层整个关掉:T6 那种薄买方也照样上榜,置信度不受影响
+// 阈值全设 0 = 深度层整个关掉:T6 那种薄买方也照样上榜,置信度不受影响。
+// 挂单带宽也关掉:T6 买一只有均价的 0.73 倍,带宽会把挂买价抬到 0.8 倍并写一条说明,
+// 这里只看深度层自己有没有出声(带宽的用例在 clamp_test.go)
 func TestEvaluateSides_深度阈值全为0时不触发(t *testing.T) {
 	cfg := config()
 	cfg.Filters.MinBidDepth, cfg.Filters.ThinBidEdgeQty, cfg.Filters.BidCliffEdgePct = 0, 0, 0
 	cfg.Filters.MinBookQty, cfg.Filters.ThinBookEdgeQty = 0, 0
+	cfg.Filters.MakerPriceBand = 0
 	sides := Sides{Ask: capSide(depth.Level{Price: 357999, Qty: 1}), Bid: capSide(t6BidLadder...)}
 	opp, rej := EvaluateSides(t6Price(), sides, makeStats(t6Stats()), cfg, names, now)
 	if rej != nil {

@@ -34,6 +34,48 @@ const BREAKEVEN = { "taker-taker": 0.0417, "taker-maker": 0.0695, "maker-taker":
 // 价差 = 卖价 / 买价 − 1,和盈亏平衡同一个口径。毛利(margin)是税后净利 ÷ 成本,
 // 大于 0 就不亏 —— 两个数挨着放、口径不同,以前会把赚钱的单读成低于盈亏平衡
 const spreadOf = (buy, sell) => (buy > 0 && sell > 0 ? sell / buy - 1 : null);
+// 挂单腿被参考价封过(服务端 econ.QuoteBanded,filters.maker_price_band)。
+// 吃单腿的价是盘口上真挂着的单;挂单腿的价是假设有人按它成交,卖一是均价两倍时照它压一档
+// 挂上去没人买,所以服务端把挂卖价封在参考价 ×(1 + band)、挂买价抬到 ×(1 − band)。
+// 参考价是 7 日成交均价;整本盘口已经越过均价(卖一低于均价 / 买一高过均价)时均价是旧的,
+// 改按对面盘口那个价(buy_ref_from = "sell_min" / sell_ref_from = "buy_max"),挂价不会封过对面。
+// c 是服务端的 clamp 对象(没被封时没有这个字段);buy/sell 是封过的价,
+// buyCity/sellCity 是两条腿各在哪座城(同城时是同一个)
+function clampTips(c, buy, sell, buyCity, sellCity) {
+  if (!c) return { buy: "", sell: "", both: "" };
+  const band = pct(c.band, 0);
+  return {
+    buy: !c.buy_clamped ? "" : c.buy_ref_from === "sell_min"
+      ? `挂买价按 ${buyCity} 的卖一 ${num(c.buy_ref)} 下浮 ${band} 抬到 ${num(buy)}:整本盘口已跌到 7 日成交均价以下,` +
+        `均价跟不上行情,改按卖一算;照买一压一档本该挂 ${num(c.raw_buy_price)},挂在那儿多半收不到货`
+      : `挂买价按 ${buyCity} 的 7 日成交均价 ${num(c.buy_ref)} 下浮 ${band} 抬到 ${num(buy)}:` +
+        `照买一压一档本该挂 ${num(c.raw_buy_price)},成交价在均价附近,挂在那儿多半收不到货`,
+    sell: !c.sell_clamped ? "" : c.sell_ref_from === "buy_max"
+      ? `挂卖价按 ${sellCity} 的买一 ${num(c.sell_ref)} 上浮 ${band} 封到 ${num(sell)}:整本盘口已涨过 7 日成交均价,` +
+        `均价跟不上行情,改按买一算;照卖一压一档本该挂 ${num(c.raw_sell_price)},挂上去多半没人买`
+      : `挂卖价按 ${sellCity} 的 7 日成交均价 ${num(c.sell_ref)} 上浮 ${band} 封到 ${num(sell)}:` +
+        `照卖一压一档本该挂 ${num(c.raw_sell_price)},挂上去多半没人买`,
+    // 两条挂单腿都被封:两个挂价都是按带宽推出来的,服务端把可信度压到 low
+    both: c.buy_clamped && c.sell_clamped
+      ? `两边都封了:挂买价、挂卖价都是按带宽推出来的,不是盘口给的,这个价差跟着带宽走、不跟着盘口走` : "",
+  };
+}
+// 参考价的说法:有一侧取自对面盘口时说全,否则就是 7 日成交均价
+const clampRefWord = c => (c.buy_ref_from === "sell_min" || c.sell_ref_from === "buy_max"
+  ? "参考价(7 日成交均价,盘口整体越过均价时改按对面盘口)" : "7 日成交均价");
+// 被封那一侧价格后面的小标记,悬停看为什么
+const clampMark = (on, tip) => (on ? `<sup class="clampmark" title="${esc(tip)}">封</sup>` : "");
+// 钳前的两个数:被封的那一侧划掉
+const clampRaw = c => `${c.buy_clamped ? `<s>${num(c.raw_buy_price)}</s>` : num(c.raw_buy_price)}<i>→</i>${
+  c.sell_clamped ? `<s>${num(c.raw_sell_price)}</s>` : num(c.raw_sell_price)}`;
+// 查价格子的 spread 被封过时的说明(纯文本,放 title 里)。和机会页同城同一个函数算的数
+function gridClampText(sp, city) {
+  const cl = sp?.clamp;
+  if (!cl) return "";
+  const t = clampTips(cl, sp.my_bid, sp.my_ask, city, city);
+  return [t.buy, t.sell, t.both].filter(Boolean).join("\n") +
+    `\n钳前 ${num(cl.raw_buy_price)} → ${num(cl.raw_sell_price)},毛利 ${pct(cl.raw_margin)}。机会页同城是同一套算法`;
+}
 // 深度闸门拦下某个执行方式的原因
 const BLOCKED = {
   no_bid_side: "买方深度不够,挂买单多半收不到货",
@@ -194,7 +236,7 @@ function unify(res) {
       item_id: o.item_id, item_name: o.item_name || o.item_id, quality: o.quality || 1,
       from_city: o.city, to_city: o.city,
       mode: o.mode, mode_label: o.mode_label,
-      buy_price: o.my_bid, sell_price: o.my_ask,
+      buy_price: o.my_bid, sell_price: o.my_ask, clamp: o.clamp || null,
       market_bid: o.buy_price, market_ask: o.sell_price,
       cost_per_unit: o.cost_per_unit, profit_per_unit: o.profit_per_unit, margin: o.margin,
       qty: o.qty, capital_used: o.capital_used, daily_profit: o.daily_profit,
@@ -225,7 +267,7 @@ function unify(res) {
       item_id: r.item_id, item_name: r.item_name || r.item_id, quality: r.quality || 1,
       from_city: r.from_city, to_city: r.to_city,
       mode: r.mode, mode_label: r.mode_label,
-      buy_price: r.buy_price, sell_price: r.sell_price,
+      buy_price: r.buy_price, sell_price: r.sell_price, clamp: r.clamp || null,
       cost_per_unit: r.cost_per_unit, profit_per_unit: r.profit_per_unit, margin: r.margin,
       qty: r.qty, capital_used: r.capital_used, daily_profit: r.daily_profit,
       capital_roi: r.capital_roi, trip_profit: r.trip_profit,
@@ -268,7 +310,7 @@ const IDEA_COLS = [
   { k: "quality", label: "品质", l: true },
   { k: "from_city", label: "路线", l: true },
   { k: "mode_text", label: "执行", l: true },
-  { k: "buy_price", label: "买 → 卖", tip: "照这两个价进游戏下单。同城是选中执行方式下我挂/吃的价;跨城吃单腿沿阶梯走过的,是走到的最差那一档。下面一行是价差(卖价 / 买价 − 1),拿它和盈亏平衡比" },
+  { k: "buy_price", label: "买 → 卖", tip: "照这两个价进游戏下单。同城是选中执行方式下我挂/吃的价;跨城吃单腿沿阶梯走过的,是走到的最差那一档。挂单腿按那座城的 7 日成交均价封过的标「封」,最下面一行是钳前的价和毛利。下面一行是价差(卖价 / 买价 − 1),拿它和盈亏平衡比" },
   { k: "margin", label: "毛利", tip: "税后净利 ÷ 成本(成本含创建费),大于 0 就不亏。它和盈亏平衡不是一个口径,别拿来比 —— 盈亏平衡比的是左边那列的价差。下面一行是单件净赚" },
   { k: "daily_volume_silver", label: "日流水", cls: "hide-md", tip: "7 日日均成交件数 × 均价。跨城没有这一项" },
   { k: "qty", label: "可吃量", tip: "一轮做多少件:日成交量 × absorb_ratio、盘口深度、本金三者取小。下面一行是瓶颈" },
@@ -331,11 +373,14 @@ const mistsTag = r => (r.risk_tags || []).includes("mists")
 function confidenceReason(r) {
   const age = ageNow(r.max_age_hours) ?? 0;
   const mists = (r.risk_tags || []).includes("mists");
+  // 两条挂单腿都被封:服务端直接压到 low(screen / arb 同一条规则)
+  const bothClamped = !!(r.clamp && r.clamp.buy_clamped && r.clamp.sell_clamped);
   if (r.kind === "arb") {
     if (r.confidence === "low") {
       const why = [];
       if (r.max_age_hours > 4) why.push("两端有一侧数据超过 4 小时");
       if (r.z_score != null && r.z_score > 1.5) why.push(`销地现价高于 30 日常态 ${r.z_score.toFixed(1)}σ`);
+      if (bothClamped) why.push("两边挂单价都封过,价差是带宽推出来的");
       return `low — ${why.join(";") || "见行下的提示"}`;
     }
     if (r.confidence === "high") return `high — 两端的价都在 ${FRESH_HI} 小时内,销地价格平稳`;
@@ -346,7 +391,8 @@ function confidenceReason(r) {
     return `medium — ${why.join(";") || `数据在 4 小时内`}`;
   }
   if (r.confidence === "low")
-    return `low — 贴着过滤阈值边缘${r.warnings.length ? ":" + r.warnings.join(";") : ""}`;
+    return `low — ${bothClamped ? "两边挂单价都封过,价差是带宽推出来的" : "贴着过滤阈值边缘"}${
+      r.warnings.length ? ":" + r.warnings.join(";") : ""}`;
   if (r.confidence === "high") return `high — 买卖两侧都在 ${FRESH_HI} 小时内`;
   return `medium — 买卖两侧都在 ${FRESH_MAX} 小时内,但超过 ${FRESH_HI} 小时` +
     (age > r.max_age_hours + 0.05 ? `(现在是 ${age.toFixed(1)} 小时,算这份结果时是 ${r.max_age_hours.toFixed(1)})` : "");
@@ -408,9 +454,14 @@ function ideaRowHTML(r) {
   const be = r.modes.find(m => m.mode === r.mode)?.breakeven ?? BREAKEVEN[r.mode];
   const spreadTip = spread != null
     ? `\n价差 ${pct(spread, 2)}(卖价 / 买价 − 1),这个执行方式的盈亏平衡价差是 ${be != null ? pct(be, 2) : "—"}` : "";
+  const cl = r.clamp, ct = clampTips(cl, r.buy_price, r.sell_price, r.from_city, r.to_city);
+  const clampTip = cl ? `\n${[ct.buy, ct.sell, ct.both].filter(Boolean).join("\n")}\n钳前 ${num(cl.raw_buy_price)} → ${
+    num(cl.raw_sell_price)},毛利 ${pct(cl.raw_margin)}` : "";
   const quoteTip = (r.kind === "flip"
     ? `${r.mode_text}:买 ${num(r.buy_price)}、卖 ${num(r.sell_price)}。市场现在买一 ${num(r.market_bid)} / 卖一 ${num(r.market_ask)}`
-    : `${r.mode_text}:在 ${r.from_city} 买 ${num(r.buy_price)},运到 ${r.to_city} 卖 ${num(r.sell_price)}`) + spreadTip;
+    : `${r.mode_text}:在 ${r.from_city} 买 ${num(r.buy_price)},运到 ${r.to_city} 卖 ${num(r.sell_price)}`) + spreadTip + clampTip;
+  // 被封过的:主行是封过的价(照它挂),下面一行是钳前的价,被封那一侧划掉
+  const rawLn = cl ? `<span class="subln rawpx">钳前 ${clampRaw(cl)} · ${pct(cl.raw_margin)}</span>` : "";
   const vol = r.daily_volume_silver != null
     ? silver(r.daily_volume_silver)
     : `<span class="nodata" title="跨城没有流水这一项:产地日均 ${num(r.source_daily_qty)} 件、销地日均 ${num(r.dest_daily_qty)} 件">—</span>`;
@@ -424,8 +475,9 @@ function ideaRowHTML(r) {
     `<td class="l">${qualityTag(r.quality)}</td>`,
     `<td class="l">${routeCell(r)}</td>`,
     `<td class="l sub">${esc(r.mode_text)}</td>`,
-    `<td class="quote" title="${esc(quoteTip)}">${num(r.buy_price)}<i>→</i>${num(r.sell_price)}${
-      spread != null ? `<span class="subln">价差 ${pct(spread)}</span>` : ""}</td>`,
+    `<td class="quote" title="${esc(quoteTip)}">${num(r.buy_price)}${clampMark(cl?.buy_clamped, ct.buy)}<i>→</i>${
+      num(r.sell_price)}${clampMark(cl?.sell_clamped, ct.sell)}${
+      spread != null ? `<span class="subln">价差 ${pct(spread)}</span>` : ""}${rawLn}</td>`,
     `<td>${pct(r.margin)}<span class="subln ${r.profit_per_unit > 0 ? "pos" : "neg"}">单件 ${num(r.profit_per_unit)}</span></td>`,
     `<td class="hide-md">${vol}</td>`,
     `<td>${num(r.qty)}${r.bottleneck ? `<span class="subln" title="这一项限住了可吃量">${esc(BOTTLENECK[r.bottleneck] || "瓶颈未归类")}</span>` : ""}</td>`,
@@ -530,13 +582,19 @@ function modesTable(r) {
       const turns = m.trips_per_day ?? m.turns_per_day;
       const be = m.breakeven ?? BREAKEVEN[m.mode];
       const spread = spreadOf(m.buy_price, m.sell_price);
+      // 这个模式的挂单腿被封过:价后面标「封」,下面一行是钳前的价;说明里写钳前毛利
+      const mc = m.clamp, mt = clampTips(mc, m.buy_price, m.sell_price, r.from_city, r.to_city);
+      const px = (v, on, rawV, tip) => `${num(v)}${clampMark(on, tip)}${on ? `<span class="subln rawpx">钳前 <s>${num(rawV)}</s></span>` : ""}`;
+      const clampWhy = mc ? `挂${[mc.buy_clamped ? "买" : "", mc.sell_clamped ? "卖" : ""].filter(Boolean).join("、")}价按${
+        clampRefWord(mc)} ±${pct(mc.band, 0)} 封过,钳前毛利 ${pct(mc.raw_margin)}${
+        mt.both ? "。两边都封,价差是带宽推出来的" : ""}` : "";
       const why = m.blocked
         ? `被深度闸门拦下:${esc(BLOCKED[m.blocked] || rejectLabel(m.blocked))}。账照算给你看,不参与挑选`
-        : esc(MODE_NOTE[m.mode] || "");
+        : esc([MODE_NOTE[m.mode] || "", clampWhy].filter(Boolean).join("。"));
       return `<tr class="${m.blocked ? "blocked" : ""}">
         <td class="l"><b>${esc(m.label || MODE_LABEL[m.mode] || "")}</b>${m.mode === r.mode ? ' <span class="tag high">选用</span>' : ""}${
           m.blocked ? ' <span class="tag low">被拦</span>' : ""}</td>
-        <td>${num(m.buy_price)}</td><td>${num(m.sell_price)}</td>
+        <td>${px(m.buy_price, mc?.buy_clamped, mc?.raw_buy_price, mt.buy)}</td><td>${px(m.sell_price, mc?.sell_clamped, mc?.raw_sell_price, mt.sell)}</td>
         <td class="${m.profit_per_unit > 0 ? "pos" : "neg"}">${num(m.profit_per_unit)}</td>
         <td>${pct(m.margin)}</td>
         <td class="${spread != null && be != null ? (spread > be ? "pos" : "neg") : ""}">${spread != null ? pct(spread, 2) : "—"}</td>
@@ -603,6 +661,12 @@ function detailFacts(r) {
   }
   f.push(`z <b>${r.z_score == null ? "—" : r.z_score.toFixed(1) + "σ"}</b> · 波动 <b>${r.volatility ? r.volatility.toFixed(2) : "—"}</b>`);
   if (r.depth_checked != null) f.push(r.depth_checked ? "两条腿的深度都核过" : `<span class="tag medium">未核深度</span>`);
+  if (r.clamp) {
+    const c = r.clamp, ct = clampTips(c, r.buy_price, r.sell_price, r.from_city, r.to_city);
+    f.push(`<span title="${esc([ct.buy, ct.sell, ct.both].filter(Boolean).join("\n"))}"><span class="tag ${ct.both ? "low" : "medium"}">${
+      ct.both ? "两边都封过" : "挂单价封过"}</span> 钳前 <b>${
+      clampRaw(c)}</b>(毛利 ${pct(c.raw_margin)})→ 按${esc(clampRefWord(c))} ±${pct(c.band, 0)} 封成 <b>${num(r.buy_price)}<i>→</i>${num(r.sell_price)}</b></span>`);
+  }
   return `<div class="facts2">${f.filter(Boolean).map(x => `<span>${x}</span>`).join("")}</div>`;
 }
 
@@ -624,9 +688,15 @@ function detailHTML(r) {
   const why = r.kind === "arb"
     ? "跨城只列扣完税费还赚的;选用的是日收益最高的那个,不是单件利润最高的"
     : "选用的是日收益最高的那个,不是单件利润最高的";
+  const banded = r.modes.find(m => m.clamp)?.clamp;
+  const bandNote = banded ? `<p class="note">标<sup class="clampmark">封</sup>的价按那座城的 7 日成交均价 ±${pct(banded.band, 0)} 封过:
+      吃单腿吃的是盘口上真挂着的单,不封;挂单腿照盘口压一档,是假设有人按这个价成交 —— 卖一已经是均价的两倍,挂上去没人买;
+      买一远低于均价,挂在那儿收不到货。整本盘口已经越过均价时均价是旧的,改按对面盘口的价封,挂价不会越过对面。
+      两边都封时两个挂价都是按带宽推出来的,可信度按 low 算。单件利润、毛利、日收益都按封过的价算。</p>` : "";
   return `<div class="detailbox">
     <h4>${title} <em>${why}</em></h4>
     ${modesTable(r)}
+    ${bandNote}
     ${detailFacts(r)}
     ${sidesTable(r)}
     ${fillPosHTML(r)}
@@ -902,6 +972,10 @@ function renderIdeasPage(res, opts = {}) {
   sel.value = cities.includes(keep) ? keep : "";
   for (const [id, m] of [["be-tt", "taker-taker"], ["be-tm", "taker-maker"], ["be-mt", "maker-taker"], ["be-mm", "maker-maker"]])
     $(id).textContent = pct(beOf(m), 2);
+  // 带宽不在扫描结果顶层,从任意一条被封过的报价里取;一条都没封(或 band = 0)就不说这句
+  const banded = ideas.flatMap(r => r.modes).find(m => m.clamp)?.clamp;
+  $("band-note").hidden = !banded;
+  if (banded) $("band-pct").textContent = "±" + pct(banded.band, 0);
   renderIdeas(opts);
   renderRejects(res);
   renderIdeasFoot(res);
@@ -1733,12 +1807,17 @@ function renderPrices(d) {
     // 拦着这种数据,查价页展示原始值,就得靠标色提醒
     let spread = "";
     if (c.spread) {
-      const m = c.spread.margin, sus = c.spread.suspect;
+      // 挂单价和机会页同城是同一个函数算的:被 7 日成交均价封过时 clamp 非空。
+      // 可疑(suspect)判的是盘口本身,按钳前的毛利说;格子上显示的是封过的毛利
+      const sp = c.spread, m = sp.margin, sus = sp.suspect, cl = sp.clamp;
       const cls2 = sus ? "suspect" : m > 0 ? "up" : "down";
       const hint = sus
-        ? `毛利率 ${pct(m)} 高得不真实,多半是某一侧挂了 troll 单(1 件货、价格离谱)。AODP 拿不到挂单数量,这种单看不出来只有一件`
-        : `在这座城挂买单收货、再挂卖单出货,一轮下来的税后净毛利率。挂 ${num(c.spread.my_bid)} 收、挂 ${num(c.spread.my_ask)} 卖,单件净赚 ${num(c.spread.profit_per_unit)}`;
-      spread = `<div><span class="spread ${cls2}" title="${esc(hint)}">同城价差 ${m > 0 ? "+" : ""}${(m * 100).toFixed(1)}%${sus ? " ⚠" : ""}</span></div>`;
+        ? `${cl ? "按盘口价算的" : ""}毛利率 ${pct(cl ? cl.raw_margin : m)} 高得不真实,多半是某一侧挂了 troll 单(1 件货、价格离谱)。AODP 拿不到挂单数量,这种单看不出来只有一件` +
+          (cl ? `。挂单价封回参考价附近之后是 ${pct(m)}` : "")
+        : `在这座城挂买单收货、再挂卖单出货,一轮下来的税后净毛利率。挂 ${num(sp.my_bid)} 收、挂 ${num(sp.my_ask)} 卖,单件净赚 ${num(sp.profit_per_unit)}` +
+          (cl ? `\n${gridClampText(sp, c.city)}` : "");
+      spread = `<div><span class="spread ${cls2}" title="${esc(hint)}">同城价差 ${m > 0 ? "+" : ""}${(m * 100).toFixed(1)}%${
+        cl ? '<sup class="clampmark">封</sup>' : ""}${sus ? " ⚠" : ""}</span></div>`;
     }
     const bc = c.buy.capture, sc = c.sell.capture;
     const thin = bc && bc.qty_near < minBid;
@@ -2107,6 +2186,7 @@ function renderLadder() {
   const cell = g ? lookupCell(g, city, quality) : null;
   const P = g?.params || {};
   const cs = cell?.sell || {}, cb = cell?.buy || {}, sp = cell?.spread, h = cell?.history;
+  const spc = sp?.clamp || null;
   const sell = d.sell, buy = d.buy;
   const minBid = d.min_bid_depth ?? P.min_bid_depth ?? 20;
 
@@ -2129,10 +2209,14 @@ function renderLadder() {
     stat("卖方闸门近价", gateVal(cs), gateTip(cs, "卖方")),
     stat("买方闸门近价", gateVal(cb), gateTip(cb, "买方")),
     stat("买卖价差", sp ? pct(sp.raw) : "—", "未扣税费的原始价差"),
-    stat("税后毛利", sp ? pct(sp.margin) : "—",
-      `挂买收货再挂卖出货,扣掉 ${pct(P.friction ?? 0.09)} 摩擦后的净毛利率;真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}`),
-    stat("挂买→挂卖", sp ? `${num(sp.my_bid)}→${num(sp.my_ask)}` : "—", "进游戏照抄的两个数(各让 1 银抢队首)"),
-    stat("单件净赚", sp ? num(sp.profit_per_unit) : "—", "税后"),
+    stat("税后毛利", sp ? pct(sp.margin) + (spc ? '<sup class="clampmark">封</sup>' : "") : "—",
+      `挂买收货再挂卖出货,扣掉 ${pct(P.friction ?? 0.09)} 摩擦后的净毛利率;真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}` +
+      (spc ? `\n按封过的挂价算;钳前(盘口价压一档)是 ${pct(spc.raw_margin)}` : "")),
+    // 挂单价被 7 日成交均价封过时:被封那一侧标「封」,悬停看钳前的价和为什么
+    stat("挂买→挂卖", sp ? `${num(sp.my_bid)}${spc?.buy_clamped ? '<sup class="clampmark">封</sup>' : ""}→${num(sp.my_ask)}${
+      spc?.sell_clamped ? '<sup class="clampmark">封</sup>' : ""}` : "—",
+      "进游戏照抄的两个数(各让 1 银抢队首)" + (spc ? `\n${gridClampText(sp, city)}` : "")),
+    stat("单件净赚", sp ? num(sp.profit_per_unit) : "—", "税后" + (spc ? ",按封过的挂价算" : "")),
     stat("7日 / 30日均价", h ? `${h.avg_7d ? num(h.avg_7d) : "—"} / ${num(h.avg_30d)}` : "—",
       "成交量加权,不含今天。零星成交日和万笔成交日不等权"),
     stat("成交区间", h?.price_min ? `${num(h.price_min)}~${num(h.price_max)}` : "—", "30 日窗口里各天均价的最低 ~ 最高"),
