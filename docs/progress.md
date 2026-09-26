@@ -55,6 +55,7 @@
 | 物品目录 | 11391 件,中英文名、分类树、图标 | `guild/internal/catalog/` |
 | AODP 客户端 | 双窗口限流、URL 分批 | `guild/internal/aodp/` |
 | 执行方式建模 | 市价/挂单四种组合,摩擦 4%–9% | `guild/internal/econ/exec.go` |
+| 挂单腿带宽 | 挂单价按 7 日成交均价 ±`maker_price_band` 钳制,同城/跨城/查价页共用(2026-09-26) | `guild/internal/econ/band.go` |
 | 跨城套利 | 两端量约束、运输时间、troll 兜底 | `guild/internal/arb/` |
 | 吃深度 | 走盘口算真实均价和滑点 | `guild/internal/depth/` |
 | 资金分配 | 风险调整贪心 + 边际收益曲线 | `guild/internal/portfolio/` |

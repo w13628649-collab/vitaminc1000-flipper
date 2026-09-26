@@ -23,36 +23,49 @@ func TestRoute_毛利率上限扣掉两城均价之差再判(t *testing.T) {
 	}
 
 	// 两城均价一样(10):销地卖一 24 是 2.4×、产地买一 5 是 0.5×,各自都在 [0.4, 2.5] 里,
-	// 同侧价格比 24/10 = 2.4 也不到 3——以前一层都拦不住
+	// 同侧价格比 24/10 = 2.4 也不到 3——以前一层都拦不住。
+	// 挂单带宽也会把这两条腿封回均价附近(封完单件利润不到 5 银,整条路线不出),
+	// 一并关掉,只看毛利率上限
 	from, to := mk(10)
 	off := opts()
 	off.MaxMargin = 0
+	off.MakerPriceBand = 0
 	loose, ok := routeOf(Find("T4_RUNE", "符文", 1, []Market{from, to}, conf.Default().Economics, off, now), "Fort Sterling", "Caerleon")
 	if !ok || loose.Mode != "maker-maker" || loose.Margin < 2 {
 		t.Fatalf("前提:关掉这一层时应出毛利 >200%% 的挂买挂卖,得到 %s / %.0f%%", loose.Mode, loose.Margin*100)
 	}
+	// 带宽开着(默认)也一样该砍:毛利率上限判的是不钳的盘口毛利,带宽不能替 troll 单开门
 	if _, ok := routeOf(find2(from, to), "Fort Sterling", "Caerleon"); ok {
 		t.Fatal("两城均价一样、毛利 250%(秒买挂卖也有 115%),两个模式都该砍掉,整条路线不出")
 	}
 
-	// 销地均价 22:卖一 24 只是 1.09×,这是结构性价差,扣掉均价之比后挂买挂卖只剩约 59%
+	// 销地均价 22:卖一 24 只是 1.09×,这是结构性价差,扣掉均价之比后挂买挂卖只剩约 59%。
+	// 挂卖价没被封(26.4 封顶,23 在里面);挂买价按产地均价 10 抬到 8(买一 5 只有 0.5×),
+	// 所以报出来的毛利是封过的 162%,盘口毛利 250% 在 clamp 里
 	from, to = mk(22)
 	r, ok := routeOf(find2(from, to), "Fort Sterling", "Caerleon")
-	if !ok || r.Mode != "maker-maker" || r.Margin < 2 {
-		t.Fatalf("结构性价差不该被当成高得不真实,得到 %v / %+v", ok, r)
+	if !ok || r.Mode != "maker-maker" || r.Clamp == nil || !r.Clamp.BuyClamped || r.Clamp.SellClamped ||
+		r.BuyPrice != 8 || r.SellPrice != 23 || r.Clamp.RawMargin < 2 {
+		t.Fatalf("结构性价差不该被当成高得不真实,得到 %v / %+v / %+v", ok, r, r.Clamp)
 	}
-	if got := excessMargin(r.Margin, from.Stats, to.Stats); got > 1 || got < 0 {
+	if want := 23*0.935/(8*1.025) - 1; math.Abs(r.Margin-want) > 1e-12 {
+		t.Fatalf("毛利应按封过的 8 → 23 算(%.4f),得到 %.4f", want, r.Margin)
+	}
+	if got := excessMargin(r.Clamp.RawMargin, from.Stats, to.Stats); got > 1 || got < 0 {
 		t.Fatalf("扣掉均价之比后应在 0~100%% 之间,得到 %.0f%%", got*100)
 	}
 }
 
-// 按执行方式逐个判:只砍超了的那个模式,别的模式用的是另外两边,照样能做
+// 按执行方式逐个判:只砍超了的那个模式,别的模式用的是另外两边,照样能做。
+// 销地卖一 1.8× 均价,带宽开着会把挂卖价封到 12,秒买挂卖就不赚了——关掉带宽,只看这一层
 func TestRoute_毛利率上限只砍超了的模式(t *testing.T) {
 	from := market("Fort Sterling", 10, 5, 200_000)
 	from.Stats.AvgPrice7d = 10
 	to := market("Caerleon", 18, 0, 200_000) // 卖一 1.8× 均价
 	to.Stats.AvgPrice7d = 10
-	r, ok := routeOf(find2(from, to), "Fort Sterling", "Caerleon")
+	o := opts()
+	o.MakerPriceBand = 0
+	r, ok := routeOf(Find("T4_RUNE", "符文", 1, []Market{from, to}, conf.Default().Economics, o, now), "Fort Sterling", "Caerleon")
 	if !ok || r.Mode != "taker-maker" || r.Margin > 1 {
 		t.Fatalf("挂买挂卖(6 → 17,毛利约 158%%)该砍,秒买挂卖(10 → 17,约 59%%)留着,得到 %v / %+v", ok, r)
 	}

@@ -12,6 +12,9 @@
 //     跑一趟赚 10 万但要两小时,不如同城一小时赚 6 万
 //  3. **盘口深度(只有抓包那一边有)。** 挂单腿过和同城同一道闸门(screen.LegGate);
 //     吃单腿沿阶梯逐档试边际价,吃到的件数当日容量——最优价只是第一件的价格
+//  4. **挂单腿的价是假设的。** 挂卖价按销地、挂买价按产地的 7 日成交均价做带宽钳制
+//     (filters.maker_price_band,和同城同一个 econ.QuoteBanded):销地卖一是成交均价
+//     两倍时,照它压一档挂上去没人买。troll 判据(逐腿偏离、excessMargin)照旧判盘口本身
 //
 // 风险(红区劫道、货砸手里)不建模成数字——那是玩家自己的判断,
 // 工具能做的是把量、价、时间摆清楚。唯一的例外是一端是 Brecilien 的路线:
@@ -59,9 +62,12 @@ type Route struct {
 	ModeLabel string `json:"mode_label"`
 
 	// BuyPrice/SellPrice 是我的买价和卖价。吃单腿沿抓包阶梯走过的,就是走到的
-	// 最差那一档(限价):整轮都按它计价,只会低估不会高估
+	// 最差那一档(限价):整轮都按它计价,只会低估不会高估。挂单腿按那座城的 7 日成交均价
+	// 做过带宽钳制(econ.QuoteBanded),被钳过时 Clamp 非空
 	BuyPrice  int64 `json:"buy_price"`
 	SellPrice int64 `json:"sell_price"`
+	// Clamp 是选中执行方式的挂单腿有没有被封、封之前是多少。nil = 两条腿都是盘口价
+	Clamp *econ.Clamp `json:"clamp,omitempty"`
 
 	CostPerUnit    float64 `json:"cost_per_unit"`
 	RevenuePerUnit float64 `json:"revenue_per_unit"`
@@ -143,10 +149,14 @@ type ModeQuote struct {
 	DailyProfit  float64 `json:"daily_profit"`
 	// Blocked 非空说明挂单腿被深度闸门拦下(no_bid_side / thin_book)
 	Blocked string `json:"blocked,omitempty"`
+	// Clamp 非空说明这个模式的挂单腿按 7 日成交均价封过,和同城 ModeQuote 同义
+	Clamp *econ.Clamp `json:"clamp,omitempty"`
 
 	mode econ.Mode
 	unit econ.Unit
-	qty  int64
+	// raw 是不钳的账,只给 excessMargin(troll 判据)用,见 econ.Banded.Raw
+	raw econ.Unit
+	qty int64
 	// buyCap/sellCap 是吃单腿按阶梯走到的那一档为止的件数,没按阶梯算是 +Inf
 	buyCap, sellCap float64
 	// edge/warns 是深度闸门对这个模式的判定:贴着阈值、要降置信
@@ -209,8 +219,14 @@ type Options struct {
 	// 执行方式毛利差一截,拿最赚的那个撞上限会误杀整条路线;而且城市之间本来就可能有
 	// 结构性价差,原始毛利率超过 100% 未必是假单。所以这里两点都避开:按执行方式逐个判,
 	// 只砍超了的那个模式;判之前先除掉两城均价之比,结构性价差不算"高得不真实"。
-	// 两城是同一个均价时 excessMargin 就是毛利率本身,和同城第五层逐字同一个判据
+	// 两城是同一个均价时 excessMargin 就是毛利率本身,和同城第五层逐字同一个判据。
+	//
+	// 判的是**不钳**的毛利率(见 econ.Banded.Raw):它是 troll 判据,问的是盘口本身离不离谱
 	MaxMargin float64
+	// MakerPriceBand 是挂单腿的价格带宽(filters.maker_price_band),0 = 关。
+	// 挂买价按产地 7 日成交均价钳、挂卖价按销地的钳,吃单腿不动。和同城同一个函数
+	// (econ.QuoteBanded),同一个盘口在机会页同城、跨城两处的挂价是一个数
+	MakerPriceBand float64
 }
 
 // roundTripHours 是这种执行方式跑完一趟来回要多久。同城没有路程,
@@ -249,6 +265,7 @@ func DefaultOptions(cfg conf.Config) Options {
 		DeviationMin:         cfg.Filters.DeviationMin,
 		DeviationMax:         cfg.Filters.DeviationMax,
 		MaxMargin:            cfg.Filters.MaxMargin,
+		MakerPriceBand:       cfg.Filters.MakerPriceBand,
 	}
 }
 
@@ -338,8 +355,9 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 			continue
 		}
 		// 扣掉两城均价之差还高得不真实:这个模式依托的那两边多半有一头是假单或旧单。
-		// 只砍这个模式,别的模式用的是另外两边,照样能做
-		if opt.MaxMargin > 0 && excessMargin(q.Margin, from.Stats, to.Stats) > opt.MaxMargin {
+		// 只砍这个模式,别的模式用的是另外两边,照样能做。
+		// 按不钳的毛利判:钳过的毛利被带宽封住了,拿它判这一层对挂单模式永远不响
+		if opt.MaxMargin > 0 && excessMargin(q.raw.Margin, from.Stats, to.Stats) > opt.MaxMargin {
 			continue
 		}
 		// 挂买排在产地的买单簿上,挂卖排在销地的卖单簿上
@@ -389,7 +407,7 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		ItemID: itemID, ItemName: itemName, Quality: quality,
 		FromCity: from.City, ToCity: to.City,
 		Mode: best.Mode, ModeLabel: best.Label,
-		BuyPrice: unit.MyBid, SellPrice: unit.MyAsk,
+		BuyPrice: unit.MyBid, SellPrice: unit.MyAsk, Clamp: best.Clamp,
 		CostPerUnit: unit.CostPerUnit, RevenuePerUnit: unit.RevenuePerUnit,
 		ProfitPerUnit: unit.ProfitPerUnit, Margin: unit.Margin,
 		SourceDaily: sourceDaily, DestDaily: destDaily,
@@ -433,6 +451,9 @@ func evaluate(itemID, itemName string, quality int, from, to Market,
 		r.Confidence = screen.Low
 	}
 	r.Warnings = append(r.Warnings, best.warns...)
+	// 挂买排在产地买单簿上、挂卖排在销地卖单簿上:说"买一 / 卖一是均价几倍"用的是那两边
+	r.Warnings = append(r.Warnings, screen.ClampWarnings(best.Clamp, unit.MyBid, unit.MyAsk,
+		from.Book.BuyMax, to.Book.SellMin, "产地", "销地")...)
 	return r, true
 }
 
@@ -481,6 +502,9 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 	buys := ladder(from.Ask, m.Buy == econ.Taker, from.Book.SellMin)
 	sells := ladder(to.Bid, m.Sell == econ.Taker, to.Book.BuyMax)
 	hours := opt.routeHours(m, from.City, to.City)
+	// 挂买腿按产地 7 日成交均价钳、挂卖腿按销地的钳。只动挂单腿,吃单腿沿阶梯走的价不变,
+	// 所以下面"更深的前缀只会更差"那条剪枝照样精确:挂单腿的价和走到第几档无关
+	band := screen.MakerBand(opt.MakerPriceBand, from.Stats, to.Stats)
 
 	var best ModeQuote
 	found := false
@@ -494,7 +518,9 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 			if m.Sell == econ.Taker {
 				sk.BuyMax = s.price
 			}
-			u := econ.Quote(bk, sk, m, cfg)
+			bq := econ.QuoteBanded(bk, sk, m, cfg, band)
+			u := bq.Unit
+			// 逐腿偏离度判盘口本身(bk/sk 是盘口价),利润门槛按钳过的账判
 			if !legsSane(m, bk, sk, from.Stats, to.Stats, opt) ||
 				u.ProfitPerUnit < opt.MinProfitPerUnit || u.Margin < opt.MinMargin {
 				if j == 0 {
@@ -515,7 +541,8 @@ func bestFill(m econ.Mode, from, to Market, byMarket float64, cfg conf.Economics
 					HoursPerTrip: hours,
 					TripsPerDay:  trips,
 					DailyProfit:  daily,
-					mode:         m, unit: u, qty: q,
+					Clamp:        bq.Clamp,
+					mode:         m, unit: u, raw: bq.Raw, qty: q,
 					buyCap: b.qty, sellCap: s.qty,
 				}
 			}

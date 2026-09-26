@@ -35,6 +35,9 @@ func TestDefault_深度阈值与抓包段(t *testing.T) {
 		f.MinBidDepth != 20 || f.ThinBidEdgeQty != 100 || f.BidCliffEdgePct != 0.20 || f.MaxSpreadPct != 0 {
 		t.Fatalf("深度阈值默认值不对: %+v", f)
 	}
+	if f.MakerPriceBand != 0.2 {
+		t.Fatalf("挂单腿带宽默认应为 0.2,得到 %v", f.MakerPriceBand)
+	}
 	if got := c.DepthWindow(); got != 2*time.Hour {
 		t.Fatalf("DepthWindow 应为 2h,得到 %v", got)
 	}
@@ -104,6 +107,9 @@ func TestValidate_深度与抓包段的边界(t *testing.T) {
 		// 清单物品一档都不评估;以前空着是给 AODP 发 qualities=,由它自己解释
 		{"品质为空", func(c *Config) { c.Qualities = nil }, "qualities"},
 		{"品质越界", func(c *Config) { c.Qualities = []int{1, 6} }, "qualities"},
+		// ≥ 1 时挂买价下沿 ≤ 0,只剩一边在钳
+		{"挂单带宽为负", func(c *Config) { c.Filters.MakerPriceBand = -0.1 }, "maker_price_band"},
+		{"挂单带宽到1", func(c *Config) { c.Filters.MakerPriceBand = 1 }, "maker_price_band"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -125,6 +131,7 @@ func TestValidate_深度与抓包段的边界(t *testing.T) {
 	c.Capture.SnapshotSlackSeconds = 6 * 3600
 	c.Capture.MaxHours = 6
 	c.Filters.NearPct = 0.5
+	c.Filters.MakerPriceBand = 0 // 0 = 关闭,要放行
 	if err := c.Validate(); err != nil {
 		t.Fatalf("边界值应放行: %v", err)
 	}

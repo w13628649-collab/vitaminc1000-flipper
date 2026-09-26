@@ -130,23 +130,26 @@ type Book struct {
 // 用同一个价去算两种模式,是这类计算器最常见的错。
 func Quote(buy, sell Book, m Mode, cfg conf.Economics) Unit {
 	var myBid, myAsk int64
-	cost, revenue := 0.0, 0.0
-
-	// 费用系数和 Breakeven 共用 buyMul/sellMul,税费逻辑只此一份。
-	// 分成两份写过一次,改税率时漏掉一边就会让"盈亏平衡"和"实际算账"对不上。
 	if m.Buy == Taker {
 		myBid = buy.SellMin
 	} else {
 		myBid = buy.BuyMax + cfg.OutbidSilver
 	}
-	cost = float64(myBid) * m.buyMul(cfg)
-
 	if m.Sell == Taker {
 		myAsk = sell.BuyMax
 	} else {
 		myAsk = sell.SellMin - cfg.UndercutSilver
 	}
-	revenue = float64(myAsk) * m.sellMul(cfg)
+	return unitAt(myBid, myAsk, m, cfg)
+}
+
+// unitAt 按给定的买价、卖价算一件货的账。Quote 和 QuoteBanded 共用它:
+// 带宽钳制只改价,不另写一份税费——两份税费逻辑早晚会对不上。
+func unitAt(myBid, myAsk int64, m Mode, cfg conf.Economics) Unit {
+	// 费用系数和 Breakeven 共用 buyMul/sellMul,税费逻辑只此一份。
+	// 分成两份写过一次,改税率时漏掉一边就会让"盈亏平衡"和"实际算账"对不上。
+	cost := float64(myBid) * m.buyMul(cfg)
+	revenue := float64(myAsk) * m.sellMul(cfg)
 
 	profit := revenue - cost
 	margin := 0.0

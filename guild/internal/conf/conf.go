@@ -80,6 +80,15 @@ type Filters struct {
 	BidCliffEdgePct float64 `yaml:"bid_cliff_edge_pct"`
 	// MaxSpreadPct:卖一/买一 − 1 超过它 → wide_spread 拒绝,不分数据来源。0 = 关闭
 	MaxSpreadPct float64 `yaml:"max_spread_pct"`
+
+	// MakerPriceBand 是挂单腿的价格带宽(econ.QuoteBanded):挂卖价最多挂到 7 日成交均价的
+	// (1 + band) 倍,挂买价至少出到 (1 − band) 倍。0 = 关闭,挂单腿照盘口价算。
+	//
+	// 吃单腿的价是盘口上真挂着的单,挂单腿的价是假设有人按它成交——卖一已经是成交均价
+	// 两倍时,照卖一压一档挂上去没人买。偏离度(deviation_*)只拦离谱到 troll 的价,
+	// 0.4~2.5 倍之间整段放行,这一段靠它把挂价拉回成交价附近。
+	// 默认 0.2 是先拍的,没拿真实数据校准过
+	MakerPriceBand float64 `yaml:"maker_price_band"`
 }
 
 // Capture 是自建抓包盘口怎么参与扫描。键名沿用 Python 版能对上的那几个。
@@ -291,6 +300,7 @@ func Default() Config {
 			ThinBidEdgeQty:       100,
 			BidCliffEdgePct:      0.20,
 			MaxSpreadPct:         0,
+			MakerPriceBand:       0.2,
 		},
 		Economics: Economics{
 			MarketTax:        0.04,
@@ -372,6 +382,10 @@ func (c Config) Validate() error {
 	}
 	if cp.BookLevels < 1 {
 		return fmt.Errorf("capture.book_levels 至少为 1,得到 %d", cp.BookLevels)
+	}
+	// band ≥ 1 时挂买价的下沿 均价 × (1 − band) ≤ 0,等于只钳一边;负数没有意义
+	if !(f.MakerPriceBand >= 0 && f.MakerPriceBand < 1) {
+		return fmt.Errorf("filters.maker_price_band 要在 [0, 1) 内(0 = 关闭),得到 %g", f.MakerPriceBand)
 	}
 	// 件数阈值不能超过 book_levels。阶梯在 book_levels 档处被截断时,
 	// 如果读到的档全在近价窗口内,近价件数至少是 book_levels(每档至少 1 件);

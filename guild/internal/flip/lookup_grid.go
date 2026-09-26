@@ -97,6 +97,9 @@ type GridParams struct {
 	// "两路谁新用谁",和实际规则对不上
 	PreferSlackMinutes float64 `json:"prefer_slack_minutes"`
 	DepthMaxHours      float64 `json:"depth_max_hours"`
+	// MakerPriceBand 是挂单腿按 7 日成交均价钳制的带宽(filters.maker_price_band),0 = 关。
+	// 界面解释"挂买→挂卖为什么不是盘口价压一档"时要用
+	MakerPriceBand float64 `json:"maker_price_band"`
 }
 
 type GridAODP struct {
@@ -173,15 +176,20 @@ type AODPSide struct {
 	FarAgeHours *float64 `json:"far_age_hours"`
 }
 
-// GridSpread 是同城挂买→挂卖一轮的账,按 econ.Quote 的挂买挂卖模式算。
+// GridSpread 是同城挂买→挂卖一轮的账,和机会页同城同一个函数(econ.QuoteBanded):
+// 挂单价按这一格的 7 日成交均价做带宽钳制,MyBid/MyAsk/Margin/ProfitPerUnit 都是钳过的。
+// Raw 是盘口本身的价差,不钳。
 type GridSpread struct {
 	Raw           float64 `json:"raw"`    // 卖一/买一 − 1,未扣税费
 	Margin        float64 `json:"margin"` // 税后毛利率
 	MyBid         int64   `json:"my_bid"`
 	MyAsk         int64   `json:"my_ask"`
 	ProfitPerUnit float64 `json:"profit_per_unit"`
-	// Suspect:毛利率超过 filters.max_margin,多半是某一侧挂了 troll 单
+	// Suspect:按**不钳**的盘口价算的毛利率超过 filters.max_margin,多半是某一侧挂了
+	// troll 单。和机会页 implausible_margin 同一个判据
 	Suspect bool `json:"suspect"`
+	// Clamp 非空说明挂单价被 7 日成交均价封过,里面是封之前的价和毛利率
+	Clamp *econ.Clamp `json:"clamp,omitempty"`
 }
 
 // GridHistory 是一格的成交统计。**卡片和右栏用的是同一个对象**。
@@ -311,17 +319,28 @@ func mergeSide(cb *BookSide, aodpBest int64, aodpDate aodp.Stamp, aodpFar int64,
 	return g
 }
 
-func spreadOf(sell, buy int64, cfg conf.Config) *GridSpread {
+// spreadOf 算一格的同城挂买→挂卖。h 是这一格的成交统计(卡片和右栏用的同一个),
+// 它的 7 日均价就是挂单腿的参考价;没有历史时不钳。
+//
+// 以前这里按盘口价压一档:卖一是均价两倍的格子,"进游戏照抄的两个数"和机会页对不上
+// (机会页封过、这里没封),照抄了也卖不出去
+func spreadOf(sell, buy int64, h *GridHistory, cfg conf.Config) *GridSpread {
 	if sell <= 0 || buy <= 0 {
 		return nil
 	}
+	ref := 0.0
+	if h != nil {
+		ref = h.Avg7d
+	}
 	b := econ.Book{SellMin: sell, BuyMax: buy}
-	u := econ.Quote(b, b, makerMaker, cfg.Economics)
+	q := econ.QuoteBanded(b, b, makerMaker, cfg.Economics,
+		econ.Band{Width: cfg.Filters.MakerPriceBand, BuyRef: ref, SellRef: ref})
 	return &GridSpread{
 		Raw:    float64(sell)/float64(buy) - 1,
-		Margin: u.Margin, MyBid: u.MyBid, MyAsk: u.MyAsk,
-		ProfitPerUnit: u.ProfitPerUnit,
-		Suspect:       cfg.Filters.MaxMargin > 0 && u.Margin > cfg.Filters.MaxMargin,
+		Margin: q.Margin, MyBid: q.MyBid, MyAsk: q.MyAsk,
+		ProfitPerUnit: q.ProfitPerUnit,
+		Suspect:       cfg.Filters.MaxMargin > 0 && q.Raw.Margin > cfg.Filters.MaxMargin,
+		Clamp:         q.Clamp,
 	}
 }
 
@@ -569,7 +588,7 @@ func buildGrid(in gridInput) *LookupGrid {
 			if cell.Sell.Best == 0 && cell.Buy.Best == 0 && cell.History == nil {
 				continue // 只输出有数据的格子,缺的界面自己画"无数据"
 			}
-			cell.Spread = spreadOf(cell.Sell.Best, cell.Buy.Best, in.Cfg)
+			cell.Spread = spreadOf(cell.Sell.Best, cell.Buy.Best, cell.History, in.Cfg)
 			out.Cells = append(out.Cells, cell)
 		}
 	}
@@ -604,6 +623,7 @@ func buildGrid(in gridInput) *LookupGrid {
 		HistoryDays:          long,
 		PreferSlackMinutes:   in.Cfg.PreferSlack().Minutes(),
 		DepthMaxHours:        in.Cfg.Capture.DepthMaxHours,
+		MakerPriceBand:       in.Cfg.Filters.MakerPriceBand,
 	}
 	return out
 }

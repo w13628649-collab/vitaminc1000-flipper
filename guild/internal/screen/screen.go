@@ -18,9 +18,14 @@
 //	| 交叉盘    | 买一 ≥ 卖一                                                 | crossed_book |
 //	| 深度闸门  | 四种执行方式各过一遍 LegGate,只拦挂单腿、只看抓包那一边;   | no_bid_side / thin_book |
 //	|           | 赚钱的模式全被拦下时,报日收益最高那个被拦的原因            |          |
-//	| 利润      | 四种执行方式没一种税后赚钱                                  | unprofitable |
-//	| 毛利率    | Margin > MaxMargin,两边多半同时是 troll                     | implausible_margin |
+//	| 利润      | 四种执行方式没一种税后赚钱(挂单腿按带宽钳过的价算)        | unprofitable |
+//	| 毛利率    | 按不钳的盘口价算 Margin > MaxMargin,两边多半同时是 troll    | implausible_margin |
 //	| 吃单量    | 可吃量不足 1 件                                             | too_thin |
+//
+// 挂单腿带宽(filters.maker_price_band,econ.QuoteBanded):吃单腿的价是盘口上真挂着的单,
+// 挂单腿的价是假设有人按它成交。挂卖价最多到 7 日成交均价 ×(1 + band),挂买价至少出到
+// ×(1 − band),税费、盈亏平衡、利润、日收益全按钳过的价算。钳制只让账变差,不放行任何东西;
+// 偏离度、深度闸门、毛利率上限这些 troll 判据照旧判盘口本身。
 //
 // 通过之后定置信度:贴着任何一道阈值(含深度闸门的 edge)→ low;
 // 否则两侧都在 HighConfidenceHours 内 → high;其余 medium。
@@ -69,9 +74,13 @@ type Opportunity struct {
 	// BuyPrice/SellPrice 是市场快照里现有的最高买单价 / 最低卖单价。
 	BuyPrice  int64 `json:"buy_price"`
 	SellPrice int64 `json:"sell_price"`
-	// MyBid/MyAsk 是我实际要挂的价(压过现价一档)。
+	// MyBid/MyAsk 是我实际要挂的价:压过现价一档,再按 7 日成交均价做带宽钳制
+	// (filters.maker_price_band,见 econ.QuoteBanded)。被钳过时 Clamp 非空,
+	// 里面是钳之前的价和参考价
 	MyBid int64 `json:"my_bid"`
 	MyAsk int64 `json:"my_ask"`
+	// Clamp 是选中执行方式的挂单腿有没有被封、封之前是多少。nil = 两条腿都是盘口价
+	Clamp *econ.Clamp `json:"clamp,omitempty"`
 
 	CostPerUnit    float64 `json:"cost_per_unit"`
 	RevenuePerUnit float64 `json:"revenue_per_unit"`
@@ -156,6 +165,9 @@ type ModeQuote struct {
 	// Blocked 非空说明这个模式被深度闸门拦下(no_bid_side / thin_book):
 	// 账照样算出来给人看,但不参与挑选
 	Blocked string `json:"blocked,omitempty"`
+	// Clamp 非空说明这个模式的挂单腿按 7 日成交均价封过:BuyPrice/SellPrice 和
+	// 上面的账都是封过的,封之前的价在里面
+	Clamp *econ.Clamp `json:"clamp,omitempty"`
 }
 
 // Notes 是警告加提示,报告里一起显示。
@@ -319,11 +331,16 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	// 共用的周转模型,否则组合页把同城跨城混排时口径不一致
 	book := econ.Book{SellMin: rec.SellPriceMin, BuyMax: rec.BuyPriceMax}
 	absorbable := stats.DailyVolumeQty * cfg.Sizing.AbsorbRatio
+	// 挂单腿按本城 7 日成交均价做带宽钳制。偏离度(上面第 4 层)只拦离谱到 troll 的价,
+	// 0.4~2.5 倍整段放行;挂单价在这一段里照盘口压一档,就是假设有人按均价两倍来买
+	band := MakerBand(f.MakerPriceBand, stats, stats)
 
 	var modes []ModeQuote
 	type sized struct {
 		q    ModeQuote
 		unit econ.Unit
+		// raw 是不钳的账,只给毛利率上限(troll 判据)用,见 econ.Banded.Raw
+		raw  econ.Unit
 		qty  int64
 		mode econ.Mode
 		// 深度闸门对这个模式的判定
@@ -334,7 +351,8 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	// profitable 是赚钱且没被拦的;blocked 是赚钱但被深度闸门拦下的
 	var profitable, blocked []sized
 	for _, m := range econ.Modes {
-		u := econ.Quote(book, book, m, cfg.Economics)
+		bq := econ.QuoteBanded(book, book, m, cfg.Economics, band)
+		u := bq.Unit
 		hours := m.HoursPerRound(0, cfg.Sizing.FillHours) // 同城 travel = 0
 		qty, turns, daily := econ.Turnover(u, absorbable, cfg.Capital, hours)
 		// 同城两条腿在同一个城:挂买看这里的 bid,挂卖看这里的 ask
@@ -347,12 +365,13 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 			Breakeven:    m.Breakeven(cfg.Economics),
 			HoursPerTurn: hours, TurnsPerDay: turns, DailyProfit: daily,
 			Blocked: reason,
+			Clamp:   bq.Clamp,
 		}
 		modes = append(modes, q)
 		if u.ProfitPerUnit <= 0 {
 			continue
 		}
-		s := sized{q: q, unit: u, qty: qty, mode: m, edge: gEdge, warns: gWarns, detail: detail}
+		s := sized{q: q, unit: u, raw: bq.Raw, qty: qty, mode: m, edge: gEdge, warns: gWarns, detail: detail}
 		if reason != "" {
 			blocked = append(blocked, s)
 		} else {
@@ -385,16 +404,26 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 		// 挂买挂卖名义 9.0%、真实要 9.63% —— 中间那 0.63 个百分点的价差
 		// 会被"摩擦 9%"这句话说成够用,实际每件都在亏。
 		mm := econ.Mode{Buy: econ.Maker, Sell: econ.Maker}
-		u := econ.Quote(book, book, mm, cfg.Economics)
+		mq := econ.QuoteBanded(book, book, mm, cfg.Economics, band)
+		u := mq.Unit
 		spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1
 		// 亏损写成正数:以前是"税后亏 -9.5",负号和"亏"叠成双重否定,读着像赚了
 		loss := "税后每件刚好打平"
 		if u.ProfitPerUnit < 0 {
 			loss = fmt.Sprintf("税后每件亏 %s 银", thousands1(-u.ProfitPerUnit))
 		}
+		be := mm.Breakeven(cfg.Economics) * 100
+		if mq.Clamp != nil {
+			// 盘口价差本身可能够,是挂单价封回成交均价附近之后不够了。只报盘口价差的话,
+			// "价差 80% 还说不赚钱"读不懂
+			return reject("unprofitable", fmt.Sprintf(
+				"%s:挂单价按 7 日成交均价封过,%s → %s 价差 %.2f%%,%s 要 %.2f%% 才打平(盘口价差 %.2f%%)",
+				loss, Thousands(u.MyBid), Thousands(u.MyAsk), (float64(u.MyAsk)/float64(u.MyBid)-1)*100,
+				mm.Label(), be, spread*100))
+		}
 		return reject("unprofitable", fmt.Sprintf(
 			"%s:买卖价差 %.2f%%,%s 要 %.2f%% 才打平",
-			loss, spread*100, mm.Label(), mm.Breakeven(cfg.Economics)*100))
+			loss, spread*100, mm.Label(), be))
 	}
 	byDaily(profitable)
 	best, unit, bestQty, bestMode := profitable[0].q, profitable[0].unit, profitable[0].qty, profitable[0].mode
@@ -404,9 +433,19 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	}
 	warnings = append(warnings, profitable[0].warns...)
 
-	if unit.Margin > f.MaxMargin {
-		return reject("implausible_margin", fmt.Sprintf("毛利率 %.0f%% 高得不真实", unit.Margin*100))
+	// 毛利率上限是 troll 判据,判的是盘口本身离不离谱,所以按**不钳**的价判(见 econ.Banded.Raw)。
+	// 按钳过的判,挂买挂卖的毛利被带宽封在 ~37% 以内,这一层对挂单模式就永远不响了
+	if raw := profitable[0].raw; raw.Margin > f.MaxMargin {
+		detail := fmt.Sprintf("毛利率 %.0f%% 高得不真实", raw.Margin*100)
+		if best.Clamp != nil {
+			detail = fmt.Sprintf("按盘口价算毛利率 %.0f%% 高得不真实(挂单价封回成交均价附近之后是 %.0f%%,但两边盘口多半有 troll 单)",
+				raw.Margin*100, unit.Margin*100)
+		}
+		return reject("implausible_margin", detail)
 	}
+	// 选中模式的挂单腿被封过:说清楚封在哪、为什么。不降置信——封过的价本来就更保守
+	warnings = append(warnings, ClampWarnings(best.Clamp, unit.MyBid, unit.MyAsk,
+		rec.BuyPriceMax, rec.SellPriceMin, "", "")...)
 
 	// ---- 吃单量 -----------------------------------------------------------
 	pos := econ.SizePosition(unit, stats.DailyVolumeQty, cfg.Capital, cfg.Sizing)
@@ -474,6 +513,7 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 		SellPrice:         rec.SellPriceMin,
 		MyBid:             unit.MyBid,
 		MyAsk:             unit.MyAsk,
+		Clamp:             best.Clamp,
 		CostPerUnit:       unit.CostPerUnit,
 		RevenuePerUnit:    unit.RevenuePerUnit,
 		ProfitPerUnit:     unit.ProfitPerUnit,

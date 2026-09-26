@@ -202,6 +202,10 @@ func (s *Service) itemConflicts(itemID string, orders []store.LiveOrder, since t
 
 // BookSummary 是两侧最优价算出来的那几个数,全部只用抓包。
 // 查价格子上显示的是逐边融合后的价,和这里可能不同 —— 界面两边都标了来源。
+//
+// 这里的 my_bid/my_ask **不做**挂单腿带宽钳制:这个接口不带成交历史,没有参考价。
+// 界面上"进游戏照抄的两个数"用的是格子里的 spread(GridSpread,钳过、和机会页一致),
+// 不是这里
 type BookSummary struct {
 	BestSell      int64    `json:"best_sell"`
 	BestBuy       int64    `json:"best_buy"`
