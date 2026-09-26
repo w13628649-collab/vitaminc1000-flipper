@@ -4,7 +4,9 @@
 //
 // 数据来源(sync 时拉一次):
 //   - formatted/items.json(24MB)官方中英文名 + 完整的附魔变体 ID
-//   - 根目录 items.json(17MB)市场分类树、tier、品质档数,**不含附魔变体**
+//   - 根目录 items.json(17MB)市场分类树、tier、品质档数,**不含装备的附魔变体**;
+//     精炼 / 转化配方也从这一份里抽(recipe.go)。附魔资源在这里是独立条目,
+//     名字是 T8_ORE_LEVEL4,市场上叫 T8_ORE_LEVEL4@4(MarketID / DumpID)
 //   - data/categories.json(随包 6KB)分类的中文名,来自 90MB 的 localization.json,
 //     极少变动,不值得让每个人 sync 时都下一遍
 package catalog

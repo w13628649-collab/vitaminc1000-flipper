@@ -36,21 +36,29 @@ type rawMeta struct {
 	maxQuality  int
 }
 
+// Dump 是一次同步从上游拿到的全部东西,可以直接写库。
+type Dump struct {
+	Items      []Item
+	Categories []Category
+	// Recipes 是精炼和转化配方,和目录出自同一份 items.json,不另外下载
+	Recipes []Recipe
+}
+
 // Fetch 拉上游两份 dump,合并成可以直接写库的行。
-func Fetch(ctx context.Context) ([]Item, []Category, error) {
+func Fetch(ctx context.Context) (Dump, error) {
 	client := &http.Client{Timeout: 5 * time.Minute}
 
 	var named []namedItem
 	if err := getJSON(ctx, client, itemsJSONURL, &named); err != nil {
-		return nil, nil, fmt.Errorf("拉 formatted/items.json: %w", err)
+		return Dump{}, fmt.Errorf("拉 formatted/items.json: %w", err)
 	}
 	var rawPayload struct {
 		Items map[string]json.RawMessage `json:"items"`
 	}
 	if err := getJSON(ctx, client, rawItemsURL, &rawPayload); err != nil {
-		return nil, nil, fmt.Errorf("拉 items.json: %w", err)
+		return Dump{}, fmt.Errorf("拉 items.json: %w", err)
 	}
-	meta := parseRawItems(rawPayload.Items)
+	meta, recipes := parseRawItems(rawPayload.Items)
 
 	var items []Item
 	for _, row := range named {
@@ -62,11 +70,9 @@ func Fetch(ctx context.Context) ([]Item, []Category, error) {
 		if zh == "" && en == "" {
 			continue // dump 里的占位条目,没有交易价值
 		}
-		base := row.UniqueName
-		if idx := indexByte(base, '@'); idx >= 0 {
-			base = base[:idx]
-		}
-		m, ok := meta[base]
+		// 市场 id 去掉 @n 就是原始 dump 里的条目:装备的附魔变体查本体,
+		// 附魔资源查 _LEVELn 那一条
+		m, ok := meta[DumpID(row.UniqueName)]
 		if !ok {
 			m = rawMeta{maxQuality: 1}
 		}
@@ -86,9 +92,9 @@ func Fetch(ctx context.Context) ([]Item, []Category, error) {
 
 	categories, err := seedCategories()
 	if err != nil {
-		return nil, nil, err
+		return Dump{}, err
 	}
-	return items, categories, nil
+	return Dump{Items: items, Categories: categories, Recipes: recipes}, nil
 }
 
 func getJSON(ctx context.Context, client *http.Client, url string, out any) error {
@@ -110,12 +116,14 @@ func getJSON(ctx context.Context, client *http.Client, url string, out any) erro
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
-// parseRawItems 从原始 dump 抽出 id → (大类, 子类, 品质档数)。
+// parseRawItems 从原始 dump 抽出 id → (大类, 子类, 品质档数),顺手抽精炼和转化配方。
 //
 // 物品按类型散在 simpleitem / equipmentitem / weapon 等十几个节点里,
-// 结构一致,统一扫一遍。
-func parseRawItems(root map[string]json.RawMessage) map[string]rawMeta {
+// 结构一致,统一扫一遍。配方放在同一遍里:17MB 的 JSON 解成 map 是整个同步里
+// 最慢的一步,不值得为配方再解一次。
+func parseRawItems(root map[string]json.RawMessage) (map[string]rawMeta, []Recipe) {
 	meta := map[string]rawMeta{}
+	var recipes []Recipe
 	for key, blob := range root {
 		if key == "" || key[0] == '@' || key == "shopcategories" {
 			continue
@@ -145,10 +153,16 @@ func parseRawItems(root map[string]json.RawMessage) map[string]rawMeta {
 			}
 			cat, _ := row["@shopcategory"].(string)
 			sub, _ := row["@shopsubcategory1"].(string)
+			// 同一个 id 出现两次时配方只收第一次的:(产物, variant) 是库里的主键
+			if _, dup := meta[id]; !dup {
+				recipes = append(recipes, recipesOf(row)...)
+			}
 			meta[id] = rawMeta{category: cat, subcategory: sub, maxQuality: maxQuality}
 		}
 	}
-	return meta
+	// 节点是 map,遍历顺序随机;排好序,入库和比对才是确定的
+	SortRecipes(recipes)
+	return meta, recipes
 }
 
 func seedCategories() ([]Category, error) {
@@ -190,13 +204,4 @@ func trim(s string) string {
 		s = s[:len(s)-1]
 	}
 	return s
-}
-
-func indexByte(s string, b byte) int {
-	for i := range len(s) {
-		if s[i] == b {
-			return i
-		}
-	}
-	return -1
 }

@@ -41,6 +41,12 @@ type Service struct {
 	IngestStats func() any
 
 	cat atomic.Pointer[catalog.Catalog]
+	// recipes 是精炼 / 转化配方,和目录一起同步、一起载入(见 recipe.go)。
+	// nil 时 Recipes() 退回内置快照
+	recipes atomic.Pointer[catalog.RecipeBook]
+	// syncMu 串起目录同步。启动时的后台补同步和手动 /api/catalog/sync 撞在一起时,
+	// 两个「整表删了重写」的事务交错会撞主键,后一个白下 40MB
+	syncMu sync.Mutex
 	// last 是对外的扫描结果,整份原子替换,发布之后不再改。
 	// snap 是它所用的 AODP 快照,定时重算拿它配最新抓包重跑,不打 AODP。
 	// 换 last 一律走 publish:摘要和 WS 通知跟着一起发
@@ -84,7 +90,7 @@ func (s *Service) Catalog() *catalog.Catalog { return s.cat.Load() }
 // LastScan 是最近一次扫描结果,没扫过是 nil。
 func (s *Service) LastScan() *scan.Result { return s.last.Load() }
 
-// LoadCatalog 从库里读目录。库是空的就去上游同步一次。
+// LoadCatalog 从库里读目录和配方。目录是空的就去上游同步一次。
 func (s *Service) LoadCatalog(ctx context.Context) error {
 	items, cats, syncedAt, err := s.Store.LoadCatalog(ctx)
 	if err != nil {
@@ -96,20 +102,24 @@ func (s *Service) LoadCatalog(ctx context.Context) error {
 	}
 	s.cat.Store(catalog.New(items, cats, syncedAt))
 	slog.Info("物品目录已载入", "items", len(items), "synced_at", syncedAt)
+	s.loadRecipes(ctx)
 	return nil
 }
 
-// SyncCatalog 从 ao-bin-dumps 拉一份新的写库,再换进内存。
+// SyncCatalog 从 ao-bin-dumps 拉一份新的写库,再换进内存。配方出自同一次下载。
 func (s *Service) SyncCatalog(ctx context.Context) error {
-	items, cats, err := catalog.Fetch(ctx)
+	s.syncMu.Lock()
+	defer s.syncMu.Unlock()
+	dump, err := catalog.Fetch(ctx)
 	if err != nil {
 		return err
 	}
-	if err := s.Store.SaveCatalog(ctx, items, cats); err != nil {
+	if err := s.Store.SaveCatalog(ctx, dump.Items, dump.Categories); err != nil {
 		return err
 	}
-	s.cat.Store(catalog.New(items, cats, time.Now().UTC().Format(time.RFC3339)))
-	slog.Info("物品目录已同步", "items", len(items))
+	s.cat.Store(catalog.New(dump.Items, dump.Categories, time.Now().UTC().Format(time.RFC3339)))
+	slog.Info("物品目录已同步", "items", len(dump.Items))
+	s.saveRecipes(ctx, dump.Recipes)
 	return nil
 }
 

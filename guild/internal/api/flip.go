@@ -191,7 +191,10 @@ func (s *Server) handleCatalogSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	writeJSON(w, map[string]any{"items": s.Flip.Catalog().Len()})
+	// 配方出自同一次下载;source 不是 upstream 说明这次没解析出配方,还在用旧的或内置快照
+	recipes := s.Flip.Recipes()
+	writeJSON(w, map[string]any{"items": s.Flip.Catalog().Len(),
+		"recipes": recipes.Len(), "recipes_source": recipes.Source()})
 }
 
 func intOr(v string, def int) int {
