@@ -95,7 +95,7 @@ func (e *engine) askOffers(item string, route float64, target string) []offer {
 				key:   offerKey{item: item, city: city, idx: i},
 				price: price, mul: e.mkt.TakeAsk, transport: transport, route: route,
 				qty: qty, target: target,
-				seen: l.seen, source: l.source, truncated: l.truncated,
+				seen: l.seenAt(i), source: l.source, truncated: l.truncated,
 				lastVisible: i == len(l.levels)-1, depthUnknown: l.depthUnknown,
 			}
 			o.eff = o.buyUnit() + o.transport + o.route
@@ -119,7 +119,7 @@ func (e *engine) bidOffer(item string) (offer, bool) {
 	o := offer{
 		key:   offerKey{item: item, city: e.p.City, bid: true},
 		price: float64(l.levels[0].Price + e.p.Fees.Outbid), mul: e.mkt.PostBid,
-		qty: qty, target: item, seen: l.seen, source: l.source,
+		qty: qty, target: item, seen: l.seenAt(0), source: l.source,
 	}
 	o.eff = o.buyUnit()
 	return o, true

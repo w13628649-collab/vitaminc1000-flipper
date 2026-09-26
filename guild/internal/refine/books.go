@@ -21,8 +21,15 @@ type Key struct {
 type Ladder struct {
 	// Levels 从优到劣:卖单价格升序,买单降序。引擎会防御性地再排一次
 	Levels []depth.Level `json:"levels"`
-	// Seen 是这一边最近一次被看到的时刻(book.Side.Newest),新鲜度按它算
+	// Seen 是这一边最近一次被看到的时刻(book.Side.Newest)。LevelSeen 没给的档按它算年龄
 	Seen time.Time `json:"seen"`
+	// LevelSeen 和 Levels 一一对应:每一档自己最近一次被看到的时刻(book.Level.Seen)。
+	// 可以不给(空);给了就要和 Levels 一样长,零值的档退回 Seen。
+	//
+	// 为什么要按档记:一边的阶梯可能拼了几次浏览(续页之前那一页、串城时暂停剔除留下的旧单),
+	// 整边只记最近一眼的话,吃到的旧档会被报成刚看过的(审查 finding 2)。步骤清单和候选的
+	// 新鲜度取实际吃到的最旧那一档,比 max_age_hours 还旧的档不用
+	LevelSeen []time.Time `json:"level_seen,omitempty"`
 	// Truncated:最近一轮是满页,更深的档没翻到(规则表 G1)。吃穿可见深度时
 	// 算出来的成本只是下界
 	Truncated bool `json:"truncated,omitempty"`
@@ -75,33 +82,81 @@ type Input struct {
 
 // ladderSide 是一边阶梯在引擎里的样子:排好序、去掉空档。
 type ladderSide struct {
-	levels       []depth.Level
+	levels []depth.Level
+	// seens 和 levels 一一对应,每一档的观测时刻(没给的是整边的 seen)
+	seens        []time.Time
 	seen         time.Time
 	truncated    bool
 	source       string
 	depthUnknown bool
 }
 
+// seenAt 是第 i 档的观测时刻。
+func (l ladderSide) seenAt(i int) time.Time {
+	if i >= 0 && i < len(l.seens) {
+		return l.seens[i]
+	}
+	return l.seen
+}
+
+// oldestSeen 是前 n 档里最旧的观测时刻(零值 = 不知道)。
+func (l ladderSide) oldestSeen(n int) time.Time {
+	var oldest time.Time
+	for i := 0; i < n && i < len(l.levels); i++ {
+		if s := l.seenAt(i); !s.IsZero() && (oldest.IsZero() || s.Before(oldest)) {
+			oldest = s
+		}
+	}
+	return oldest
+}
+
 // normalize 按方向排好序、去掉 0 价 0 件的档。depthUnknown 时只留最优那一档。
 func normalizeLadder(l Ladder, ascending bool) ladderSide {
 	out := ladderSide{seen: l.Seen, truncated: l.Truncated, source: l.Source, depthUnknown: l.DepthUnknown}
-	for _, lv := range l.Levels {
+	type row struct {
+		lv   depth.Level
+		seen time.Time
+	}
+	var rows []row
+	for i, lv := range l.Levels {
 		if lv.Price <= 0 || (lv.Qty <= 0 && !l.DepthUnknown) {
 			continue
 		}
-		out.levels = append(out.levels, lv)
-	}
-	sort.SliceStable(out.levels, func(i, j int) bool {
-		if ascending {
-			return out.levels[i].Price < out.levels[j].Price
+		seen := l.Seen
+		if len(l.LevelSeen) == len(l.Levels) && !l.LevelSeen[i].IsZero() {
+			seen = l.LevelSeen[i]
 		}
-		return out.levels[i].Price > out.levels[j].Price
+		rows = append(rows, row{lv, seen})
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		if ascending {
+			return rows[i].lv.Price < rows[j].lv.Price
+		}
+		return rows[i].lv.Price > rows[j].lv.Price
 	})
-	if l.DepthUnknown && len(out.levels) > 1 {
-		out.levels = out.levels[:1]
+	if l.DepthUnknown && len(rows) > 1 {
+		rows = rows[:1]
+	}
+	for _, r := range rows {
+		out.levels = append(out.levels, r.lv)
+		out.seens = append(out.seens, r.seen)
 	}
 	if out.source == "" {
 		out.source = "capture"
+	}
+	return out
+}
+
+// keepFresh 只留 tooOld 说不旧的档(观测时刻不知道的也留着)。
+func (l ladderSide) keepFresh(tooOld func(time.Time) bool) ladderSide {
+	out := l
+	out.levels, out.seens = nil, nil
+	for i, lv := range l.levels {
+		if s := l.seenAt(i); !s.IsZero() && tooOld(s) {
+			continue
+		}
+		out.levels = append(out.levels, lv)
+		out.seens = append(out.seens, l.seenAt(i))
 	}
 	return out
 }

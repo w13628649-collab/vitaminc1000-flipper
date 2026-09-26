@@ -29,9 +29,10 @@ import (
 //  2. 用 storeBooks.readSides 一次读出,book.Build 剔幽灵单 —— 和扫描、WS 报价、查价页
 //     是同一套口径。**不用 Service.Depth**:它走旧的 SQL,不剔幽灵单
 //  3. 读单窗口是 refining.window_hours(默认 72h),不是扫描的 6h:用户是抓一次包、
-//     之后再算。超过 6h 的价照用,引擎按年龄标黄(6h)/ 标红(24h)
-//  4. 抓包没有的盘口边用 AODP 兜底(scan.MergeSide,和扫描、查价页同一个择边函数),
-//     只有价格、没有件数,标「深度未知」
+//     之后再算。超过 6h 的价照用,引擎按年龄标黄(6h)/ 标红(24h)。窗口拉长以后,
+//     续页只认隔得够近的(refinePageGap),每一档带自己的观测时刻进引擎
+//  4. 抓包没有的盘口边、或者抓包整边比 sources.max_age_hours 还旧的,用 AODP 兜底
+//     (scan.MergeSide,和扫描、查价页同一个择边函数),只有价格、没有件数,标「深度未知」
 //  5. 成交量取 refining.volume_days(默认 14)个自然日,按「总量 ÷ 自然日」平均
 //  6. 同样的参数 2 秒内只算一次,并发的同样请求合并成一次(ttlCache)
 //
@@ -46,6 +47,11 @@ type RefineSource interface {
 	AODPPrices(ctx context.Context, items, cities []string) ([]aodp.PriceRecord, error)
 	// DailyVolume 同 store.DailyVolume
 	DailyVolume(ctx context.Context, items []string, city string, quality int, first, last time.Time) ([]store.ItemDay, error)
+}
+
+// conflictCoverage 是 ConflictSource 的可选能力(*ingest.Ingestor 有):串城判定能覆盖到多早。
+type conflictCoverage interface {
+	ConflictCoverageSince(now time.Time) time.Time
 }
 
 // ParamError 是请求参数不合法。API 层据此回 400,其余错误回 500。
@@ -65,6 +71,11 @@ const (
 	refineComputeTimeout = time.Minute
 	// refinePricesTTL:AODP 当前价按 线 × 城市 缓存 60 秒,和查价页那份一样长
 	refinePricesTTL = 60 * time.Second
+	// refinePageGap 是精炼读簿时认「续页」的最大间隔(book.Opts.MaxPageGap)。同一次浏览
+	// 翻页是几秒的事(实测 0.5 秒一页),30 分钟已经很宽;读簿窗口 72h,不设这个上限的话,
+	// 隔了几天的旧页会被当成续页之前那一页、把早就没了的便宜单留下来(审查 finding 2)。
+	// 认错成「重新翻」的代价只是少算几张更便宜的单,成本偏高、不会偏低
+	refinePageGap = 30 * time.Minute
 	// refineQuality:资源和半成品没有品质之分,只读品质 1
 	refineQuality = 1
 )
@@ -156,6 +167,13 @@ type RefineBooks struct {
 	Conflicted []string `json:"conflicted"`
 	// AODPNewer 是抓包有阶梯、但 AODP 之后报了不同的最优价的盘口边(见 refineBooks)
 	AODPNewer []AODPNewer `json:"aodp_newer"`
+	// AODPOverStale 是抓包整边都比 sources.max_age_hours 旧、改用了 AODP 价(深度未知)的
+	// 盘口边(物品|城市|卖单/买单),算在 AODP 里
+	AODPOverStale []string `json:"aodp_over_stale"`
+	// ConflictsSince 是串城判定能覆盖到多早:冲突记录只在服务端内存里,重启就清空、
+	// 超过保留期也删掉。比它早的串城看不到,那段时间的盘口照常剔幽灵单。
+	// null = 没接串城检测(测试里)
+	ConflictsSince *time.Time `json:"conflicts_since"`
 	// AODPOK=false:这次没取到 AODP 当前价(只用了快照和查价页取过的),AODPError 说明原因
 	AODPOK    bool   `json:"aodp_ok"`
 	AODPError string `json:"aodp_error,omitempty"`
@@ -245,7 +263,7 @@ func (s *Service) computeRefine(ctx context.Context, p refine.Params) (*RefinePl
 	}
 	line, _ := refine.LineOfItem(p.Target)
 	keys := refineKeys(items, buyCities(p), []string{p.Target}, p.Sell.City)
-	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(p), now)
+	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(p), now, p.Sources.MaxAgeHours)
 	if err != nil {
 		return nil, err
 	}
@@ -363,17 +381,27 @@ func (o ordersOnly) CapturedItems(context.Context, []string, []int, time.Time) (
 // 精炼要沿阶梯吃深度,AODP 只有一个价、没有件数,换成它等于假设那个价有无限件
 // (卖一只有几件、却要吃二十几件时,会全按卖一算)。所以留着阶梯,把这种边列进
 // books.aodp_newer、加一条 aodp_newer 警告,让人知道阶梯顶上可能已经变了。
+//
+// 反过来,抓包这一边整个比 maxAgeHours(请求的 sources.max_age_hours)还旧、而 AODP 的价
+// 在这个年龄以内时,用 AODP(深度未知):引擎会把太旧的抓包当缺价丢掉,留着它等于把
+// 新的 AODP 价也挡在外面(审查 finding 8)。这种边列进 books.aodp_over_stale。
 func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line refine.Line,
-	cities []string, now time.Time) (refine.Books, RefineBooks, []refine.Warning, error) {
+	cities []string, now time.Time, maxAgeHours float64) (refine.Books, RefineBooks, []refine.Warning, error) {
 
 	src := s.refineSource()
 	window := s.Cfg.Refining.Window()
 	since := now.Add(-window)
 	info := RefineBooks{WindowHours: window.Hours(), ReadAt: now, Sides: len(keys),
-		Conflicted: []string{}, AODPNewer: []AODPNewer{}}
+		Conflicted: []string{}, AODPNewer: []AODPNewer{}, AODPOverStale: []string{}}
+	if cc, ok := s.Conflicts.(conflictCoverage); ok {
+		t := cc.ConflictCoverageSince(now).UTC()
+		info.ConflictsSince = &t
+	}
 
-	// 串城的盘口边把 slack 放到整个读单窗口(见 rounds):窗口是 72h,不是扫描的 6h
-	sb := &storeBooks{st: ordersOnly{src}, conflicts: s.Conflicts, slack: s.Cfg.SnapshotSlack(), window: window}
+	// 串城的盘口边把 slack 放到整个读单窗口(见 rounds):窗口是 72h,不是扫描的 6h。
+	// 续页只认隔得够近的(refinePageGap)
+	sb := &storeBooks{st: ordersOnly{src}, conflicts: s.Conflicts, slack: s.Cfg.SnapshotSlack(), window: window,
+		pageGap: refinePageGap}
 	sides, flagged, err := sb.readSides(ctx, keys, since, since)
 	if err != nil {
 		return nil, info, nil, fmt.Errorf("读抓包挂单: %w", err)
@@ -411,10 +439,15 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 			cs = scan.CapturedFrom(side, 0)
 		}
 		m := scan.MergeSide(px, at, cs, s.Cfg, now)
+		aodpAge, aodpOK := at.AgeHours(now)
+		aodpOK = aodpOK && px > 0
+		// 抓包整边都比 max_age_hours 旧(最近一眼 side.Newest 都过了),AODP 却在这个年龄以内
+		captureStale := has && now.Sub(side.Newest).Hours() > maxAgeHours
+		useAODP := captureStale && aodpOK && aodpAge <= maxAgeHours
 
 		var l refine.Ladder
 		switch {
-		case has:
+		case has && !useAODP:
 			l = ladderOf(side)
 			info.Capture++
 			if flagged[k] {
@@ -422,16 +455,19 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 			}
 			if m.Superseded {
 				capAge := now.Sub(side.Levels[0].Seen).Hours()
-				aodpAge, _ := at.AgeHours(now)
 				info.AODPNewer = append(info.AODPNewer, AODPNewer{
 					Item: k.ItemID, City: k.LocationID, Side: sideWord(k.Side),
 					CapturePrice: side.Levels[0].Price, CaptureAgeH: round3(capAge),
 					AODPPrice: px, AODPAgeH: round3(aodpAge),
 				})
 			}
-		case m.Price > 0 && m.At.Valid():
-			l = refine.Ladder{Levels: []depth.Level{{Price: m.Price}}, Seen: m.At.T, Source: "aodp", DepthUnknown: true}
+		case aodpOK:
+			// 抓包没有这条边,或者抓包太旧、AODP 够新:只有价格,没有件数
+			l = refine.Ladder{Levels: []depth.Level{{Price: px}}, Seen: at.T, Source: "aodp", DepthUnknown: true}
 			info.AODP++
+			if has {
+				info.AODPOverStale = append(info.AODPOverStale, sideName(k))
+			}
 		default:
 			info.Empty++
 			continue
@@ -445,6 +481,7 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 		books[refine.Key{ItemID: k.ItemID, City: k.LocationID}] = b
 	}
 	sort.Strings(info.Conflicted)
+	sort.Strings(info.AODPOverStale)
 	sort.Slice(info.AODPNewer, func(i, j int) bool {
 		a, b := info.AODPNewer[i], info.AODPNewer[j]
 		if a.Item != b.Item {
@@ -468,11 +505,15 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 }
 
 // ladderOf 把 book.Build 整理好的一边转成引擎的阶梯。stale 的档不进来:那些单多半已经没了。
+// 每一档带上自己的观测时刻(book.Level.Seen):续页之前那一页、串城时暂停剔除留下的旧单
+// 都比整边的「最近一眼」旧,新鲜度要按实际吃到的那几档报(审查 finding 2)。
 func ladderOf(side book.Side) refine.Ladder {
 	l := refine.Ladder{Levels: make([]depth.Level, 0, len(side.Levels)),
-		Seen: side.Newest, Truncated: side.Truncated, Source: "capture"}
+		LevelSeen: make([]time.Time, 0, len(side.Levels)),
+		Seen:      side.Newest, Truncated: side.Truncated, Source: "capture"}
 	for _, lv := range side.Levels {
 		l.Levels = append(l.Levels, depth.Level{Price: lv.Price, Qty: lv.Qty})
+		l.LevelSeen = append(l.LevelSeen, lv.Seen)
 	}
 	return l
 }
@@ -720,7 +761,7 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 	items = uniqStrings(items)
 	sort.Strings(items)
 	keys := refineKeys(items, buyCities(base), targets, base.Sell.City)
-	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(base), now)
+	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(base), now, base.Sources.MaxAgeHours)
 	if err != nil {
 		return nil, err
 	}

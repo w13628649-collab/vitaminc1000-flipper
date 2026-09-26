@@ -270,6 +270,66 @@ func TestPlan过期盘口当缺价(t *testing.T) {
 	}
 }
 
+// 一边的阶梯可能拼了几次浏览(续页之前那一页、串城时暂停剔除留下的旧单):每一档带自己的
+// 观测时刻(Ladder.LevelSeen)。步骤和候选的新鲜度按实际吃到的最旧那一档报;比 max_age_hours
+// 还旧的档单独不用,不连累同一边新的档(审查 finding 2)。
+func TestPlan按档记观测时刻(t *testing.T) {
+	books := Books{}
+	ore := Book{Asks: Ladder{Levels: lv(1000, 2, 1100, 100), Seen: testNow.Add(-time.Hour),
+		LevelSeen: []time.Time{testNow.Add(-10 * time.Hour), testNow.Add(-time.Hour)}, Source: "capture"}}
+	books[Key{"T5_ORE_LEVEL4@4", "Thetford"}] = ore
+	setAsks(books, "T4_METALBAR_LEVEL4@4", "Thetford", 5000, 100)
+	setAsks(books, "T5_METALBAR_LEVEL4@4", "Thetford", 30000, 5)
+	p := params("T5_METALBAR_LEVEL4@4")
+	p.Focus.Mode = FocusOff
+	buy := func(res *Result) Step {
+		t.Helper()
+		for _, s := range findCandidate(t, res, "mixed|auto|focus:").Steps {
+			if s.Op == "buy" && s.Item == "T5_ORE_LEVEL4@4" {
+				return s
+			}
+		}
+		t.Fatal("没有买 T5.4 矿")
+		return Step{}
+	}
+	res, err := Plan(Input{Params: p, Books: books, Recipes: EmbeddedRecipes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := buy(res)
+	if s.PriceFrom != 1000 || s.AgeH == nil || *s.AgeH != 10 {
+		t.Fatalf("吃到了 10 小时前那一档,步骤年龄应是 10h: %+v", s)
+	}
+	c := findCandidate(t, res, "mixed|auto|focus:")
+	if c.AgeLevel != "yellow" || c.OldestAgeH == nil || *c.OldestAgeH != 10 {
+		t.Fatalf("候选的新鲜度按最旧那一档: %s %v", c.AgeLevel, c.OldestAgeH)
+	}
+
+	// 数据最大年龄 5h:10 小时前那一档不用,1 小时前那档照用,整边不算缺价
+	p.Sources.MaxAgeHours = 5
+	res, err = Plan(Input{Params: p, Books: books, Recipes: EmbeddedRecipes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = buy(res)
+	if s.PriceFrom != 1100 || *s.AgeH != 1 || len(res.Data.Stale) != 0 {
+		t.Fatalf("只该丢掉太旧的那一档: %+v stale=%v", s, res.Data.Stale)
+	}
+
+	// LevelSeen 和 Levels 对不上长度:不认,整边按 Seen 算
+	bad := ore
+	bad.Asks.LevelSeen = bad.Asks.LevelSeen[:1]
+	books[Key{"T5_ORE_LEVEL4@4", "Thetford"}] = bad
+	p.Sources.MaxAgeHours = DefaultMaxAgeHours
+	res, err = Plan(Input{Params: p, Books: books, Recipes: EmbeddedRecipes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := buy(res); *s.AgeH != 1 {
+		t.Fatalf("LevelSeen 长度不对时按整边的 Seen: %+v", s)
+	}
+}
+
 // 步骤清单是账本:每一步的金额加起来就是这一批的稳态成本;转化次数和买来转化的件数对得上;
 // 精炼一步的材料消耗 = 次数 × count × (1 − r)。
 func Test步骤清单的账对得上(t *testing.T) {

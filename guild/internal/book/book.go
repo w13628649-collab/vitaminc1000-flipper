@@ -203,6 +203,23 @@ type Side struct {
 // 0 件、0 价的单直接忽略(库里也滤了,这里再防一道):0 价的单只可能是解析出错,
 // 留着会被当成最优卖价,也不能拿它当"最近一眼"。
 func Build(orders []Order, side model.Side, slack time.Duration) Side {
+	return BuildWith(orders, side, slack, Opts{})
+}
+
+// Opts 是 Build 的可选口径。零值就是 Build 的行为。
+type Opts struct {
+	// MaxPageGap 是认「续页」的最大时间间隔:更早那一页最新的一张单,离本轮最早的一张单
+	// 超过这么久,就不认作续页,当作重新从第一页翻(照 ① 剔除)。0 = 不限。
+	//
+	// 为什么要有:同一次浏览里翻页是几秒、最多几分钟的事(实测 0.5 秒一页),而读簿窗口
+	// 拉长以后(精炼页 72h),隔了几天的两次浏览也可能碰巧满足「旧页满页、本轮首尾相接」,
+	// 于是三天前那一页早就被买走的便宜单被当成盘口第一页留下来(审查 finding 2)。
+	// 扫描、报价、查价页的窗口只有几小时,暂不设限,口径保持不变
+	MaxPageGap time.Duration
+}
+
+// BuildWith 是带可选口径的 Build。
+func BuildWith(orders []Order, side model.Side, slack time.Duration, opts Opts) Side {
 	valid := make([]Order, 0, len(orders))
 	for _, o := range orders {
 		if o.Amount <= 0 || o.Price <= 0 {
@@ -218,7 +235,7 @@ func Build(orders []Order, side model.Side, slack time.Duration) Side {
 		slack = 0
 	}
 
-	sp := splitRounds(valid, side, slack, false)
+	sp := splitRounds(valid, side, slack, opts.MaxPageGap, false)
 	out := Side{
 		Levels:    aggregate(sp.cur, side),
 		Stale:     aggregate(sp.stale, side),
@@ -247,6 +264,16 @@ func newestOf(orders []Order) time.Time {
 		}
 	}
 	return newest
+}
+
+func earliestOf(orders []Order) time.Time {
+	earliest := orders[0].LastSeen
+	for _, o := range orders[1:] {
+		if o.LastSeen.Before(earliest) {
+			earliest = o.LastSeen
+		}
+	}
+	return earliest
 }
 
 // pageTruncated 判一轮是不是没翻完。两条满足一条就算:
@@ -305,7 +332,8 @@ func (sp *split) drop(o Order) {
 
 // splitRounds 见 Build 的说明。bounded:调用方是在整理续页之前的那几页,
 // 更深的那一截已经被续页盖住,比这一轮 worst 更差的旧单一律剔除,不会是 stale。
-func splitRounds(orders []Order, side model.Side, slack time.Duration, bounded bool) split {
+// maxGap 见 Opts.MaxPageGap。
+func splitRounds(orders []Order, side model.Side, slack, maxGap time.Duration, bounded bool) split {
 	var sp split
 	if len(orders) == 0 {
 		return sp
@@ -353,9 +381,11 @@ func splitRounds(orders []Order, side model.Side, slack time.Duration, bounded b
 	if len(ahead) == 0 {
 		return sp
 	}
-	// 续页:更早那一页没翻完,而且本轮接在它整页的末尾之后(见 Build)
-	prev := splitRounds(ahead, side, slack, true)
-	if prev.truncated && !Better(side, best, prev.edge) {
+	// 续页:更早那一页没翻完,而且本轮接在它整页的末尾之后(见 Build);
+	// 设了 maxGap 时两页还得隔得够近,才像是同一次浏览
+	prev := splitRounds(ahead, side, slack, maxGap, true)
+	near := maxGap <= 0 || earliestOf(latest).Sub(newestOf(ahead)) <= maxGap
+	if prev.truncated && !Better(side, best, prev.edge) && near {
 		sp.cur = append(sp.cur, prev.cur...)
 		sp.prevPage = len(prev.cur)
 		sp.dropped += prev.dropped

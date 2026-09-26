@@ -45,8 +45,10 @@ type orderState struct {
 	seen   int64
 }
 
-// conflictKeep 是盘口冲突记录留多久。扫描窗口默认 6h,留 24h 足够
-const conflictKeep = 24 * time.Hour
+// conflictKeepDefault 是盘口冲突记录至少留多久。扫描窗口默认 6h,留 24h 足够;
+// 精炼页读簿的窗口是 72h(refining.window_hours),服务端启动时用 SetConflictKeep 放大到
+// 读簿窗口里最长的那个,否则 24~72 小时前串过城的盘口边在精炼读簿时不会暂停幽灵剔除
+const conflictKeepDefault = 24 * time.Hour
 
 // Conflict 是最近一次"同一个 order_id 被报到了别的盘口"的现场。
 // 只记新的那次观测;旧的那次在 market_order_event 里按 order_id 能查到
@@ -118,6 +120,11 @@ type Ingestor struct {
 	// 是因为 LRU 里只存了旧盘口的指纹,拿不到它的字符串
 	conflictAt map[uint64]time.Time
 	lastPrune  time.Time
+	// conflictKeep 是冲突记录留多久;0 = conflictKeepDefault。启动前设好(SetConflictKeep),之后只读
+	conflictKeep time.Duration
+	// startedAt 是开始记冲突的时刻(New 的时候)。冲突只存在内存里,重启就清空:
+	// 比它早的串城看不到(见 ConflictCoverageSince)。零值 = 不知道(测试里直接构造的)
+	startedAt time.Time
 
 	flushSize int
 	flushWait time.Duration
@@ -135,7 +142,32 @@ func New(st *store.Store, dirty DirtyMarker, cacheSize int) (*Ingestor, error) {
 		pending:   map[string][]model.MarketOrder{},
 		flushSize: 500,
 		flushWait: 2 * time.Second,
+		startedAt: time.Now(),
 	}, nil
+}
+
+// SetConflictKeep 把冲突记录的保留期放到至少 d(不会比 24h 短)。读簿的调用方按自己的窗口
+// 往回问「最近串没串过城」,保留期要盖住其中最长的那个:扫描 6h、精炼 72h。
+// 在 Run 和 Submit 开跑之前调用。
+func (i *Ingestor) SetConflictKeep(d time.Duration) {
+	i.conflictKeep = max(conflictKeepDefault, d)
+}
+
+func (i *Ingestor) keep() time.Duration {
+	if i.conflictKeep > 0 {
+		return i.conflictKeep
+	}
+	return conflictKeepDefault
+}
+
+// ConflictCoverageSince 是串城判定能覆盖到多早:保留期之前的记录删掉了,进程启动之前的
+// 根本没记(冲突只在内存里)。读簿窗口的起点比它早时,更早那段的串城是看不到的。
+func (i *Ingestor) ConflictCoverageSince(now time.Time) time.Time {
+	since := now.Add(-i.keep())
+	if i.startedAt.After(since) {
+		since = i.startedAt
+	}
+	return since
 }
 
 // Submit 处理一批上传。
@@ -229,7 +261,7 @@ func (i *Ingestor) noteConflict(o model.MarketOrder, prevIdent, ident uint64, re
 	if now.Sub(i.lastPrune) >= 10*time.Minute {
 		i.lastPrune = now
 		for h, at := range i.conflictAt {
-			if now.Sub(at) > conflictKeep {
+			if now.Sub(at) > i.keep() {
 				delete(i.conflictAt, h)
 			}
 		}

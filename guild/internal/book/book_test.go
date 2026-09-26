@@ -257,6 +257,36 @@ func TestBuild_续页晚到不剔第一页(t *testing.T) {
 	}
 }
 
+// 读簿窗口拉到几天(精炼页 72h)时,隔了几天的两次浏览也可能满足「旧页满页、本轮首尾相接」。
+// 设了 MaxPageGap 就只认隔得够近的续页,隔太久的当作重新从第一页翻、旧页剔掉(审查 finding 2)。
+// 不设(Build,扫描、报价、查价页)时行为不变。
+func TestBuildWith_隔太久的旧页不当续页(t *testing.T) {
+	rows := func(gap time.Duration) []Order {
+		var out []fx
+		for i := int64(0); i < PageSize; i++ {
+			out = append(out, fx{100 + i, 1, T.Add(-gap), 0}, fx{150 + i, 2, T.Add(-10 * time.Second), 0})
+		}
+		return side("T4_ORE_LEVEL1@1", "Thetford", 1, model.SideOffer, out...)
+	}
+	opts := Opts{MaxPageGap: 30 * time.Minute}
+
+	// 旧页是 65 小时前的:不认作续页,整页剔掉,卖一是本轮的 150
+	b := BuildWith(rows(65*time.Hour), model.SideOffer, slack, opts)
+	if b.Levels[0].Price != 150 || b.PrevPage != 0 || b.Dropped != PageSize || b.Orders != PageSize {
+		t.Fatalf("隔 65 小时的旧页应当剔掉,得到 卖一 %d / prev %d / 剔 %d / %d 张",
+			b.Levels[0].Price, b.PrevPage, b.Dropped, b.Orders)
+	}
+	// 不设上限(Build 的口径)时照旧认作续页
+	if b := Build(rows(65*time.Hour), model.SideOffer, slack); b.Levels[0].Price != 100 || b.PrevPage != PageSize {
+		t.Fatalf("Build 的口径不变,得到 卖一 %d / prev %d", b.Levels[0].Price, b.PrevPage)
+	}
+	// 10 分钟前翻的第 1 页:同一次浏览,照样是续页
+	b = BuildWith(rows(10*time.Minute), model.SideOffer, slack, opts)
+	if b.Levels[0].Price != 100 || b.PrevPage != PageSize || b.Dropped != 0 {
+		t.Fatalf("隔 10 分钟的续页应保留第 1 页,得到 卖一 %d / prev %d / 剔 %d", b.Levels[0].Price, b.PrevPage, b.Dropped)
+	}
+}
+
 // 页满没满按整次响应数:同一 城市 × 方向 × 时间戳,跨品质、**跨物品**。
 // 装备一页 50 单横跨几个品质;按分类翻列表页时一页横跨几个物品(实测 Martlock 一页 50 单
 // 里 T2_FIBER、T4_ROCK、T1_WOOD… 12 个物品)。以前按物品分,跨物品的满页数不满

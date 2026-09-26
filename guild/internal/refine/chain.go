@@ -62,7 +62,8 @@ func newEngine(p Params, line Line, in Input) *engine {
 	}
 }
 
-// side 取一个盘口边:排好序、去掉空档;比 MaxAgeHours 还旧的当作没有(记进 stale)。
+// side 取一个盘口边:排好序、去掉空档。比 MaxAgeHours 还旧的档不用(按每一档自己的
+// 观测时刻,见 Ladder.LevelSeen);一档都不剩就当作没有,记进 stale。
 func (e *engine) side(item, city string, asks bool) (ladderSide, bool) {
 	k := sideKey{item, city, asks}
 	if s, ok := e.sides[k]; ok {
@@ -78,10 +79,15 @@ func (e *engine) side(item, city string, asks bool) (ladderSide, bool) {
 	var ent sideEntry
 	if has && !raw.empty() {
 		l := normalizeLadder(raw, asks)
-		if age, known := e.ageHours(l.seen); known && age > e.p.Sources.MaxAgeHours {
+		fresh := l.keepFresh(func(t time.Time) bool {
+			age, known := e.ageHours(t)
+			return known && age > e.p.Sources.MaxAgeHours
+		})
+		switch {
+		case len(fresh.levels) > 0:
+			ent = sideEntry{l: fresh, ok: true}
+		case len(l.levels) > 0:
 			e.stale[sideLabel(item, city, asks)] = true
-		} else if len(l.levels) > 0 {
-			ent = sideEntry{l: l, ok: true}
 		}
 	}
 	e.sides[k] = ent
@@ -303,8 +309,9 @@ type buyRec struct {
 	cost      float64 // 成交价 × 买方系数 × 件数
 	transport float64
 	levels    map[int64]float64
-	seen      time.Time
-	source    string
+	// seen 是吃到的各档里最旧的观测时刻
+	seen   time.Time
+	source string
 	// hitLast:吃到了可见阶梯的最后一档
 	hitLast      bool
 	truncated    bool
@@ -717,6 +724,10 @@ func (st *state) record(takes []take) {
 				levels: map[int64]float64{}, seen: o.seen, source: o.source,
 				truncated: o.truncated, depthUnknown: o.depthUnknown}
 			res.buys = append(res.buys, br)
+		}
+		// 一笔买入吃了几档,新鲜度按其中最旧的那一档报(审查 finding 2)
+		if !o.seen.IsZero() && (br.seen.IsZero() || o.seen.Before(br.seen)) {
+			br.seen = o.seen
 		}
 		br.qty += t.qty
 		br.cost += t.qty * o.buyUnit()

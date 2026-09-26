@@ -105,7 +105,9 @@ func main() {
 		os.Exit(1)
 	}
 	// 读簿要知道哪些盘口最近串过城:那些盘口的"最近一眼"不可信,暂停幽灵剔除。
-	// 必须在 conflator 和 ingest 开跑之前设好,之后只读
+	// 必须在 conflator 和 ingest 开跑之前设好,之后只读。
+	// 冲突记录要留得比读簿窗口里最长的那个还久:扫描看 6h,精炼页看 72h(refining.window_hours)
+	ing.SetConflictKeep(max(cfg.CaptureWindow(), cfg.Refining.Window()))
 	flipper.Conflicts = ing
 
 	go ing.Run(ctx)

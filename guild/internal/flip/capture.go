@@ -66,6 +66,9 @@ type storeBooks struct {
 	slack     time.Duration  // "同一眼"的宽容度
 	window    time.Duration  // 抓包窗口;串城的 key 把 slack 放到这么大
 	levels    int
+	// pageGap 是认续页的最大间隔(book.Opts.MaxPageGap)。0 = 不限:扫描和报价的窗口只有
+	// 几小时,口径不变;精炼页读 72h,设成 refinePageGap
+	pageGap time.Duration
 }
 
 // CaptureBooks 读一批盘口边,转成扫描用的形状。since 就是扫描的 now − 抓包窗口,
@@ -120,7 +123,7 @@ func (b *storeBooks) readSides(ctx context.Context, keys []model.QuoteKey,
 			continue // 按品质集合过滤时顺带回来的别的 key(见 store.bookOrdersSQL)
 		}
 		slack, conflict := r.slackOf(k)
-		side := book.Build(group, k.Side, slack)
+		side := book.BuildWith(group, k.Side, slack, book.Opts{MaxPageGap: b.pageGap})
 		if len(side.Levels) == 0 {
 			continue
 		}

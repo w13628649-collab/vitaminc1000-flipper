@@ -150,6 +150,11 @@ func refineServer(src *refineSrc, opts ...func(*flip.Service)) *httptest.Server 
 // someConflicts 让几个盘口边「最近串过城」。
 type someConflicts map[model.QuoteKey]bool
 
+// ConflictCoverageSince:和 *ingest.Ingestor 一样报串城判定覆盖到多早(books.conflicts_since)。
+func (c someConflicts) ConflictCoverageSince(now time.Time) time.Time {
+	return now.Add(-24 * time.Hour)
+}
+
 func (c someConflicts) ConflictedSince(keys []model.QuoteKey, since time.Time) map[model.QuoteKey]time.Time {
 	out := map[model.QuoteKey]time.Time{}
 	for _, k := range keys {

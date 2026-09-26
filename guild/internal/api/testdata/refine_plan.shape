@@ -11,9 +11,12 @@ $.books.aodp_newer[].city: string
 $.books.aodp_newer[].item: string
 $.books.aodp_newer[].side: string
 $.books.aodp_ok: bool
+$.books.aodp_over_stale: array
+$.books.aodp_over_stale[]: string
 $.books.capture: number
 $.books.conflicted: array
 $.books.conflicted[]: string
+$.books.conflicts_since: string
 $.books.empty: number
 $.books.read_at: string
 $.books.sides: number
@@ -220,7 +223,7 @@ $.raw_sources.*.mixed.unit: null|number
 $.raw_sources.*.need: number
 $.raw_sources.*.pure: array
 $.raw_sources.*.pure[]: object
-$.raw_sources.*.pure[].available: number
+$.raw_sources.*.pure[].available: null|number
 $.raw_sources.*.pure[].filled: bool
 $.raw_sources.*.pure[].path: array
 $.raw_sources.*.pure[].path[]: string

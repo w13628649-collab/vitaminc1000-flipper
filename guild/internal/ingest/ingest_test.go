@@ -404,6 +404,61 @@ func TestConflictedSince_新旧两个盘口都记(t *testing.T) {
 	}
 }
 
+// 精炼页读簿往回看 72h:冲突记录只留 24h 的话,30 小时前串过城的盘口边在精炼读簿时
+// 不会暂停幽灵剔除(审查 finding 10)。SetConflictKeep 把保留期放到读簿窗口那么长。
+func TestConflict记录保留期盖住精炼窗口(t *testing.T) {
+	run := func(keep time.Duration) (bool, *Ingestor) {
+		ing, _ := newTestIngestor(t)
+		if keep > 0 {
+			ing.SetConflictKeep(keep)
+		}
+		cur := t0
+		ing.now = func() time.Time { return cur }
+		first := order(1, 1000, 50)
+		first.ObservedAt = t0.Add(-time.Minute)
+		ing.Submit(model.UploadBatch{SentAt: t0, Orders: []model.MarketOrder{first}})
+		moved := first
+		moved.LocationID, moved.ObservedAt = "Thetford", t0
+		ing.Submit(model.UploadBatch{SentAt: t0, Orders: []model.MarketOrder{moved}})
+
+		// 30 小时后另一个物品的一张单串城,顺手清一次过期记录
+		cur = t0.Add(30 * time.Hour)
+		other := order(2, 900, 5)
+		other.ItemID, other.ObservedAt = "T6_METALBAR", cur.Add(-time.Minute)
+		ing.Submit(model.UploadBatch{SentAt: cur, Orders: []model.MarketOrder{other}})
+		moved2 := other
+		moved2.LocationID, moved2.ObservedAt = "Lymhurst", cur
+		ing.Submit(model.UploadBatch{SentAt: cur, Orders: []model.MarketOrder{moved2}})
+
+		got := ing.ConflictedSince([]model.QuoteKey{first.Key()}, cur.Add(-72*time.Hour))
+		return len(got) == 1, ing
+	}
+	if kept, _ := run(0); kept {
+		t.Fatal("默认只留 24h:30 小时前的冲突应当已经清掉(这个测试的前提)")
+	}
+	kept, ing := run(72 * time.Hour)
+	if !kept {
+		t.Fatal("保留期 72h 时,30 小时前的冲突要还在")
+	}
+	// 保留期不会比默认的 24h 短
+	ing.SetConflictKeep(time.Hour)
+	if ing.keep() != conflictKeepDefault {
+		t.Fatalf("保留期 %v,不该短于 24h", ing.keep())
+	}
+
+	// 能覆盖到多早:保留期之前删了,进程启动之前没记
+	ing.SetConflictKeep(72 * time.Hour)
+	now := t0.Add(100 * time.Hour)
+	ing.startedAt = time.Time{}
+	if got := ing.ConflictCoverageSince(now); !got.Equal(now.Add(-72 * time.Hour)) {
+		t.Fatalf("覆盖起点 %v,想要 now−72h", got)
+	}
+	ing.startedAt = now.Add(-5 * time.Hour)
+	if got := ing.ConflictCoverageSince(now); !got.Equal(ing.startedAt) {
+		t.Fatalf("刚重启 5 小时:覆盖起点应是启动时刻,得到 %v", got)
+	}
+}
+
 // 老客户端不带 sent_at,钟纠不了偏。数出来,才知道还有多少人没升级
 func TestSubmit_不带SentAt的批次计数(t *testing.T) {
 	ing, _ := newTestIngestor(t)

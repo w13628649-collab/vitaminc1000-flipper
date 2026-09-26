@@ -79,13 +79,14 @@ func (e *engine) sellInfo() SellInfo {
 		if !l.depthUnknown {
 			ps.NearQty = depth.Analyze(l.levels, sellNearPct).QtyNear
 		}
-		ps.SeenAt, ps.AgeH = e.seenAge(l.seen)
+		// 挂卖价跟的是卖一:新鲜度按卖一那一档的观测时刻
+		ps.SeenAt, ps.AgeH = e.seenAge(l.seenAt(0))
 		si.Post = ps
 	}
 	if l, ok := e.side(item, city, false); ok {
 		best := l.levels[0].Price
 		ts := &TakeSell{BestBid: best, Truncated: l.truncated, Source: l.source}
-		ts.SeenAt, ts.AgeH = e.seenAge(l.seen)
+		ts.SeenAt, ts.AgeH = e.seenAge(l.seenAt(0))
 		want := float64(e.p.Qty)
 		if l.depthUnknown {
 			// 只有价格没有件数:按买一全卖得掉算,并不知道哪里是断崖
@@ -104,6 +105,10 @@ func (e *engine) sellInfo() SellInfo {
 			ts.MaxQty = &acc
 			f := depth.WalkFrac(usable, want)
 			ts.Fill = TakeFill{Want: want, Got: f.Got, VWAP: f.VWAP, NetAvg: f.VWAP * e.mkt.TakeBid}
+			// 吃了几档,新鲜度按其中最旧的那一档(usable 是 levels 的前缀,下标对得上)
+			if old := l.oldestSeen(len(f.Levels)); !old.IsZero() {
+				ts.SeenAt, ts.AgeH = e.seenAge(old)
+			}
 		}
 		si.Take = ts
 	}
