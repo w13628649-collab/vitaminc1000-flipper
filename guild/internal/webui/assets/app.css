@@ -15,13 +15,19 @@
    WebView2 会跟随 Windows 的深色设置,加暗色分支等于把深底又带回来。
 
    城市色、品质色都是给浅底调过的:普通品质在游戏里是白的,
-   浅底上看不见,换成中灰。 */
+   浅底上看不见,换成中灰。
+
+   --ink-soft 是 10~12px 小字(表头、物品 id、价差行、页签、数据龄)的颜色,
+   必须在纸底上过 WCAG AA 的 4.5:1。以前的 #7c858d 在纸底只有 2.86:1、surface 上 3.28:1;
+   现在的 #5c646b 是 4.59 / 5.26,色相不变,只是深一档。
+   --bronze-ink 同理:青铜当小字颜色时(置信度 medium、当前排序列、件数)用它,
+   #8a6320 在纸底是 4.12:1,差一点;大面积的青铜点缀(边框、按钮底)仍用 --bronze */
 :root{
   color-scheme:light;
   --paper:#dfe1e3; --surface:#eef0f1; --surface-2:#e6e8ea;
-  --ink:#15181c; --ink-mid:#4a5158; --ink-soft:#7c858d;
+  --ink:#15181c; --ink-mid:#4a5158; --ink-soft:#5c646b;
   --rule:#c6cbcf; --rule-soft:#d6dadd;
-  --bronze:#8a6320; --bronze-lift:#a87a2c;
+  --bronze:#8a6320; --bronze-lift:#a87a2c; --bronze-ink:#76541b;
   --gain:#2c6e49; --warn:#9c3232;
   --thetford:#6b4a8f; --fort-sterling:#69737d; --lymhurst:#4f7a3a;
   --martlock:#2f5d8a; --bridgewatch:#b07226; --caerleon:#9c3232;
@@ -128,7 +134,7 @@ th{text-align:right; font-size:11px; font-weight:600; color:var(--ink-soft);
    padding:7px 10px; border-bottom:1px solid var(--ink); white-space:nowrap}
 th.s{cursor:pointer; user-select:none}
 th.s:hover{color:var(--ink)}
-th.s[data-dir]{color:var(--bronze)}
+th.s[data-dir]{color:var(--bronze-ink)}
 th.s::after{content:""; font-size:10px; margin-left:4px; opacity:.55}
 th.s[data-dir=desc]::after{content:"▼"}
 th.s[data-dir=asc]::after{content:"▲"}
@@ -157,7 +163,7 @@ tr.detail tbody tr:hover{background:var(--surface-2)}
 .depth,.age{font-size:11.5px; color:var(--ink-soft)}
 .pos{color:var(--gain)} .neg{color:var(--warn)}
 .tag{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r); border:1px solid currentColor}
-.high{color:var(--gain)} .medium{color:var(--bronze)} .low{color:var(--warn)}
+.high{color:var(--gain)} .medium{color:var(--bronze-ink)} .low{color:var(--warn)}
 .kind{font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:var(--r)}
 .kind.arb{background:var(--bronze); color:#fff}
 .kind.flip{background:var(--surface-2); color:var(--ink-mid); box-shadow:inset 0 0 0 1px var(--rule)}
@@ -256,7 +262,7 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 #list .en{font-size:10.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 #list .empty{padding:18px 0}
 .tierbadge{flex:none; width:25px; text-align:center; font-size:10.5px; font-weight:700;
-  color:var(--bronze); border:1px solid var(--rule); border-radius:var(--r); padding:1px 0}
+  color:var(--bronze-ink); border:1px solid var(--rule); border-radius:var(--r); padding:1px 0}
 
 .pricepanel{min-width:0}
 #v-lookup .empty{padding:26px 0 40px; max-width:62ch; color:inherit}
@@ -322,14 +328,14 @@ dialog .row{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
 .cell.best-sell{border-color:var(--bronze); box-shadow:inset 0 0 0 1px var(--bronze)}
 .cell .ctag{font-size:10px; font-weight:600; margin-top:3px}
 .best-buy .ctag{color:var(--gain)}
-.best-sell .ctag{color:var(--bronze)}
+.best-sell .ctag{color:var(--bronze-ink)}
 .best-buy.best-sell .ctag{color:var(--ink)}
 .cell .ctag.warn{color:var(--warn); font-weight:500}
 .cell .ctag.warn b{font-weight:700}
 /* 来源徽标:绿底白字 = 这一侧用的是自建抓包 */
 .src{font-style:normal; font-size:9.5px; font-weight:700; margin-left:4px; padding:0 3px;
   border-radius:var(--r); vertical-align:1px; background:var(--gain); color:#fff}
-.qty{font-style:normal; font-size:11px; color:var(--bronze); font-weight:600}
+.qty{font-style:normal; font-size:11px; color:var(--bronze-ink); font-weight:600}
 .qty.dim{opacity:.55}
 .hsrc{font-style:normal; font-size:9.5px; font-weight:600; margin-left:4px; padding:0 3px;
   border-radius:var(--r); background:var(--gain); color:#fff; vertical-align:1px}
@@ -474,7 +480,7 @@ table.ladder tr.stale td{opacity:.45}
 
 table.ideas th{cursor:pointer; user-select:none}
 table.ideas th:hover{color:var(--ink)}
-table.ideas th[aria-sort]{color:var(--bronze)}
+table.ideas th[aria-sort]{color:var(--bronze-ink)}
 table.ideas th .arrow{opacity:.55; font-size:10px; margin-left:3px}
 table.ideas th,table.ideas td{padding-left:8px; padding-right:8px}
 /* 数据越旧,这一行就越褪色——旧数据看起来就该旧 */
