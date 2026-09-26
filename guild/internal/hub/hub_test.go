@@ -162,6 +162,60 @@ func TestFanout_慢客户端丢消息而不是阻塞(t *testing.T) {
 	}
 }
 
+// 丢过消息的连接要能被写循环认出来,排空后补发 resync。没丢过的不该有这个信号:
+// 否则界面每一轮都整体回拉一次
+func TestFanout_丢过消息才标记Lagged(t *testing.T) {
+	h := NewHub()
+	c := NewClient(3)
+	keys := []string{"a", "b", "c", "d", "e"}
+	c.Subscribe(keys)
+	h.Add(c)
+
+	h.Fanout([]model.Quote{{Key: "a", Price: 1, At: time.Now()}})
+	select {
+	case <-c.Lagged():
+		t.Fatal("没丢过消息,不该标记")
+	default:
+	}
+	<-c.Out()
+
+	now := time.Now().Add(time.Second)
+	batch := make([]model.Quote, 0, len(keys))
+	for i, k := range keys {
+		batch = append(batch, model.Quote{Key: k, Price: int64(10 + i), At: now})
+	}
+	h.Fanout(batch) // 5 条塞进容量 3 的积压:丢 2 条
+	if h.DroppedCount() != 2 {
+		t.Fatalf("应丢 2 条,得到 %d", h.DroppedCount())
+	}
+	select {
+	case <-c.Lagged():
+	default:
+		t.Fatal("丢过消息应标记 Lagged")
+	}
+	// 多次丢弃合成一个信号,读走就清掉
+	select {
+	case <-c.Lagged():
+		t.Fatal("读走之后不该还有")
+	default:
+	}
+}
+
+// 主题消息被丢也算:resync 之后界面重订 scan,拿到补发的最近一条
+func TestPublishTopic_丢了也标记Lagged(t *testing.T) {
+	h := NewHub()
+	c := NewClient(1)
+	h.Add(c)
+	h.SubscribeTopics(c, []string{TopicScan})
+	h.PublishTopic(TopicScan, []byte("1"))
+	h.PublishTopic(TopicScan, []byte("2")) // 积压满,丢
+	select {
+	case <-c.Lagged():
+	default:
+		t.Fatal("扫描通知被丢也应标记 Lagged")
+	}
+}
+
 func TestRemove_摘掉后写循环收到退出信号(t *testing.T) {
 	h := NewHub()
 	c := NewClient(4)

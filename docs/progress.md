@@ -123,6 +123,10 @@ POST /api/catalog/sync 重新同步物品目录
 - 主题消息只扇给本实例的连接,不走 NATS(扫描是每个实例各跑各的)。
   背压和报价同一套:连接积压就丢、计进 `/api/stats` 的 `dropped`;
   `/api/stats` 的 `topic_subscribers.scan` 是订阅数,`last_scan_event` 是最近一条通知
+- 每条连接的发送积压上限 2048 条(`api.wsSendBuffer`,以前 256:实时页一次就订 280 个盘口边,
+  一次上传翻过这些盘口时多出来的几十条会被丢)。真丢过的话,积压排空后服务端补发一条
+  `{"type":"resync"}`(不用订阅,一次积压只补一次)。界面收到后对订阅的全部 key 回拉
+  `/api/quotes`、查价页重拉一次表,再重订 `scan` 拿补发的最近一条通知。老界面按不认识的 `type` 忽略
 
 重启:
 

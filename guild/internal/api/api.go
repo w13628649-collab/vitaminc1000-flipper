@@ -45,6 +45,9 @@ type Server struct {
 	ReleaseVersion string
 	// MinClientVersion 是服务端接受的最低客户端版本,低于它就必须更新。
 	MinClientVersion string
+	// WSBuffer 是每条 WS 连接的发送积压上限,0 用 wsSendBuffer。留这个口子是为了测试
+	// 能把它调小、稳定地造出"丢过消息"
+	WSBuffer int
 
 	releases releaseCache
 	upgrader websocket.Upgrader
@@ -225,7 +228,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return // Upgrade 内部已经写过响应了
 	}
-	client := hub.NewClient(256)
+	client := hub.NewClient(s.wsBuffer())
 	s.Hub.Add(client)
 
 	go s.wsWriter(conn, client)
@@ -264,24 +267,52 @@ func (s *Server) wsReader(conn *websocket.Conn, client *hub.Client) {
 	}
 }
 
+// wsSendBuffer 是每条 WS 连接的发送积压上限(条)。
+//
+// 一轮 conflator tick 里变了的盘口会在同一次 Fanout 里一口气塞进来,塞不下的直接丢。
+// 以前是 256,可实时页自己就订了 280 个盘口边(机会板前 15 个物品 + 查价页物品的 5 档品质,
+// × 7 城 × 2 边),成员一次上传翻过这些盘口,多出来的那几十条就丢了。
+// 定成前端最大订阅量的好几倍:一条报价几十字节,2048 条也就百来 KB。真丢了还有 resync 兜底
+const wsSendBuffer = 2048
+
+func (s *Server) wsBuffer() int {
+	if s.WSBuffer > 0 {
+		return s.WSBuffer
+	}
+	return wsSendBuffer
+}
+
 func (s *Server) wsWriter(conn *websocket.Conn, client *hub.Client) {
 	ping := time.NewTicker(pingInterval)
 	defer func() {
 		ping.Stop()
 		_ = conn.Close()
 	}()
+	write := func(kind int, msg []byte) bool {
+		_ = conn.SetWriteDeadline(time.Now().Add(writeTimeout))
+		return conn.WriteMessage(kind, msg) == nil
+	}
+	// resync 等积压排空再发:排在前面的报价都写出去之后界面再回拉,回拉结果不会比已推的旧;
+	// 一次积压里丢多少条都只补这一条,不会每丢一条就让界面回拉一次
+	resync := false
 	for {
 		select {
 		case <-client.Closed():
 			return // Hub 把这个客户端摘掉了
 		case msg := <-client.Out():
-			_ = conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-			if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			if !write(websocket.TextMessage, msg) {
 				return
 			}
+		case <-client.Lagged():
+			resync = true
 		case <-ping.C:
-			_ = conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if !write(websocket.PingMessage, nil) {
+				return
+			}
+		}
+		if resync && len(client.Out()) == 0 {
+			resync = false
+			if !write(websocket.TextMessage, hub.ResyncMessage) {
 				return
 			}
 		}

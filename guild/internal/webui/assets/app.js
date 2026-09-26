@@ -2351,13 +2351,15 @@ sortable("#v-rank thead", rankSort, () => rankRows, renderRank);
 // 协议(服务端 hub/topic.go):
 //   → {"op":"sub"|"unsub","keys":[...],"topics":["scan"]}   key = item|city|quality|side(0 卖单 1 买单)
 //   ← 报价 {k,p,d,n,t},没有 type 字段;订阅了 scan 的连接,服务端每发布一次扫描结果
-//     (AODP 全量或抓包快速重算)都收到 {"type":"scan","evaluated_at","started_at","digest",…,"full"}
+//     (AODP 全量或抓包快速重算)都收到 {"type":"scan","evaluated_at","started_at","digest",…,"full","ingest"}
+//   ← {"type":"resync"}:这条连接积压丢过消息,不用订阅(见 rtResync)
 // 老服务端不认识 topics:encoding/json 直接忽略未知字段,所以现在就带上是安全的
 const rt = {
   ws: null, up: false, backoff: 500, openedAt: 0, opens: 0,   // opens:第几次连上,>1 就是重连
   owners: new Map(),     // 登记方 → { keys: Set, snapshot: bool }("live" 实时页、"lookup" 查价页)
   subbed: new Set(),     // 这条连接上已经订上的 key
   quoteFns: [], scanFns: [], openFns: [],
+  resyncTimer: 0, resyncs: 0,   // 服务端 resync 通知的合并定时器、处理过几次(见 rtResync)
 };
 const SUB_CHUNK = 400;   // 服务端一条指令最多读 64KB,一个 key 四十来字节
 const SNAP_CHUNK = 100;  // /api/quotes 一次带多少个 key
@@ -2448,6 +2450,7 @@ function rtConnect() {
       }
       return;
     }
+    if (msg.type === "resync") { rtResync(); return; }
     if (msg.type) return;   // 以后新加的主题,不认识就不管
     if (typeof msg.k === "string") rtQuote(msg, true);
   };
@@ -2462,6 +2465,23 @@ function rtConnect() {
 function rtRetry() {
   setTimeout(rtConnect, rt.backoff);
   rt.backoff = Math.min(rt.backoff * 2, 30000);   // 指数退避
+}
+
+// 服务端说这条连接积压丢过消息({"type":"resync"},见 hub.ResyncMessage)。丢的是哪几条不知道,
+// 被丢的盘口要是之后没人再翻,就一直停在旧值上 —— 以前只能等实时页每分钟一次的整体对账,
+// 而且实时页不在前台时那个对账根本不跑。这里:要快照的 key 全部回拉一次,查价页重拉一次表,
+// 再重订 scan 拿服务端补发的最近一条通知(摘要没变就不重拉 /api/scan)。连着来几条只做一次
+function rtResync() {
+  if (rt.resyncTimer) return;
+  rt.resyncTimer = setTimeout(() => {
+    rt.resyncTimer = 0;
+    rt.resyncs++;
+    rtSend("sub", [], ["scan"]);
+    const snap = new Set();
+    for (const o of rt.owners.values()) if (o.snapshot) for (const k of o.keys) snap.add(k);
+    if (snap.size) liveResync([...snap]);
+    if (lookup.data) lookupLiveKick();
+  }, 300);
 }
 
 // 顶栏「推送」那一格
@@ -2577,7 +2597,8 @@ const LIVE_FRESH_MS = 30 * 60000;
 // 推送到了之后隔一会儿对这批 key 回拉一次 /api/quotes,用回拉的结果为准。
 // 老服务端的推送发在单子落库之前,推出去的是上一个价;新服务端推的已经是落库后的,回拉只是多一次确认
 const LIVE_VERIFY_MS = 2500;
-// 实时页开着时每分钟整体对一次:推送被丢(客户端积压)、盘口清空(服务端不推消息)都靠它收敛
+// 实时页开着时每分钟整体对一次:盘口清空(服务端不推消息)靠它收敛。推送被丢(连接积压)
+// 新服务端会补发 resync、当场回拉(rtResync),这一路只剩兜老服务端
 const LIVE_RESYNC_MS = 60000;
 
 // 城市取扫描覆盖率里的(就是配置里的城市),再并上查价页的城市。Brecilien 总是带上:

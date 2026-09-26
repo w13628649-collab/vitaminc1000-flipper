@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,10 +23,15 @@ type wsEnv struct {
 	at  time.Time // 报价时间戳,每推一条往前走,免得被 Fanout 的乱序保护吞掉
 }
 
-func newWSEnv(t *testing.T) *wsEnv {
+func newWSEnv(t *testing.T) *wsEnv { return newWSEnvBuf(t, 0) }
+
+// newWSEnvBuf 同 newWSEnv,只是把每条连接的发送积压设成 buf(0 = 线上默认值)。
+func newWSEnvBuf(t *testing.T, buf int) *wsEnv {
 	t.Helper()
 	h := hub.NewHub()
-	srv := httptest.NewServer(New(nil, nil, h, time.Minute, nil).Routes())
+	s := New(nil, nil, h, time.Minute, nil)
+	s.WSBuffer = buf
+	srv := httptest.NewServer(s.Routes())
 	t.Cleanup(srv.Close)
 	return &wsEnv{t: t, h: h, srv: srv, at: time.Now()}
 }
@@ -202,5 +208,85 @@ func TestWS_不认识的主题忽略(t *testing.T) {
 	ts, ok := stats["topic_subscribers"].(map[string]any)
 	if !ok || ts["scan"] != float64(0) || stats["clients"] != float64(1) {
 		t.Fatalf("/api/stats 应报 scan 订阅数,得到 %v", stats)
+	}
+}
+
+// subscribeN 订 n 个 key(k0..k{n-1})加一个哨兵,等订阅生效。waitQuote 期间可能多推出
+// 几条哨兵报价还躺在连接里,调用方读的时候按 key 过滤
+func (e *wsEnv) subscribeN(c *websocket.Conn, n int) []string {
+	e.t.Helper()
+	keys := make([]string, n)
+	for i := range keys {
+		keys[i] = "k" + strconv.Itoa(i)
+	}
+	b, _ := json.Marshal(map[string]any{"op": "sub", "keys": append(append([]string(nil), keys...), "sentinel")})
+	e.send(c, string(b))
+	e.waitQuote(c, "sentinel")
+	return keys
+}
+
+// 验收原样:实时页订了 280 个盘口边,一次上传翻过全部,一轮 Fanout 280 条。
+// 以前每条连接只能积压 256 条,多出来的 24 条悄悄丢掉。现在一条不丢
+func TestWS_一轮几百条报价不丢(t *testing.T) {
+	e := newWSEnv(t)
+	c := e.dial()
+	keys := e.subscribeN(c, 280)
+	before := e.h.DroppedCount()
+
+	e.at = e.at.Add(time.Second)
+	batch := make([]model.Quote, len(keys))
+	for i, k := range keys {
+		batch[i] = model.Quote{Key: k, Price: int64(2000 + i), At: e.at}
+	}
+	e.h.Fanout(batch)
+
+	want := map[any]bool{}
+	for _, k := range keys {
+		want[k] = true
+	}
+	got := map[any]bool{}
+	for len(got) < len(keys) {
+		m := e.read(c)
+		if _, typed := m["type"]; typed {
+			t.Fatalf("没丢消息不该收到带 type 的消息: %v", m)
+		}
+		if want[m["k"]] { // 跳过订阅时多推出来的哨兵
+			got[m["k"]] = true
+		}
+	}
+	if d := e.h.DroppedCount() - before; d != 0 {
+		t.Fatalf("280 条不该丢,丢了 %d", d)
+	}
+}
+
+// 真丢了(积压上限调到 1 造出来):排空之后补发一条 {"type":"resync"},界面据此整体回拉
+func TestWS_丢过消息后补发resync(t *testing.T) {
+	e := newWSEnvBuf(t, 1)
+	c := e.dial()
+	keys := e.subscribeN(c, 200)
+
+	// 一次 Fanout 200 条塞进容量 1 的积压:写循环再快也追不上,几乎必丢。
+	// 没丢就再来一轮(至多 20 轮),断言只在真丢过之后做
+	before := e.h.DroppedCount()
+	for round := 0; round < 20 && e.h.DroppedCount() == before; round++ {
+		e.at = e.at.Add(time.Second)
+		batch := make([]model.Quote, len(keys))
+		for i, k := range keys {
+			batch[i] = model.Quote{Key: k, Price: int64(round*1000 + i), At: e.at}
+		}
+		e.h.Fanout(batch)
+	}
+	if e.h.DroppedCount() == before {
+		t.Skip("20 轮都没丢,造不出积压")
+	}
+	// 同一轮里写循环读走信号之后 Fanout 可能又丢几条,resync 可能补不止一次,这里只要求至少一次
+	for {
+		m := e.read(c) // 3 秒读不到就失败
+		if m["type"] == "resync" {
+			break
+		}
+		if _, typed := m["type"]; typed {
+			t.Fatalf("只该有 resync 这一种带 type 的消息,得到 %v", m)
+		}
 	}
 }

@@ -15,6 +15,9 @@ package hub
 //     前端按有没有 type 区分
 //   - 订阅时如果这个主题已经发布过,立刻补发最近那一条(retained)。断线重连的
 //     界面不用等下一轮发布,就能拿摘要判断自己手上那份结果是不是最新的
+//   - 连接积压丢过消息(报价或主题消息)时,积压排空后服务端补发一条 {"type":"resync"}
+//     (ResyncMessage,不用订阅)。界面收到后对自己订的全部 key 回拉 /api/quotes,
+//     再重订一次 scan 拿补发的最近一条通知。老界面按不认识的 type 忽略
 //
 // 主题消息只扇给本实例的连接,不走 Broadcaster/NATS:扫描是每个实例各跑各的,
 // 通知说的是"本实例的 /api/scan 变了",发给连在别的实例上的界面反而是错的。
@@ -121,6 +124,7 @@ func (h *Hub) offerLocked(c *Client, payload []byte) bool {
 		return true
 	default:
 		h.Dropped++
+		c.markLagged() // 丢的是扫描通知也一样:resync 之后界面重订 scan,拿到补发的最近一条
 		return false
 	}
 }

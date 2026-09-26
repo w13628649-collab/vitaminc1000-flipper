@@ -38,7 +38,11 @@ type Client struct {
 	// 一个成员断线就能把整个服务端打挂。
 	closed    chan struct{}
 	closeOnce sync.Once
-	subs      map[string]struct{}
+	// lagged 在这条连接上丢过消息时收到一个信号(容量 1,多次丢弃合成一个)。
+	// 写循环据此在积压排空之后补发一条 ResyncMessage:丢掉的报价不会再推,
+	// 盘口没再变的话界面会一直停在旧值上,光靠前端每分钟一次的整体对账太慢
+	lagged chan struct{}
+	subs   map[string]struct{}
 	// topics 是按主题订阅的那部分(见 topic.go),和按盘口 key 订阅的 subs 分开:
 	// 两者的消息形状不同,老客户端只订 key,永远收不到主题消息
 	topics map[string]struct{}
@@ -49,15 +53,31 @@ func NewClient(buffer int) *Client {
 	return &Client{
 		send:   make(chan []byte, buffer),
 		closed: make(chan struct{}),
+		lagged: make(chan struct{}, 1),
 		subs:   make(map[string]struct{}),
 		topics: make(map[string]struct{}),
 	}
 }
 
+// ResyncMessage 是"你丢过消息,把订阅的东西整体重拉一次"的通知,形状和主题消息一样
+// 带 type(见 topic.go),老界面按"不认识的 type"忽略。写循环在积压排空之后发(见 Lagged)
+var ResyncMessage = []byte(`{"type":"resync"}`)
+
 func (c *Client) Out() <-chan []byte { return c.send }
 
 // Closed 在这个客户端被摘掉时关闭。写循环用它退出。
 func (c *Client) Closed() <-chan struct{} { return c.closed }
+
+// Lagged 在这条连接因积压丢过消息之后可读(见 lagged)。读走一次清掉,之后再丢再来。
+func (c *Client) Lagged() <-chan struct{} { return c.lagged }
+
+// markLagged 记一次"丢过消息",不阻塞:已经记着没被读走的就不用再记
+func (c *Client) markLagged() {
+	select {
+	case c.lagged <- struct{}{}:
+	default:
+	}
+}
 
 func (c *Client) Subscribe(keys []string) {
 	c.mu.Lock()
@@ -170,12 +190,14 @@ func (h *Hub) Fanout(quotes []model.Quote) {
 				// 这个客户端已经走了,剩下的都别发了
 			case c.send <- payload:
 			default:
-				// 客户端处理不过来:丢掉这条,不阻塞扇出循环。
-				// 行情丢旧的没关系,下一个 tick 还会推最新值——
-				// 这跟聊天不一样,绝不能让一个慢客户端卡住所有人。
+				// 客户端处理不过来:丢掉这条,不阻塞扇出循环。绝不能让一个慢客户端卡住所有人。
+				// 但"下一个 tick 还会推最新值"只在这个盘口再变时才成立:一次上传几百张单、
+				// 之后没人再翻,被丢的那几边就一直停在旧值上。所以记下这条连接丢过,
+				// 写循环排空积压后补发 ResyncMessage,界面据此整体回拉一次
 				h.mu.Lock()
 				h.Dropped++
 				h.mu.Unlock()
+				c.markLagged()
 			}
 		}
 	}
