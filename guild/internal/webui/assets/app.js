@@ -1828,14 +1828,16 @@ function renderPrices(d) {
 
   const wrap = $("lookup-result").querySelector(".matrix-wrap");
   const bar = $("lookup-result").querySelector(".hbar");
-  // 两条滚动条互相跟。赋同一个值不会再触发 scroll,不会来回弹
+  // 两条滚动条互相跟。赋同一个值不会再触发 scroll,不会来回弹。
+  // 表自己一滚(拖上面那条、点格子时 revealCellX 横着挪)就重算"左右还藏着哪几列"
   bar.addEventListener("scroll", () => { wrap.scrollLeft = bar.scrollLeft; }, { passive: true });
-  wrap.addEventListener("scroll", () => { bar.scrollLeft = wrap.scrollLeft; }, { passive: true });
-  fitLookup();
+  wrap.addEventListener("scroll", () => { bar.scrollLeft = wrap.scrollLeft; queueHbarNote(); }, { passive: true });
+  // 先恢复横向滚动位置再算尺寸和提示:以前反过来,提示算的是 scrollLeft=0 时藏着的列
   if (keep) {
     wrap.scrollLeft = keep.x;
     if (keep.focus) wrap.querySelector(".cellbtn.open")?.focus({ preventScroll: true });
   }
+  fitLookup();
   if (was) {
     for (const b of wrap.querySelectorAll(".cellbtn")) {
       for (const kind of ["sell", "buy"]) {
@@ -1885,12 +1887,34 @@ function fitLookup() {
   if (over > 1) {
     bar.firstElementChild.style.width = wrap.scrollWidth + "px";
     bar.scrollLeft = wrap.scrollLeft;
-    // 告诉人右边还藏着哪几列,不然五档品质只看得到两档半,也不知道要滚
-    const cut = wrap.getBoundingClientRect().right;
-    const hiddenQ = [...wrap.querySelectorAll("thead th.q")]
-      .filter(th => th.getBoundingClientRect().right > cut + 1).map(th => th.textContent.trim());
-    note.textContent = `表比这一栏宽${hiddenQ.length ? `,右边还有 ${hiddenQ.join("、")}` : ""}:拖上面这条横向滚动,或者用「品质」只看一档`;
+    hbarNote();
   }
+}
+// 告诉人左右两边还藏着哪几列,不然五档品质只看得到两档半,也不知道要滚。
+// 按当前滚动位置算:钉在左边的城市列挡住的也算藏着;露出来不到一半的列算藏着(只露一条边看不到价)。
+// 以前只在重画时算一次、只报右边,横着一滚就过时了,右栏打开后还会把正开着、看得见的那一列报成"右边还有"
+function hbarNote() {
+  const wrap = $("lookup-result").querySelector(".matrix-wrap");
+  const note = $("lookup-result").querySelector(".hbar-note");
+  if (!wrap || !note || note.hidden) return;
+  const r = wrap.getBoundingClientRect();
+  const pinned = wrap.classList.contains("hscroll")
+    ? wrap.querySelector("thead th:first-child")?.getBoundingClientRect().width || 0 : 0;
+  const lo = r.left + pinned, hi = r.right;
+  const left = [], right = [];
+  for (const th of wrap.querySelectorAll("thead th.q")) {
+    const b = th.getBoundingClientRect();
+    if (Math.min(b.right, hi) - Math.max(b.left, lo) >= b.width / 2) continue;
+    (b.left + b.width / 2 < lo ? left : right).push(th.textContent.trim());
+  }
+  const parts = [left.length ? `左边还有 ${left.join("、")}` : "", right.length ? `右边还有 ${right.join("、")}` : ""].filter(Boolean);
+  note.textContent = `表比这一栏宽${parts.length ? "," + parts.join(";") : ""}:拖上面这条横向滚动,或者用「品质」只看一档`;
+}
+let noteQueued = false;
+function queueHbarNote() {
+  if (noteQueued) return;
+  noteQueued = true;
+  requestAnimationFrame(() => { noteQueued = false; hbarNote(); });
 }
 let fitQueued = false;
 function queueFit() {
