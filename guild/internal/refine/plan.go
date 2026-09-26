@@ -262,6 +262,9 @@ func Plan(in Input) (*Result, error) {
 	if in.Recipes.Len() == 0 {
 		return nil, errors.New("没有配方数据")
 	}
+	if err := CheckTarget(in.Recipes, p.Target); err != nil {
+		return nil, err
+	}
 	e := newEngine(p, line, in)
 	e.buildChain()
 	tiers := e.focusTiers()

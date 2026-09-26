@@ -18,6 +18,16 @@ func Validate(p Params) error {
 	return err
 }
 
+// CheckTarget:目标在配方表里要有精炼配方。id 长得对(validate 查过)还不够——配方表里
+// 没有的话,链是空的、引擎只会报一条误导人的「没解锁」(审查 finding 7)。
+// 服务层在读库之前调它,Plan 里也会再查一次。
+func CheckTarget(recipes *catalog.RecipeBook, target string) error {
+	if len(recipes.OfKind(target, catalog.RecipeRefine)) == 0 {
+		return fmt.Errorf("%q 在配方表(%s)里没有精炼配方", target, recipes.Source())
+	}
+	return nil
+}
+
 // Normalized 是 Plan 实际会用的参数:补齐出售城市、买料城市这几个空字段。
 // 服务层按它收集要读的盘口,才和引擎看的是同一批城市。
 func Normalized(p Params) Params { return p.normalized() }

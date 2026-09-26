@@ -445,6 +445,9 @@ func TestRefine参数不合法是ParamError且不碰数据源(t *testing.T) {
 		{"专注超过上限", func(p *refine.Params) { p.Focus.Budget = 40000 }},
 		{"k 录成百分数", func(p *refine.Params) { p.Fees.TransmuteFactor = 115.4 }},
 		{"件数 0", func(p *refine.Params) { p.Qty = 0 }},
+		{"不存在的附魔", func(p *refine.Params) { p.Target = "T8_METALBAR_LEVEL5@5" }},
+		{"不规范的 id", func(p *refine.Params) { p.Target = "T8_METALBAR_LEVEL0@0" }},
+		{"本金 +Inf", func(p *refine.Params) { p.Daily.Capital = math.Inf(1) }},
 	}
 	for _, c := range cases {
 		p := s.RefineDefaults(tBar, "")

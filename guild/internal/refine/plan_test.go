@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"albion-guild/internal/catalog"
 )
 
 // 参数不合法返回 error;缺价、深度不够不是 error(见 chain_test)。
@@ -28,6 +30,21 @@ func TestPlan参数校验(t *testing.T) {
 		{"余料估值", func(p *Params) { p.Leftover = "sell" }, "余料"},
 		{"出售方式", func(p *Params) { p.Sell.Modes = []string{"dump"} }, "出售方式"},
 		{"自定义专注不在链上", func(p *Params) { p.Focus.Mode = FocusCustom; p.Focus.CustomTiers = []int{3} }, "不在这条链上"},
+		// 审查 finding 7:游戏里没有的附魔、不规范的 id
+		{"附魔 .5", func(p *Params) { p.Target = "T8_METALBAR_LEVEL5@5" }, "不是本期能算的半成品"},
+		{"附魔 .9", func(p *Params) { p.Target = "T8_METALBAR_LEVEL9@9" }, "不是本期能算的半成品"},
+		{"_LEVEL0@0 写法", func(p *Params) { p.Target = "T8_METALBAR_LEVEL0@0" }, "不是本期能算的半成品"},
+		{"T4 以下带附魔", func(p *Params) { p.Target = "T3_METALBAR_LEVEL1@1" }, "不是本期能算的半成品"},
+		// 审查 finding 9:+Inf 能混过「>= 0」,之后缓存键的 json.Marshal 会失败
+		{"本金 +Inf", func(p *Params) { p.Daily.Capital = math.Inf(1) }, "本金"},
+		{"本金 NaN", func(p *Params) { p.Daily.Capital = math.NaN() }, "本金"},
+		{"周转天数 +Inf", func(p *Params) { p.Daily.TurnoverDays = math.Inf(1) }, "周转天数"},
+		{"挂买单上限 +Inf", func(p *Params) { p.Sources.BidMaxQty = math.Inf(1) }, "挂买单上限"},
+		{"数据最大年龄 +Inf", func(p *Params) { p.Sources.MaxAgeHours = math.Inf(1) }, "数据最大年龄"},
+		{"压价为负", func(p *Params) { p.Fees.Undercut = -9_000_000_000_000_000_000 }, "undercut"},
+		{"加价太大", func(p *Params) { p.Fees.Outbid = 2_000_000 }, "outbid"},
+		{"FCE 的键不是 tier", func(p *Params) { p.Focus.FCE[99] = 1000 }, "FCE 的键"},
+		{"FCE 的键是 T3", func(p *Params) { p.Focus.FCE[3] = 1000 }, "FCE 的键"},
 	}
 	for _, c := range cases {
 		p := params("T8_METALBAR_LEVEL4@4")
@@ -41,6 +58,44 @@ func TestPlan参数校验(t *testing.T) {
 	p := params("T8_METALBAR_LEVEL4@4")
 	if _, err := Plan(Input{Params: p}); err == nil {
 		t.Fatal("没有配方数据应当报错")
+	}
+	// id 长得对、配方表里却没有它的精炼配方:报错,不回一个空链加「没解锁」
+	var rest []catalog.Recipe
+	for _, r := range EmbeddedRecipes().All() {
+		if r.ItemID != "T8_METALBAR_LEVEL4@4" {
+			rest = append(rest, r)
+		}
+	}
+	book := catalog.NewRecipeBook(rest, "", "test")
+	if _, err := Plan(Input{Params: p, Recipes: book}); err == nil || !strings.Contains(err.Error(), "没有精炼配方") {
+		t.Fatalf("配方表里没有目标的精炼配方时应当报错,得到 %v", err)
+	}
+	if err := CheckTarget(book, "T8_METALBAR_LEVEL4@4"); err == nil {
+		t.Fatal("CheckTarget 应当报错")
+	}
+	if err := CheckTarget(EmbeddedRecipes(), "T8_METALBAR_LEVEL4@4"); err != nil {
+		t.Fatal(err)
+	}
+	// 边界上合法的值照常放行
+	p.Fees.Undercut, p.Fees.Outbid = 0, MaxPriceStep
+	p.Sources.MaxAgeHours, p.Daily.TurnoverDays = MaxAgeHoursLimit, MaxTurnoverDays
+	p.Focus.FCE = map[int]float64{4: 0, 8: MaxFCE}
+	if _, err := Plan(Input{Params: p, Recipes: EmbeddedRecipes()}); err != nil {
+		t.Fatalf("边界值应当放行: %v", err)
+	}
+}
+
+// RecipeTree 同样挡掉不存在的附魔和不规范的 id(审查 finding 7)。
+func TestRecipeTree拒绝不存在的附魔(t *testing.T) {
+	for _, item := range []string{"T8_ORE_LEVEL7@7", "T8_ORE_LEVEL5@5", "T8_ORE_LEVEL0@0", "T8_METALBAR_LEVEL0@0", "T3_ORE_LEVEL1@1"} {
+		if _, err := RecipeTree(EmbeddedRecipes(), item, DefaultTransmuteFactor, DefaultTransmuteStationFeePer100); err == nil {
+			t.Errorf("%s 应当报错", item)
+		}
+	}
+	for _, item := range []string{"T8_ORE_LEVEL4@4", "T8_ORE", "T2_METALBAR"} {
+		if _, err := RecipeTree(EmbeddedRecipes(), item, DefaultTransmuteFactor, DefaultTransmuteStationFeePer100); err != nil {
+			t.Errorf("%s: %v", item, err)
+		}
 	}
 }
 

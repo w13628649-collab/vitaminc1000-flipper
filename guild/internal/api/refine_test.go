@@ -220,6 +220,16 @@ func TestRefine接口参数不合法回400且不读数据(t *testing.T) {
 		`{"target":"T8_METALBAR_LEVEL4@4","sources":{"max_age_hours":100}}`,
 		`{"target":"T8_METALBAR_LEVEL4@4","sell":{"modes":["hold"]}}`,
 		`{"target":"T8_METALBAR_LEVEL4@4","leftover":"sell"}`,
+		// 游戏里没有的附魔、不规范的 id(审查 finding 7)
+		`{"target":"T8_METALBAR_LEVEL5@5"}`,
+		`{"target":"T8_METALBAR_LEVEL9@9"}`,
+		`{"target":"T8_METALBAR_LEVEL0@0"}`,
+		// 数值边界(审查 finding 9)
+		`{"target":"T8_METALBAR_LEVEL4@4","fees":{"undercut":-9000000000000000000}}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","fees":{"outbid":-1}}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","focus":{"fce":{"99":1000}}}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","daily":{"turnover_days":1e300}}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","sources":{"bid_max_qty":-1}}`,
 	} {
 		resp, raw := postPlan(t, srv, body)
 		if resp.StatusCode != http.StatusBadRequest {
@@ -238,10 +248,20 @@ func TestRefine接口参数不合法回400且不读数据(t *testing.T) {
 		"/api/refine/matrix?line=ORE&island=2",
 		"/api/refine/matrix?line=ORE&city=Atlantis",
 		"/api/refine/matrix?line=ORE&k=115.4",
+		// ParseFloat 认 Inf / NaN:+Inf 以前混过校验,在缓存键的 json.Marshal 上变成 500
+		"/api/refine/matrix?line=ORE&capital=Inf",
+		"/api/refine/matrix?line=ORE&capital=NaN",
+		"/api/refine/matrix?line=ORE&budget=Inf",
+		"/api/refine/matrix?line=ORE&fce=Inf",
+		"/api/refine/matrix?line=ORE&fce=8:NaN",
+		"/api/refine/matrix?line=ORE&max_age_hours=Inf",
 		"/api/refine/recipe",
 		"/api/refine/recipe?item=T8_MAIN_FIRESTAFF",
 		"/api/refine/recipe?item=T8_ORE&k=abc",
 		"/api/refine/recipe?item=T8_ORE&k=115.4",
+		"/api/refine/recipe?item=T8_ORE&k=Inf",
+		"/api/refine/recipe?item=T8_ORE_LEVEL7@7",
+		"/api/refine/recipe?item=T8_ORE_LEVEL0@0",
 	} {
 		resp, raw := get(t, srv, path)
 		if resp.StatusCode != http.StatusBadRequest {

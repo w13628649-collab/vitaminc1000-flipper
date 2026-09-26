@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -133,6 +134,16 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, res)
 }
 
+// parseNum 是查询参数里的一个数。ParseFloat 认 "Inf"、"NaN",这里不认:
+// +Inf 能混过「>= 0」这种校验,之后缓存键的 json.Marshal 失败,回的是 500 不是 400(审查 finding 9)
+func parseNum(key, v string) (float64, error) {
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0, fmt.Errorf("%s=%q 不是有限的数", key, v)
+	}
+	return f, nil
+}
+
 // matrixParams 把查询参数写进 p。写错的直接报错,不悄悄用默认值。
 func matrixParams(q url.Values, p *refine.Params) error {
 	num := func(key string, dst *float64) error {
@@ -140,9 +151,9 @@ func matrixParams(q url.Values, p *refine.Params) error {
 		if v == "" {
 			return nil
 		}
-		f, err := strconv.ParseFloat(v, 64)
+		f, err := parseNum(key, v)
 		if err != nil {
-			return fmt.Errorf("%s=%q 不是数", key, v)
+			return err
 		}
 		*dst = f
 		return nil
@@ -210,9 +221,9 @@ func matrixParams(q url.Values, p *refine.Params) error {
 func parseFCE(v string) (map[int]float64, error) {
 	out := map[int]float64{}
 	if !strings.Contains(v, ":") {
-		f, err := strconv.ParseFloat(v, 64)
+		f, err := parseNum("fce", v)
 		if err != nil {
-			return nil, fmt.Errorf("fce=%q 不是数,也不是 4:0,5:1000 这种写法", v)
+			return nil, fmt.Errorf("fce=%q 不是有限的数,也不是 4:0,5:1000 这种写法", v)
 		}
 		for t := refine.MinEnchantTier; t <= refine.MaxTier; t++ {
 			out[t] = f
@@ -222,7 +233,7 @@ func parseFCE(v string) (map[int]float64, error) {
 	for _, part := range strings.Split(v, ",") {
 		ts, fs, ok := strings.Cut(strings.TrimSpace(part), ":")
 		t, err1 := strconv.Atoi(strings.TrimSpace(ts))
-		f, err2 := strconv.ParseFloat(strings.TrimSpace(fs), 64)
+		f, err2 := parseNum("fce", strings.TrimSpace(fs))
 		if !ok || err1 != nil || err2 != nil || t < refine.MinEnchantTier || t > refine.MaxTier {
 			return nil, fmt.Errorf("fce 里的 %q 看不懂:要写成 tier:点数,tier 在 4~8", part)
 		}
@@ -244,9 +255,9 @@ func (s *Server) handleRefineRecipe(w http.ResponseWriter, r *http.Request) {
 		if v == "" {
 			return nil, nil
 		}
-		f, err := strconv.ParseFloat(v, 64)
+		f, err := parseNum(key, v)
 		if err != nil {
-			return nil, fmt.Errorf("%s=%q 不是数", key, v)
+			return nil, err
 		}
 		return &f, nil
 	}

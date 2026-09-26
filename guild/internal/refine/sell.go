@@ -74,7 +74,8 @@ func (e *engine) sellInfo() SellInfo {
 	item, city := e.p.Target, e.p.Sell.City
 	if l, ok := e.side(item, city, true); ok {
 		best := l.levels[0].Price
-		price := best - e.p.Fees.Undercut
+		// 挂价不能压到 0:卖一本身就是 1 银时再压 1 银就没意义了,按 1 银算
+		price := max(1, best-e.p.Fees.Undercut)
 		ps := &PostSell{BestAsk: best, Price: price, Net: float64(price) * e.mkt.PostAsk, Source: l.source}
 		if !l.depthUnknown {
 			ps.NearQty = depth.Analyze(l.levels, sellNearPct).QtyNear

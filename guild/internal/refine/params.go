@@ -169,6 +169,14 @@ const (
 	DefaultPureStarts = 3
 	// MaxQty 挡一下离谱的件数
 	MaxQty = 10000
+	// MaxAgeHoursLimit:数据最大年龄的上限,和 conf 里 refining.window_hours 的上限(30 天)一致。
+	// 服务端还会再按自己的读簿窗口卡一次
+	MaxAgeHoursLimit = 24 * 30.0
+	// MaxTurnoverDays:一轮(买料、精炼、卖掉)最多按一年算,挡录错
+	MaxTurnoverDays = 365.0
+	// MaxPriceStep:挂单压价 / 加价(fees.outbid / undercut)的上限,银币。这是防录错的范围,
+	// 不是游戏规则:负数会把挂卖价抬到卖一之上、虚高挂卖利润,极大的数会让价格溢出
+	MaxPriceStep = 1_000_000
 )
 
 // DefaultParams 是做 target 的默认参数:生产和出售都在这条线的专精城,
@@ -239,12 +247,20 @@ func (p Params) normalized() Params {
 	return p
 }
 
+// finite:不是 NaN、不是 ±Inf。查询参数的 ParseFloat 认 "Inf" / "NaN",
+// 光比大小挡不住 +Inf(+Inf >= 0 为真),之后缓存键的 json.Marshal 会失败成 500。
+func finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
+
 // validate 检查参数。错误是给用户看的:说清楚哪一项、合法范围是什么。
 func (p Params) validate() (Line, int, int, error) {
 	family, tier, enchant, ok := ParseItemID(p.Target)
 	line, isLine := LineOf(family)
-	if !ok || !isLine || family != line.Refined || tier < MinEnchantTier || tier > MaxTier {
-		return Line{}, 0, 0, fmt.Errorf("%q 不是本期能算的半成品:只做矿/皮/纤维/木四条线 T4~T8 的精炼产物", p.Target)
+	// 附魔只有 .0~.4(MaxEnchant),而且 id 要是规范写法:T8_METALBAR_LEVEL0@0 这种
+	// 游戏里没有的写法、T8_METALBAR_LEVEL5@5 这种不存在的附魔都挡掉(审查 finding 7),
+	// 不能让它们读一遍库、打一次 AODP,最后回一个误导人的「没解锁」
+	if !ok || !isLine || family != line.Refined || tier < MinEnchantTier || tier > MaxTier ||
+		enchant > MaxEnchant || ItemID(family, tier, enchant) != p.Target {
+		return Line{}, 0, 0, fmt.Errorf("%q 不是本期能算的半成品:只做矿/皮/纤维/木四条线 T4~T8、附魔 .0~.4 的精炼产物", p.Target)
 	}
 	if p.City == "" {
 		return line, 0, 0, fmt.Errorf("没给生产城市")
@@ -266,11 +282,11 @@ func (p Params) validate() (Line, int, int, error) {
 	if !(p.Sources.TransportPct >= 0 && p.Sources.TransportPct < 10) {
 		return line, 0, 0, fmt.Errorf("运费比例要在 [0, 10) 内,得到 %g", p.Sources.TransportPct)
 	}
-	if !(p.Sources.BidMaxQty >= 0) {
-		return line, 0, 0, fmt.Errorf("挂买单上限不能为负,得到 %g", p.Sources.BidMaxQty)
+	if !(p.Sources.BidMaxQty >= 0) || !finite(p.Sources.BidMaxQty) {
+		return line, 0, 0, fmt.Errorf("挂买单上限要是非负的有限数(0 = 不限),得到 %g", p.Sources.BidMaxQty)
 	}
-	if !(p.Sources.MaxAgeHours > 0) {
-		return line, 0, 0, fmt.Errorf("数据最大年龄要大于 0,得到 %g", p.Sources.MaxAgeHours)
+	if !(p.Sources.MaxAgeHours > 0 && p.Sources.MaxAgeHours <= MaxAgeHoursLimit) {
+		return line, 0, 0, fmt.Errorf("数据最大年龄要在 (0, %g] 小时内,得到 %g", MaxAgeHoursLimit, p.Sources.MaxAgeHours)
 	}
 	switch p.Focus.Mode {
 	case FocusAuto, FocusOff, FocusTop, FocusAll:
@@ -287,6 +303,10 @@ func (p Params) validate() (Line, int, int, error) {
 		return line, 0, 0, fmt.Errorf("今日专注要是非负的有限数,得到 %g", p.Focus.Budget)
 	}
 	for t, fce := range p.Focus.FCE {
+		// 键是 tier:只有 T4~T8 有精炼专精;{"99":1000} 这种以前被悄悄忽略
+		if t < MinEnchantTier || t > MaxTier {
+			return line, 0, 0, fmt.Errorf("专精 FCE 的键是 tier,要在 %d~%d 内,得到 %d", MinEnchantTier, MaxTier, t)
+		}
 		if err := CheckFCE(fce); err != nil {
 			return line, 0, 0, fmt.Errorf("T%d: %w", t, err)
 		}
@@ -309,6 +329,10 @@ func (p Params) validate() (Line, int, int, error) {
 	if !(p.Fees.Tax >= 0 && p.Fees.Setup >= 0 && p.Fees.Tax+p.Fees.Setup < 1) {
 		return line, 0, 0, fmt.Errorf("税 %g、创建费 %g 不合理", p.Fees.Tax, p.Fees.Setup)
 	}
+	if p.Fees.Outbid < 0 || p.Fees.Outbid > MaxPriceStep || p.Fees.Undercut < 0 || p.Fees.Undercut > MaxPriceStep {
+		return line, 0, 0, fmt.Errorf("挂单加价 outbid %d、压价 undercut %d 要在 [0, %d] 银内",
+			p.Fees.Outbid, p.Fees.Undercut, MaxPriceStep)
+	}
 	switch p.Leftover {
 	case LeftoverCarry, LeftoverBid, LeftoverZero:
 	default:
@@ -322,8 +346,11 @@ func (p Params) validate() (Line, int, int, error) {
 	if !(p.Daily.VolumeShare > 0 && p.Daily.VolumeShare <= 1) {
 		return line, 0, 0, fmt.Errorf("成交份额要在 (0, 1] 内,得到 %g", p.Daily.VolumeShare)
 	}
-	if !(p.Daily.Capital >= 0) || !(p.Daily.TurnoverDays > 0) {
-		return line, 0, 0, fmt.Errorf("本金 %g、周转天数 %g 不合理", p.Daily.Capital, p.Daily.TurnoverDays)
+	if !(p.Daily.Capital >= 0) || !finite(p.Daily.Capital) {
+		return line, 0, 0, fmt.Errorf("本金要是非负的有限数(0 = 不按本金封顶),得到 %g", p.Daily.Capital)
+	}
+	if !(p.Daily.TurnoverDays > 0 && p.Daily.TurnoverDays <= MaxTurnoverDays) {
+		return line, 0, 0, fmt.Errorf("周转天数要在 (0, %g] 内,得到 %g", MaxTurnoverDays, p.Daily.TurnoverDays)
 	}
 	return line, tier, enchant, nil
 }

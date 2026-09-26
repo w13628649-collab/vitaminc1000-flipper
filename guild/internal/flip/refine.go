@@ -230,6 +230,9 @@ func (s *Service) checkRefine(p refine.Params) error {
 	if err := refine.Validate(probe); err != nil {
 		return &ParamError{Err: err}
 	}
+	if err := refine.CheckTarget(s.Recipes(), p.Target); err != nil {
+		return &ParamError{Err: err}
+	}
 	known := func(c string) bool { return slices.Contains(s.Cfg.Cities, c) }
 	if !known(p.City) {
 		return paramErr("生产城市 %q 不在服务端的城市列表 %v 里", p.City, s.Cfg.Cities)

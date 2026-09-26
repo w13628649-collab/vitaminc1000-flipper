@@ -89,8 +89,10 @@ type Tree struct {
 func RecipeTree(recipes *catalog.RecipeBook, item string, k, feePer100 float64) (*Tree, error) {
 	family, tier, enchant, ok := ParseItemID(item)
 	line, isLine := LineOf(family)
-	if !ok || !isLine || tier < MinTier || tier > MaxTier || (enchant > 0 && tier < MinEnchantTier) {
-		return nil, fmt.Errorf("%q 不是矿/皮/纤维/木四条线 T2~T8 的原料或半成品", item)
+	// 附魔 .0~.4、id 要是规范写法(T8_ORE_LEVEL7@7、T8_ORE_LEVEL0@0 都不是),见 validate
+	if !ok || !isLine || tier < MinTier || tier > MaxTier || (enchant > 0 && tier < MinEnchantTier) ||
+		enchant > MaxEnchant || ItemID(family, tier, enchant) != item {
+		return nil, fmt.Errorf("%q 不是矿/皮/纤维/木四条线 T2~T8(附魔 .0~.4)的原料或半成品", item)
 	}
 	if err := CheckTransmuteFactor(k); err != nil {
 		return nil, err
