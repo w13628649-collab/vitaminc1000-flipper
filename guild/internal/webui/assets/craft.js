@@ -66,6 +66,9 @@ function craftRestore() {
   if (!craftLine(def.line)) def.line = "ORE";
   if (!CRAFT_TIERS.includes(def.tier)) def.tier = 8;
   if (!CRAFT_ENCH.includes(def.ench)) def.ench = 4;
+  if (!(Number.isInteger(def.qty) && def.qty >= 1 && def.qty <= 10000)) def.qty = 10;
+  def.customTiers = def.customTiers.filter(t => CRAFT_TIERS.includes(t));
+  def.srcCities = def.srcCities.filter(c => typeof c === "string");
 }
 function craftSave() {
   try { localStorage.setItem(CRAFT_LS, JSON.stringify(craft.p)); } catch (e) { /* 存不了就只在这一页有效 */ }
@@ -229,6 +232,7 @@ function craftSyncForm() {
   setVal("c-tstation", p.tstation[city]);
   setPh("c-tstation", sd.transmute_station_fee_per100);
   const bonus = cBonus();
+  $("c-bonus").options[0].textContent = `服务端默认(+${num(sd.daily_bonus?.[L.line] ?? 0)})`;
   $("c-bonus").value = bonus == null ? "" : String(bonus);
   $("c-island").checked = !!p.island;
   cSetOptions($("c-sellcity"), [["", `同生产城市(${city})`], ...cities.filter(c => c !== city).map(c => [c, c])],
@@ -247,7 +251,9 @@ function craftSyncForm() {
   setVal("c-capital", p.capital);
   setPh("c-capital", sd.capital);
   setVal("c-share", p.share);
-  setPh("c-share", 30);
+  // 成交份额的服务端默认不在 server_defaults 里,从上一次实际用的参数看(没填时就是服务端默认)
+  const share = p.share == null ? craft.data?.params_used?.daily?.volume_share : null;
+  setPh("c-share", share != null ? Math.round(share * 100) : null);
   setVal("c-gold", p.gold);
   setPh("c-gold", craftGold());
   craftBadges();
@@ -424,7 +430,11 @@ async function craftAfterPlan(res) {
   if (craft.data !== res) return;   // 等配方树的时候又算了一份新的
   craft.keys = new Set(craftKeysOf(res, tree));
   if (currentView === "craft") rtSetKeys("craft", [...craft.keys], { snapshot: false });
-  craftStatus("ok", { keep: true });
+  craftStatus("ok");
+  // 心不按物品族编号,按族拉名字拉不到:单独按 id 查一次,查到就重画
+  const hearts = [...new Set((tree.chain || []).flatMap(n => (n.recipes || []).flatMap(r => (r.inputs || [])
+    .filter(i => i.kind === "heart").map(i => i.item))))].filter(id => !cName(id));
+  if (hearts.length && await resolveNames(hearts) && craft.data === res) craftRender(res);
 }
 function onCraftQuote(q, pushed) {
   // 快照不触发(那是刚订阅时补的);不在这页时已经退订,晚到的也不管
@@ -525,7 +535,11 @@ function rawVerdict(id, src, res, main) {
   const direct = pure.find(p => p.start === id);
   const mixedU = src.mixed?.unit, directU = direct?.unit ?? null;
   const bestTrans = pure.find(p => p.start !== id && p.filled && p.unit != null);
-  const directWhy = direct ? (direct.filled ? "" : `直接买的盘口只有 ${fq(direct.available)} 个,不够 ${fq(need)} 个`) : `${T} 在可买城市没有卖单`;
+  // 直接买凑不齐时 raw_sources 没有它的均价;卖一从「全部吃卖一」那条参照行的买料步骤里拿
+  const mk = (res.candidates || []).find(c => c.reference === "market");
+  const ask = mk?.steps?.find(s => s.op === "buy" && s.item === id && !s.for)?.price_from;
+  const directWhy = direct ? (direct.filled ? "" : `直接买的盘口只有 ${fq(direct.available)} 个,不够 ${fq(need)} 个${
+    ask ? `(卖一 ${num(ask)} 起${mixedU != null && ask > mixedU ? ",本身就比转化上来贵" : ""})` : ""}`) : `${T} 在可买城市没有卖单`;
   let v;
   if (!splits.length) {
     return `<b>缺价</b>:${esc(cLabel(id))} 和能转化到它的起点,在可买城市都没有挂单(或者超过了数据最大年龄)。`;
@@ -692,9 +706,12 @@ function craftCardHTML(res) {
         <em>${d ? `每天 ${fq(d.units)} 件 · 卡在<b>${esc(BIND_WORD[d.binding] || d.binding)}</b>` : "算不出(没有卖价)"}</em></div>
       <div class="${over ? "c-over" : ""}"><b>${num(c.upfront_capital)}</b><i>开工本金(含批末余料)</i>
         <em>${cap > 0 ? (over ? `<b class="neg">超过本金 ${num(cap)}(${(c.upfront_capital / cap).toFixed(1)} 倍)</b>:一次备不齐,把件数调小或分批` : `本金 ${num(cap)} 以内`) : "不按本金封顶"}</em></div>
-      <div><b>${ageTag(c.oldest_age_h)}</b><i>用到的价里最旧的</i><em>${c.age_level === "red" ? "超过 24 小时,先进游戏看一眼" : c.age_level === "yellow" ? "超过 6 小时,下单前核一下" : "6 小时以内"}</em></div>
+      <div><b>${ageTag(c.oldest_age_h)}</b><i>用到的价里最旧的</i><em>${c.oldest_age_h == null ? "没有用到带观测时间的价"
+        : c.age_level === "red" ? "超过 24 小时,先进游戏看一眼" : c.age_level === "yellow" ? "超过 6 小时,下单前核一下" : "6 小时以内"}</em></div>
     </div>
-    <p class="c-focusln">专注:${f.tiers?.length ? `T${f.tiers.join("、T")} 开,每根 ${num(f.per_unit)}(没有专精时 ${num(f.base_per_unit)})· 这一批 ${num(f.effective)}` : "不开"}
+    ${c.filled ? "" : `<p class="c-unfilled"><b>拿不满料:</b>要的原料或下级料缺价、盘口不够深,上面的成本只按拿得到的那部分算,不能当真。${
+      res.data?.missing?.length ? `缺价的:${res.data.missing.map(x => esc(cLabel(x) || x)).join("、")}。` : ""}换个城市、打开「跨城买料」,或者让成员去游戏里翻一下这些市场。</p>`}
+    <p class="c-focusln">专注:${f.tiers?.length ? `T${esc(f.tiers.join("、T"))} 开,每根 ${num(f.per_unit)}(没有专精时 ${num(f.base_per_unit)})· 这一批 ${num(f.effective)}` : "不开"}
       · 今日可用 ${num(res.focus?.budget)}${f.over_budget ? ` <span class="wtag bad">这一批要的专注超过今日可用</span>` : ""}</p>
     ${unv.length ? `<div class="c-unv"><span>用到的<b>未核实参数</b>:</span><ul>${unvHTML}</ul>
       <button class="act ghost mini-act" data-open-cal>去校准</button></div>` : ""}
@@ -813,6 +830,15 @@ function craftStepsHTML(c, res) {
 // toggle 不冒泡,在捕获阶段听:记下「下级链的原料」开没开,重画后照旧
 $("c-result").addEventListener("toggle", e => {
   if (e.target.classList?.contains("c-rawmore")) craft.rawOpen = e.target.open;
+  // 「数据」那一块:重画时带着 open 属性建出来也会触发 toggle,只记用户点 summary 的那一次
+  if (e.target.classList?.contains("c-data") && craft.dataToggleArmed) craft.dataOpen = e.target.open;
+}, true);
+// toggle 事件分不出是用户点的还是重画时带着 open 属性建出来的:只在点 summary 之后认一次
+$("c-result").addEventListener("click", e => {
+  if (e.target.closest(".c-data > summary")) {
+    craft.dataToggleArmed = true;
+    setTimeout(() => { craft.dataToggleArmed = false; }, 100);
+  }
 }, true);
 $("c-result").addEventListener("click", e => {
   const openCal = e.target.closest("[data-open-cal]");
@@ -887,7 +913,9 @@ function craftDataHTML(res) {
   if (b.aodp_newer?.length) line("抓包之后 AODP 报了不同的价(阶梯可能变了):", b.aodp_newer,
     x => `${esc(cLabel(x.item) || x.item)} @ ${esc(x.city)} ${x.side === "sell" ? "卖单" : "买单"} 抓包 ${num(x.capture_price)}(${fq(x.capture_age_h)}h)→ AODP ${num(x.aodp_price)}(${fq(x.aodp_age_h)}h)`);
   if (b.aodp_ok === false) lists.push(`<li><b>AODP 当前价这次没取到:</b>${esc(b.aodp_error || "")}</li>`);
-  return `<details class="c-fold c-data"${lists.length ? " open" : ""}>
+  // 有要紧的事(缺价、串城、AODP 更新……)默认展开;用户自己开合过就照他的
+  const open = craft.dataOpen ?? lists.length > 0;
+  return `<details class="c-fold c-data"${open ? " open" : ""}>
     <summary>数据 <em>${parts.join(" · ")}</em></summary>
     ${lists.length ? `<ul class="c-list">${lists.join("")}</ul>` : ""}
     ${warnList(res.warnings)}
@@ -922,6 +950,10 @@ $("c-sell").addEventListener("click", e => {
   craftChanged({ grid: true });
 });
 $("c-run").addEventListener("click", () => craftLoad({ force: true }));
+$("c-fce-cal").addEventListener("click", () => {
+  $("c-cal").open = true;
+  $("c-cal").scrollIntoView({ block: "start", behavior: "smooth" });
+});
 $("c-reset").addEventListener("click", () => {
   if (!confirm("把高级参数全部恢复成服务端默认?(专精、k、站费、生产加成、跨城来源……都会清掉)")) return;
   const p = craft.p;
