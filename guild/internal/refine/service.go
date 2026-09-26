@@ -48,6 +48,9 @@ func DefaultsFrom(target, city string, cfg conf.Config) Params {
 		Outbid: econ.OutbidSilver, Undercut: econ.UndercutSilver,
 	}
 	p.Daily.VolumeShare = r.VolumeShare
+	// 本金默认用服务端的 capital(资金分配页也是它,默认 1000 万):日化按「本金 ÷ 单根成本
+	// ÷ 周转天数」封顶。请求里带 daily.capital 就用请求的,写 0 表示不按本金封顶
+	p.Daily.Capital = float64(cfg.Capital)
 	p.HeartReturns = r.HeartReturns
 	p.Leftover = r.Leftover
 	p.IncludeTail = r.IncludeTail

@@ -366,7 +366,7 @@ func TestRefine接口JSON形状(t *testing.T) {
 	planShape := map[string]map[string]bool{}
 	for _, body := range []string{
 		`{"target":"T5_METALBAR_LEVEL1@1","qty":10,"sources":{"bid_orders":true}}`,
-		`{"target":"T8_METALBAR_LEVEL4@4","qty":600,"sell":{"modes":["take","post"]},"leftover":"bid"}`,
+		`{"target":"T8_METALBAR_LEVEL4@4","qty":600,"sell":{"modes":["take","post"]},"leftover":"bid","daily":{"capital":0}}`,
 		`{"target":"T6_METALBAR_LEVEL4@4","qty":10,"sources":{"max_age_hours":0.5}}`,
 		`{"target":"T8_LEATHER_LEVEL4@4","qty":10}`,
 	} {

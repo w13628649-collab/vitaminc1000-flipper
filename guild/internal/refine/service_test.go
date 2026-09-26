@@ -48,11 +48,16 @@ func Test配置默认值和引擎默认值一致(t *testing.T) {
 	}
 }
 
-// 默认配置下服务端打底的参数就是 DefaultParams:引擎测试用的和线上跑的是同一组默认值
+// 默认配置下服务端打底的参数就是 DefaultParams:引擎测试用的和线上跑的是同一组默认值。
+// 唯一的差别是本金:DefaultParams 不按本金封顶(0),服务端默认用 conf.capital(1000 万)
 func TestDefaultsFrom在默认配置下等于DefaultParams(t *testing.T) {
 	for _, l := range Lines {
 		for _, target := range l.Targets() {
 			got, want := DefaultsFrom(target, "", conf.Default()), DefaultParams(target)
+			if got.Daily.Capital != 10_000_000 {
+				t.Fatalf("服务端默认本金应是 conf.capital 1000 万,得到 %g", got.Daily.Capital)
+			}
+			want.Daily.Capital = got.Daily.Capital
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("%s:\n配置打底 %+v\nDefaultParams %+v", target, got, want)
 			}
