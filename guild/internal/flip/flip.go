@@ -52,6 +52,9 @@ type Service struct {
 	// backfilling/lastBackfill 管"给新抓到的物品补拉 AODP"的节流
 	backfilling  atomic.Bool
 	lastBackfill atomic.Int64 // unix 纳秒,0 = 还没补过
+	// fresh 是查价页现取回来的 AODP 当前价,评估时并进快照(见 aodp_fresh.go):
+	// 卡片和面板用同一份 AODP
+	fresh freshPrices
 	// bookSrc 非 nil 时代替库做读簿来源,只给测试用
 	bookSrc scan.BookSource
 	// ladder 非 nil 时代替库做 BookOrders/CapturedItems,只给测试用:
@@ -137,10 +140,11 @@ func (s *Service) Scan(ctx context.Context) (*scan.Result, error) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), afterFetchTimeout)
 	defer cancel()
 
-	// 评估用拉完 AODP 之后的时刻:读簿就发生在这时,AODP 的数据龄也按这时算
+	// 评估用拉完 AODP 之后的时刻:读簿就发生在这时,AODP 的数据龄也按这时算。
+	// 拉的这几分钟里查价页可能取到了更新的价,评估时一并用上(evalSnapshot)
 	s.evalMu.Lock()
 	s.snap.Store(snap)
-	res := scan.EvaluateSnapshot(ctx, snap, s.Cfg, cat, books, time.Now().UTC())
+	res := scan.EvaluateSnapshot(ctx, s.evalSnapshot(snap), s.Cfg, cat, books, time.Now().UTC())
 	s.publish(res, true)
 	s.evalMu.Unlock()
 

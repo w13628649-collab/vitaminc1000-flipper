@@ -206,6 +206,9 @@ func TestReevaluate_用缓存快照配新抓包重算不打AODP(t *testing.T) {
 	}
 
 	books.setAsk("T5_CLOTH", 1400, 50, time.Now().UTC().Add(-time.Minute))
+	// Windows 上 time.Now() 的刻度比全量 + 重算这一趟还粗,不等一下两个时刻常常相等,
+	// 下面"evaluated_at 晚于 started_at"就偶发不成立(改动之前的代码上连跑 300 次失败 4 次)
+	time.Sleep(20 * time.Millisecond)
 	res, err := s.Reevaluate(ctx)
 	if err != nil {
 		t.Fatal(err)

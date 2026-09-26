@@ -20,6 +20,7 @@ import (
 	"albion-guild/internal/histagg"
 	"albion-guild/internal/model"
 	"albion-guild/internal/scan"
+	"albion-guild/internal/screen"
 	"albion-guild/internal/store"
 )
 
@@ -126,6 +127,15 @@ type GridSide struct {
 	AgeHours *float64     `json:"age_hours"`
 	Capture  *CaptureSide `json:"capture"`
 	AODP     *AODPSide    `json:"aodp"`
+	// Depth / Note 是扫描的深度闸门对这一边的看法,和机会页卡片上同一边的 depth / note
+	// 是 scan.MergeSide 算出来的同一份:选中抓包、最优档在 capture.depth_max_hours 以内时,
+	// Depth 是闸门实际用的近价件数(只算这个可信窗口内、capture.book_levels 以内的档);
+	// 最优档太旧时 Depth 为空、Note 写"未参与判定";选了 AODP 时两个都空。
+	//
+	// capture 子对象里的 qty_near 是面板展示整本簿的口径(全部当前档,不管多旧),
+	// 两边都有数时一样,不一样的是"有没有数":以前卡片写着"未参与判定",面板却给个近价件数
+	Depth *screen.DepthView `json:"depth"`
+	Note  string            `json:"note,omitempty"`
 }
 
 // CaptureSide 是这一侧的抓包摘要,件数判据全在这里。
@@ -288,6 +298,7 @@ func mergeSide(cb *BookSide, aodpBest int64, aodpDate aodp.Stamp, aodpFar int64,
 		// 龄按 MergeSide 给的时间戳算:两边同价时取较新的那个,和扫描一致
 		g.Pick, g.Best = "capture", m.Price
 		g.AgeHours = hoursPtr(math.Max(0, now.Sub(m.At.T).Hours()))
+		g.Depth, g.Note = m.Side.Depth, m.Side.Note
 	case g.AODP != nil:
 		g.Pick, g.Best, g.AgeHours = "aodp", g.AODP.Best, g.AODP.AgeHours
 	}
@@ -443,7 +454,8 @@ func buildGrid(in gridInput) *LookupGrid {
 	}
 	maxQ = clampQuality(maxQ)
 	var kept []store.LiveOrder
-	// 页满没满要按整次响应数(跨品质),所以在按城市筛之前、对这个物品的全部单数
+	// 页满没满要按整次响应数(跨物品、跨品质)。ItemOrders 在 SQL 里对整张表数好了;
+	// WithPages 只给没带数的补(单测),所以在按城市筛之前、对这个物品的全部单补
 	for _, o := range book.WithPages(in.Orders) {
 		if !wanted[o.City] {
 			out.Capture.OtherLocations[o.City]++
@@ -658,5 +670,8 @@ func (s *Service) LookupGrid(ctx context.Context, itemID string) (*LookupGrid, e
 	if in.PricesErr != nil || in.HistoryErr != nil {
 		slog.Warn("查价时 AODP 没取全", "item", itemID, "prices", in.PricesErr, "history", in.HistoryErr)
 	}
+	// 当前价和机会页的重算用同一份:并上快照、记下这次取回的(见 aodp_fresh.go)。
+	// 这次没取到时格子上就是快照里那份 AODP,和卡片一样;aodp.prices_ok 照实报 false
+	in.Prices = s.gridPrices(itemID, in.Prices, now)
 	return buildGrid(in), nil
 }

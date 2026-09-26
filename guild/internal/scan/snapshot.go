@@ -222,6 +222,74 @@ func (s *Snapshot) With(ext *Extension) *Snapshot {
 	return &n
 }
 
+// NewerPrice 逐字段合并同一格(物品 × 城市 × 品质)的两条 AODP 当前价:四个价
+// (卖单最低 / 最高、买单最低 / 最高)各看各的时间戳,add 那条更新就用 add 的。
+// 第二个返回值说明有没有哪个字段换了。
+//
+// 只收有价、有时间戳的字段:AODP 对没数据的组合回 0 价、零时间,那不是"现在没有挂单",
+// 不能拿它盖掉旧的真实报价。逐字段而不是整条比,是因为同一条记录里四个价各自更新,
+// 一条记录的卖价新、买价可能反而旧。
+func NewerPrice(base, add aodp.PriceRecord) (aodp.PriceRecord, bool) {
+	changed := false
+	take := func(px *int64, at *aodp.Stamp, npx int64, nat aodp.Stamp) {
+		if npx <= 0 || !nat.Valid() {
+			return
+		}
+		if at.Valid() && !nat.T.After(at.T) {
+			return
+		}
+		*px, *at = npx, nat
+		changed = true
+	}
+	take(&base.SellPriceMin, &base.SellPriceMinDate, add.SellPriceMin, add.SellPriceMinDate)
+	take(&base.SellPriceMax, &base.SellPriceMaxDate, add.SellPriceMax, add.SellPriceMaxDate)
+	take(&base.BuyPriceMin, &base.BuyPriceMinDate, add.BuyPriceMin, add.BuyPriceMinDate)
+	take(&base.BuyPriceMax, &base.BuyPriceMaxDate, add.BuyPriceMax, add.BuyPriceMaxDate)
+	return base, changed
+}
+
+// WithPrices 返回一份用 recs 逐字段更新过 AODP 当前价的快照(NewerPrice),s 本身不动。
+// 只更新快照里已经有的格子,不添格子:快照的物品、城市、品质集合由全量和补拉决定,
+// 这里只是让已有的格子用上别处(查价页)现取回来的更新的价。没有可换的就原样返回 s。
+func (s *Snapshot) WithPrices(recs []aodp.PriceRecord) *Snapshot {
+	if s == nil || len(recs) == 0 {
+		return s
+	}
+	type key struct {
+		item, city string
+		quality    int
+	}
+	newer := make(map[key]aodp.PriceRecord, len(recs))
+	for _, r := range recs {
+		k := key{r.ItemID, r.City, r.Quality}
+		if cur, ok := newer[k]; ok {
+			r, _ = NewerPrice(cur, r)
+		}
+		newer[k] = r
+	}
+	var prices []aodp.PriceRecord
+	for i, p := range s.Prices {
+		add, ok := newer[key{p.ItemID, p.City, p.Quality}]
+		if !ok {
+			continue
+		}
+		merged, changed := NewerPrice(p, add)
+		if !changed {
+			continue
+		}
+		if prices == nil {
+			prices = append([]aodp.PriceRecord(nil), s.Prices...)
+		}
+		prices[i] = merged
+	}
+	if prices == nil {
+		return s
+	}
+	n := *s
+	n.Prices = prices
+	return &n
+}
+
 // EvaluateSnapshot 是扫描不打 AODP 的那一半:用快照里的 AODP 数据,配上 now 时刻的
 // 抓包盘口,重跑融合、过滤、算账和跨城配对。
 //

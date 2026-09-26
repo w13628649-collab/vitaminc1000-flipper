@@ -21,7 +21,7 @@ const backfillEvery = 5 * time.Minute
 //
 // 两次全量之间新抓到、快照里还没有的物品,到点了就批量补拉它们的 AODP
 // 价格和历史并进快照(至多每 5 分钟一次);没到点的在 capture.extra_pending 里报数。
-// 除了补拉,重算不打 AODP。
+// 除了补拉,重算不打 AODP;查价页现取过的 AODP 当前价会并进来(evalSnapshot)。
 func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 	cat := s.cat.Load()
 	if cat == nil || s.snap.Load() == nil {
@@ -39,10 +39,11 @@ func (s *Service) Reevaluate(ctx context.Context) (*scan.Result, error) {
 
 	s.evalMu.Lock()
 	defer s.evalMu.Unlock()
-	// 锁里重读快照:补拉期间可能刚跑完一次全量,With 会跳过它已经有的物品
+	// 锁里重读快照:补拉期间可能刚跑完一次全量,With 会跳过它已经有的物品。
+	// 评估时并上查价页现取过的 AODP,和面板用同一份(见 aodp_fresh.go)
 	snap := s.snap.Load().With(ext)
 	s.snap.Store(snap)
-	res := scan.EvaluateSnapshot(ctx, snap, s.Cfg, cat, books, time.Now().UTC())
+	res := scan.EvaluateSnapshot(ctx, s.evalSnapshot(snap), s.Cfg, cat, books, time.Now().UTC())
 	if err := ctx.Err(); err != nil {
 		// 自己的 ctx 被取消了(服务端在关):读簿多半是因此失败、退回了纯 AODP,
 		// 这份降级结果不该盖掉手上那份好的。重算便宜,不像全量那样值得收尾

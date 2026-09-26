@@ -90,6 +90,14 @@ func TestSameBook_扫描报价查价三处同一个最优价(t *testing.T) {
 	if c.Sell.AgeHours == nil || !near(*c.Sell.AgeHours, now.Sub(ask.At.T).Hours()) {
 		t.Fatalf("查价卖侧的龄应和扫描一致,得到 %v / %v", c.Sell.AgeHours, ask.At)
 	}
+	// 深度闸门的看法也是同一份:卡片 ask.depth 和格子 sell.depth 同一个近价件数
+	if c.Sell.Depth == nil || ask.Side.Depth == nil || *c.Sell.Depth != *ask.Side.Depth || c.Sell.Note != ask.Side.Note {
+		t.Fatalf("查价卖侧的深度判据应和扫描同一份,得到 %+v / %q,扫描 %+v / %q",
+			c.Sell.Depth, c.Sell.Note, ask.Side.Depth, ask.Side.Note)
+	}
+	if c.Buy.Depth != nil || c.Buy.Note != "" {
+		t.Fatalf("选了 AODP 的一边没有深度判据,得到 %+v / %q", c.Buy.Depth, c.Buy.Note)
+	}
 
 	// ④ 查价右栏:阶梯第一档
 	b := buildBook(sellKey.ItemID, sellKey.LocationID, 1, orders, now, 0, cfg, nil)
@@ -98,5 +106,35 @@ func TestSameBook_扫描报价查价三处同一个最优价(t *testing.T) {
 		t.Fatalf("右栏阶梯应和扫描读簿同一份(卖一 %d、%d 档、%d 件),得到 %d / %d / %d",
 			wantSell, books[sellKey].LevelCount, books[sellKey].QtyTotal,
 			b.Sell.Support.Best, b.Sell.LevelCount, b.Sell.QtyTotal)
+	}
+}
+
+// 审查 low:近价件数的"有没有数"两边不一样。抓包最优档超过 capture.depth_max_hours(2h),
+// 卡片写"深度快照超过 2h 可信窗口,未参与判定",面板 capture.qty_near 却照样给个数。
+// capture.qty_near 是面板展示整本簿的口径,不改;格子多给 depth / note,和卡片同一份
+func TestSameBook_深度判据太旧时格子和卡片一样说未参与判定(t *testing.T) {
+	cfg := conf.Default()
+	now := time.Now().UTC()
+	k := model.QuoteKey{ItemID: "T7_CLOTH", LocationID: "Fort Sterling", Quality: 1, Side: model.SideOffer}
+	orders := []store.LiveOrder{lo(k, 9000, 5, now.Add(-3*time.Hour)), lo(k, 9100, 7, now.Add(-3*time.Hour))}
+	s := &Service{Cfg: cfg, ladder: &fakeLadder{orders: orders}}
+	books, err := s.storeBooks().CaptureBooks(context.Background(), []model.QuoteKey{k}, now.Add(-cfg.CaptureWindow()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ask := scan.MergeSide(0, aodp.Stamp{}, books[k], cfg, now)
+	g := buildGrid(gridInput{
+		Item: catalog.Item{ItemID: k.ItemID, MaxQuality: 1}, Cities: lookupCities(cfg.Cities), Now: now,
+		Cfg: cfg, Window: cfg.CaptureWindow(), Orders: orders,
+	})
+	c := findCell(g, k.LocationID, 1)
+	if !ask.UsedCapture || ask.Side.Depth != nil || ask.Side.Note == "" {
+		t.Fatalf("扫描:3 小时前的抓包仍选中,但深度不参与判定,得到 %+v", ask.Side)
+	}
+	if c == nil || c.Sell.Pick != "capture" || c.Sell.Depth != nil || c.Sell.Note != ask.Side.Note {
+		t.Fatalf("格子应和卡片一样说未参与判定,得到 %+v", c)
+	}
+	if c.Sell.Capture.QtyNear != 12 {
+		t.Fatalf("capture.qty_near 仍是整本簿的展示口径,得到 %d", c.Sell.Capture.QtyNear)
 	}
 }
