@@ -1604,7 +1604,7 @@ function renderList() {
     ? lookup.list.map(it => `<button data-id="${esc(it.item_id)}" class="${it.item_id === lookup.itemId ? "on" : ""}">
         <img src="${iconURL(it.item_id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
         <span class="tierbadge">T${Number(it.tier) || "?"}</span>
-        <span class="names"><span class="zh">${esc(displayName(it))}</span><span class="en">${esc(it.name_en || it.item_id)}</span></span>
+        <span class="names"><span class="zh">${esc(displayName(it))}${roleTag(refineRole(it.item_id))}</span><span class="en">${esc(it.name_en || it.item_id)}</span></span>
       </button>`).join("")
     : lookup.listTouched ? `<div class="empty"><p>没有匹配的物品。</p></div>` : "";
 }
@@ -1764,11 +1764,14 @@ function renderPrices(d) {
   const hb = headline?.n ? best[headline.q].buy : null;
   const hs = headline?.n ? best[headline.q].sell : null;
 
+  // 精炼线的物品:标题旁挂「原料」/「半成品」,下面一行跳到对应的另一半、可精炼的直接去精炼页
+  const rr = refineRole(d.item.item_id);
   const head = `<div class="lookup-head">
     <img src="${iconURL(d.item.item_id)}" alt="" onerror="this.style.visibility='hidden'">
     <div>
-      <h2>${esc(displayName(d.item))}</h2>
+      <h2>${esc(displayName(d.item))}${roleTag(rr, true)}</h2>
       <div class="sub">${d.item.name_en ? esc(d.item.name_en) + " · " : ""}${esc(d.item.item_id)}</div>
+      ${rr ? lookupRelHTML(rr) : ""}
     </div>
     <div class="verdict">
       <div><b>${hb ? num(hb.sell.best) : "—"}</b>
@@ -1988,6 +1991,29 @@ $("lookup-result").addEventListener("click", e => {
   const b = e.target.closest(".cellbtn");
   if (b) openLadder(b.dataset.city, Number(b.dataset.q), b);
 });
+
+// 查价页标题下面那一行:原料 ↔ 半成品互相跳,可精炼的给「去精炼计算」。
+// 对应那一件的名字手上没有时先写 T8.4 这种短名,查到名字再补上
+const tierWord = r => (r.tier >= 4 ? `T${r.tier}.${r.ench}` : `T${r.tier}`);
+function lookupRelHTML(r) {
+  const other = r.other, name = NAMES.get(other);
+  const label = name || `${tierWord(r)} ${r.role === "raw" ? "半成品" : "原料"}`;
+  if (!name) {
+    resolveNames([other]).then(() => {
+      const a = $("lookup-result").querySelector(`a[data-rel="${CSS.escape(other)}"]`);
+      if (a && NAMES.has(other)) a.textContent = `${NAMES.get(other)} →`;
+    });
+  }
+  const link = `<a href="#lookup/${encodeURIComponent(other)}" data-rel="${esc(other)}" title="${esc(other)}">${esc(label)} →</a>`;
+  const rel = r.role === "raw"
+    ? `<span>这是<b>原料</b>,对应半成品:${link}</span>`
+    : `<span>这是<b>半成品</b>,原料:${link}</span>`;
+  const craftBtn = r.craftable
+    ? `<a class="mini" href="#craft/${encodeURIComponent(r.refinedID)}" title="算 ${esc(tierWord(r))} ${r.role === "raw" ? "用它炼出来的半成品" : "这件"}怎么拿料最便宜、做出来赚多少">去精炼计算</a>`
+    : !r.fam.craft ? `<span class="sub">石头 → 石块这条线精炼页暂时不算</span>`
+    : `<span class="sub">T3 及以下只当 T4 链底的输入,精炼页不单独算</span>`;
+  return `<div class="rel">${rel}${craftBtn}</div>`;
+}
 
 // ── 查价页的尺寸:右栏高度、表格横向滚动条 ──
 // 挂单簿是 sticky 的,但高度不能写死 100vh:页面在顶部时它从自己的位置(离视口顶两百多 px)

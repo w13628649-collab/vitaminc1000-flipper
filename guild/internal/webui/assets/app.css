@@ -581,6 +581,17 @@ tr.detail td.why{white-space:normal; min-width:220px}
 .rtag.ref{color:var(--paper); background:var(--ink-mid)}
 .rtag.heart{color:var(--ink-mid); box-shadow:inset 0 0 0 1px var(--rule)}
 .rtag.big{font-size:12.5px; padding:2px 8px; vertical-align:3px; margin-left:6px}
+/* 左栏选中那一行是墨底:标签跟着反色 */
+#list .zh .rtag{margin-left:5px}
+#list button.on .rtag.raw{color:var(--paper); background:transparent; box-shadow:inset 0 0 0 1px var(--paper)}
+#list button.on .rtag.ref{background:var(--paper); color:var(--ink)}
+/* 查价页标题下面:原料 ↔ 半成品互相跳、去精炼计算 */
+.lookup-head .rel{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-mid)}
+.lookup-head .rel b{color:var(--ink)}
+.lookup-head .rel a[data-rel]{font-weight:600}
+a.mini{font-size:11.5px; font-weight:600; padding:2px 9px; border:1px solid var(--ink); border-radius:var(--r);
+  color:var(--ink); text-decoration:none; background:var(--surface)}
+a.mini:hover{background:var(--ink); color:var(--paper)}
 
 /* ══ 精炼页 ═══════════════════════════════════════════════
    参数条 | 高级 / 校准(折叠) | 推荐卡片 | 原料来路 | 候选路线 | 整条线矩阵。
