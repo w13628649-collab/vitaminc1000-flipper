@@ -658,6 +658,54 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .wtag{display:inline-block; font-size:10.5px; font-weight:600; padding:0 5px; margin:1px 3px 1px 0; border-radius:var(--r);
   color:var(--bronze-ink); box-shadow:inset 0 0 0 1px var(--rule); white-space:nowrap; cursor:help}
 .wtag.bad{color:var(--warn); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--warn),transparent 50%)}
+/* 推荐卡片:数字格复用总览的 .kpis,下面几行是专注、未核实参数、警告 */
+.c-card{margin:6px 0 4px; padding:12px 14px 12px; background:var(--surface); border:1px solid var(--rule);
+  border-top:3px solid var(--ink); border-radius:var(--r)}
+.c-card.empty{border-top-color:var(--warn)}
+.c-card-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+.c-kicker{font-size:10.5px; font-weight:700; color:var(--paper); background:var(--ink); padding:1px 6px; border-radius:var(--r)}
+.c-route{font-weight:600}
+.c-kpis{margin:10px 0 6px}
+.c-kpis div{background:var(--surface)}
+.c-kpis b{font-size:19px}
+.c-kpis em b{font-size:inherit; display:inline; font-weight:600}
+.c-kpis .agetag{font-size:15px}
+.c-kpis .c-over{background:color-mix(in oklab,var(--warn),var(--surface) 88%); box-shadow:inset 0 3px 0 var(--warn)}
+.c-kpis .pfbar{margin-top:6px}
+.pfbar{position:relative; height:8px; background:var(--surface-2); border-radius:var(--r); max-width:220px}
+.pfbar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--ink-soft); border-radius:var(--r)}
+.pfbar .fill.over{background:var(--gain)}
+.pfbar .mark{position:absolute; top:-3px; bottom:-3px; width:2px; margin-left:-1px; background:var(--bronze)}
+.c-kpis .pfbar + .sub{display:block; margin-top:3px; font-size:11px}
+.c-focusln{margin:6px 0 0; font-size:12.5px; color:var(--ink-mid)}
+.c-unv{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-top:8px; font-size:12px; color:var(--ink-mid)}
+.c-unv b{color:var(--ink)}
+.c-unv ul{list-style:none; display:flex; flex-wrap:wrap; gap:4px 8px; margin:0; padding:0}
+.c-unv li{padding:1px 7px; border-radius:var(--r); box-shadow:inset 0 0 0 1px var(--rule); cursor:help}
+.c-unv li em{font-style:normal; font-size:10.5px; font-weight:600; margin-left:3px}
+.c-unv li.def em{color:var(--warn)}
+.c-unv li.mine em{color:var(--gain)}
+button.mini-act{padding:3px 10px; font-size:12px}
+.c-sec{margin-top:6px}
+.c-sec h3 .sub{font-weight:400; margin-left:6px}
+table.c-cands td .subln{font-weight:400}
+table.c-cands tr.main{cursor:pointer}
+table.c-cands tr.main.open > td{background:var(--surface-2)}
+table.c-cands td.primary{font-weight:700}
+table.c-cands td.l .c-route{white-space:normal}
+table.c-cands td.l{white-space:normal; min-width:240px}
+table.c-cands td.wcell{white-space:normal; min-width:130px; max-width:260px}
+table.c-cands .rank{display:inline-block; min-width:18px; font-size:11px; font-weight:700; color:var(--bronze-ink)}
+table.c-cands tr.refrow > td{background:color-mix(in oklab,var(--surface-2),transparent 40%)}
+table.c-cands tr.refrow .c-route{font-style:italic}
+table.c-cands tr.unfilled > td{opacity:.62}
+table.c-cands tr.sep > td{text-align:left; font-size:11px; font-weight:600; color:var(--ink-soft);
+  padding-top:14px; border-bottom:1px solid var(--rule)}
+table.c-cands tr.sep:hover{background:transparent}
+.c-steps h4{margin:12px 0 3px}
+.c-steps table{margin:0 0 4px}
+.c-steps td.l{white-space:normal}
+.c-p{margin:2px 0 6px; font-size:12.5px; color:var(--ink-mid)}
 .c-warns,.c-list{list-style:none; margin:8px 0 0; padding:0; font-size:12px; color:var(--ink-mid); max-width:110ch}
 .c-warns li,.c-list li{margin:3px 0}
 .c-list b{color:var(--ink); font-weight:600}
