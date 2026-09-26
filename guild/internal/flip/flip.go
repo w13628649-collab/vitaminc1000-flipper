@@ -39,6 +39,10 @@ type Service struct {
 	// IngestStats 取入库口径的计数,每条扫描通知带上(ScanEvent.Ingest)。服务端 main 里
 	// 接 ingest.Ingestor.Stats;返回 any 是为了 flip 不依赖 ingest。不设就不带
 	IngestStats func() any
+	// RefineSrc 非 nil 时代替库和 AODP 做精炼页的数据来源(见 refine.go),只给测试用
+	RefineSrc RefineSource
+	// refine 是精炼页的结果缓存和 AODP 价缓存,零值可用
+	refine refineState
 
 	cat atomic.Pointer[catalog.Catalog]
 	// recipes 是精炼 / 转化配方,和目录一起同步、一起载入(见 recipe.go)。

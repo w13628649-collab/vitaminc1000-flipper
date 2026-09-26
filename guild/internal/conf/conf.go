@@ -227,6 +227,8 @@ type Config struct {
 	Sizing    Sizing    `yaml:"sizing"`
 	API       API       `yaml:"api"`
 	Items     Items     `yaml:"items"`
+	// Refining 是精炼页的服务端默认值,见 refining.go
+	Refining Refining `yaml:"refining"`
 }
 
 // DefaultCities 是五个皇家城市、凯尔利恩和 Brecilien。黑区市场不进来——
@@ -313,6 +315,7 @@ func Default() Config {
 			TimeoutSeconds: 30,
 			MaxRetries:     4,
 		},
+		Refining: DefaultRefining(),
 	}
 }
 
@@ -418,7 +421,7 @@ func (c Config) Validate() error {
 		return fmt.Errorf("sizing.brecilien_travel_hours 不能为负(0 = 和 travel_hours 一样),得到 %g",
 			c.Sizing.BrecilienTravelHours)
 	}
-	return nil
+	return c.Refining.Validate()
 }
 
 // Load 读 YAML。先铺默认值再覆盖,所以配置文件只写要改的那几项就行。

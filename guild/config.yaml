@@ -83,3 +83,24 @@ items:
     # 火法杖系
     - "T{4,5,6}_{MAIN_FIRESTAFF,2H_FIRESTAFF,2H_INFERNOSTAFF}"
   exclude: []
+
+# 精炼页(/api/refine/*)的服务端默认值。个人参数(专精 FCE、今日专注、自己看到的站费、
+# 实测的转化系数 k)不在这里:客户端存本地,每次请求带上。标「未核实」的等游戏里核对
+refining:
+  window_hours: 72        # 精炼页读抓包的窗口,也是请求 max_age_hours 的上限;超过 6h 标黄、24h 标红
+  volume_days: 14         # 日成交量按「总量 ÷ 自然日」取多少天
+  daily_bonus: {}         # 今天的每日生产加成,线 → 0/10/20(ORE/HIDE/FIBER/WOOD),看游戏「活动」窗口手填
+  station_fee_per100: 500 # 精炼站使用费,银/100 营养。未核实(表格作者用的数)
+  station_fee_by_city: {} # 按城市覆盖,例如 {Thetford: 800}
+  transmute_factor: 1.154 # 转化实付系数 k。未核实(亚服表格反推)
+  transmute_measured_at: ""   # k 是哪天量的,只原样回给界面
+  transmute_gold_price: 0     # 量 k 时的金价,只原样回给界面
+  transmute_station_fee_per100: 500   # 转化的主人费率。未核实
+  heart_returns: true     # 精炼用的心是否也返还。未核实,对 .4 链没影响
+  leftover: carry         # 批末余料估值:carry 结转 / bid 砸买单 / zero 按 0
+  include_tail: true      # 批末余料算进开工本金
+  focus_per_day: 10000    # 今日可用专注的默认值(premium 每天恢复 10000)
+  focus_cap: 30000        # 专注上限;请求里的今日专注不能超过它
+  volume_share: 0.3       # 能吃到日成交量的几成。没核实
+  transport_pct: 0        # 外城买料的运费比例
+  bid_orders: false       # 把「挂买单收料」列进候选(默认只当参照行)

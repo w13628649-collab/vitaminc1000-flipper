@@ -115,6 +115,53 @@ func (s *Store) DailyHistory(ctx context.Context, first, last time.Time,
 	return out, rows.Err()
 }
 
+// ItemDay 是一个物品在一座城一天的成交(日线)。Source 是这一桶最后留下的那条的来源。
+type ItemDay struct {
+	ItemID    string
+	City      string
+	Day       time.Time
+	ItemCount int64
+	AvgPrice  int64
+	Source    string
+}
+
+// DailyVolume 取几个物品在一座城 [first, last] 的日线,给精炼页算日成交量。
+//
+// 和 DailyHistory 同一个口径:同一个桶抓包和 AODP 各有一条时只留一条、优先抓包
+// (两边是同一份服务端成交,取平均或相加都会重复计数)。只按请求的物品取,不像
+// DailyHistory 那样把整座城的物品都读回来:精炼页一次只要几个到二十几个物品。
+func (s *Store) DailyVolume(ctx context.Context, items []string, city string, quality int,
+	first, last time.Time) ([]ItemDay, error) {
+
+	if len(items) == 0 {
+		return nil, nil
+	}
+	const q = `
+		SELECT DISTINCT ON (item_id, bucket)
+		       item_id, location_id, bucket, item_count, avg_price, source
+		FROM market_history
+		WHERE timescale = $1 AND quality = $2 AND location_id = $3
+		  AND item_id = ANY($4::text[])
+		  AND bucket BETWEEN $5 AND $6
+		ORDER BY item_id, bucket,
+		         CASE source WHEN 'capture' THEN 0 ELSE 1 END`
+	rows, err := s.pool.Query(ctx, q, int16(TimescaleDaily), int16(quality), city, items, first, last)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ItemDay
+	for rows.Next() {
+		var d ItemDay
+		if err := rows.Scan(&d.ItemID, &d.City, &d.Day, &d.ItemCount, &d.AvgPrice, &d.Source); err != nil {
+			return nil, err
+		}
+		d.Day = d.Day.UTC().Truncate(24 * time.Hour)
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
 // HistoryCoverage 是库里现在攒了多少历史。
 type HistoryCoverage struct {
 	Rows     int64  `json:"rows"`
