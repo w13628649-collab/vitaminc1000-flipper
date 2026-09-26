@@ -179,6 +179,11 @@
       <details class="rejects" id="i-rejects">
         <summary>被过滤的候选 <em id="i-reject-total"></em></summary>
         <div class="statgrid" id="i-reject-grid"></div>
+        <div class="rfilter" id="i-reject-filter" hidden>
+          <div class="ctrl"><label for="i-rq">品质</label><select id="i-rq"></select></div>
+          <div class="ctrl"><label for="i-rsrc">价格来源</label>
+            <select id="i-rsrc" title="用了抓包 = 判它时卖一或买一至少一边是成员抓包抓到的"></select></div>
+        </div>
         <div id="i-reject-list"></div>
         <div id="i-diagnosis"></div>
       </details>

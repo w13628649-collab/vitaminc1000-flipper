@@ -693,7 +693,7 @@ func judge(r Route, maxAge float64) (screen.Confidence, []string) {
 	case "depth":
 		// 阶梯是某一眼的快照,吃掉之后多久补上完全不知道——按日容量算已经是保守口径,
 		// 但真去做的人得知道"一天就这么多"
-		warns = append(warns, fmt.Sprintf("盘口深度是瓶颈:按当前挂单只够 %d 件,补货速度未知", depthQty(r)))
+		warns = append(warns, fmt.Sprintf("盘口深度是瓶颈:按当前挂单只够 %s 件,补货速度未知", screen.Thousands(depthQty(r))))
 	default:
 		side := "产地"
 		if r.Bottleneck == "dest" {

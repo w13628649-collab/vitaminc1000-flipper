@@ -66,7 +66,8 @@ func TestEvaluateSides_T6买方薄被no_bid_side拒(t *testing.T) {
 	if rej.Reason != "no_bid_side" {
 		t.Fatalf("拒绝原因 = %s,想要 no_bid_side", rej.Reason)
 	}
-	for _, want := range []string{"260066", "11 件", "7 档", "79.6%", "创建费"} {
+	// 价按千分位写,和界面格子里的数字一个样
+	for _, want := range []string{"买一 260,066", "11 件", "7 档", "79.6%", "创建费"} {
 		if !strings.Contains(rej.Detail, want) {
 			t.Fatalf("理由应含 %q,得到 %q", want, rej.Detail)
 		}

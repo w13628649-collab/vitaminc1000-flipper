@@ -222,6 +222,11 @@ func TestDigest_界面渲染的每一块单独变了都要变(t *testing.T) {
 			r.Rejected = append([]screen.Rejected(nil), r.Rejected...)
 			r.Rejected[0].AskSource = "capture"
 		},
+		// 被拒明细显示两边价:单边的高品质装备卖价变了,界面那一行也得跟着换
+		"rejected[].ask_price": func(r *Result) {
+			r.Rejected = append([]screen.Rejected(nil), r.Rejected...)
+			r.Rejected[0].AskPrice++
+		},
 		"rejected[].detail(非数据龄文案)": func(r *Result) {
 			r.Rejected = append([]screen.Rejected(nil), r.Rejected...)
 			r.Rejected[0].Reason, r.Rejected[0].Detail = "one_sided", "只有买单"

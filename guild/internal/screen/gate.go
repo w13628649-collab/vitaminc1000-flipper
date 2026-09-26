@@ -34,19 +34,20 @@ func LegGate(m econ.Mode, buyBid, sellAsk Side, f conf.Filters) (blocked, detail
 	if m.Buy == econ.Maker && gated(buyBid) {
 		d := buyBid.Depth
 		pct := nearLabel(d.NearPct, f.NearPct)
+		// 价和件数一律按千分位写(Thousands):这些句子原样显示在界面上,旁边格子里都是 2,022,222
 		if f.MinBidDepth > 0 && d.QtyNear < f.MinBidDepth {
 			return ReasonNoBidSide, fmt.Sprintf(
-				"买一 %d 往下 %s 内只有 %d 件、%d 档在收,%s;挂买单大概率收不到货,还白付创建费",
-				d.Best, pct, d.QtyNear, d.LevelsNear, cliffNote(d.GapAfterNear)), false, nil
+				"买一 %s 往下 %s 内只有 %s 件、%d 档在收,%s;挂买单大概率收不到货,还白付创建费",
+				Thousands(d.Best), pct, Thousands(d.QtyNear), d.LevelsNear, cliffNote(d.GapAfterNear)), false, nil
 		}
 		if f.ThinBidEdgeQty > 0 && d.QtyNear < f.ThinBidEdgeQty {
 			edge = true
-			warns = append(warns, fmt.Sprintf("买一往下 %s 内只有 %d 件在收,挂买单收货会慢", pct, d.QtyNear))
+			warns = append(warns, fmt.Sprintf("买一往下 %s 内只有 %s 件在收,挂买单收货会慢", pct, Thousands(d.QtyNear)))
 		}
 		if f.BidCliffEdgePct > 0 && d.GapAfterNear >= f.BidCliffEdgePct {
 			edge = true
 			warns = append(warns, fmt.Sprintf(
-				"买方近价 %d 件之外断崖 %.1f%%:顶上这一小撮收完就没人接了", d.QtyNear, d.GapAfterNear*100))
+				"买方近价 %s 件之外断崖 %.1f%%:顶上这一小撮收完就没人接了", Thousands(d.QtyNear), d.GapAfterNear*100))
 		}
 	}
 	if m.Sell == econ.Maker && gated(sellAsk) {
@@ -54,12 +55,12 @@ func LegGate(m econ.Mode, buyBid, sellAsk Side, f conf.Filters) (blocked, detail
 		pct := nearLabel(d.NearPct, f.NearPct)
 		if f.MinBookQty > 0 && d.QtyNear < f.MinBookQty {
 			return ReasonThinBook, fmt.Sprintf(
-				"卖一 %d 往上 %s 内只有 %d 件,撑不起参考价;按它压价挂卖会高估收入",
-				d.Best, pct, d.QtyNear), false, nil
+				"卖一 %s 往上 %s 内只有 %s 件,撑不起参考价;按它压价挂卖会高估收入",
+				Thousands(d.Best), pct, Thousands(d.QtyNear)), false, nil
 		}
 		if f.ThinBookEdgeQty > 0 && d.QtyNear < f.ThinBookEdgeQty {
 			edge = true
-			warns = append(warns, fmt.Sprintf("卖一往上 %s 内只有 %d 件,挂卖的参考价不稳", pct, d.QtyNear))
+			warns = append(warns, fmt.Sprintf("卖一往上 %s 内只有 %s 件,挂卖的参考价不稳", pct, Thousands(d.QtyNear)))
 		}
 	}
 	return "", "", edge, warns

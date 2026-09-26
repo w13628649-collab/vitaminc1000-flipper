@@ -161,6 +161,10 @@ let ideasOpen = "";
 let rejectPick = "";          // 被过滤候选里点开明细的那个原因
 let rejectsTouched = false;   // 用户自己开合过「被过滤的候选」就不再替他开合
 let rejectsAuto = false;      // 代码最后一次给它设的 open 值(和 HTML 初始的收起一致)
+// 明细的品质 / 来源筛选,和列到第几条。换原因时筛选保留(想看的往往就是"良好以上"那几档),
+// 列的条数回到一页
+const REJECT_PAGE = 300;
+const rejectView = { q: 0, src: "", limit: REJECT_PAGE };
 
 const BOTTLENECK = { capital: "本金", source: "产地量", dest: "销地量", depth: "盘口深度" };
 const SRC_WORD = { capture: "抓包", aodp: "AODP" };
@@ -753,47 +757,96 @@ function renderRejects(res) {
   $("i-diagnosis").innerHTML = hints.map(h => `<div class="diagnosis">${h}</div>`).join("");
 }
 
+// 这一边判它时用了抓包没有
+const rejCaptured = x => x.ask_source === "capture" || x.bid_source === "capture";
+
+// 明细的筛选框:选项带这个原因下的条数,品质五档都列(某档 0 条也列,选着它就知道"这一类里没有")
+function renderRejectFilter(rows) {
+  const qs = [0, 0, 0, 0, 0, 0];
+  for (const x of rows) if (x.quality >= 1 && x.quality <= 5) qs[x.quality]++;
+  const cap = rows.filter(rejCaptured).length;
+  const opt = (v, label, n, cur) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${label}(${num(n)})</option>`;
+  $("i-rq").innerHTML = opt(0, "全部", rows.length, rejectView.q) +
+    [1, 2, 3, 4, 5].map(q => opt(q, QUALITY[q], qs[q], rejectView.q)).join("");
+  $("i-rsrc").innerHTML = opt("", "全部", rows.length, rejectView.src) +
+    opt("capture", "用了抓包", cap, rejectView.src) + opt("aodp", "纯 AODP", rows.length - cap, rejectView.src);
+}
+
+// 一边的价:有抓包徽标就是抓包抓到的那个价。老服务端不带价时只剩来源
+const rejPrice = (p, src, side) => `<td title="${esc(`${side}来自 ${SRC_WORD[src] || src || "—"}`)}">${
+  p ? num(p) : "—"}${src === "capture" ? `<i class="src">抓</i>` : ""}</td>`;
+
 function renderRejectList(res, opts = {}) {
   const box = $("i-reject-list");
-  if (!rejectPick) { box.innerHTML = ""; return; }
+  const bar = $("i-reject-filter");
+  if (!rejectPick) { box.innerHTML = ""; bar.hidden = true; return; }
   if (!Array.isArray(res.rejected)) {
+    bar.hidden = true;
     box.innerHTML = `<p class="note">这份结果里没有逐条明细。</p>`;
     return;
   }
-  const all = res.rejected.filter(x => x.reason === rejectPick);
-  const LIMIT = 300;
-  const shown = all.slice(0, LIMIT);
+  const ofReason = res.rejected.filter(x => x.reason === rejectPick);
+  bar.hidden = false;
+  renderRejectFilter(ofReason);
+  // 抓包参与判定的排前面,其次品质高的,其余保持服务端的顺序(配置清单在前)。
+  // 以前原样截前 300 条:单边那一类有上千条,清单里的普通品质全排在前面,
+  // 抓包抓到的良好~不凡一条都进不了前 300,机会页上等于看不到
+  const all = ofReason
+    .filter(x => (!rejectView.q || x.quality === rejectView.q) &&
+      (!rejectView.src || (rejectView.src === "capture") === rejCaptured(x)))
+    .map((x, i) => ({ x, i }))
+    .sort((a, b) => (rejCaptured(b.x) - rejCaptured(a.x)) || ((b.x.quality || 0) - (a.x.quality || 0)) || (a.i - b.i))
+    .map(o => o.x);
+  const shown = all.slice(0, rejectView.limit);
   for (const x of shown) noteName(x.item_id, x.item_name);   // 以后服务端带上名字就直接用
-  const src = x => x.ask_source || x.bid_source
-    ? `卖单簿 ${srcWord(x.ask_source)} · 买单簿 ${srcWord(x.bid_source)}` : "";
   // rejected[] 不带名字,NAMES 只攒了机会板、查价、销量榜见过的:没见过的先显示 id,
   // 查完目录再重画一次(还停在同一个原因上才画)
-  const pick = rejectPick;
+  const pick = `${rejectPick}|${rejectView.q}|${rejectView.src}`;
   if (!opts.named) resolveNames(shown.map(x => x.item_id), 200).then(n => {
-    if (n && rejectPick === pick && scan === res) renderRejectList(res, { named: true });
+    if (n && `${rejectPick}|${rejectView.q}|${rejectView.src}` === pick && scan === res) renderRejectList(res, { named: true });
   });
   const y = box.dataset.pick === pick ? box.querySelector(".rlist")?.scrollTop || 0 : 0;
   box.dataset.pick = pick;
-  box.innerHTML = `<div class="rlist"><table class="tight"><thead><tr>
-      <th class="l">物品</th><th class="l">城市</th><th class="l">品质</th><th class="l">为什么</th><th class="l">两边的价来自</th>
+  box.innerHTML = !all.length
+    ? `<p class="note">这一类里没有符合筛选的候选。</p>`
+    : `<div class="rlist"><table class="tight"><thead><tr>
+      <th class="l">物品</th><th class="l">城市</th><th class="l">品质</th>
+      <th title="判它时用的卖一(最低卖价)。带「抓」的是成员抓包抓到的">卖一</th>
+      <th title="判它时用的买一(最高买价)。带「抓」的是成员抓包抓到的">买一</th>
+      <th class="l">为什么</th>
     </tr></thead><tbody>${shown.map(x => `<tr>
       <td class="l">${itemCell(x.item_id, NAMES.get(x.item_id) || x.item_id)}</td>
       <td class="l">${cityMark(x.city)}</td>
       <td class="l">${x.quality ? qualityTag(x.quality) : "—"}</td>
+      ${rejPrice(x.ask_price, x.ask_source, "卖一")}
+      ${rejPrice(x.bid_price, x.bid_source, "买一")}
       <td class="l d">${esc(x.detail || rejectLabel(x.reason))}</td>
-      <td class="l sub">${src(x)}</td>
     </tr>`).join("")}</tbody></table></div>` +
-    (all.length > LIMIT ? `<p class="sub">只列前 ${LIMIT} 条,共 ${num(all.length)} 条。</p>` : "");
+    (all.length > shown.length
+      ? `<p class="sub">列了前 ${num(shown.length)} 条,共 ${num(all.length)} 条(抓包参与判定的、品质高的排在前面)。
+         <button type="button" class="mini" data-more>再列 ${num(Math.min(REJECT_PAGE, all.length - shown.length))} 条</button></p>` : "");
   const list = box.querySelector(".rlist");
-  if (list && y) list.scrollTop = y;   // 补上名字、结果刷新重画时别把人滚回顶上
+  if (list && y) list.scrollTop = y;   // 补上名字、结果刷新、再列一页时别把人滚回顶上
 }
 
 $("i-reject-grid").addEventListener("click", e => {
   const b = e.target.closest("button[data-reason]");
   if (!b || !scan) return;
   rejectPick = rejectPick === b.dataset.reason ? "" : b.dataset.reason;
+  rejectView.limit = REJECT_PAGE;
   for (const x of $("i-reject-grid").children) x.setAttribute("aria-pressed", String(x.dataset.reason === rejectPick));
   renderRejectList(scan);
+});
+for (const id of ["i-rq", "i-rsrc"]) $(id).addEventListener("change", () => {
+  rejectView.q = Number($("i-rq").value) || 0;
+  rejectView.src = $("i-rsrc").value;
+  rejectView.limit = REJECT_PAGE;
+  if (scan) renderRejectList(scan);
+});
+$("i-reject-list").addEventListener("click", e => {
+  if (!e.target.closest("button[data-more]") || !scan) return;
+  rejectView.limit += REJECT_PAGE;
+  renderRejectList(scan, { named: false });
 });
 // 代码改 open 也会派发 toggle,而且是异步派发的,不能靠"改之前打个标志"区分。
 // 这里比开合状态和代码最后一次设的值:一样就是代码自己开合的,不一样才是用户点的。

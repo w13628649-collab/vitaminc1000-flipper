@@ -174,6 +174,11 @@ type Rejected struct {
 	// 处置不一样:前者多半该回游戏里再翻一眼
 	AskSource string `json:"ask_source,omitempty"`
 	BidSource string `json:"bid_source,omitempty"`
+	// AskPrice/BidPrice 是判它时用的卖一、买一(融合之后的,和 AskSource/BidSource 对应),
+	// 0 表示这一边没有价。以前明细里只有原因:只有卖单的高品质装备整批判成 one_sided,
+	// 抓包抓到的卖价在机会页上一眼都看不到,只能去查价页一件件翻
+	AskPrice int64 `json:"ask_price,omitempty"`
+	BidPrice int64 `json:"bid_price,omitempty"`
 }
 
 // Evaluate 把一条 (物品, 城市) 的市场快照判成机会或拒绝原因。
@@ -199,6 +204,7 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 			ItemID: rec.ItemID, City: rec.City, Quality: rec.Quality,
 			Reason: reason, Detail: detail,
 			AskSource: sides.Ask.Source, BidSource: sides.Bid.Source,
+			AskPrice: max(rec.SellPriceMin, 0), BidPrice: max(rec.BuyPriceMax, 0),
 		}
 	}
 
@@ -278,7 +284,7 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 
 	// ---- 第 5 层:成交量 --------------------------------------------------
 	if stats.DailyVolumeSilver < f.MinDailyVolumeSilver {
-		return reject("low_volume", fmt.Sprintf("日流水 %.0f 银", stats.DailyVolumeSilver))
+		return reject("low_volume", fmt.Sprintf("日流水 %s 银", thousandsF(stats.DailyVolumeSilver)))
 	}
 	if stats.DailyVolumeSilver < f.MinDailyVolumeSilver*volumeEdgeMultiplier {
 		edge = true
@@ -290,8 +296,8 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	// 纯价格过滤的 max_margin 已经兜住了最离谱的那段
 	if f.MaxSpreadPct > 0 {
 		if spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1; spread > f.MaxSpreadPct {
-			return reject("wide_spread", fmt.Sprintf("卖一 %d / 买一 %d,价差 %.1f%% 超过上限 %.1f%%",
-				rec.SellPriceMin, rec.BuyPriceMax, spread*100, f.MaxSpreadPct*100))
+			return reject("wide_spread", fmt.Sprintf("卖一 %s / 买一 %s,价差 %.1f%% 超过上限 %.1f%%",
+				Thousands(rec.SellPriceMin), Thousands(rec.BuyPriceMax), spread*100, f.MaxSpreadPct*100))
 		}
 	}
 
@@ -299,7 +305,7 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 	// 真实市场不会持续存在这种状态(会立刻自己成交),出现说明两侧快照
 	// 来自不同时间点,是陈旧数据的强信号。
 	if rec.BuyPriceMax >= rec.SellPriceMin {
-		detail := fmt.Sprintf("买 %d >= 卖 %d", rec.BuyPriceMax, rec.SellPriceMin)
+		detail := fmt.Sprintf("买 %s >= 卖 %s", Thousands(rec.BuyPriceMax), Thousands(rec.SellPriceMin))
 		if f.RejectCrossedBook {
 			return reject("crossed_book", detail)
 		}
@@ -381,9 +387,14 @@ func EvaluateSides(rec aodp.PriceRecord, sides Sides, stats *histagg.Stats, cfg 
 		mm := econ.Mode{Buy: econ.Maker, Sell: econ.Maker}
 		u := econ.Quote(book, book, mm, cfg.Economics)
 		spread := float64(rec.SellPriceMin)/float64(rec.BuyPriceMax) - 1
+		// 亏损写成正数:以前是"税后亏 -9.5",负号和"亏"叠成双重否定,读着像赚了
+		loss := "税后每件刚好打平"
+		if u.ProfitPerUnit < 0 {
+			loss = fmt.Sprintf("税后每件亏 %s 银", thousands1(-u.ProfitPerUnit))
+		}
 		return reject("unprofitable", fmt.Sprintf(
-			"税后亏 %.1f 银/件:买卖价差 %.2f%%,%s 要 %.2f%% 才打平",
-			u.ProfitPerUnit, spread*100, mm.Label(), mm.Breakeven(cfg.Economics)*100))
+			"%s:买卖价差 %.2f%%,%s 要 %.2f%% 才打平",
+			loss, spread*100, mm.Label(), mm.Breakeven(cfg.Economics)*100))
 	}
 	byDaily(profitable)
 	best, unit, bestQty, bestMode := profitable[0].q, profitable[0].unit, profitable[0].qty, profitable[0].mode
