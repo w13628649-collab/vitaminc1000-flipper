@@ -194,11 +194,25 @@ const CRAFT_WARN = {
 };
 // 这几种是「数不能全信」,标红;其余是提醒
 const CRAFT_WARN_BAD = new Set(["depth_short", "missing", "no_sell_price", "locked", "capital_short", "stale", "conflicted"]);
-const warnTag = w => `<span class="wtag${CRAFT_WARN_BAD.has(w.code) ? " bad" : ""}" title="${esc(w.msg || w.code)}">${
+// 服务端的警告文字里是物品 id(T8_ORE_LEVEL4@4 缺价…):换成页面上别处一样的中文名。
+// 只查到 tier、没查到名字的保留 id,免得 T3_METALBAR 变成光秃秃的「T3」
+const ITEM_ID_RE = /\bT\d_[A-Z0-9_]+(?:@\d)?/g;
+const idLabel = id => { const l = cLabel(id); return l && l !== cTier(id) ? l : id; };
+const warnText = msg => String(msg || "").replace(ITEM_ID_RE, idLabel);
+function warnHTML(msg) {
+  const s = String(msg || "");
+  let out = "", last = 0;
+  for (const m of s.matchAll(ITEM_ID_RE)) {
+    out += esc(s.slice(last, m.index)) + `<span class="wid" title="${esc(m[0])}">${esc(idLabel(m[0]))}</span>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(s.slice(last));
+}
+const warnTag = w => `<span class="wtag${CRAFT_WARN_BAD.has(w.code) ? " bad" : ""}" title="${esc(warnText(w.msg || w.code))}">${
   esc(CRAFT_WARN[w.code] || w.code)}</span>`;
 function warnList(ws) {
   if (!ws?.length) return "";
-  return `<ul class="c-warns">${ws.map(w => `<li>${warnTag(w)} ${esc(w.msg || "")}</li>`).join("")}</ul>`;
+  return `<ul class="c-warns">${ws.map(w => `<li>${warnTag(w)} ${warnHTML(w.msg)}</li>`).join("")}</ul>`;
 }
 
 // 按物品族一次拉全名字(/api/items?family=METALBAR 是 T2~T8 全部附魔,二十几件)。
@@ -976,21 +990,27 @@ function craftCandsHTML(res) {
   const row = (c, i) => {
     const pp = c.profit?.post, pt = c.profit?.take, d = c.daily, f = c.focus || {};
     const open = craft.open.has(c.id);
-    const profitCell = (pl, mode) => pl
-      ? `<td class="${pl.unit >= 0 ? "pos" : "neg"}${mode === modes[0] ? " primary" : ""}">${sgn(pl.unit)}<span class="subln">${spct(pl.pct)}${
-        pl.sold != null && pl.sold < res.qty - 0.005 ? ` · 出 ${fq(pl.sold)} 件` : ""}</span></td>`
-      : `<td class="sub">—</td>`;
+    // 拿不满料:成本只是拿到的那一部分除以整批件数,是下界;照常按正数、绿色显示的话,
+    // 「全部吃卖一」这种参照行看起来比推荐那条便宜得多、利润高得多 —— 正好反着读
+    const lb = !c.filled;
+    const LB_TIP = "拿不满料:成本只按拿得到的那部分算,是下界,利润、每点专注值、日化都不能当真";
+    const profitCell = (pl, mode) => !pl ? `<td class="sub">—</td>`
+      : lb ? `<td class="sub${mode === modes[0] ? " primary" : ""}" title="${LB_TIP}">—</td>`
+      : `<td class="${pl.unit >= 0 ? "pos" : "neg"}${mode === modes[0] ? " primary" : ""}">${sgn(pl.unit)}<span class="subln">${spct(pl.pct)}${
+        pl.sold != null && pl.sold < res.qty - 0.005 ? ` · 出 ${fq(pl.sold)} 件` : ""}</span></td>`;
     const codes = new Map();
     for (const w of c.warnings || []) if (!codes.has(w.code)) codes.set(w.code, w);
     return `<tr class="main${c.reference ? " refrow" : ""}${c.filled ? "" : " unfilled"}${open ? " open" : ""}" data-cid="${esc(c.id)}">
       <td class="l">${c.reference ? `<span class="kind flip">参照</span> ` : `<span class="rank">${i + 1}</span> `}<span class="c-route">${esc(c.label)}</span>
         ${c.reference ? `<span class="subln">${esc(REF_NOTE[c.reference] || "参照行")}</span>` : ""}</td>
-      <td>${num(c.unit_cost)}</td>
+      <td${lb ? ` title="${LB_TIP}"` : ""}>${lb ? `≥ ${num(c.unit_cost)}<span class="subln">只拿到一部分料</span>` : num(c.unit_cost)}</td>
       ${profitCell(pp, "post")}${profitCell(pt, "take")}
       <td class="${f.over_budget ? "neg" : ""}" title="${esc(f.tiers?.length ? `开专注的级:T${f.tiers.join("、T")};没有专精时每根 ${num(f.base_per_unit)}${f.over_budget ? ";这一批超过今日可用专注" : ""}` : "不开专注")}">${f.per_unit ? num(f.per_unit) : "0"}</td>
-      <td class="${c.silver_per_focus != null && c.silver_per_focus >= th ? "pos" : c.silver_per_focus < 0 ? "neg" : ""}">${c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</td>
-      <td title="${esc(limitsText(d))}">${d ? sgn(d.profit) : "—"}<span class="subln">${d ? `${fq(d.units)} 件/天 · ${esc(BIND_WORD[d.binding] || d.binding)}` : ""}</span></td>
-      <td class="${cap > 0 && c.upfront_capital > cap ? "neg" : ""}">${silver(c.upfront_capital)}</td>
+      ${lb ? `<td class="sub" title="${LB_TIP}">—</td>`
+        : `<td class="${c.silver_per_focus != null && c.silver_per_focus >= th ? "pos" : c.silver_per_focus < 0 ? "neg" : ""}">${c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</td>`}
+      ${lb ? `<td class="sub" title="${LB_TIP}">—</td>`
+        : `<td title="${esc(limitsText(d))}">${d ? sgn(d.profit) : "—"}<span class="subln">${d ? `${fq(d.units)} 件/天 · ${esc(BIND_WORD[d.binding] || d.binding)}` : ""}</span></td>`}
+      <td class="${!lb && cap > 0 && c.upfront_capital > cap ? "neg" : ""}">${lb ? "≥ " : ""}${silver(c.upfront_capital)}</td>
       <td>${ageTag(c.oldest_age_h)}</td>
       <td class="l wcell">${c.filled ? "" : `<span class="wtag bad">拿不满料</span>`}${[...codes.values()].map(warnTag).join("")}</td>
     </tr>${open ? `<tr class="detail"><td colspan="10">${craftStepsHTML(c, res)}</td></tr>` : ""}`;
@@ -1004,7 +1024,7 @@ function craftCandsHTML(res) {
         <th title="挂卖单:卖一压 1 银挂上去,到手 ×(1 − 税 − 创建费)">挂卖利</th>
         <th title="吃买单:沿买单阶梯卖,到手 ×(1 − 税),断崖之后不卖">吃买单利</th>
         <th title="按你的专精 FCE 折算后,每件多少专注">专注/根</th>
-        <th title="(开专注的利润 − 不开专注的最好利润)÷ 每件专注。绿色 = 超过 premium 门槛">银/专注点</th>
+        <th title="(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准。绿色 = 超过 premium 门槛">银/专注点</th>
         <th title="每天件数(专注、成交量、本金、批量里最小的)× 单根利润">日化</th>
         <th title="开工前要备齐的钱:稳态消耗 + 批末余料">本金</th>
         <th title="用到的价里最旧的:超过 6 小时黄、超过 24 小时红">数据</th><th class="l">警告</th></tr></thead>
@@ -1016,6 +1036,63 @@ function craftCandsHTML(res) {
 
 // 步骤清单:买什么、在哪城、多少件、价位、金额、观测时间和来源;转化几次、从哪到哪;
 // 精炼几次、开没开专注、回收率;怎么卖;批末余料(设计 §4.5)
+// 转化步骤按「最后变成哪种原料」分组:每组从买来的起点沿用到的边一路走到那种原料,组内按路径先后排,
+// 带小计。服务端按起点的 tier+附魔 排,几条链的步骤交错在一起,照着在游戏里做很难跟。
+// 两条链共用的一步(次数是合计)放在先出现的那组,后面的组里注明「也供」
+function transGroups(buys, trans) {
+  const adj = new Map();
+  for (const t of trans) {
+    if (!adj.has(t.from)) adj.set(t.from, []);
+    adj.get(t.from).push(t);
+  }
+  // 从 S 走到 T 用到的边(广度优先;每一步都是 tier+附魔 加一,路径很短)
+  const path = (S, T) => {
+    const prev = new Map([[S, null]]), queue = [S];
+    while (queue.length) {
+      const v = queue.shift();
+      if (v === T) break;
+      for (const e of adj.get(v) || []) if (!prev.has(e.to)) { prev.set(e.to, e); queue.push(e.to); }
+    }
+    if (!prev.has(T)) return [];
+    const out = [];
+    for (let e = prev.get(T); e; e = prev.get(e.from)) out.unshift(e);
+    return out;
+  };
+  const groups = [], rowOf = new Map();
+  const targets = cUniq(buys.filter(b => b.for && b.for !== b.item).map(b => b.for)).sort((a, b) => levelOf(b) - levelOf(a) || (a < b ? -1 : 1));
+  for (const T of targets) {
+    const starts = cUniq(buys.filter(b => b.for === T).map(b => b.item));
+    const g = { target: T, starts, rows: [] };
+    const edges = cUniq(starts.flatMap(S => path(S, T))).sort((a, b) => levelOf(a.from) - levelOf(b.from) || (a.from < b.from ? -1 : 1));
+    for (const e of edges) {
+      const r = rowOf.get(e);
+      if (r) { if (!r.also.includes(T)) r.also.push(T); continue; }
+      const row = { t: e, also: [] };
+      rowOf.set(e, row);
+      g.rows.push(row);
+    }
+    if (g.rows.length) groups.push(g);
+  }
+  const rest = trans.filter(t => !rowOf.has(t)).map(t => ({ t, also: [] }));
+  if (rest.length) groups.push({ target: "", starts: [], rows: rest });
+  return groups;
+}
+
+// 拿不满料时每种料差多少:要的 = 各级精炼的稳态投入 − 下一级精炼做出来的;拿到的 = 买来(或买来转化成它)的件数
+function shortfalls(buys, refs) {
+  const need = new Map(), got = new Map();
+  const add = (m, k, q) => m.set(k, (m.get(k) || 0) + q);
+  for (const r of refs) for (const i of r.inputs || []) add(need, i.item, i.qty);
+  for (const r of refs) add(need, r.item, -r.qty);
+  for (const b of buys) add(got, b.for || b.item, b.qty);
+  const out = new Map();
+  for (const [item, n] of need) {
+    const g = got.get(item) || 0;
+    if (n > 0.01 && g < n - 0.01) out.set(item, { need: n, got: g });
+  }
+  return out;
+}
+
 function craftStepsHTML(c, res) {
   const steps = c.steps || [];
   const buys = steps.filter(s => s.op === "buy" || s.op === "bid");
@@ -1023,7 +1100,14 @@ function craftStepsHTML(c, res) {
   const refs = steps.filter(s => s.op === "refine");
   const sell = steps.find(s => s.op === "sell");
   const sum = xs => xs.reduce((a, s) => a + (s.cost || 0), 0);
+  const fees = res.params_used?.fees || {};
+  const short = c.filled ? new Map() : shortfalls(buys, refs);
   const out = [];
+  if (short.size) {
+    out.push(`<p class="c-unfilled"><b>拿不满料:</b>${[...short].map(([item, x]) =>
+      `${cItem(item)} 要 ${fq(x.need)} 个,${x.got > 0 ? `只买到 ${fq(x.got)} 个` : "一个都没买到"}`).join(";")}。
+      下面的件数、金额都只是拿到的那一部分,精炼那一步照整批写,凑不齐是做不出来的。</p>`);
+  }
   if (buys.length) {
     out.push(`<h4>① 买料 <em>${buys.length} 项,合计 ${num(sum(buys))} 银</em></h4>
       <table class="tight"><thead><tr><th class="l">物品</th><th class="l">城市</th><th>件数</th><th>价位</th><th>金额</th>
@@ -1031,8 +1115,9 @@ function craftStepsHTML(c, res) {
       const lv = s.levels || [];
       const price = s.price_from === s.price_to || !s.price_to ? num(s.price_from) : `${num(s.price_from)} ~ ${num(s.price_to)}`;
       const lvTitle = lv.map(l => `${num(l.price)} × ${fq(l.qty)}`).join("\n");
-      return `<tr><td class="l">${s.op === "bid" ? `<span class="wtag" title="挂买单:按买一 + 1 挂、多付创建费,收不收得到不知道">挂买单</span>` : ""}${cItem(s.item)}</td>
-        <td class="l">${cityDot(s.city)}</td><td>${fq(s.qty)}</td>
+      const sh = !s.for ? short.get(s.item) : null;
+      return `<tr${sh ? ` class="short"` : ""}><td class="l">${s.op === "bid" ? `<span class="wtag" title="挂买单:按买一 + ${num(fees.outbid)} 挂、多付创建费,收不收得到不知道">挂买单</span>` : ""}${cItem(s.item)}</td>
+        <td class="l">${cityDot(s.city)}</td><td>${fq(s.qty)}${sh ? `<span class="subln neg">要 ${fq(sh.need)}</span>` : ""}</td>
         <td title="${esc(lvTitle)}">${price}${lv.length > 1 ? `<span class="subln">吃 ${lv.length} 档</span>` : ""}</td>
         <td>${num(s.cost)}${s.transport ? `<span class="subln">含运费 ${num(s.transport)}</span>` : ""}</td>
         <td class="l">${ageTag(s.age_h)} <span class="sub">${esc(SRC_NAME[s.source] || s.source || "")}${s.seen_at ? " · " + hms(s.seen_at) : ""}</span></td>
@@ -1040,10 +1125,14 @@ function craftStepsHTML(c, res) {
     }).join("")}</tbody></table>`);
   }
   if (trans.length) {
+    const groups = transGroups(buys, trans);
     out.push(`<h4>② 转化 <em>${trans.length} 步,合计 ${num(sum(trans))} 银 · 在 ${esc(res.city)} 的站里做,不用专注、没有返还</em></h4>
-      <table class="tight"><thead><tr><th class="l">从 → 到</th><th>次数</th><th>每次实付</th><th>合计</th></tr></thead><tbody>${trans.map(s =>
-      `<tr><td class="l">${cItem(s.from, { noTag: true })} → ${cItem(s.to, { noTag: true })}</td><td>${fq(s.qty)}</td>
-        <td>${num(s.unit_fee)}</td><td>${num(s.cost)}</td></tr>`).join("")}</tbody></table>`);
+      <table class="tight c-transt"><thead><tr><th class="l">从 → 到</th><th>次数</th><th>每次实付</th><th>合计</th></tr></thead><tbody>${groups.map(g =>
+      `<tr class="grp"><td class="l" colspan="3">${g.target ? `做成 ${cItem(g.target)} <span class="sub">从 ${g.starts.map(x => esc(cTier(x))).join("、")} 一路转上去</span>` : "其它"}</td>
+        <td>小计 ${num(g.rows.reduce((a, r) => a + (r.t.cost || 0), 0))}</td></tr>${g.rows.map(({ t, also }) =>
+      `<tr><td class="l">${cItem(t.from, { noTag: true })} → ${cItem(t.to, { noTag: true })}${also.length
+        ? `<span class="subln">这一步也供 ${also.map(x => esc(cTier(x))).join("、")}(次数是合计)</span>` : ""}</td><td>${fq(t.qty)}</td>
+        <td>${num(t.unit_fee)}</td><td>${num(t.cost)}</td></tr>`).join("")}`).join("")}</tbody></table>`);
   }
   if (refs.length) {
     out.push(`<h4>${trans.length ? "③" : "②"} 精炼 <em>站费合计 ${num(sum(refs))} 银 · 专注合计 ${num(refs.reduce((a, s) => a + (s.focus_cost || 0), 0))}</em></h4>
@@ -1059,13 +1148,24 @@ function craftStepsHTML(c, res) {
     out.push(`<h4>出售</h4><p class="c-p">${sell.mode === "take" ? "吃买单" : "挂卖单"} ${fq(sell.qty)} 件 @ ${cityDot(sell.city)},${
       sell.mode === "take" ? "均价" : "挂"} ${num(sell.price)},每件到手 ${num(sell.net)}${unsold} · ${ageTag(sell.age_h)} <span class="sub">${esc(SRC_NAME[sell.source] || sell.source || "")}</span></p>`);
   }
-  if (c.leftover?.length) {
-    const lvWord = { carry: "结转下一批", bid: "砸买单", zero: "按 0" };
-    out.push(`<h4>批末余料 <em>一批做完总会剩这些,和件数无关;取得成本合计 ${num(c.leftover.reduce((a, l) => a + (l.cost || 0), 0))}</em></h4>
-      <table class="tight"><thead><tr><th class="l">物品</th><th>件数</th><th>取得成本</th><th>估值</th><th class="l">方式</th><th>损失</th></tr></thead><tbody>${
-      c.leftover.map(l => `<tr><td class="l">${cItem(l.item)}</td><td>${fq(l.qty)}</td><td>${num(l.cost)}</td><td>${num(l.value)}</td>
-        <td class="l">${esc(lvWord[l.mode] || l.mode)}</td><td class="${l.loss > 0 ? "neg" : ""}">${num(l.loss)}</td></tr>`).join("")}</tbody></table>`);
+  const lvWord = { carry: "结转下一批", bid: "砸买单", zero: "按 0" };
+  const left = c.leftover || [];
+  const acq = left.reduce((a, l) => a + (l.cost || 0), 0), loss = left.reduce((a, l) => a + (l.loss || 0), 0);
+  if (left.length) {
+    out.push(`<h4>批末余料 <em>一批做完总会剩这些,和件数无关;取得成本合计 ${num(acq)}${Math.abs(loss) > 0.5 ? ` · 估值损失合计 ${snum(loss)}` : ""}</em></h4>
+      <table class="tight"><thead><tr><th class="l">物品</th><th>件数</th><th>取得成本</th><th>估值</th><th class="l">方式</th>
+        <th title="取得成本 − 估值;负数 = 估值比取得成本高">损失</th></tr></thead><tbody>${
+      left.map(l => `<tr><td class="l">${cItem(l.item)}</td><td>${fq(l.qty)}</td><td>${num(l.cost)}</td><td>${num(l.value)}</td>
+        <td class="l">${esc(lvWord[l.mode] || l.mode)}</td><td class="${l.loss > 0.5 ? "neg" : l.loss < -0.5 ? "pos" : ""}">${snum(l.loss)}</td></tr>`).join("")}</tbody></table>`);
   }
+  // 对账:①+②+③ 是稳态;余料按砸买单 / 按 0 估值时的损失另外摊进成本 —— 以前只列了取得成本,
+  // 照着加出来和卡片上的「这一批共 X」差一截,找不到差在哪
+  const steady = sum(buys) + sum(trans) + sum(refs);
+  out.push(`<p class="c-recon"><b>对账:</b>${trans.length ? "① 买料 + ② 转化 + ③ 站费" : "① 买料 + ② 站费"} = 稳态 ${num(steady)}${
+    Math.abs(loss) > 0.5 ? ` ${loss > 0 ? "+" : "−"} 余料估值损失 ${num(Math.abs(loss))}(${esc(lvWord[left[0]?.mode] || "")})` : ""}
+    = 这一批 ${num(c.total_cost)}(单根 ${num(c.unit_cost)} × ${num(res.qty)});开工本金 = 稳态 ${num(steady)}${
+    left.length ? ` + 余料取得成本 ${num(acq)}` : ""} = ${num(c.upfront_capital)}${
+    left.length && left.every(l => l.mode === "carry") ? "。余料按成本结转下一批,不算损失" : ""}</p>`);
   out.push(warnList(c.warnings));
   return `<div class="detailbox c-steps">${out.join("")}
     <p class="sub">件数是稳态均摊:按回收率的期望返还算,所以带小数;进游戏按整数下单,多出来的零头就是下一批的余料。</p></div>`;
@@ -1400,7 +1500,7 @@ const MX_COLS = [
   { k: "unit_cost", label: "单根成本" },
   { k: "profit", label: "单根利润", tip: "主出售方式下每件的利润" },
   { k: "pct", label: "利润率" },
-  { k: "spf", label: "银/专注点", tip: "(开专注的利润 − 不开专注的最好利润)÷ 每件专注" },
+  { k: "spf", label: "银/专注点", tip: "(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准" },
   { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数(总量 ÷ 自然日)" },
   { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的" },
   { k: "binding", label: "卡在", l: true, str: true },

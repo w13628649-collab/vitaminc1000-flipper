@@ -637,7 +637,7 @@ a.mini:hover{background:var(--ink); color:var(--paper)}
 .c-row{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end}
 .c-check{display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--ink-mid); padding-bottom:6px}
 .c-srcwrap .checks{max-width:520px}
-.ubadge{font-size:9.5px; font-weight:700; padding:0 4px; margin-left:4px; border-radius:var(--r);
+.ubadge{font-size:11px; font-weight:700; padding:0 4px; margin-left:4px; border-radius:var(--r);
   color:var(--warn); box-shadow:inset 0 0 0 1px currentColor; white-space:nowrap}
 .ubadge:empty{display:none}
 .ubadge.mine{color:var(--gain)}
@@ -749,7 +749,8 @@ table.c-mxt td.l{white-space:normal}
 table.c-mxt td.wcell{white-space:normal; min-width:120px; max-width:240px}
 table.c-mxt tr.cur > td{background:var(--surface-2); box-shadow:inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)}
 table.c-mxt tr.cur > td:first-child{box-shadow:inset 3px 0 0 var(--bronze), inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)}
-table.c-mxt tr.unfilled > td{opacity:.62}
+table.c-mxt tr.unfilled > td{background:color-mix(in oklab,var(--warn),var(--surface) 94%)}
+table.c-mxt tr.unfilled > td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
 .c-sec{margin-top:6px}
 .c-sec h3 .sub{font-weight:400; margin-left:6px}
 table.c-cands td .subln{font-weight:400}
@@ -762,13 +763,22 @@ table.c-cands td.wcell{white-space:normal; min-width:130px; max-width:260px}
 table.c-cands .rank{display:inline-block; min-width:18px; font-size:11px; font-weight:700; color:var(--bronze-ink)}
 table.c-cands tr.refrow > td{background:color-mix(in oklab,var(--surface-2),transparent 40%)}
 table.c-cands tr.refrow .c-route{font-style:italic}
-table.c-cands tr.unfilled > td{opacity:.62}
+/* 拿不满料的行:数字已经换成「—」「≥」,行本身用浅红底 + 左边一道红标出来。
+   以前整行 opacity .62,把解释「为什么不能用」的警告标签也淡到 3:1 以下 */
+table.c-cands tr.unfilled > td{background:color-mix(in oklab,var(--warn),var(--surface) 94%)}
+table.c-cands tr.unfilled > td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
 table.c-cands tr.sep > td{text-align:left; font-size:11px; font-weight:600; color:var(--ink-soft);
   padding-top:14px; border-bottom:1px solid var(--rule)}
 table.c-cands tr.sep:hover{background:transparent}
 .c-steps h4{margin:12px 0 3px}
 .c-steps table{margin:0 0 4px}
 .c-steps td.l{white-space:normal}
+/* 转化按供给哪种原料分组,组头带小计 */
+table.c-transt tr.grp > td{background:var(--surface-2); font-weight:600; font-size:12px; padding-top:6px}
+table.c-transt tr.grp .sub{font-weight:400; margin-left:6px}
+.c-steps tr.short > td{background:color-mix(in oklab,var(--warn),var(--surface) 92%)}
+.c-recon{margin:8px 0 0; font-size:12.5px; color:var(--ink-mid); max-width:120ch}
+.c-recon b{color:var(--ink)}
 .c-p{margin:2px 0 6px; font-size:12.5px; color:var(--ink-mid)}
 .c-warns,.c-list{list-style:none; margin:8px 0 0; padding:0; font-size:12px; color:var(--ink-mid); max-width:110ch}
 .c-warns li,.c-list li{margin:3px 0}
