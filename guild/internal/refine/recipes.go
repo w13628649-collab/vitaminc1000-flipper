@@ -67,6 +67,37 @@ func InScope(r catalog.Recipe) bool {
 	return ok
 }
 
+// MissingFromSnapshot 数一份配方比内置快照少了哪些:快照里每一条(产物 × 种类 × variant)
+// 在 recipes 里都要有。返回少了几条,以及前几条的例子(「产物 种类#variant」)。
+//
+// 为什么要查:上游只解析出一部分时(比如转化按钮的本地化键改了名,转化配方整批没了),
+// 整表替换会把库里的好数据换成残缺的,之后每次启动都读这份残缺的;引擎拿不到转化边也不报错,
+// 只会悄悄算出更贵的路线(审查 finding 6)。只比有没有、不比数值:数值随版本改是正常的,
+// 那正是同步的意义。上游多出来的配方不算问题。
+func MissingFromSnapshot(recipes []catalog.Recipe) (int, []string) {
+	type key struct {
+		item    string
+		kind    catalog.RecipeKind
+		variant int
+	}
+	have := make(map[key]bool, len(recipes))
+	for _, r := range recipes {
+		have[key{r.ItemID, r.Kind, r.Variant}] = true
+	}
+	n := 0
+	var sample []string
+	for _, r := range EmbeddedRecipes().All() {
+		if have[key{r.ItemID, r.Kind, r.Variant}] {
+			continue
+		}
+		n++
+		if len(sample) < 5 {
+			sample = append(sample, fmt.Sprintf("%s %s#%d", r.ItemID, r.Kind, r.Variant))
+		}
+	}
+	return n, sample
+}
+
 // TrimRecipes 从全部配方里挑出本期范围内的,生成快照用。
 func TrimRecipes(all []catalog.Recipe) []catalog.Recipe {
 	var out []catalog.Recipe

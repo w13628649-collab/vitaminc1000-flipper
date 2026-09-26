@@ -36,4 +36,53 @@ func TestSaveRecipes上游为空时保持原样(t *testing.T) {
 	if s.Recipes() != prev {
 		t.Fatal("上游为空时内存里的配方被换掉了")
 	}
+	if st := s.LastRecipeSync(); st == nil || st.Rejected == "" || st.Upstream != 0 {
+		t.Fatalf("要记下这次没收: %+v", st)
+	}
+}
+
+// 上游只解析出一部分(比如转化按钮的本地化键改了名,转化配方整批没了):整份不收,
+// 不换内存、不写库,并记下原因给 /api/catalog/sync(审查 finding 6)。以前只告警一句就照样整表替换。
+func TestSaveRecipes上游不完整时整份不收(t *testing.T) {
+	all := refine.EmbeddedRecipes().All()
+	var refineOnly, missingOne []catalog.Recipe
+	for i, r := range all {
+		if r.Kind == catalog.RecipeRefine {
+			refineOnly = append(refineOnly, r)
+		}
+		if i != len(all)/2 {
+			missingOne = append(missingOne, r)
+		}
+	}
+	// 范围外的配方(石头线)多出来不算,缺的照样是缺
+	extra := catalog.Recipe{ItemID: "T5_STONEBLOCK", Kind: catalog.RecipeRefine, Amount: 1,
+		Inputs: []catalog.RecipeInput{{ItemID: "T5_ROCK", Count: 1}}}
+	for name, upstream := range map[string][]catalog.Recipe{
+		"只有精炼没有转化":  refineOnly,
+		"少一条":       missingOne,
+		"少一条但多了石头线": append(append([]catalog.Recipe(nil), missingOne...), extra),
+	} {
+		s := New(nil, conf.Default())
+		// Store 是 nil:走到写库就会 panic,所以没 panic 就说明没写库
+		s.saveRecipes(context.Background(), upstream)
+		if src := s.Recipes().Source(); src != refine.SnapshotName {
+			t.Fatalf("%s:不完整的上游配方不该换进内存,来源 %s", name, src)
+		}
+		st := s.LastRecipeSync()
+		if st == nil || st.Rejected == "" || st.Upstream != len(upstream) {
+			t.Fatalf("%s:要记下没收和原因: %+v", name, st)
+		}
+		t.Logf("%s:%s", name, st.Rejected)
+	}
+
+	// 完整的(和快照一样,或者比快照多)可以用
+	if ok, why := recipesUsable(all); !ok {
+		t.Fatalf("和快照一样的配方应当可用: %s", why)
+	}
+	if ok, why := recipesUsable(append(append([]catalog.Recipe(nil), all...), extra)); !ok {
+		t.Fatalf("比快照多的配方应当可用: %s", why)
+	}
+	if ok, _ := recipesUsable(refineOnly); ok {
+		t.Fatal("缺整批转化配方的不能用")
+	}
 }

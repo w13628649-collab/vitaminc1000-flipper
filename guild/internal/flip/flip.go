@@ -48,6 +48,8 @@ type Service struct {
 	// recipes 是精炼 / 转化配方,和目录一起同步、一起载入(见 recipe.go)。
 	// nil 时 Recipes() 退回内置快照
 	recipes atomic.Pointer[catalog.RecipeBook]
+	// recipeSync 是最近一次同步配方的结果(收了没有、为什么不收),见 recipe.go
+	recipeSync atomic.Pointer[RecipeSync]
 	// syncMu 串起目录同步。启动时的后台补同步和手动 /api/catalog/sync 撞在一起时,
 	// 两个「整表删了重写」的事务交错会撞主键,后一个白下 40MB
 	syncMu sync.Mutex

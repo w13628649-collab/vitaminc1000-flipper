@@ -23,6 +23,29 @@ var update = flag.Bool("update", false,
 // 内置快照必须就是 catalog 的解析器对原始 items.json 解析、再裁到四条线的结果。
 // 需要本地有一份原始 items.json(17MB,不进仓库):没设 FLIPPER_ITEMS_JSON 就跳过,
 // 下面那些结构断言照样对快照本身跑。
+// 快照自己和快照比,一条不缺;去掉任意一种配方就能数出来。
+func TestMissingFromSnapshot(t *testing.T) {
+	all := EmbeddedRecipes().All()
+	if n, _ := MissingFromSnapshot(all); n != 0 {
+		t.Fatalf("快照自己比自己少了 %d 条", n)
+	}
+	var noHeart []catalog.Recipe
+	hearts := 0
+	for _, r := range all {
+		if usesHeart(r) {
+			hearts++
+			continue
+		}
+		noHeart = append(noHeart, r)
+	}
+	if n, sample := MissingFromSnapshot(noHeart); n != hearts || hearts == 0 || len(sample) == 0 {
+		t.Fatalf("去掉 %d 条心配方,数出来少 %d 条 %v", hearts, n, sample)
+	}
+	if n, _ := MissingFromSnapshot(nil); n != len(all) {
+		t.Fatalf("空的应当全缺: %d", n)
+	}
+}
+
 func Test内置快照和items_json一致(t *testing.T) {
 	path := os.Getenv("FLIPPER_ITEMS_JSON")
 	if path == "" {
@@ -50,6 +73,11 @@ func Test内置快照和items_json一致(t *testing.T) {
 			}
 		}
 		t.Fatalf("条数不一致:dump %d,快照 %d", len(trimmed), len(got))
+	}
+
+	// 整份上游配方(含范围外的)同步时要能被收下(见 MissingFromSnapshot)
+	if n, sample := MissingFromSnapshot(all); n != 0 {
+		t.Fatalf("上游配方比快照少 %d 条: %v", n, sample)
 	}
 
 	// 范围外的精炼/转化配方只应该是石头线(A8:本期不做)
