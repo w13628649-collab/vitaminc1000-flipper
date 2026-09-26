@@ -217,20 +217,27 @@ function warnList(ws) {
 
 // 按物品族一次拉全名字(/api/items?family=METALBAR 是 T2~T8 全部附魔,二十几件)。
 // 心不按族编号,单独按 id 查
+const craftFamLoading = new Map();   // 物品族 → 正在拉的 Promise:连着调两次(show 两次)不重复请求
 async function craftNames(line) {
   const L = craftLine(line);
   if (!L) return;
   const fams = [L.raw, L.refined].filter(f => !craft.families.has(f));
   if (!fams.length) return;
-  await Promise.all(fams.map(async fam => {
-    try {
-      const rows = await getJSON(`/api/items?limit=300&family=${encodeURIComponent(fam)}`);
-      for (const it of rows || []) {
-        craft.items.set(it.item_id, { zh: it.name_zh || it.name_en || "", en: it.name_en || "" });
-        noteName(it.item_id, displayName(it));
-      }
-      craft.families.add(fam);
-    } catch (e) { /* 目录还没同步:先显示 T8.4 这种短名,下次再拉 */ }
+  await Promise.all(fams.map(fam => {
+    if (!craftFamLoading.has(fam)) {
+      craftFamLoading.set(fam, (async () => {
+        try {
+          const rows = await getJSON(`/api/items?limit=300&family=${encodeURIComponent(fam)}`);
+          for (const it of rows || []) {
+            craft.items.set(it.item_id, { zh: it.name_zh || it.name_en || "", en: it.name_en || "" });
+            noteName(it.item_id, displayName(it));
+          }
+          craft.families.add(fam);
+        } catch (e) { /* 目录还没同步:先显示 T8.4 这种短名,下次再拉 */ }
+        craftFamLoading.delete(fam);
+      })());
+    }
+    return craftFamLoading.get(fam);
   }));
 }
 
@@ -546,6 +553,9 @@ rt.quoteFns.push(onCraftQuote);
 rt.openFns.push(() => { if (rt.opens > 1 && craft.data && currentView === "craft") craftLiveKick("reconnect"); });
 // 服务端说这条连接丢过消息:丢的是哪几条不知道,整份重算一次
 rt.resyncFns.push(() => { if (craft.data && currentView === "craft") craftLiveKick("resync"); });
+// 断开时状态行马上改口(以前要等下一次重算才从「订了 N 个盘口」变过来)。正在算、或者正显示
+// 错误时不动,那两种状态行更要紧
+rt.closeFns.push(() => { if (currentView === "craft" && craft.data && !craft.pending && !craft.err) craftStatus("ok"); });
 const cKeyText = k => {
   const [item, city, , side] = String(k).split("|");
   return `${cLabel(item) || item} @ ${city} ${side === "0" ? "卖单" : "买单"}`;
@@ -1344,17 +1354,36 @@ $("c-fce-zero").addEventListener("click", () => {
   craftChanged();
 });
 
-// 数字框:合法才收进状态;不合法标红、不发请求,离开这个框时换回状态里的值
+// 数字框:合法才收进状态;不合法标红、框下面写一句「这次没改」、不发请求,离开这个框时换回状态里的值。
+// 原来的悬停说明(k 怎么量、站费在哪看)先存进 data-help,改对了或离开时还回去 ——
+// 以前直接把 title 换成「要在 lo ~ hi 之间」,输错一次说明就永远没了
+function cInvalid(el, msg) {
+  if (!("help" in el.dataset)) el.dataset.help = el.title || "";
+  el.setAttribute("aria-invalid", "true");
+  el.title = (el.dataset.help ? el.dataset.help + "\n" : "") + msg;
+  let tip = el.nextElementSibling;
+  if (!tip?.classList.contains("c-inval")) {
+    tip = document.createElement("span");
+    tip.className = "c-inval";
+    el.after(tip);
+  }
+  tip.textContent = `${msg},这次没改`;
+}
+function cValid(el) {
+  el.removeAttribute("aria-invalid");
+  if ("help" in el.dataset) { el.title = el.dataset.help; delete el.dataset.help; }
+  if (el.nextElementSibling?.classList.contains("c-inval")) el.nextElementSibling.remove();
+}
 function cNum(el, lo, hi, opts = {}) {
   const raw = el.value.trim();
-  if (raw === "") { el.removeAttribute("aria-invalid"); return { ok: true, v: null }; }
+  if (raw === "") { cValid(el); return { ok: true, v: null }; }
   let v = Number(raw);
   if (!isFinite(v) || v < lo || v > hi || (opts.int && !Number.isInteger(v))) {
-    el.setAttribute("aria-invalid", "true");
-    el.title = `要在 ${lo} ~ ${hi} 之间${opts.int ? "的整数" : ""}`;
+    const nf = x => (Number.isInteger(x) ? num(x) : String(x));   // num 会把 k 的 0.5 取整成 1
+    cInvalid(el, `要在 ${nf(lo)} ~ ${nf(hi)} 之间${opts.int ? "的整数" : ""}`);
     return { ok: false };
   }
-  el.removeAttribute("aria-invalid");
+  cValid(el);
   return { ok: true, v };
 }
 $("v-craft").addEventListener("input", e => {
@@ -1399,7 +1428,7 @@ $("v-craft").addEventListener("change", e => {
   // 离开数字框:不合法的那个换回状态里的值(状态里一直是上一个合法值)
   if (el instanceof HTMLInputElement && el.type === "number") {
     if (el.getAttribute("aria-invalid")) {
-      el.removeAttribute("aria-invalid");
+      cValid(el);
       el.blur();
       craftSyncForm();
     }
@@ -1823,6 +1852,9 @@ function craftShow() {
   craftNames(craft.p.line).then(() => { craftRenderGrid(); if (craft.data) craftRender(craft.data); });
   // 回到这页:照上次的树重新订阅;不在这页时退订了实时,手上那份可能旧了,隔得久就强制重算一次
   if (craft.keys.size) rtSetKeys("craft", [...craft.keys], { snapshot: false });
+  // 从导航点进来会连着调两次(show 改地址栏 → hashchange → route → 再 show 一次):
+  // 同样的参数已经在算了就不再发一份。以前数据隔了 15 秒时两次都带 force,一次点击两个请求
+  if (craft.pending && JSON.stringify(craftBody()) === craft.sig) return;
   craftLoad({ force: !!craft.data && Date.now() - craft.loadedAt > 15000 });
 }
 // 离开这页:退订(设计 §4.5),攒着的实时重算也取消。keys 留着,回来时照它重新订

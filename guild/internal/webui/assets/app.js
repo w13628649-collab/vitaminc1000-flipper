@@ -94,9 +94,11 @@ const num = n => (n == null || !isFinite(n) ? "—" : Math.round(n).toLocaleStri
 const pct = (n, d = 1) => (n == null || !isFinite(n) ? "—" : (n * 100).toFixed(d) + "%");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const cityDot = c => `<span class="city"><i class="cdot" style="--c:var(${CITY_VAR[c] || "--ink-soft"})"></i>${esc(c)}</span>`;
+// 精炼线的物品挂「原料 / 半成品」标签(见 refineRole):别的页从这里点进查价页之前就分得清。
+// refineRole / roleTag 在下面定义,调用时早已就绪
 const itemCell = (id, name) =>
   `<span class="item"><img src="/api/icon/${encodeURIComponent(id)}" alt="" loading="lazy"
-     onerror="this.style.visibility='hidden'"><a href="#lookup/${encodeURIComponent(id)}">${esc(name)}</a></span>`;
+     onerror="this.style.visibility='hidden'"><a href="#lookup/${encodeURIComponent(id)}">${esc(name)}</a>${roleTag(refineRole(id))}</span>`;
 
 async function getJSON(url, opts) {
   const resp = await fetch(url, opts);
@@ -524,7 +526,7 @@ function ideaRowHTML(r) {
   if (r.hints.length) notes.push(["hint", r.hints]);
   const cells = [
     `<td class="l"><div class="item"><img src="${iconURL(r.item_id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
-      <span style="min-width:0"><span class="item-name"><a href="#lookup/${encodeURIComponent(r.item_id)}" title="查这个物品在所有城市的价格">${esc(r.item_name)}</a>${srcTag(r)}</span>
+      <span style="min-width:0"><span class="item-name"><a href="#lookup/${encodeURIComponent(r.item_id)}" title="查这个物品在所有城市的价格">${esc(r.item_name)}</a>${roleTag(refineRole(r.item_id))}${srcTag(r)}</span>
       <span class="item-id">${esc(r.item_id)}</span></span></div></td>`,
     `<td class="l">${qualityTag(r.quality)}</td>`,
     `<td class="l">${routeCell(r)}</td>`,
@@ -2601,8 +2603,9 @@ const rt = {
   ws: null, up: false, backoff: 500, openedAt: 0, opens: 0,   // opens:第几次连上,>1 就是重连
   owners: new Map(),     // 登记方 → { keys: Set, snapshot: bool }("live" 实时页、"lookup" 查价页)
   subbed: new Set(),     // 这条连接上已经订上的 key
-  // resyncFns:服务端说丢过消息时,不要快照的登记方(精炼页)各自回拉一次
-  quoteFns: [], scanFns: [], openFns: [], resyncFns: [],
+  // resyncFns:服务端说丢过消息时,不要快照的登记方(精炼页)各自回拉一次;
+  // closeFns:连接断开时(精炼页的状态行要马上改口说「推送断开了」,不能等下一次重算)
+  quoteFns: [], scanFns: [], openFns: [], resyncFns: [], closeFns: [],
   resyncTimer: 0, resyncs: 0,   // 服务端 resync 通知的合并定时器、处理过几次(见 rtResync)
 };
 const SUB_CHUNK = 400;   // 服务端一条指令最多读 64KB,一个 key 四十来字节
@@ -2703,6 +2706,9 @@ function rtConnect() {
     rt.up = false;
     rt.subbed = new Set();
     renderConn();
+    for (const fn of rt.closeFns) {
+      try { fn(); } catch (e) { console.error(e); }
+    }
     rtRetry();
   };
 }
