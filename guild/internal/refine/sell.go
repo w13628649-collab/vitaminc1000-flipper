@@ -1,0 +1,122 @@
+package refine
+
+import (
+	"math"
+	"time"
+
+	"albion-guild/internal/depth"
+)
+
+// 出售(设计 §2.3 ④)。
+//
+//   - 挂卖:(卖一 − undercut) × (1 − 税 − 创建费),即 ×0.935(F3)
+//   - 吃买单:沿买单阶梯 × (1 − 税),即 ×0.96;遇到断崖就停。T8.4 条 @ Thetford 09-26 的买单
+//     3,000,000×2、2,950,001×1、2,950,000×3、2,750,029×2,第 9 根就掉到 105,565
+
+// sellNearPct 是挂卖时数「卖一附近有多少件在排队」的窗口,和 conf.Filters.NearPct 默认一致。
+const sellNearPct = 0.05
+
+// PostSell 是挂卖单。
+type PostSell struct {
+	BestAsk int64 `json:"best_ask"`
+	// Price 是我挂的价:卖一 − undercut
+	Price int64 `json:"price"`
+	// Net 是每件到手
+	Net float64 `json:"net"`
+	// NearQty 是卖一 5% 以内已经在排队的件数:越多,挂上去越难轮到
+	NearQty int64      `json:"near_qty"`
+	SeenAt  *time.Time `json:"seen_at,omitempty"`
+	AgeH    *float64   `json:"age_h,omitempty"`
+	Source  string     `json:"source"`
+}
+
+// TakeFill 是吃买单卖 N 件(不过断崖)的结果。
+type TakeFill struct {
+	Want float64 `json:"want"`
+	Got  float64 `json:"got"`
+	VWAP float64 `json:"vwap"`
+	// NetAvg 是每件到手均价 = VWAP × 0.96
+	NetAvg float64 `json:"net_avg"`
+}
+
+// Cliff 是买单阶梯上的断崖:从这一档起价格掉到买一的 (1 − CliffPct) 以下。
+type Cliff struct {
+	Price int64 `json:"price"`
+	// AfterQty 是断崖之前能卖的件数
+	AfterQty float64 `json:"after_qty"`
+	// Drop 是这一档相对买一的落差
+	Drop float64 `json:"drop"`
+}
+
+// TakeSell 是吃买单。
+type TakeSell struct {
+	BestBid int64    `json:"best_bid"`
+	Fill    TakeFill `json:"fill"`
+	// MaxQty 是断崖之前最多能卖几件;深度未知时为 nil
+	MaxQty    *float64   `json:"max_qty"`
+	Cliff     *Cliff     `json:"cliff,omitempty"`
+	Truncated bool       `json:"truncated,omitempty"`
+	SeenAt    *time.Time `json:"seen_at,omitempty"`
+	AgeH      *float64   `json:"age_h,omitempty"`
+	Source    string     `json:"source"`
+}
+
+// SellInfo 是目标产物在出售城市的两种卖法。缺价的那种为 nil。
+type SellInfo struct {
+	City  string    `json:"city"`
+	Modes []string  `json:"modes"`
+	Post  *PostSell `json:"post"`
+	Take  *TakeSell `json:"take"`
+}
+
+func (e *engine) sellInfo() SellInfo {
+	si := SellInfo{City: e.p.Sell.City, Modes: e.p.Sell.Modes}
+	item, city := e.p.Target, e.p.Sell.City
+	if l, ok := e.side(item, city, true); ok {
+		best := l.levels[0].Price
+		price := best - e.p.Fees.Undercut
+		ps := &PostSell{BestAsk: best, Price: price, Net: float64(price) * e.mkt.PostAsk, Source: l.source}
+		if !l.depthUnknown {
+			ps.NearQty = depth.Analyze(l.levels, sellNearPct).QtyNear
+		}
+		ps.SeenAt, ps.AgeH = e.seenAge(l.seen)
+		si.Post = ps
+	}
+	if l, ok := e.side(item, city, false); ok {
+		best := l.levels[0].Price
+		ts := &TakeSell{BestBid: best, Truncated: l.truncated, Source: l.source}
+		ts.SeenAt, ts.AgeH = e.seenAge(l.seen)
+		want := float64(e.p.Qty)
+		if l.depthUnknown {
+			// 只有价格没有件数:按买一全卖得掉算,并不知道哪里是断崖
+			ts.Fill = TakeFill{Want: want, Got: want, VWAP: float64(best), NetAvg: float64(best) * e.mkt.TakeBid}
+		} else {
+			var usable []depth.Level
+			acc := 0.0
+			for _, lv := range l.levels {
+				if float64(lv.Price) < float64(best)*(1-e.p.Sell.CliffPct) {
+					ts.Cliff = &Cliff{Price: lv.Price, AfterQty: acc, Drop: 1 - float64(lv.Price)/float64(best)}
+					break
+				}
+				usable = append(usable, lv)
+				acc += float64(lv.Qty)
+			}
+			ts.MaxQty = &acc
+			f := depth.WalkFrac(usable, want)
+			ts.Fill = TakeFill{Want: want, Got: f.Got, VWAP: f.VWAP, NetAvg: f.VWAP * e.mkt.TakeBid}
+		}
+		si.Take = ts
+	}
+	return si
+}
+
+// seenAge 把观测时刻转成 JSON 里的 seen_at / age_h;零值时刻两个都是 nil。
+func (e *engine) seenAge(t time.Time) (*time.Time, *float64) {
+	age, ok := e.ageHours(t)
+	if !ok {
+		return nil, nil
+	}
+	tt := t.UTC()
+	age = math.Round(age*1000) / 1000
+	return &tt, &age
+}
