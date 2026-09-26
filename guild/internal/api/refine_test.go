@@ -403,7 +403,7 @@ func TestRefine接口JSON形状(t *testing.T) {
 }
 
 // dynamicMaps 是键本身是数据的对象(物品 id、tier):形状里写成 *。
-var dynamicMaps = []string{".raw_sources", ".fce", "].value"}
+var dynamicMaps = []string{".raw_sources", ".fce", "].value", ".daily_bonus", ".station_fee_by_city"}
 
 func addShape(t *testing.T, out map[string]map[string]bool, raw []byte) {
 	t.Helper()

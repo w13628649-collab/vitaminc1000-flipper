@@ -103,7 +103,42 @@ func (r *refineState) now() time.Time {
 // RefinePlan 是 POST /api/refine/plan 的响应:引擎的结果,加上这次读了哪些数据。
 type RefinePlan struct {
 	*refine.Result
-	Books RefineBooks `json:"books"`
+	Books          RefineBooks    `json:"books"`
+	ServerDefaults ServerDefaults `json:"server_defaults"`
+}
+
+// ServerDefaults 是服务端配置里的精炼默认值(conf.Refining),原样回给界面:
+// 界面据此判断用户填的数是不是默认值,「未核实」徽章上的 k 录入日期和金价也从这里来。
+type ServerDefaults struct {
+	WindowHours               float64            `json:"window_hours"`
+	VolumeDays                int                `json:"volume_days"`
+	DailyBonus                map[string]float64 `json:"daily_bonus"`
+	StationFeePer100          float64            `json:"station_fee_per100"`
+	StationFeeByCity          map[string]float64 `json:"station_fee_by_city"`
+	TransmuteFactor           float64            `json:"transmute_factor"`
+	TransmuteMeasuredAt       string             `json:"transmute_measured_at"`
+	TransmuteGoldPrice        float64            `json:"transmute_gold_price"`
+	TransmuteStationFeePer100 float64            `json:"transmute_station_fee_per100"`
+	FocusPerDay               float64            `json:"focus_per_day"`
+	FocusCap                  float64            `json:"focus_cap"`
+	Capital                   int64              `json:"capital"`
+}
+
+func (s *Service) serverDefaults() ServerDefaults {
+	r := s.Cfg.Refining
+	orEmpty := func(m map[string]float64) map[string]float64 {
+		if m == nil {
+			return map[string]float64{}
+		}
+		return m
+	}
+	return ServerDefaults{
+		WindowHours: r.WindowHours, VolumeDays: r.VolumeDays, DailyBonus: orEmpty(r.DailyBonus),
+		StationFeePer100: r.StationFeePer100, StationFeeByCity: orEmpty(r.StationFeeByCity),
+		TransmuteFactor: r.TransmuteFactor, TransmuteMeasuredAt: r.TransmuteMeasuredAt,
+		TransmuteGoldPrice: r.TransmuteGoldPrice, TransmuteStationFeePer100: r.TransmuteStationFeePer100,
+		FocusPerDay: r.FocusPerDay, FocusCap: r.FocusCap, Capital: s.Cfg.Capital,
+	}
 }
 
 // RefineBooks 汇总这一次喂给引擎的盘口从哪来。
@@ -223,7 +258,7 @@ func (s *Service) computeRefine(ctx context.Context, p refine.Params) (*RefinePl
 		return nil, err // 参数在 checkRefine 里校验过,到这里只能是内部问题(比如配方表是空的)
 	}
 	res.Warnings = append(res.Warnings, warns...)
-	return &RefinePlan{Result: res, Books: info}, nil
+	return &RefinePlan{Result: res, Books: info, ServerDefaults: s.serverDefaults()}, nil
 }
 
 // buyCities 是买料的城市:生产城市(挂买单收料只在这里)加上可以买料的城市。
@@ -593,13 +628,14 @@ type RefineMatrix struct {
 	City string `json:"city"`
 	Qty  int    `json:"qty"`
 	// ParamsUsed 是 25 格共用的参数(Target 为空)
-	ParamsUsed   refine.Params           `json:"params_used"`
-	Now          time.Time               `json:"now"`
-	Unverified   []refine.UnverifiedUsed `json:"unverified"`
-	Cells        []MatrixCell            `json:"cells"`
-	Books        RefineBooks             `json:"books"`
-	Warnings     []refine.Warning        `json:"warnings"`
-	RecipeSource string                  `json:"recipe_source"`
+	ParamsUsed     refine.Params           `json:"params_used"`
+	Now            time.Time               `json:"now"`
+	Unverified     []refine.UnverifiedUsed `json:"unverified"`
+	Cells          []MatrixCell            `json:"cells"`
+	Books          RefineBooks             `json:"books"`
+	Warnings       []refine.Warning        `json:"warnings"`
+	RecipeSource   string                  `json:"recipe_source"`
+	ServerDefaults ServerDefaults          `json:"server_defaults"`
 }
 
 // MatrixCell 是矩阵的一格。
@@ -727,7 +763,7 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 	out := &RefineMatrix{
 		Line: line.Key, City: base.City, Qty: base.Qty, ParamsUsed: base, Now: now,
 		Unverified: []refine.UnverifiedUsed{}, Cells: cells, Books: info, Warnings: warns,
-		RecipeSource: recipes.Source(),
+		RecipeSource: recipes.Source(), ServerDefaults: s.serverDefaults(),
 	}
 	if out.Warnings == nil {
 		out.Warnings = []refine.Warning{}

@@ -579,6 +579,27 @@ func TestRefineMatrix一条线25格共用一次读簿(t *testing.T) {
 	}
 }
 
+// 服务端的默认值原样回给界面:界面按它判「是不是默认值」,k 的录入日期和金价也从这里拿
+func TestRefine回带服务端默认值(t *testing.T) {
+	s, _ := newRefineService(barFixture())
+	s.Cfg.Refining.TransmuteMeasuredAt = "2026-09-20"
+	s.Cfg.Refining.TransmuteGoldPrice = 13554
+	s.Cfg.Refining.StationFeeByCity = map[string]float64{"Thetford": 800}
+	res := mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	d := res.ServerDefaults
+	if d.TransmuteMeasuredAt != "2026-09-20" || d.TransmuteGoldPrice != 13554 || d.TransmuteFactor != 1.154 ||
+		d.StationFeeByCity["Thetford"] != 800 || d.WindowHours != 72 || d.Capital != 10_000_000 || d.DailyBonus == nil {
+		t.Fatalf("server_defaults: %+v", d)
+	}
+	if res.ParamsUsed.Fees.StationPer100 != 800 {
+		t.Fatalf("Thetford 覆盖了站费,打底参数应是 800: %g", res.ParamsUsed.Fees.StationPer100)
+	}
+	m, err := s.RefineMatrix(context.Background(), "ORE", s.RefineDefaults("", "Thetford"))
+	if err != nil || m.ServerDefaults.TransmuteMeasuredAt != "2026-09-20" {
+		t.Fatalf("矩阵也要回带: %+v %v", m.ServerDefaults, err)
+	}
+}
+
 func TestRefineRecipe用配置的k(t *testing.T) {
 	s, _ := newRefineService(&fakeRefine{})
 	tr, err := s.RefineRecipe("T8_METALBAR_LEVEL4@4", nil, nil)
