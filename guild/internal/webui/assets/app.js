@@ -31,6 +31,9 @@ const MODE_LABEL = {
 // 真实盈亏平衡价差(econ.Mode.Breakeven)。服务端 modes 里带 breakeven 时用它的,
 // 这里只是老服务端(跨城 modes 还没有这个字段)的兜底
 const BREAKEVEN = { "taker-taker": 0.0417, "taker-maker": 0.0695, "maker-taker": 0.0677, "maker-maker": 0.0963 };
+// 价差 = 卖价 / 买价 − 1,和盈亏平衡同一个口径。毛利(margin)是税后净利 ÷ 成本,
+// 大于 0 就不亏 —— 两个数挨着放、口径不同,以前会把赚钱的单读成低于盈亏平衡
+const spreadOf = (buy, sell) => (buy > 0 && sell > 0 ? sell / buy - 1 : null);
 // 深度闸门拦下某个执行方式的原因
 const BLOCKED = {
   no_bid_side: "买方深度不够,挂买单多半收不到货",
@@ -94,6 +97,8 @@ function show(name, push = true) {
   }
   if (name === "rank") loadRank();
   if (name === "book") loadBook();
+  // 不在这页时只记了数据,没画;顺便对一次账
+  if (name === "live") { liveUI.full = true; liveFlush(); liveResyncNow(); }
 }
 document.querySelector("nav").addEventListener("click", e => {
   const btn = e.target.closest("button[data-view]");
@@ -117,14 +122,18 @@ function route() {
 }
 
 // ── 点表头排序 ─────────────────────────────────────────────
-function sortable(scope, rows, render) {
+// 排序状态存在 state 里,不只存在 th 的 data-dir 上:数据自己重拉(全量扫描后的销量榜)
+// 时要照它重排。以前只有表头箭头记得,重画按服务端原始顺序,箭头和行对不上
+function sortable(scope, state, rows, render) {
   document.querySelector(scope).addEventListener("click", e => {
     const th = e.target.closest("th.s");
     if (!th) return;
     const dir = th.dataset.dir === "desc" ? "asc" : "desc";
     for (const other of th.closest("tr").querySelectorAll("th.s")) delete other.dataset.dir;
     th.dataset.dir = dir;
-    render(sortBy(rows(), th.dataset.k, dir));
+    state.key = th.dataset.k;
+    state.dir = dir;
+    render(sortBy(rows(), state.key, state.dir));
   });
 }
 function sortBy(list, key, dir) {
@@ -151,6 +160,7 @@ const ideasSort = { key: "daily_profit", dir: "desc" };
 let ideasOpen = "";
 let rejectPick = "";          // 被过滤候选里点开明细的那个原因
 let rejectsTouched = false;   // 用户自己开合过「被过滤的候选」就不再替他开合
+let rejectsAuto = false;      // 代码最后一次给它设的 open 值(和 HTML 初始的收起一致)
 
 const BOTTLENECK = { capital: "本金", source: "产地量", dest: "销地量", depth: "盘口深度" };
 const SRC_WORD = { capture: "抓包", aodp: "AODP" };
@@ -254,11 +264,12 @@ const IDEA_COLS = [
   { k: "quality", label: "品质", l: true },
   { k: "from_city", label: "路线", l: true },
   { k: "mode_text", label: "执行", l: true },
-  { k: "buy_price", label: "买 → 卖", tip: "照这两个价进游戏下单。同城是选中执行方式下我挂/吃的价;跨城吃单腿沿阶梯走过的,是走到的最差那一档" },
-  { k: "margin", label: "毛利", tip: "税后毛利率,下面一行是单件净赚" },
+  { k: "buy_price", label: "买 → 卖", tip: "照这两个价进游戏下单。同城是选中执行方式下我挂/吃的价;跨城吃单腿沿阶梯走过的,是走到的最差那一档。下面一行是价差(卖价 / 买价 − 1),拿它和盈亏平衡比" },
+  { k: "margin", label: "毛利", tip: "税后净利 ÷ 成本(成本含创建费),大于 0 就不亏。它和盈亏平衡不是一个口径,别拿来比 —— 盈亏平衡比的是左边那列的价差。下面一行是单件净赚" },
   { k: "daily_volume_silver", label: "日流水", cls: "hide-md", tip: "7 日日均成交件数 × 均价。跨城没有这一项" },
   { k: "qty", label: "可吃量", tip: "一轮做多少件:日成交量 × absorb_ratio、盘口深度、本金三者取小。下面一行是瓶颈" },
-  { k: "capital_used", label: "占用本金" },
+  // 窄屏下收起:日收益下面那行的本金 % 和展开行里都有
+  { k: "capital_used", label: "占用本金", cls: "hide-sm" },
   { k: "trips", label: "轮/天", cls: "hide-md", tip: "挂单腿要等成交,一天转不了几轮" },
   { k: "daily_profit", label: "日收益", tip: "排序主键。下面一行是占总本金的比例" },
   { k: "z_score", label: "z", cls: "hide-md", tip: "现价相对 30 日常态的位置。>1.5σ 说明现在偏贵,这个价差可能只是一时的" },
@@ -377,9 +388,13 @@ function ideaRowHTML(r) {
   const k = esc(r.key);
   const z = r.z_score == null ? "—"
     : `<span class="${r.z_score > 1.5 ? "neg" : r.z_score < -1 ? "pos" : ""}">${r.z_score.toFixed(1)}σ</span>`;
-  const quoteTip = r.kind === "flip"
+  const spread = spreadOf(r.buy_price, r.sell_price);
+  const be = r.modes.find(m => m.mode === r.mode)?.breakeven ?? BREAKEVEN[r.mode];
+  const spreadTip = spread != null
+    ? `\n价差 ${pct(spread, 2)}(卖价 / 买价 − 1),这个执行方式的盈亏平衡价差是 ${be != null ? pct(be, 2) : "—"}` : "";
+  const quoteTip = (r.kind === "flip"
     ? `${r.mode_text}:买 ${num(r.buy_price)}、卖 ${num(r.sell_price)}。市场现在买一 ${num(r.market_bid)} / 卖一 ${num(r.market_ask)}`
-    : `${r.mode_text}:在 ${r.from_city} 买 ${num(r.buy_price)},运到 ${r.to_city} 卖 ${num(r.sell_price)}`;
+    : `${r.mode_text}:在 ${r.from_city} 买 ${num(r.buy_price)},运到 ${r.to_city} 卖 ${num(r.sell_price)}`) + spreadTip;
   const vol = r.daily_volume_silver != null
     ? silver(r.daily_volume_silver)
     : `<span class="nodata" title="跨城没有流水这一项:产地日均 ${num(r.source_daily_qty)} 件、销地日均 ${num(r.dest_daily_qty)} 件">—</span>`;
@@ -393,11 +408,12 @@ function ideaRowHTML(r) {
     `<td class="l">${qualityTag(r.quality)}</td>`,
     `<td class="l">${routeCell(r)}</td>`,
     `<td class="l sub">${esc(r.mode_text)}</td>`,
-    `<td class="quote" title="${esc(quoteTip)}">${num(r.buy_price)}<i>→</i>${num(r.sell_price)}</td>`,
+    `<td class="quote" title="${esc(quoteTip)}">${num(r.buy_price)}<i>→</i>${num(r.sell_price)}${
+      spread != null ? `<span class="subln">价差 ${pct(spread)}</span>` : ""}</td>`,
     `<td>${pct(r.margin)}<span class="subln ${r.profit_per_unit > 0 ? "pos" : "neg"}">单件 ${num(r.profit_per_unit)}</span></td>`,
     `<td class="hide-md">${vol}</td>`,
     `<td>${num(r.qty)}${r.bottleneck ? `<span class="subln" title="这一项限住了可吃量">${esc(BOTTLENECK[r.bottleneck] || "瓶颈未归类")}</span>` : ""}</td>`,
-    `<td>${silver(r.capital_used)}</td>`,
+    `<td class="hide-sm">${silver(r.capital_used)}</td>`,
     `<td class="sub hide-md">${r.trips ? r.trips.toFixed(1) : "—"}</td>`,
     `<td class="pcell"><span class="profit">${silver(r.daily_profit)}</span>${
       r.capital_roi != null ? `<span class="roi">本金 ${pct(r.capital_roi)}</span>` : ""}</td>`,
@@ -488,13 +504,16 @@ const MODE_NOTE = {
 function modesTable(r) {
   if (!r.modes.length) return `<p class="note">这条没有执行方式明细。</p>`;
   return `<table class="tight"><thead><tr>
-      <th class="l">执行方式</th><th>买入价</th><th>卖出价</th><th>单件利润</th><th>毛利率</th>
-      <th title="真实盈亏平衡价差:卖价 / 买价 − 1 至少要到这么多才不亏。比几个费率直接相加高">盈亏平衡</th>
+      <th class="l">执行方式</th><th>买入价</th><th>卖出价</th><th>单件利润</th>
+      <th title="税后净利 ÷ 成本(成本含创建费)。大于 0 就不亏;它不是价差,别拿它和盈亏平衡比">毛利率</th>
+      <th title="卖出价 / 买入价 − 1,没扣任何税费。拿它和右边的盈亏平衡比">价差</th>
+      <th title="真实盈亏平衡价差:左边的价差至少要到这么多才不亏。比几个费率直接相加高">盈亏平衡</th>
       <th>一轮耗时</th><th>轮/天</th><th>日收益</th><th class="l">说明</th>
     </tr></thead><tbody>${r.modes.map(m => {
       const hours = m.hours_per_trip ?? m.hours_per_turn;
       const turns = m.trips_per_day ?? m.turns_per_day;
       const be = m.breakeven ?? BREAKEVEN[m.mode];
+      const spread = spreadOf(m.buy_price, m.sell_price);
       const why = m.blocked
         ? `被深度闸门拦下:${esc(BLOCKED[m.blocked] || rejectLabel(m.blocked))}。账照算给你看,不参与挑选`
         : esc(MODE_NOTE[m.mode] || "");
@@ -504,6 +523,7 @@ function modesTable(r) {
         <td>${num(m.buy_price)}</td><td>${num(m.sell_price)}</td>
         <td class="${m.profit_per_unit > 0 ? "pos" : "neg"}">${num(m.profit_per_unit)}</td>
         <td>${pct(m.margin)}</td>
+        <td class="${spread != null && be != null ? (spread > be ? "pos" : "neg") : ""}">${spread != null ? pct(spread, 2) : "—"}</td>
         <td title="名义摩擦(几个费率相加)${pct(m.friction)}">${be != null ? pct(be, 2) : "—"}</td>
         <td class="sub">${hours ? hours.toFixed(1) + "h" : "—"}</td>
         <td class="sub">${turns ? turns.toFixed(1) : "—"}</td>
@@ -581,8 +601,15 @@ function fillPosHTML(r) {
 }
 
 function detailHTML(r) {
+  // 同城 modes 是四种全列;跨城只列可行的(arb.evaluate:两边有价、扣完税费还赚、
+  // 利润率不离谱;被深度闸门拦下的也在,灰着),常常只有一两种,标题照实数写
+  const n = r.modes.length;
+  const title = r.kind === "arb" ? `${n} 种可行的执行方式` : n === 4 ? "四种执行方式" : `${n} 种执行方式`;
+  const why = r.kind === "arb"
+    ? "跨城只列扣完税费还赚的;选用的是日收益最高的那个,不是单件利润最高的"
+    : "选用的是日收益最高的那个,不是单件利润最高的";
   return `<div class="detailbox">
-    <h4>四种执行方式 <em>选用的是日收益最高的那个,不是单件利润最高的</em></h4>
+    <h4>${title} <em>${why}</em></h4>
     ${modesTable(r)}
     ${detailFacts(r)}
     ${sidesTable(r)}
@@ -681,7 +708,7 @@ function renderRejects(res) {
   const counts = Object.entries(res.reject_counts || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   const total = counts.reduce((a, [, n]) => a + n, 0);
   // 机会少的时候,"为什么这么少"才是最该看的信息,别藏在折叠里
-  if (!rejectsTouched) $("i-rejects").open = ideas.length < 5;
+  if (!rejectsTouched) $("i-rejects").open = rejectsAuto = ideas.length < 5;
   $("i-reject-total").textContent = total
     ? `${num(total)} 条 — 这些就是天真计算器会报成机会的那些。点格子看明细` : "这一轮没有候选被拦下";
   if (rejectPick && !counts.some(([k]) => k === rejectPick)) rejectPick = "";
@@ -710,7 +737,7 @@ function renderRejects(res) {
   $("i-diagnosis").innerHTML = hints.map(h => `<div class="diagnosis">${h}</div>`).join("");
 }
 
-function renderRejectList(res) {
+function renderRejectList(res, opts = {}) {
   const box = $("i-reject-list");
   if (!rejectPick) { box.innerHTML = ""; return; }
   if (!Array.isArray(res.rejected)) {
@@ -719,11 +746,21 @@ function renderRejectList(res) {
   }
   const all = res.rejected.filter(x => x.reason === rejectPick);
   const LIMIT = 300;
+  const shown = all.slice(0, LIMIT);
+  for (const x of shown) noteName(x.item_id, x.item_name);   // 以后服务端带上名字就直接用
   const src = x => x.ask_source || x.bid_source
     ? `卖单簿 ${srcWord(x.ask_source)} · 买单簿 ${srcWord(x.bid_source)}` : "";
+  // rejected[] 不带名字,NAMES 只攒了机会板、查价、销量榜见过的:没见过的先显示 id,
+  // 查完目录再重画一次(还停在同一个原因上才画)
+  const pick = rejectPick;
+  if (!opts.named) resolveNames(shown.map(x => x.item_id), 200).then(n => {
+    if (n && rejectPick === pick && scan === res) renderRejectList(res, { named: true });
+  });
+  const y = box.dataset.pick === pick ? box.querySelector(".rlist")?.scrollTop || 0 : 0;
+  box.dataset.pick = pick;
   box.innerHTML = `<div class="rlist"><table class="tight"><thead><tr>
       <th class="l">物品</th><th class="l">城市</th><th class="l">品质</th><th class="l">为什么</th><th class="l">两边的价来自</th>
-    </tr></thead><tbody>${all.slice(0, LIMIT).map(x => `<tr>
+    </tr></thead><tbody>${shown.map(x => `<tr>
       <td class="l">${itemCell(x.item_id, NAMES.get(x.item_id) || x.item_id)}</td>
       <td class="l">${cityMark(x.city)}</td>
       <td class="l">${x.quality ? qualityTag(x.quality) : "—"}</td>
@@ -731,6 +768,8 @@ function renderRejectList(res) {
       <td class="l sub">${src(x)}</td>
     </tr>`).join("")}</tbody></table></div>` +
     (all.length > LIMIT ? `<p class="sub">只列前 ${LIMIT} 条,共 ${num(all.length)} 条。</p>` : "");
+  const list = box.querySelector(".rlist");
+  if (list && y) list.scrollTop = y;   // 补上名字、结果刷新重画时别把人滚回顶上
 }
 
 $("i-reject-grid").addEventListener("click", e => {
@@ -740,13 +779,21 @@ $("i-reject-grid").addEventListener("click", e => {
   for (const x of $("i-reject-grid").children) x.setAttribute("aria-pressed", String(x.dataset.reason === rejectPick));
   renderRejectList(scan);
 });
-$("i-rejects").addEventListener("toggle", () => { if (scan) rejectsTouched = true; });
+// 代码改 open 也会派发 toggle,而且是异步派发的,不能靠"改之前打个标志"区分。
+// 这里比开合状态和代码最后一次设的值:一样就是代码自己开合的,不一样才是用户点的。
+// 以前一律当用户操作,第一次自动开合之后就再也不自动了
+$("i-rejects").addEventListener("toggle", () => {
+  if (scan && $("i-rejects").open !== rejectsAuto) rejectsTouched = true;
+});
 
 function renderIdeasFoot(res) {
   const when = s => (s ? new Date(s).toLocaleString("zh-CN") : "—");
-  const re = res.evaluated_at && res.evaluated_at !== res.started_at;
+  // 摘要没变时不重拉 /api/scan,手上这份的 evaluated_at 就停在上一次内容变的时候;
+  // 重算时刻取推送里最新的那个(内容一样,只是又算了一遍)
+  const ev = later(res.evaluated_at, sync.evalAt);
+  const re = ev && ev !== res.started_at;
   $("i-foot").innerHTML =
-    `<p>AODP 全量拉取于 ${when(res.started_at)}${re ? `,最近一次用抓包重算于 ${when(res.evaluated_at)}` : ""};
+    `<p>AODP 全量拉取于 ${when(res.started_at)}${re ? `,最近一次用抓包重算于 ${when(ev)}` : ""};
        ${num(res.price_rows)} 条 AODP 报价,${num(res.request_count)} 次 AODP 请求。</p>
      <p>往返的真实盈亏平衡价差:秒买秒卖 ${pct(beOf("taker-taker"), 2)}、秒买挂卖 ${pct(beOf("taker-maker"), 2)}、
        挂买秒卖 ${pct(beOf("maker-taker"), 2)}、挂买挂卖 ${pct(beOf("maker-maker"), 2)}。创建费下单就扣、不成交不退,
@@ -818,10 +865,11 @@ const conflictBanner = g => `<div class="banner"><b>多开串城:</b>入库时�
   g.last_conflict ? `最近一次:${esc(g.last_conflict.item_id)} 被报成 ${esc(g.last_conflict.location_id)}(原始地点 ${esc(g.last_conflict.raw_location_id)}),上报人 ${esc(g.last_conflict.reporter)}。` : ""}</div>`;
 
 // 拿到一份新的扫描结果:两个页面一起换。why 只影响"要不要闪一下"。
-// 推送消息本身不带 coverage / reject_counts / capture 这些摘要,所以结果一律来自
+// 推送消息本身不带 coverage / reject_counts / capture 这些,所以结果一律来自
 // /api/scan(pullScan 或重新扫描),不直接拿推送消息画
 function applyResult(res, why) {
   const had = !!scan;
+  const prevFull = scan?.started_at || "";
   scan = res;
   scanError = "";   // 手上已经是更新的结果了,上一次「重新扫描失败」的提示不再成立
   sync.digest = res.digest || "";
@@ -834,7 +882,24 @@ function applyResult(res, why) {
   loadPortfolio();
   noteEval(res.evaluated_at, res.started_at);
   liveTargetsChanged();   // 实时页订阅跟着机会板前几名换
+  // AODP 全量换了,成交历史也跟着入库:销量榜、/api/coverage(城市列表、串城计数)补读一次。
+  // 放在这里而不是推送回调里:老服务端没有推送、新服务端推送被丢时,新全量是轮询拉进来的,
+  // 以前那条路一次都不补读
+  if (had && prevFull && res.started_at && res.started_at !== prevFull) scheduleSlowReload();
 }
+
+// 服务端先发布扫描结果、后写成交历史(新服务端 flip.Scan 就是这个顺序),
+// 一收到就读会读到入库之前的。延后几秒再读;/api/coverage 很贵,只读这一次
+const SLOW_RELOAD_MS = 8000;
+function scheduleSlowReload() {
+  clearTimeout(sync.slowTimer);
+  sync.slowTimer = setTimeout(() => {
+    loadServerCoverage();
+    if (currentView === "rank") loadRank();   // 不在销量榜就不用:切过去时 show() 会重读
+  }, SLOW_RELOAD_MS);
+}
+// 同一份内容:有摘要比摘要,老服务端没有摘要就比时间戳
+const sameResult = res => !!scan && (res.digest ? res.digest === sync.digest : scanStamp(res) === sync.stamp);
 
 // 两处「重新扫描」(总览、机会页)和空态里的「立即扫描」走同一个
 let rescanning = false;
@@ -846,7 +911,15 @@ async function doRescan() {
   try {
     const res = await getJSON("/api/scan", { method: "POST" });
     scanError = "";
-    applyResult(res, "rescan");
+    // 服务端在回 POST 之前就发布了这份结果:推送那一路多半已经拉过、画过同一份了,
+    // 再 applyResult 一遍是整页重画两次、资金分配拉两次
+    if (sameResult(res)) {
+      noteEval(res.evaluated_at, res.started_at);
+      renderIdeasBanners(scan);
+      renderDeskBanners(scan);
+    } else {
+      applyResult(res, "rescan");
+    }
   } catch (e) {
     scanError = String(e.message || e) + (e.status === 409 ? "(上一轮可能还在跑,跑完会自己出结果)" : "");
     if (scan) { renderIdeasBanners(scan); renderDeskScan(scan); } else { renderIdeasEmpty(e); renderDeskBanners(null); }
@@ -859,15 +932,19 @@ $("rescan").addEventListener("click", doRescan);
 $("i-rescan").addEventListener("click", doRescan);
 
 // 总览上和扫描有关的那几块
-function renderDeskScan(res) {
+function renderScanMeta(res) {
   const extra = (res.extra_item_ids || []).length, missing = (res.missing_item_ids || []).length;
   const hm = s => new Date(s).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  const ev = later(res.evaluated_at, sync.evalAt);   // 同 renderIdeasFoot
   $("scan-meta").textContent =
     `${(res.item_ids || []).length} 个物品${extra ? `(抓包并入 ${extra})` : ""}` +
     `${missing ? `・目录里查不到 ${missing} 个` : ""}・${num(res.price_rows)} 条报价・${num(res.request_count)} 次请求` +
     (res.started_at ? `・AODP 全量 ${hm(res.started_at)}` : "") +
-    (res.evaluated_at && res.evaluated_at !== res.started_at ? `・最近重算 ${hm(res.evaluated_at)}` : "");
+    (ev && ev !== res.started_at ? `・最近重算 ${hm(ev)}` : "");
   $("scan-meta").title = missing ? "配置里有、目录里查不到的:" + res.missing_item_ids.join(", ") : "";
+}
+function renderDeskScan(res) {
+  renderScanMeta(res);
   renderCoverage(res, { grid: "cov", note: "cov-note", legend: "cov-legend" });
   renderCaptureSummary(res.capture);
   renderCheckTable();
@@ -1159,17 +1236,25 @@ async function loadBook() {
 }
 const STATUS = { open: "未收口", filled: "已成交", partial: "部分成交", abandoned: "放弃" };
 
-// 记账接口只存 item_id。扫描、查价里见过的名字直接用;没见过的按 id 搜一次目录,
-// 一次最多查 20 个,查不到的就显示 id
-async function resolveNames(ids) {
-  const want = [...new Set(ids)].filter(id => id && !NAMES.has(id)).slice(0, 20);
-  await Promise.all(want.map(async id => {
-    try {
-      const hits = await getJSON(`/api/items?limit=5&q=${encodeURIComponent(id)}`);
-      const it = (hits || []).find(x => x.item_id === id);
-      if (it) noteName(id, displayName(it));
-    } catch (e) { /* 目录没同步:显示 id */ }
-  }));
+// 记账接口、被拒明细都只有 item_id。扫描、查价里见过的名字直接用;没见过的按 id 搜一次目录,
+// 一次最多查 max 个、同时最多 4 个请求,查不到的就显示 id。目录里确实没有的记下来,
+// 下次不再白查(没同步 / 网络失败不算,下次还查)
+const NAME_MISS = new Set();
+async function resolveNames(ids, max = 20) {
+  const want = [...new Set(ids)].filter(id => id && !NAMES.has(id) && !NAME_MISS.has(id)).slice(0, max);
+  let next = 0;
+  const worker = async () => {
+    while (next < want.length) {
+      const id = want[next++];
+      try {
+        const hits = await getJSON(`/api/items?limit=5&q=${encodeURIComponent(id)}`);
+        const it = (hits || []).find(x => x.item_id === id);
+        if (it && displayName(it) !== id) noteName(id, displayName(it)); else NAME_MISS.add(id);
+      } catch (e) { /* 目录没同步:显示 id */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, want.length) }, worker));
+  return want.length;
 }
 
 for (const id of ["t-owner", "t-status"]) $(id).addEventListener("change", loadBook);
@@ -1326,7 +1411,10 @@ for (const id of ["f-tier", "f-ench"]) $(id).addEventListener("change", refreshL
 $("f-qual").addEventListener("change", () => { if (lookup.data) renderPrices(lookup.data); });
 
 // ── 中栏:价格矩阵 ──
-async function selectItem(itemId) {
+// opts.live:实时刷新(推送、重连、切回本页补拉)。只重拉这一件的表和右栏,
+// 不动地址栏、不动左栏 —— 以前复用完整的选中流程,用户一边开着这件、一边在左栏
+// 按分类翻别的物品,一条推送过来左栏就被拉回这件物品的分类、滚动归零
+async function selectItem(itemId, opts = {}) {
   if (!itemId) return;
   const seq = ++lookup.seq;
   // 同一件重查(页面开久了、从别的页跳回来)时旧表先留着,新数据回来再换,别闪成"正在查"
@@ -1334,9 +1422,11 @@ async function selectItem(itemId) {
   lookup.itemId = itemId;
   lookup.pending = true;
   if (!again) lookup.data = null;
-  markListSelection();
-  const h = "#lookup/" + encodeURIComponent(itemId);
-  if (location.hash !== h) location.hash = h;   // route() 看到请求在飞会跳过
+  if (!opts.live) {
+    markListSelection();
+    const h = "#lookup/" + encodeURIComponent(itemId);
+    if (location.hash !== h) location.hash = h;   // route() 看到请求在飞会跳过
+  }
   $("lookup-empty").hidden = true;
   const box = $("lookup-result");
   box.hidden = false;
@@ -1355,9 +1445,9 @@ async function selectItem(itemId) {
     if (ladder.key && ladder.itemId === itemId) loadLadder(++ladder.seq, { grid: false });
     // 从别的页面点物品名跳过来、这件又不在左栏里:照它的分类重填左栏。
     // 每次都要判断,不是只有第一次 —— 旧版 gotoItem 就是每次都重填。
-    // 用户自己在搜索框里搜着的时候不动
+    // 用户自己在搜索框里搜着的时候不动;实时刷新不动(见函数头)
     const inList = lookup.list.some(it => it.item_id === itemId);
-    if (!inList && !$("search").value.trim() && d.item?.category) {
+    if (!opts.live && !inList && !$("search").value.trim() && d.item?.category) {
       lookup.sel = { cat: d.item.category, sub: d.item.subcategory || "", fam: d.item.family || "" };
       refreshList({ reveal: true });
     }
@@ -1376,8 +1466,10 @@ async function selectItem(itemId) {
 // ── 查价页的实时刷新 ──
 // 订阅当前物品在所有查价城市 × 品质 × 两边的 key。黑市没有抓包,订了也不会有消息。
 // 推送不带整张表需要的东西(件数分档、成交历史),收到就去重拉 grid:
-// 第一条到了之后等 1.5 秒把同一波的都攒上,再拉一次。右栏开着的话挂单簿一起刷新
-const LOOKUP_LIVE_MS = 1500;
+// 第一条到了之后等一会儿把同一波的都攒上,再拉一次。右栏开着的话挂单簿一起刷新。
+// 等 2.5 秒而不是更短:老服务端的推送发在单子落库之前(入库 2 秒一轮 flush),
+// 等得比 flush 短,重拉 grid 会在写库前读走旧数据,页面就停在上一个价上
+const LOOKUP_LIVE_MS = 2500;
 function lookupSubscribe(d) {
   const keys = [];
   if (d?.item?.item_id) {
@@ -1411,7 +1503,7 @@ function refreshLookupLive() {
   const a = document.activeElement;
   if (a && a.tagName === "INPUT" && $("bookpanel").contains(a)) { lookupLiveKick(); return; }
   lookup.stale = false;
-  selectItem(lookup.itemId);   // 同一件重查:旧表先留着,新数据回来再换;右栏的阶梯跟着换
+  selectItem(lookup.itemId, { live: true });   // 同一件重查:旧表先留着,新数据回来再换;右栏的阶梯跟着换
 }
 
 function renderPrices(d) {
@@ -1601,8 +1693,9 @@ function renderPrices(d) {
       你想马上出货拿的就是它。<b>×N/M</b> 是最优档件数 / 最优价 ${nearTxt} 以内的件数,只有自建抓包拿得到;
       带 <i class="src" style="margin:0">抓</i> 的那一侧用的是抓包,没带的是 AODP。两路谁新用谁。</p>
       <p>所以<b>卖单价总是比买单价高</b>,这段差就是倒爷的利润空间。<b>同城价差</b>已经替你把
-      ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了(真实盈亏平衡价差 ${pct(P.breakeven ?? 0.0963, 2)}):
-      在这座城挂买单收货、再挂卖单出货,一轮下来的净毛利率。为正才值得做。
+      ${pct(P.friction ?? 0.09)} 的税和手续费扣掉了:在这座城挂买单收货、再挂卖单出货,
+      一轮下来的净毛利率,为正就不亏。它已经是扣完费的数,别再拿它和盈亏平衡比 ——
+      换成没扣费的毛价差(卖价 / 买价 − 1),要超过 ${pct(P.breakeven ?? 0.0963, 2)} 才为正。
       标<b class="warnish">⚠</b> 的是超过 ${((P.max_margin ?? 1) * 100).toFixed(0)}% 的价差 —— 这种数字通常不是机会,
       而是某一侧挂了 troll 单。</p>
       <p>标红的时间是超过 ${maxH} 小时新鲜度上限的报价。最低/最高标记只在新鲜数据里选,
@@ -2127,6 +2220,8 @@ $("menu").addEventListener("click", e => {
 
 // ── 销量榜 ─────────────────────────────────────────────────
 let rankRows = [];
+// 初值和表头上 data-dir="desc" 的那一列一致,也就是服务端默认的排序
+const rankSort = { key: "daily_silver", dir: "desc" };
 
 function sparkline(series) {
   if (!series || series.length < 2) return "";
@@ -2172,7 +2267,7 @@ async function loadRank() {
   if ($("r-category").value) q.set("category", $("r-category").value);
   try {
     rankRows = await getJSON("/api/rank?" + q);
-    renderRank(rankRows);
+    renderRank(sortBy(rankRows, rankSort.key, rankSort.dir));
     $("rank-meta").textContent = `${rankRows.length} 条`;
   } catch (e) {
     $("rank-empty").textContent = String(e.message || e);
@@ -2181,7 +2276,7 @@ async function loadRank() {
 }
 for (const id of ["r-city", "r-window", "r-quality", "r-category"])
   $(id).addEventListener("change", loadRank);
-sortable("#v-rank thead", () => rankRows, renderRank);
+sortable("#v-rank thead", rankSort, () => rankRows, renderRank);
 
 // ── 实时:一条 WS 连接,各页登记自己要订阅的 key ─────────────────
 // 协议(服务端 hub/topic.go):
@@ -2190,7 +2285,7 @@ sortable("#v-rank thead", () => rankRows, renderRank);
 //     (AODP 全量或抓包快速重算)都收到 {"type":"scan","evaluated_at","started_at","digest",…,"full"}
 // 老服务端不认识 topics:encoding/json 直接忽略未知字段,所以现在就带上是安全的
 const rt = {
-  ws: null, up: false, backoff: 500, openedAt: 0,
+  ws: null, up: false, backoff: 500, openedAt: 0, opens: 0,   // opens:第几次连上,>1 就是重连
   owners: new Map(),     // 登记方 → { keys: Set, snapshot: bool }("live" 实时页、"lookup" 查价页)
   subbed: new Set(),     // 这条连接上已经订上的 key
   quoteFns: [], scanFns: [], openFns: [],
@@ -2227,15 +2322,26 @@ function rtSetKeys(owner, keys, opts = {}) {
   rt.subbed = want;
   if (opts.snapshot !== false) rtSnapshot([...next].filter(k => !prev.has(k)));
 }
+// 返回哪些 key 服务端给了报价、哪些所在的那一批没拉到。没给报价 = 服务端那边这一边
+// 已经空了(或超出新鲜窗口),实时页据此把它从表上拿掉 —— 盘口清空时服务端不推任何消息
 async function rtSnapshot(keys) {
+  const got = new Set(), failed = new Set();
   for (let i = 0; i < keys.length; i += SNAP_CHUNK) {
+    const part = keys.slice(i, i + SNAP_CHUNK);
     try {
-      const qs = await getJSON("/api/quotes?" + new URLSearchParams({ keys: keys.slice(i, i + SNAP_CHUNK).join(",") }));
-      for (const q of qs || []) rtQuote(q, false);
-    } catch (e) { /* 服务端抖一下:下一次推送或重连会补上 */ }
+      const qs = await getJSON("/api/quotes?" + new URLSearchParams({ keys: part.join(",") }));
+      for (const q of qs || []) { if (typeof q.k === "string") { got.add(q.k); rtQuote(q, false); } }
+    } catch (e) {
+      for (const k of part) failed.add(k);   // 服务端抖一下:下一次推送或重连会补上
+    }
   }
+  return { keys, got, failed };
 }
 rt.quoteFns.push(onLookupQuote);
+// 查价页重连之后补一次:断线期间这件物品的挂单可能变了,推送是收不到了的。
+// 它订阅时不要报价快照(表自己就是整张拉的),onopen 里的快照补不到它,得在这里补。
+// 第一次连上不用:那时表刚拉过
+rt.openFns.push(() => { if (rt.opens > 1 && lookup.data) lookupLiveKick(); });
 function rtQuote(q, pushed) {
   for (const fn of rt.quoteFns) {
     try { fn(q, pushed); } catch (e) { console.error("处理报价出错", e); }
@@ -2247,17 +2353,17 @@ function rtConnect() {
   try { ws = new WebSocket(`${proto}//${location.host}/ws`); } catch (e) { rtRetry(); return; }
   rt.ws = ws;
   ws.onopen = () => {
-    rt.up = true; rt.backoff = 500; rt.openedAt = Date.now();
+    rt.up = true; rt.backoff = 500; rt.openedAt = Date.now(); rt.opens++;
     renderConn();
     // ① 重新订阅 keys 和 topics:新连接(可能是另一个实例)完全不知道你要看什么
     const keys = [...rtUnion()];
     rt.subbed = new Set(keys);
     rtSend("sub", keys, ["scan"]);
     // ② 补快照:断线期间错过的变化。少了这步界面会停在旧值上,
-    //    却看起来"一切正常"——这是这类系统最常见的 bug
+    //    却看起来"一切正常"——这是这类系统最常见的 bug。实时页顺便拿它剔掉已经空了的边
     const snap = new Set();
     for (const o of rt.owners.values()) if (o.snapshot) for (const k of o.keys) snap.add(k);
-    rtSnapshot([...snap]);
+    if (snap.size) liveResync([...snap]);
     for (const fn of rt.openFns) {
       try { fn(); } catch (e) { console.error(e); }
     }
@@ -2308,6 +2414,8 @@ const sync = {
   poll: null, busy: false, again: false, want: "", pulledAt: 0,
 };
 const scanStamp = r => (r && (r.evaluated_at || r.started_at)) || "";
+// 两个时间戳取后一个。推送、轮询、重新扫描各自带着时间戳到,先后不保证
+const later = (a, b) => (!a ? b || "" : !b ? a : Date.parse(b) >= Date.parse(a) ? b : a);
 
 async function pullScan(why) {
   if (sync.busy) { sync.again = true; return; }
@@ -2315,23 +2423,30 @@ async function pullScan(why) {
   try {
     const res = await getJSON("/api/scan");
     sync.pulledAt = Date.now();
-    // 同一份内容:有摘要比摘要,老服务端没有摘要就比时间戳
-    const same = scan && (res.digest ? res.digest === sync.digest : scanStamp(res) === sync.stamp);
-    if (same) noteEval(res.evaluated_at, res.started_at);   // 数据龄本来就按本地时间在走,不用重画
+    clearTimeout(sync.retry);   // 上一次失败排的重试不用了:这次已经拉到(推送先到时常见)
+    // 同一份内容:数据龄本来就按本地时间在走,不用重画,只记下最新的重算时刻。
+    // 摘要覆盖整份 /api/scan(服务端 scan.Digest),只剔 evaluated_at 和随时间自己变的那几样
+    if (sameResult(res)) noteEval(res.evaluated_at, res.started_at);
     else applyResult(res, why);
   } catch (e) {
-    // 503 = 服务端还没扫完第一轮,不是错误。第一轮通常一两分钟就好,
-    // 这时不等看门狗的 2 分钟,15 秒后自己再问一次(推送到了也会提前拉)
+    clearTimeout(sync.retry);
     if (!scan) {
+      // 503 = 服务端还没扫完第一轮,不是错误。第一轮通常一两分钟就好,
+      // 这时不等看门狗的 2 分钟,15 秒后自己再问一次(推送到了也会提前拉)
       renderIdeasEmpty(e);
-      clearTimeout(sync.retry);
       sync.retry = setTimeout(() => { if (!scan) pullScan("retry"); }, 15000);
+    } else if (why !== "retry") {
+      // 手上有一份,这次没拉到(重连时新服务端还在跑第一轮、网络抖了一下):15 秒后再试一次。
+      // 只试一次,再失败就等推送或看门狗,服务端长时间挂着时不会每 15 秒打一次
+      sync.retry = setTimeout(() => pullScan("retry"), 15000);
     }
   } finally {
     sync.busy = false;
     if (sync.again) {
+      const want = sync.want;
       sync.again = false;
-      if (!(sync.want && sync.want === sync.digest)) pullScan("again");
+      sync.want = "";
+      if (!(want && want === sync.digest)) pullScan("again");
     }
   }
 }
@@ -2339,11 +2454,6 @@ async function pullScan(why) {
 function onScanPush(msg) {
   sync.lastMsgAt = Date.now();
   stopPoll();
-  // AODP 全量换了(成交历史也跟着入库了):销量榜、串城计数那些慢数据补读一次
-  if (msg.full && msg.started_at && sync.fullAt && msg.started_at !== sync.fullAt) {
-    loadServerCoverage();
-    if (currentView === "rank") loadRank();
-  }
   noteEval(msg.evaluated_at, msg.started_at);
   if (scan && msg.digest && msg.digest === sync.digest) return;   // 摘要没变,不重拉
   if (sync.busy) { sync.again = true; sync.want = msg.digest || ""; return; }
@@ -2356,10 +2466,13 @@ rt.openFns.push(() => {
   if (!sync.busy && Date.now() - sync.pulledAt > 5000) pullScan("reconnect");
 });
 
+// 顶栏的重算时间、页脚和总览概况里的「最近重算」都跟着最新的 evaluated_at 走:
+// 摘要没变时手上那份结果不换,它自己的 evaluated_at 就停住了
 function noteEval(evaluatedAt, startedAt) {
-  if (evaluatedAt) sync.evalAt = evaluatedAt;
-  if (startedAt) sync.fullAt = startedAt;
+  sync.evalAt = later(sync.evalAt, evaluatedAt);
+  sync.fullAt = later(sync.fullAt, startedAt);
   renderScanAge();
+  if (scan) { renderIdeasFoot(scan); renderScanMeta(scan); }
 }
 
 function startPoll() {
@@ -2385,8 +2498,17 @@ setInterval(() => {
 // 在配置里的每座城都订买卖两边。机会板一更新、查价换了物品,订阅跟着换
 const LIVE_TOP = 15;
 const DEFAULT_CITIES = ["Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch", "Caerleon", "Brecilien"];
-const liveState = new Map();   // item|city|quality → { sell:{p,d,n}, buy:{p,d,n}, at }
-const live = { targets: [], cities: [], sig: "" };
+// 每一边各存各的:p 价、d 件数、n 单数、t 服务端给的时间(ts 是它的毫秒数)、rx 本机收到的时刻
+const liveState = new Map();   // item|city|quality → { sell:{p,d,n,t,ts,rx}, buy:{…} }
+const live = { targets: [], cities: [], sig: "", verify: new Set(), verifyTimer: 0 };
+// 服务端 -fresh 的默认值:/api/quotes 和推送都只给这么久之内看到过的盘口。
+// 超过的边服务端不会推"没了",这里自己按时间拿掉
+const LIVE_FRESH_MS = 30 * 60000;
+// 推送到了之后隔一会儿对这批 key 回拉一次 /api/quotes,用回拉的结果为准。
+// 老服务端的推送发在单子落库之前,推出去的是上一个价;新服务端推的已经是落库后的,回拉只是多一次确认
+const LIVE_VERIFY_MS = 2500;
+// 实时页开着时每分钟整体对一次:推送被丢(客户端积压)、盘口清空(服务端不推消息)都靠它收敛
+const LIVE_RESYNC_MS = 60000;
 
 // 城市取扫描覆盖率里的(就是配置里的城市),再并上查价页的城市。Brecilien 总是带上:
 // 抓包的 5003 收敛成它,查价页也一直有这一行;配置里没列它时扫描不算它的机会,
@@ -2431,7 +2553,7 @@ function liveTargetsChanged() {
     if (!want.has(`${i}|${c}|${q}|0`)) liveState.delete(rk);   // 不再订阅的盘口从表里拿掉
   }
   rtSetKeys("live", keys);
-  renderLive();
+  liveDirty();
 }
 
 const agoText = t => {
@@ -2443,6 +2565,66 @@ const agoSpan = t => (t ? `<span class="tick-ago" data-t="${esc(t)}">${agoText(t
 setInterval(() => { for (const el of document.querySelectorAll(".tick-ago")) el.textContent = agoText(el.dataset.t); }, 15000);
 
 const depthText = v => (v ? `${num(v.d)} 件${v.n ? ` / ${num(v.n)} 单` : ""}` : "");
+const rowAt = v => later(v.sell?.t, v.buy?.t);   // 一行的"最近一次看到":两边里新的那个
+const keySide = k => {
+  const p = k.split("|");
+  return { rk: `${p[0]}|${p[1]}|${p[2]}`, side: p[3] === "0" ? "sell" : "buy" };
+};
+
+// 画表是攒着画的:同一帧里来的报价只画一次;有新行或者删了边就整表重画一次,
+// 其余只改变了的那几格。实时页不在前台时只改 liveState,切过来再画。
+// 以前每遇到一个新盘口边就整表 innerHTML 重建一次,重连快照灌 210 条要卡一秒多
+const liveUI = { full: true, patches: new Map(), raf: 0, rows: new Map() };
+function liveDirty() { liveUI.full = true; liveSchedule(); }
+function liveSchedule() {
+  if (!liveUI.raf) liveUI.raf = requestAnimationFrame(liveFlush);
+}
+function liveFlush() {
+  liveUI.raf = 0;
+  if (currentView !== "live") return;   // 记着的 full / patches 留到 show("live")
+  let flashes = [];
+  if (!liveUI.full) {
+    for (const [pk, dir] of liveUI.patches) {
+      const i = pk.indexOf(":"), side = pk.slice(0, i), rk = pk.slice(i + 1);
+      const tr = liveUI.rows.get(rk), v = liveState.get(rk);
+      if (!tr || !v) { liveUI.full = true; break; }
+      const el = liveWrite(tr, v, side);
+      if (el && dir) flashes.push([el, dir]);
+    }
+  }
+  if (liveUI.full) {
+    liveUI.full = false;
+    renderLive();
+    flashes = [];
+    for (const [pk, dir] of liveUI.patches) {
+      const i = pk.indexOf(":"), side = pk.slice(0, i), rk = pk.slice(i + 1);
+      const el = dir && liveUI.rows.get(rk)?.querySelector(`[data-f="${side}"]`);
+      if (el) flashes.push([el, dir]);
+    }
+  }
+  liveUI.patches.clear();
+  renderLiveMeta();
+  flashMany(flashes);
+}
+// 改一行里某一边的那几格,返回价格那一格(要闪的是它)
+function liveWrite(tr, v, side) {
+  const el = tr.querySelector(`[data-f="${side}"]`);
+  if (el) el.textContent = v[side] ? num(v[side].p) : "—";
+  const d = tr.querySelector(`[data-d="${side}"]`);
+  if (d) d.textContent = depthText(v[side]);
+  const at = rowAt(v);
+  tr.querySelector("[data-a]").innerHTML = agoSpan(at);
+  tr.querySelector("[data-at]").textContent = at ? new Date(at).toLocaleTimeString("zh-CN") : "";
+  return el;
+}
+// 一批元素一起重播闪动:先全部摘掉 class,只强制重排一次,再全部加回去。
+// flash() 每个元素各重排一次,一秒几十条推送时就是几十次同步重排
+function flashMany(list) {
+  if (!list.length) return;
+  for (const [el] of list) el.classList.remove("flash-up", "flash-down");
+  void document.body.offsetWidth;
+  for (const [el, dir] of list) el.classList.add("flash-" + dir);
+}
 
 function renderLive() {
   const order = new Map(live.targets.map((t, i) => [`${t.item_id}|${t.quality}`, i]));
@@ -2450,19 +2632,16 @@ function renderLive() {
   const rows = [...liveState.entries()].map(([rk, v]) => {
     const [item, city, q] = rk.split("|");
     return { rk, v, item, city, q: Number(q), t: live.targets[order.get(`${item}|${q}`)] };
-  }).filter(x => x.t).sort((a, b) =>
+  }).filter(x => x.t && (x.v.sell || x.v.buy)).sort((a, b) =>
     order.get(`${a.item}|${a.q}`) - order.get(`${b.item}|${b.q}`) || (cityIdx.get(a.city) ?? 99) - (cityIdx.get(b.city) ?? 99));
   const nKeys = live.targets.length * live.cities.length * 2;
-  const fromLookup = live.targets.filter(t => t.from === "查价").length;
-  $("live-meta").textContent = live.targets.length
-    ? `订阅了 ${live.targets.length} 个物品(机会板前 ${live.targets.length - fromLookup} 个${fromLookup ? ` + 查价页 ${fromLookup} 个品质` : ""})× ${live.cities.length} 城 × 买卖两边 = ${nKeys} 个盘口,` +
-      `其中 ${rows.length} 个最近 30 分钟有人看到。城市:${live.cities.join("、")}`
-    : "";
   $("live-empty").style.display = rows.length ? "none" : "";
   $("live-empty").textContent = !live.targets.length
     ? "机会板还没有结果,查价页也没选物品 —— 两边有了就自动订阅。"
     : `已订阅 ${nKeys} 个盘口,等待行情…需要有成员开着客户端在游戏里翻这些物品的市场(最近 30 分钟内看到的挂单才算)。`;
-  $("live-rows").innerHTML = rows.map(({ rk, v, city, q, t }) => `<tr data-rk="${esc(rk)}">
+  $("live-rows").innerHTML = rows.map(({ rk, v, city, q, t }) => {
+    const at = rowAt(v);
+    return `<tr data-rk="${esc(rk)}">
       <td class="l">${itemCell(t.item_id, t.name)} <span class="kind flip" title="${t.from === "查价" ? "查价页正在看的物品" : "机会板日收益前几名"}">${t.from}</span></td>
       <td class="l">${qualityTag(q)}</td>
       <td class="l">${cityDot(city)}</td>
@@ -2470,40 +2649,106 @@ function renderLive() {
       <td class="depth" data-d="sell">${depthText(v.sell)}</td>
       <td><span class="price" data-f="buy">${v.buy ? num(v.buy.p) : "—"}</span></td>
       <td class="depth" data-d="buy">${depthText(v.buy)}</td>
-      <td class="age" data-a>${agoSpan(v.at)}</td>
-      <td class="age" data-at>${v.at ? new Date(v.at).toLocaleTimeString("zh-CN") : ""}</td>
-    </tr>`).join("");
+      <td class="age" data-a>${agoSpan(at)}</td>
+      <td class="age" data-at>${at ? new Date(at).toLocaleTimeString("zh-CN") : ""}</td>
+    </tr>`;
+  }).join("");
+  liveUI.rows = new Map([...$("live-rows").children].map(tr => [tr.dataset.rk, tr]));
 }
 
-// 只改变化的那个单元格并让它闪一下,不整表重绘
-function patch(rk, field, v, at, dir) {
-  const tr = $("live-rows").querySelector(`tr[data-rk="${CSS.escape(rk)}"]`);
-  if (!tr) { renderLive(); return; }
-  const el = tr.querySelector(`[data-f="${field}"]`);
-  if (!el) return;
-  el.textContent = num(v.p);
-  const d = tr.querySelector(`[data-d="${field}"]`);
-  if (d) d.textContent = depthText(v);
-  tr.querySelector("[data-a]").innerHTML = agoSpan(at);
-  tr.querySelector("[data-at]").textContent = at ? new Date(at).toLocaleTimeString("zh-CN") : "";
-  if (dir) flash(el, dir);
+// 说明行。每次落笔都重写(只改格子的时候也是):一行里后到的那一边不触发整表重画,
+// 计数不能跟着整表重画才更新
+function renderLiveMeta() {
+  const order = new Set(live.targets.map(t => `${t.item_id}|${t.quality}`));
+  const nKeys = live.targets.length * live.cities.length * 2;
+  // 和 nKeys 同一个单位:一边算一个。以前拿行数(物品 × 城)去比按边算的总数
+  let seen = 0;
+  for (const [rk, v] of liveState) {
+    const [item, , q] = rk.split("|");
+    if (order.has(`${item}|${q}`)) seen += (v.sell ? 1 : 0) + (v.buy ? 1 : 0);
+  }
+  const fromLookup = live.targets.filter(t => t.from === "查价").length;
+  $("live-meta").textContent = live.targets.length
+    ? `订阅了 ${live.targets.length} 个物品(机会板前 ${live.targets.length - fromLookup} 个${fromLookup ? ` + 查价页 ${fromLookup} 个品质` : ""})× ${live.cities.length} 城 × 买卖两边 = ${nKeys} 个盘口(一边算一个),` +
+      `其中 ${seen} 个最近 30 分钟有人看到。城市:${live.cities.join("、")}`
+    : "";
 }
 
-function applyQuote(q) {
+function applyQuote(q, pushed) {
   if (!rt.owners.get("live")?.keys.has(q.k)) return;   // 退订之后还在路上的,或者是查价页订的
-  const p = q.k.split("|");
-  const rk = `${p[0]}|${p[1]}|${p[2]}`;
-  const side = p[3] === "0" ? "sell" : "buy";
+  const { rk, side } = keySide(q.k);
+  const had = liveState.has(rk);
   const cur = liveState.get(rk) || {};
   const prev = cur[side];
+  // 比这一边手上的还旧就丢,推送和快照一视同仁。重连、换订阅时快照和推送同时在路上,
+  // 晚到的快照会把新价盖回旧价(hub 的乱序闸门只管推送之间)。一样新的照收
+  const ts = Date.parse(q.t);
+  if (prev && isFinite(prev.ts) && isFinite(ts) && ts < prev.ts) return;
   // 价没动、件数变了也闪:有人吃掉/补上了最优档
   const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : q.d !== prev.d ? (q.d > prev.d ? "up" : "down") : "") : "";
-  cur[side] = { p: q.p, d: q.d, n: q.n };
-  if (!cur.at || Date.parse(q.t) > Date.parse(cur.at)) cur.at = q.t;
+  cur[side] = { p: q.p, d: q.d, n: q.n, t: q.t, ts, rx: Date.now() };
   liveState.set(rk, cur);
-  if (!prev) renderLive(); else patch(rk, side, cur[side], cur.at, dir);
+  if (!had) liveUI.full = true;
+  const pk = `${side}:${rk}`;
+  liveUI.patches.set(pk, dir || liveUI.patches.get(pk) || "");
+  liveSchedule();
+  if (pushed) liveVerify(q.k);
 }
 rt.quoteFns.push(applyQuote);
+
+function liveVerify(k) {
+  live.verify.add(k);
+  if (live.verifyTimer) return;
+  live.verifyTimer = setTimeout(() => {
+    const keys = [...live.verify];
+    live.verify.clear();
+    live.verifyTimer = 0;
+    rtSnapshot(keys);
+  }, LIVE_VERIFY_MS);
+}
+
+// 整体对一次:拉这批 key 的快照,服务端没给报价的边(而且快照发出之后也没再推来过)
+// 就是空了或过期了,从表上拿掉
+async function liveResync(keys) {
+  const t0 = Date.now();
+  const r = await rtSnapshot(keys);
+  const own = rt.owners.get("live")?.keys;
+  let gone = false;
+  for (const k of r.keys) {
+    if (r.got.has(k) || r.failed.has(k) || !own?.has(k)) continue;
+    const { rk, side } = keySide(k);
+    const cur = liveState.get(rk);
+    if (!cur?.[side] || cur[side].rx >= t0) continue;
+    delete cur[side];
+    if (!cur.sell && !cur.buy) liveState.delete(rk);
+    gone = true;
+  }
+  if (gone) liveDirty();
+}
+setInterval(() => { if (currentView === "live" && !document.hidden) liveResyncNow(); }, LIVE_RESYNC_MS);
+
+// 超过新鲜窗口的边拿掉(服务端不会为它推任何消息)。表上说的是"最近 30 分钟有人看到"。
+// 要服务端时间 t 和本机收到的时刻 rx 都过了窗口才拿:只看 t 的话,本机钟比服务端快几分钟时,
+// 服务端还认为新鲜的边这里先删掉,下一次整体对账又拿回来,来回闪。rx 由推送和对账刷新,
+// 服务端还肯给就一直是新的;真的过期了,实时页开着时由整体对账删,不开着时最多晚一个窗口
+function liveExpire() {
+  const cut = Date.now() - LIVE_FRESH_MS;
+  let gone = false;
+  for (const [rk, v] of liveState) {
+    for (const side of ["sell", "buy"]) {
+      const s = v[side];
+      if (s && s.rx < cut && !(s.ts >= cut)) { delete v[side]; gone = true; }
+    }
+    if (!v.sell && !v.buy) liveState.delete(rk);
+  }
+  if (gone) liveDirty();
+}
+setInterval(liveExpire, 15000);
+// 切到实时页时对一次账:不在这页时不对账,表上可能留着服务端已经不给的边
+function liveResyncNow() {
+  const keys = rt.owners.get("live")?.keys;
+  if (rt.up && keys?.size) liveResync([...keys]);
+}
 
 // /api/coverage 每次都对成交历史全表跑 COUNT(DISTINCT),**不能轮询**:
 // 只在启动和 AODP 全量扫描之后读一次。要的是销量榜的城市列表和入库的串城计数

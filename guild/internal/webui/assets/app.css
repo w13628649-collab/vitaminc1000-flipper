@@ -486,6 +486,15 @@ table.ideas>tbody>tr.rnote .warn{color:var(--warn)}
 table.ideas>tbody>tr.rnote .hint{color:var(--ink-soft)}
 /* confidence=low 的行(贴着某道阈值才留在榜上)左侧一条红线,别让人只盯着绿色的日收益 */
 table.ideas>tbody>tr.edge>td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+/* 「数据龄 / 可信」钉在右边:表比窗口宽、要横向滚的时候,新鲜度也一直看得见 ——
+   它是硬性要求,偏偏又是最右边、最先被挤出去的那一列。背景要不透明,悬停时跟着行变 */
+table.ideas>thead>tr>th:last-child,
+table.ideas>tbody>tr.main>td:last-child{position:sticky; right:0; z-index:1; background:var(--paper);
+  box-shadow:inset 1px 0 0 var(--rule-soft)}
+table.ideas>tbody>tr.main:hover>td:last-child{background:var(--surface)}
+/* 路线格里两座城放不下时折成两行("Ft Sterling →" / "Brecilien"),
+   不然这一列按最长的跨城路线撑到近 200px */
+#v-ideas .routecell .route{flex-wrap:wrap; row-gap:1px}
 #v-ideas .item{gap:9px; min-width:0}
 #v-ideas .item img{width:30px; height:30px}
 #v-ideas .item-name{font-weight:600; display:flex; align-items:center; gap:4px; max-width:230px}
@@ -509,8 +518,9 @@ table.ideas>tbody>tr.edge>td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
 .tag.risk{color:var(--warn)}
 td.flash-up .profit,td.flash-down .profit{border-radius:var(--r)}
 
-/* 展开行:四种执行方式 + 两边盘口 */
-.detailbox{padding:12px 14px 14px}
+/* 展开行:四种执行方式 + 两边盘口。tr.detail>td 继承了全局 td 的右对齐,
+   不重置的话标题和说明段落都被推到面板最右边,底下的表却从左边开始 */
+.detailbox{padding:12px 14px 14px; text-align:left}
 .detailbox h4{font-size:12px; font-weight:600; margin:14px 0 4px; color:var(--ink)}
 .detailbox h4:first-child{margin-top:0}
 .detailbox h4 em{font-style:normal; font-weight:400; color:var(--ink-soft); font-size:11px; margin-left:6px}
@@ -550,10 +560,15 @@ tr.detail td.why{white-space:normal; min-width:220px}
   .bookside .ladders{grid-template-columns:1fr 1fr}
   .split{grid-template-columns:1fr}
 }
-/* 1300 宽时 15 列刚好放得下。再窄才收起日流水、轮/天、z、波动 —— 这四个数在
-   展开行里都有,收起来不丢信息;更窄的屏表自己横向滚(.tablewrap) */
-@media (max-width:1100px){
+/* 15 列全开最窄要 1200px 上下(实测真实抓包数据:「盘口」列带「未核深度」、跨城路线
+   带「经迷雾」、价格六位数),加上两边 20px 的留白,窗口 1260 以下就放不下。再窄就收起
+   日流水、轮/天、z、波动 —— 这四个数在展开行里都有,收起来不丢信息。以前断点是 1100,
+   1100–1260 之间最右边的「盘口」「数据龄」被挤到可视区外;客户端窗口 1440 宽,
+   系统缩放 125% 时约 1150,正好落在这一段。
+   更窄的屏表自己横向滚(.tablewrap),数据龄那一列钉在右边 */
+@media (max-width:1260px){
   table.ideas .hide-md{display:none}
+  #v-ideas .item-name,#v-ideas .item-id{max-width:170px}
 }
 @media (max-width:920px){
   table.ideas .hide-sm{display:none}
