@@ -1843,8 +1843,10 @@ function renderPrices(d) {
       for (const kind of ["sell", "buy"]) {
         const k = `${b.dataset.city}|${b.dataset.q}|${kind}`;
         const before = was.get(k), after = bestNow.get(k);
-        if (before !== undefined && after !== before)
-          flash(b.querySelector(`b[data-f="${kind}"]`), after > before ? "up" : "down");
+        // 原来没有这一格("无数据")、现在有价了也闪,按涨闪 —— 和机会页新冒出来的行一个样。
+        // 以前只闪"已有的值变了",新出现的格子不闪
+        if (before === undefined ? after > 0 : after !== before)
+          flash(b.querySelector(`b[data-f="${kind}"]`), before === undefined || after > before ? "up" : "down");
       }
     }
   }
@@ -2852,8 +2854,11 @@ function applyQuote(q, pushed) {
   // 晚到的快照会把新价盖回旧价(hub 的乱序闸门只管推送之间)。一样新的照收
   const ts = Date.parse(q.t);
   if (prev && isFinite(prev.ts) && isFinite(ts) && ts < prev.ts) return;
-  // 价没动、件数变了也闪:有人吃掉/补上了最优档
-  const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : q.d !== prev.d ? (q.d > prev.d ? "up" : "down") : "") : "";
+  // 价没动、件数变了也闪:有人吃掉/补上了最优档。
+  // 新冒出来的一边也闪,按涨闪(和机会页新行一个样);只闪推送来的 —— 打开页面、重连时
+  // 快照一次灌上百条,全表一起闪等于没闪
+  const dir = prev ? (q.p > prev.p ? "up" : q.p < prev.p ? "down" : q.d !== prev.d ? (q.d > prev.d ? "up" : "down") : "")
+    : pushed ? "up" : "";
   cur[side] = { p: q.p, d: q.d, n: q.n, t: q.t, ts, rx: Date.now() };
   liveState.set(rk, cur);
   if (!had) liveUI.full = true;
