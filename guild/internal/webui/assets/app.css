@@ -686,6 +686,23 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .c-unv li.def em{color:var(--warn)}
 .c-unv li.mine em{color:var(--gain)}
 button.mini-act{padding:3px 10px; font-size:12px}
+/* 原料来路:这张表回答用户最先问的那句「买 8 级矿还是 8.1/8.2/8.3,还是从低级转上来」,
+   主角那种原料整块青铜描边、结论一句人话放在表上面 */
+.c-rawblk{margin:8px 0 10px}
+.c-rawblk.main{padding:10px 12px; border:1px solid var(--bronze); border-left-width:4px; border-radius:var(--r);
+  background:color-mix(in oklab,var(--bronze),var(--paper) 94%)}
+.c-rawblk h4{margin:0 0 4px; font-size:14px; font-weight:700; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+.c-rawblk h4 em{font-style:normal; font-weight:400; font-size:12px; color:var(--ink-mid)}
+.c-verdict{margin:4px 0 8px; font-size:13.5px; line-height:1.55; color:var(--ink); max-width:120ch}
+.c-verdict b{font-weight:700}
+.c-verdict .sub{font-size:12px}
+table.c-rawt{margin:0 0 4px}
+table.c-rawt td.l{white-space:normal}
+table.c-rawt tr.mixed > td{background:var(--surface); border-bottom:1px solid var(--rule)}
+table.c-rawt tr.mixed td.l:nth-child(2){font-size:12px; line-height:1.55}
+table.c-rawt tr.direct > td{font-weight:600; box-shadow:inset 0 1px 0 var(--rule), inset 0 -1px 0 var(--rule)}
+.wtag.good{color:var(--gain); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gain),transparent 50%); cursor:default}
+.c-rawmore{margin-top:4px}
 .c-sec{margin-top:6px}
 .c-sec h3 .sub{font-weight:400; margin-left:6px}
 table.c-cands td .subln{font-weight:400}

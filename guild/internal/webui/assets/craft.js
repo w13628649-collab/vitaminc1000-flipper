@@ -40,6 +40,8 @@ const craft = {
   sig: "",           // 最近一次请求体:同样的参数短时间内不重复请求
   loadedAt: 0, seq: 0, pending: false, timer: 0, retry: 0, err: null,
   open: new Set(),   // 候选表里展开着的行(按候选 id)
+  rawAll: new Set(), // 原料来路里「显示全部起点」的那几种原料
+  rawOpen: false,    // 「下级链自炼用到的原料」展开着没有(重算、实时刷新后照旧)
   items: new Map(),  // 物品 id → { zh, en }:按物品族一次拉全,精炼页的名字都从这来
   families: new Set(),
 };
@@ -414,7 +416,113 @@ function craftStatus(state, opts = {}) {
 // ── 结果 ──
 function craftRender(res) {
   $("c-result").classList.remove("dim");
-  $("c-result").innerHTML = craftHeadHTML(res) + craftCardHTML(res) + craftCandsHTML(res) + craftDataHTML(res);
+  $("c-result").innerHTML = craftHeadHTML(res) + craftCardHTML(res) + craftRawHTML(res) + craftCandsHTML(res) + craftDataHTML(res);
+}
+
+// ── 原料来路:直接回答「买 8.4 矿,还是 8.3/8.2/8.1/8.0,还是从低级转上来」(设计 §4.5) ──
+// 按推荐那条路线的需求量,列每个起点「全部从这里买、再转化上来」的等效单价和可用件数,
+// 再给混合最优的拆分(便宜的那几档直接买、其余从最便宜的起点转)。数来自 raw_sources
+const RAW_ROWS = 8;   // 起点多(T8.4 矿有二十几个),默认只列最便宜的几个,直接买那一行总是列出来
+const levelOf = id => { const m = REFINE_ID_RE.exec(id); return m ? Number(m[1]) + Number(m[3] || 0) : -1; };
+const pathText = path => (path || []).map(cTier).join(" → ");
+const priceRange = s => (s.price_from === s.price_to || !s.price_to ? num(s.price_from) : `${num(s.price_from)} ~ ${num(s.price_to)}`);
+
+function rawVerdict(id, src, res, main) {
+  const T = cTier(id), need = src.need;
+  const pure = src.pure || [], splits = src.mixed?.split || [];
+  const direct = pure.find(p => p.start === id);
+  const mixedU = src.mixed?.unit, directU = direct?.unit ?? null;
+  const bestTrans = pure.find(p => p.start !== id && p.filled && p.unit != null);
+  const directWhy = direct ? (direct.filled ? "" : `直接买的盘口只有 ${fq(direct.available)} 个,不够 ${fq(need)} 个`) : `${T} 在可买城市没有卖单`;
+  let v;
+  if (!splits.length) {
+    return `<b>缺价</b>:${esc(cLabel(id))} 和能转化到它的起点,在可买城市都没有挂单(或者超过了数据最大年龄)。`;
+  }
+  const split = s => s.bid ? `挂买单收 ${fq(s.qty)} 个(${priceRange(s)})`
+    : s.start === id ? `直接买 ${fq(s.qty)} 个(${priceRange(s)})`
+    : `从 ${esc(cTier(s.start))} 买 ${fq(s.qty)} 个(买价 ${priceRange(s)})转 ${Math.max(0, (s.path || []).length - 1)} 次上来`;
+  // 直接买的那一段放前面,读起来是「先买卖一附近那几件,其余从低级转」
+  const ordered = [...splits].sort((a, b) => (b.start === id) - (a.start === id));
+  if (splits.length === 1 && splits[0].start === id && !splits[0].bid) {
+    v = `<b>直接买 ${esc(T)} 最划算</b>:${fq(need)} 个均价 ${num(mixedU)}。` + (bestTrans
+      ? `转化上来最便宜的是从 ${esc(cTier(bestTrans.start))} 走(均价 ${num(bestTrans.unit)}),贵 ${pct(bestTrans.unit / mixedU - 1)}。`
+      : "没有别的起点凑得齐这个量。");
+  } else if (splits.every(s => s.start !== id)) {
+    v = `<b>别直接买 ${esc(T)}</b>:${ordered.map(split).join(" + ")},均价 ${num(mixedU)}` + (directU != null
+      ? `,比全部直接买(均价 ${num(directU)})便宜 ${pct(1 - mixedU / directU)}。` : `;${directWhy}。`);
+  } else {
+    v = `<b>混着买最省</b>:${ordered.map(split).join(" + ")};均价 ${num(mixedU)}` + (directU != null
+      ? `,比全部直接买(均价 ${num(directU)})每个省 ${num(directU - mixedU)}(${pct(1 - mixedU / directU)})。`
+      : `;${directWhy}。`) + `卖一附近那几件便宜货直接买,再往上的挂单比转化贵,就改从低级转。`;
+  }
+  if (src.mixed && !src.mixed.filled) v += ` <span class="neg">所有起点加起来也只凑到 ${fq(src.mixed.got)} 个,不够 ${fq(need)} 个。</span>`;
+  const usesTrans = splits.some(s => s.start !== id && !s.bid);
+  const k = res.params_used?.fees?.transmute_factor;
+  const kDefault = (res.params_used?.unverified || []).find(u => u.key === "fees.transmute_factor")?.is_default;
+  if (main && (usesTrans || bestTrans)) {
+    v += ` <span class="sub">这个结论取决于转化系数 k(现在按 ${esc(k)}${kDefault ? ",服务端默认、没核实" : ""}):k 一变,直接买和转化谁便宜可能反过来。</span>`
+      + (kDefault ? ` <button class="act ghost mini-act" data-open-cal>去量 k</button>` : "");
+  }
+  return v;
+}
+
+function rawBlock(id, src, res, main) {
+  const pure = src.pure || [], splits = src.mixed?.split || [];
+  const direct = pure.find(p => p.start === id);
+  const directU = direct?.unit ?? null;
+  const all = craft.rawAll.has(id);
+  let shown = all ? pure : pure.slice(0, RAW_ROWS);
+  if (direct && !shown.includes(direct)) shown = [...shown, direct];
+  const cheapest = pure.find(p => p.unit != null);
+  const vs = u => (u == null || directU == null || !directU ? "—" : Math.abs(u / directU - 1) < 0.0005 ? "±0" : spct(u / directU - 1));
+  const mixedDesc = splits.map(s => `${cityDot(s.city)} ${s.bid ? "挂买单收" : s.start === id ? "直接买" : `${esc(cTier(s.start))} 买来转`} <b>${fq(s.qty)}</b> 个 · ${priceRange(s)}${
+    s.start === id || s.bid ? "" : ` · ${esc(pathText(s.path))}`}`).join("<br>");
+  const rows = shown.map(p => {
+    const isDirect = p.start === id, steps = Math.max(0, (p.path || []).length - 1);
+    // 同阶:只升附魔(8.0→8.4);跨阶:从低一个 tier 上来(7.4→8.4、7.0→8.0→…)
+    const cross = Number(REFINE_ID_RE.exec(p.start)?.[1]) !== Number(REFINE_ID_RE.exec(id)?.[1]);
+    return `<tr class="${isDirect ? "direct" : ""}">
+      <td class="l">${isDirect ? `<b>直接买 ${esc(cTier(id))}</b>` : `从 ${cItem(p.start, { noTag: true })} 转`}
+        ${p === cheapest ? `<span class="wtag good">单一起点里最便宜</span>` : ""}</td>
+      <td class="l sub">${isDirect ? "不转化" : `${esc(pathText(p.path))}(${steps} 次,${cross ? "跨阶" : "同阶升附魔"})`}</td>
+      <td>${p.unit == null ? `<span class="neg">凑不齐</span>` : num(p.unit)}</td>
+      <td class="${p.unit != null && directU != null && p.unit < directU ? "pos" : ""}">${isDirect ? "—" : vs(p.unit)}</td>
+      <td title="${p.available == null ? "只有 AODP 价、不知道挂了多少件,按不限量算" : "可买城市里这个起点的可见件数合计"}">${p.available == null ? "深度未知" : num(p.available)}</td>
+      <td>${p.filled ? "够" : `<span class="neg">不够</span>`}</td>
+    </tr>`;
+  }).join("");
+  const more = pure.length > RAW_ROWS
+    ? `<button class="act ghost mini-act" data-raw-all="${esc(id)}">${all ? "只看最便宜的几个" : `显示全部 ${pure.length} 个起点`}</button>` : "";
+  return `<div class="c-rawblk${main ? " main" : ""}">
+    <h4>${cItem(id)} <em>按推荐路线要 <b>${fq(src.need)}</b> 个</em></h4>
+    <p class="c-verdict">${rawVerdict(id, src, res, main)}</p>
+    <div class="tablewrap"><table class="tight c-rawt">
+      <thead><tr><th class="l">起点</th><th class="l">怎么走</th><th title="每个 ${esc(cTier(id))} 的均价:买价沿阶梯吃深度 + 转化实付 + 运费">等效单价</th>
+        <th title="和「全部直接买」比">比直接买</th><th>可用件数</th><th>够不够 ${fq(src.need)} 个</th></tr></thead>
+      <tbody>
+        <tr class="mixed"><td class="l"><b>混合最优</b> <span class="wtag good">推荐</span></td><td class="l">${mixedDesc || "—"}</td>
+          <td><b>${src.mixed?.unit == null ? "—" : num(src.mixed.unit)}</b></td><td class="${src.mixed?.unit != null && directU != null && src.mixed.unit < directU ? "pos" : ""}">${vs(src.mixed?.unit)}</td>
+          <td>${fq(src.mixed?.got)}</td><td>${src.mixed?.filled ? "够" : `<span class="neg">不够</span>`}</td></tr>
+        ${rows}
+      </tbody></table></div>${more}
+  </div>`;
+}
+
+function craftRawHTML(res) {
+  const rs = res.raw_sources || {};
+  const ids = Object.keys(rs);
+  if (!ids.length) return "";
+  // 和目标同 tier、同附魔的那种原料是主角(T8.4 条的 T8.4 矿),放最前;其余是下级链自炼时用到的
+  const r = refineRole(res.target);
+  const top = r && rs[r.rawID] ? r.rawID : ids.sort((a, b) => levelOf(b) - levelOf(a))[0];
+  const others = ids.filter(x => x !== top).sort((a, b) => levelOf(b) - levelOf(a));
+  const openOthers = craft.rawOpen;
+  return `<section class="c-sec c-raw">
+    <h3>原料来路 <span class="sub">买现成的 ${esc(cTier(top))},还是从低一级、低一阶转上来?按推荐路线的需求量,逐个起点算</span></h3>
+    ${rawBlock(top, rs[top], res, true)}
+    ${others.length ? `<details class="c-fold c-rawmore"${openOthers ? " open" : ""}><summary>下级链自炼用到的原料 <em>${others.map(cTier).join("、")}</em></summary>
+      ${others.map(id => rawBlock(id, rs[id], res, false)).join("")}</details>` : ""}
+  </section>`;
 }
 
 const BIND_WORD = { focus: "今日专注", volume: "成交量", capital: "本金", qty: "这一批的件数", take: "吃买单卖得掉的件数" };
@@ -610,11 +718,22 @@ function craftStepsHTML(c, res) {
     <p class="sub">件数是稳态均摊:按回收率的期望返还算,所以带小数;进游戏按整数下单,多出来的零头就是下一批的余料。</p></div>`;
 }
 
+// toggle 不冒泡,在捕获阶段听:记下「下级链的原料」开没开,重画后照旧
+$("c-result").addEventListener("toggle", e => {
+  if (e.target.classList?.contains("c-rawmore")) craft.rawOpen = e.target.open;
+}, true);
 $("c-result").addEventListener("click", e => {
   const openCal = e.target.closest("[data-open-cal]");
   if (openCal) {
     $("c-cal").open = true;
     $("c-cal").scrollIntoView({ block: "start", behavior: "smooth" });
+    return;
+  }
+  const ra = e.target.closest("[data-raw-all]");
+  if (ra) {
+    const id = ra.dataset.rawAll;
+    if (craft.rawAll.has(id)) craft.rawAll.delete(id); else craft.rawAll.add(id);
+    craftRender(craft.data);
     return;
   }
   const st = e.target.closest("[data-open-steps]");
@@ -624,7 +743,7 @@ $("c-result").addEventListener("click", e => {
     $("c-result").querySelector(`tr.main[data-cid="${CSS.escape(st.dataset.openSteps)}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
     return;
   }
-  if (e.target.closest("a")) return;   // 物品名是跳查价页的链接,不当成点行
+  if (e.target.closest("a, summary, button")) return;   // 物品名是跳查价页的链接,不当成点行
   const tr = e.target.closest("tr.main[data-cid]");
   if (!tr) return;
   const id = tr.dataset.cid;
