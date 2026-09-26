@@ -114,8 +114,9 @@ function cRoleTag(id) {
 // 精炼页里的物品名:点了跳查价页(和机会表的物品名一个规矩)
 const cItem = (id, opts = {}) =>
   `<a class="citem" href="#lookup/${encodeURIComponent(id)}" title="${esc(id)} · 点开查价">${esc(cLabel(id))}</a>${opts.noTag ? "" : cRoleTag(id)}`;
-// 件数:稳态消耗是小数(按期望返还算),整数就不带小数点
-const fq = q => (q == null || !isFinite(q) ? "—" : Math.abs(q - Math.round(q)) < 0.005 ? num(q) : q.toFixed(2));
+// 件数:稳态消耗是小数(按期望返还算),整数就不带小数点;上百件的小数没有意义,取整
+const fq = q => (q == null || !isFinite(q) ? "—"
+  : Math.abs(q) >= 100 || Math.abs(q - Math.round(q)) < 0.005 ? num(q) : q.toFixed(2));
 const sgn = n => (n == null || !isFinite(n) ? "—" : (n > 0 ? "+" : n < 0 ? "−" : "") + num(Math.abs(n)));
 // 可能是负数、但不需要 + 号的数(每点专注值):负号统一用 −
 const snum = n => (n == null || !isFinite(n) ? "—" : (n < 0 ? "−" : "") + num(Math.abs(n)));
@@ -379,6 +380,9 @@ function craftChanged(opts = {}) {
   if (currentView === "craft" && opts.grid) history.replaceState(null, "", "#" + viewHooks.craft.hash());
   // 校准开着时,换了线 / 目标就按新的配方树重画(基础专注、转化格子都跟着变)
   if (opts.grid && $("c-cal").open) craftRenderCal();
+  // 矩阵开着就跟着参数重算(和目标无关的参数没变时查询串一样,不会重复请求)
+  clearTimeout(mx.timer);
+  mx.timer = setTimeout(() => craftMatrixLoad(), 600);
 }
 // 拿到计划之后的事:实时订阅、矩阵等在后面的提交里接上
 function craftAfterPlan(res, opts) { /* 见下文 */ }
@@ -936,6 +940,162 @@ $("v-craft").addEventListener("change", e => {
     } else return;
     craftChanged();
   }
+});
+
+// ── 整条线矩阵(GET /api/refine/matrix):25 档各取最好的一条,替代表格的排行榜 ──
+// 矩阵接口只认查询参数里那几项个人参数(k、站费、专注、专精、解锁、出售方式、生产加成、个人岛、
+// 数据年龄、本金);跨城买料、挂买单收料、余料估值、成交份额按服务端默认 —— 页面上写明
+const mx = { data: null, sig: "", seq: 0, pending: false, err: null, sort: { key: "level", dir: "asc" }, qty: null };
+function craftMatrixQuery() {
+  const p = craft.p, body = craftBody();
+  const q = new URLSearchParams({ line: p.line, city: body.city, qty: String(mx.qty || p.qty) });
+  const f = body.fees;
+  if (f.transmute_factor != null) q.set("k", String(f.transmute_factor));
+  if (f.station_per100 != null) q.set("station_per100", String(f.station_per100));
+  if (f.transmute_station_per100 != null) q.set("transmute_station_per100", String(f.transmute_station_per100));
+  if (body.focus.budget != null) q.set("budget", String(body.focus.budget));
+  q.set("fce", CRAFT_TIERS.map(t => `${t}:${body.focus.fce[t] || 0}`).join(","));
+  if (body.focus.unlocked_tier != null) q.set("unlocked_tier", String(body.focus.unlocked_tier));
+  // 矩阵不支持自选哪几级:每一格的链长短不一样,按「自动」算
+  q.set("focus", p.focusMode === "custom" ? "auto" : p.focusMode);
+  q.set("sort", p.sort);
+  q.set("sell", p.sell);
+  if (body.rrr.daily_bonus != null) q.set("daily_bonus", String(body.rrr.daily_bonus));
+  if (p.island) q.set("island", "1");
+  if (body.sources.max_age_hours != null) q.set("max_age_hours", String(body.sources.max_age_hours));
+  if (body.daily.capital != null) q.set("capital", String(body.daily.capital));
+  return q.toString();
+}
+async function craftMatrixLoad(opts = {}) {
+  if (!$("c-mx").open) return;
+  const qs = craftMatrixQuery();
+  if (!opts.force && qs === mx.sig && (mx.pending || mx.data)) return;
+  mx.sig = qs;
+  const seq = ++mx.seq;
+  mx.pending = true;
+  mx.err = null;
+  craftMatrixRender();
+  try {
+    const res = await getJSON("/api/refine/matrix?" + qs);
+    if (seq !== mx.seq) return;
+    mx.data = res;
+    if (res.server_defaults) craft.sd = res.server_defaults;
+  } catch (e) {
+    if (seq !== mx.seq) return;
+    mx.err = e;
+    mx.sig = "";
+  }
+  mx.pending = false;
+  craftMatrixRender();
+}
+const MX_COLS = [
+  { k: "level", label: "档位", l: true },
+  { k: "label", label: "最好的路线", l: true, str: true },
+  { k: "unit_cost", label: "单根成本" },
+  { k: "profit", label: "单根利润", tip: "主出售方式下每件的利润" },
+  { k: "pct", label: "利润率" },
+  { k: "spf", label: "银/专注点", tip: "(开专注的利润 − 不开专注的最好利润)÷ 每件专注" },
+  { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数(总量 ÷ 自然日)" },
+  { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的" },
+  { k: "binding", label: "卡在", l: true, str: true },
+  { k: "age", label: "数据", tip: "用到的价里最旧的" },
+];
+function mxRows(res) {
+  const m0 = res.params_used?.sell?.modes?.[0] || "post";
+  return (res.cells || []).map(c => {
+    const b = c.best, pl = b?.profit?.[m0];
+    return {
+      c, b, target: c.target, level: c.tier * 10 + c.enchant,
+      label: b?.label || c.error || "",
+      unit_cost: b?.unit_cost ?? null, profit: pl?.unit ?? null, pct: pl?.pct ?? null,
+      spf: b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
+      daily: b?.daily?.profit ?? null, binding: b?.daily ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
+      age: b?.oldest_age_h ?? c.data?.oldest_age_h ?? null,
+    };
+  });
+}
+function craftMatrixRender() {
+  const box = $("c-mx-body");
+  const res = mx.data, L = cLine();
+  $("c-mx-sum").textContent = mx.pending ? "正在算 25 档…(每档一次完整计算,第一次要几秒)"
+    : res ? `${res.line === L.line ? "" : "(还是上一条线的)"}${res.city} · 每档 ${num(res.qty)} 件 · 点一行切到那个目标`
+    : "点开算这条线全部 25 档";
+  if (mx.err) {
+    box.innerHTML = `<p class="c-status bad">${mx.err.status === 504 ? "服务端还没算完(多半在等 AODP),计算在后台继续,过几秒点「重算这张表」。" : esc(mx.err.message || mx.err)}</p>
+      <button class="act ghost" data-mx-reload>重算这张表</button>`;
+    return;
+  }
+  if (!res) { box.innerHTML = mx.pending ? `<p class="c-status busy">正在算…</p>` : ""; return; }
+  const rows = mxRows(res);
+  const { key, dir } = mx.sort;
+  const col = MX_COLS.find(c => c.k === key) || MX_COLS[0];
+  rows.sort((a, b) => {
+    const x = a[key], y = b[key];
+    // 算不出来的(缺卖价、不用专注)永远排最后,不管升序降序
+    if ((x == null || x === "") !== (y == null || y === "")) return x == null || x === "" ? 1 : -1;
+    const cmp = col.str ? String(x).localeCompare(String(y), "zh-CN") : (x - y);
+    return (dir === "desc" ? -cmp : cmp) || a.level - b.level;
+  });
+  const th = craftPremiumSPF(), cur = cTarget(), qtyBound = rows.filter(r => r.b?.daily?.binding === "qty").length;
+  const m0 = res.params_used?.sell?.modes?.[0] || "post";
+  const typing = document.activeElement?.id === "c-mx-qty";   // 正在改件数:重画完把焦点还回去
+  box.innerHTML = `<div class="c-row c-mxbar">
+      <div class="ctrl"><label for="c-mx-qty">每档按几件算</label>
+        <input type="number" id="c-mx-qty" min="1" max="10000" step="1" value="${esc(mx.qty || "")}" placeholder="${esc(craft.p.qty)}"></div>
+      <button class="act ghost" data-mx-reload>重算这张表</button>
+      <span class="sub">利润按${MODE_WORD[m0]}算;专注${craft.p.focusMode === "custom" ? "按「自动」(矩阵不支持自选哪几级)" : "照参数条"};
+        跨城买料、挂买单收料、余料估值、成交份额按服务端默认。${qtyBound ? `有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。` : ""}</span>
+    </div>
+    <div class="tablewrap"><table class="tight c-mxt">
+      <thead><tr>${MX_COLS.map(c => `<th data-mxk="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}<th class="l">警告</th></tr></thead>
+      <tbody>${rows.map(r => {
+        const ws = new Map();
+        for (const w of [...(r.c.warnings || []), ...(r.b?.warnings || [])]) if (!ws.has(w.code)) ws.set(w.code, w);
+        return `<tr class="main${r.target === cur ? " cur" : ""}${r.b && !r.b.filled ? " unfilled" : ""}" data-mxt="${esc(r.target)}">
+          <td class="l"><b>${esc(cTier(r.target))}</b> <span class="sub">${esc(cName(r.target))}</span></td>
+          <td class="l">${esc(r.label || "—")}</td>
+          <td>${num(r.unit_cost)}</td>
+          <td class="${r.profit == null ? "" : r.profit >= 0 ? "pos" : "neg"}">${sgn(r.profit)}</td>
+          <td>${spct(r.pct)}</td>
+          <td class="${r.spf != null && r.spf >= th ? "pos" : ""}">${snum(r.spf)}</td>
+          <td>${r.volume == null ? `<span class="sub" title="没有成交量数据">—</span>` : fq(r.volume)}</td>
+          <td class="${r.daily == null ? "" : r.daily >= 0 ? "pos" : "neg"}"><b>${sgn(r.daily)}</b></td>
+          <td class="l">${esc(r.binding || "—")}</td>
+          <td>${ageTag(r.age)}</td>
+          <td class="l wcell">${[...ws.values()].map(warnTag).join("")}</td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table></div>`;
+  if (typing) $("c-mx-qty").focus();
+}
+$("c-mx").addEventListener("toggle", () => { if ($("c-mx").open) { craftMatrixRender(); craftMatrixLoad(); } });
+$("c-mx-body").addEventListener("click", e => {
+  if (e.target.closest("[data-mx-reload]")) { craftMatrixLoad({ force: true }); return; }
+  const th = e.target.closest("th[data-mxk]");
+  if (th) {
+    const k = th.dataset.mxk;
+    if (mx.sort.key === k) mx.sort.dir = mx.sort.dir === "desc" ? "asc" : "desc";
+    else mx.sort = { key: k, dir: k === "level" || MX_COLS.find(c => c.k === k)?.str ? "asc" : "desc" };
+    craftMatrixRender();
+    return;
+  }
+  const tr = e.target.closest("tr[data-mxt]");
+  if (!tr || e.target.closest("a")) return;
+  const r = refineRole(tr.dataset.mxt);
+  if (!r) return;
+  craft.p.tier = r.tier; craft.p.ench = r.ench;
+  craft.open.clear();
+  craftChanged({ grid: true, now: true });
+  craftMatrixRender();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+$("c-mx-body").addEventListener("input", e => {
+  if (e.target.id !== "c-mx-qty") return;
+  const r = cNum(e.target, 1, 10000, { int: true });
+  if (!r.ok) return;
+  mx.qty = r.v;
+  clearTimeout(mx.timer);
+  mx.timer = setTimeout(() => craftMatrixLoad(), 500);
 });
 
 // ── 配方树(GET /api/refine/recipe):只读服务端内存里的配方表,不读库、不打 AODP ──

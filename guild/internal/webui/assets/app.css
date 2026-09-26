@@ -703,6 +703,15 @@ table.c-rawt tr.mixed td.l:nth-child(2){font-size:12px; line-height:1.55}
 table.c-rawt tr.direct > td{font-weight:600; box-shadow:inset 0 1px 0 var(--rule), inset 0 -1px 0 var(--rule)}
 .wtag.good{color:var(--gain); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gain),transparent 50%); cursor:default}
 .c-rawmore{margin-top:4px}
+/* 整条线矩阵 */
+.c-mxbar{padding:8px 0 2px}
+.c-mxbar .sub{flex:1 1 380px; max-width:90ch}
+table.c-mxt tr.main{cursor:pointer}
+table.c-mxt td.l{white-space:normal}
+table.c-mxt td.wcell{white-space:normal; min-width:120px; max-width:240px}
+table.c-mxt tr.cur > td{background:var(--surface-2); box-shadow:inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)}
+table.c-mxt tr.cur > td:first-child{box-shadow:inset 3px 0 0 var(--bronze), inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)}
+table.c-mxt tr.unfilled > td{opacity:.62}
 .c-sec{margin-top:6px}
 .c-sec h3 .sub{font-weight:400; margin-left:6px}
 table.c-cands td .subln{font-weight:400}
