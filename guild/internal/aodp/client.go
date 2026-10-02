@@ -136,12 +136,19 @@ type Client struct {
 	// 时钟刻度里,"失败时刻晚于成功时刻"判不出来
 	lastFailed bool
 	lastFail   time.Time
-	failSince  time.Time // 这一轮连续失败从什么时候开始
+	failSince  time.Time // 这一轮"连不上"从什么时候开始
 	failWhy    string
+	// okStreak 是失败之后连着成功了几次。AODP 时好时坏的时候(同晚实测:十几个请求里
+	// 偶尔回一个),一次成功就清掉状态的话,下一次又按正常情况白等 12 秒;
+	// 要连着成功 recoverAfter 次才算真恢复
+	okStreak int
 }
 
-// Down 报告 AODP 是不是"最近一直连不上":最近一次请求的结果是失败,而且就在 within
-// 之内。since 是这一轮连续失败的开始时刻,why 是最近一次失败的原因。
+// recoverAfter:连不上之后要连续成功几次才算恢复
+const recoverAfter = 3
+
+// Down 报告 AODP 是不是"最近一直连不上":失败之后还没连续成功 recoverAfter 次,
+// 而且最近一次失败就在 within 之内。since 是这一轮的开始时刻,why 是最近一次失败的原因。
 //
 // 429 限流和 4xx 都算"连得上":对面回话了,只是不给数据。
 func (c *Client) Down(now time.Time, within time.Duration) (since time.Time, why string, down bool) {
@@ -155,7 +162,12 @@ func (c *Client) Down(now time.Time, within time.Duration) (since time.Time, why
 
 func (c *Client) noteOK() {
 	c.mu.Lock()
-	c.lastFailed = false
+	if c.lastFailed {
+		c.okStreak++
+		if c.okStreak >= recoverAfter {
+			c.lastFailed, c.okStreak = false, 0
+		}
+	}
 	c.mu.Unlock()
 }
 
@@ -165,7 +177,7 @@ func (c *Client) noteFail(why string) {
 	if !c.lastFailed {
 		c.failSince = now
 	}
-	c.lastFailed, c.lastFail, c.failWhy = true, now, why
+	c.lastFailed, c.lastFail, c.failWhy, c.okStreak = true, now, why, 0
 	c.mu.Unlock()
 }
 

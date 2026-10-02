@@ -57,12 +57,28 @@ func TestDown_不响应算挂恢复后清掉(t *testing.T) {
 		t.Fatalf("不回话应该算挂、原因是请求超时,得到 down=%v why=%q", down, why)
 	}
 
+	// 时好时坏(同晚实测:偶尔回一个):成功一两次不算恢复,中间再失败就重新数
 	mode.Store(0)
-	if err := fetch(); err != nil {
-		t.Fatalf("恢复后应该成功: %v", err)
+	for i := 1; i < recoverAfter; i++ {
+		if err := fetch(); err != nil {
+			t.Fatalf("对面回话了应该成功: %v", err)
+		}
+		if _, down := isDown(); !down {
+			t.Fatalf("才连着成功 %d 次,不该就算恢复", i)
+		}
 	}
+	mode.Store(1)
+	_ = fetch()
+	mode.Store(0)
+	for i := 1; i < recoverAfter; i++ {
+		_ = fetch()
+	}
+	if _, down := isDown(); !down {
+		t.Fatal("中间又失败过一次,成功次数要重新数")
+	}
+	_ = fetch()
 	if _, down := isDown(); down {
-		t.Fatal("成功一次之后就不该再算挂")
+		t.Fatalf("连着成功 %d 次之后应该算恢复", recoverAfter)
 	}
 
 	mode.Store(2)
@@ -71,18 +87,22 @@ func TestDown_不响应算挂恢复后清掉(t *testing.T) {
 		t.Fatalf("5xx 应该算挂,得到 down=%v why=%q", down, why)
 	}
 
-	// 429 和 4xx 是对面回话了,只是不给数据:不算挂,而且会清掉上面的 502
+	// 429 和 4xx 是对面回话了,只是不给数据:算连得上,连着几次就清掉上面的 502
 	mode.Store(4)
-	_ = fetch()
+	for i := 0; i < recoverAfter; i++ {
+		_ = fetch()
+	}
 	if _, down := isDown(); down {
-		t.Fatal("404 说明对面在线,不该算挂")
+		t.Fatal("404 说明对面在线,连着几次之后不该再算挂")
 	}
 	mode.Store(2)
 	_ = fetch()
 	mode.Store(3)
-	_ = fetch()
+	for i := 0; i < recoverAfter; i++ {
+		_ = fetch()
+	}
 	if _, down := isDown(); down {
-		t.Fatal("429 说明对面在线,不该算挂")
+		t.Fatal("429 说明对面在线,连着几次之后不该再算挂")
 	}
 }
 
