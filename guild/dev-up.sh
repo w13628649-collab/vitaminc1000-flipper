@@ -10,6 +10,11 @@
 #
 #   wsl -d Ubuntu -u root -- env NOBUILD=1 bash guild/dev-up.sh
 #
+# 日常用仓库根的 dev-up.cmd(或 dev-up.cmd nobuild)更好:它跑完会在 Windows
+# 后台挂一个隐藏的 `wsl ... sleep infinity`。不挂的话,最后一个 wsl.exe 会话
+# 退出后 WSL 会把整个发行版关掉,dockerd、数据库、服务端一起被杀,
+# 日志里连"正在关闭"都没有(实测:拉起来十几分钟后就停了)
+#
 # 和 release.sh 的区别:不跑 gofmt/vet/test 门禁(Windows 检出是 CRLF,
 # gofmt -l 会把每个文件都列出来),客户端连本机,数据库也归它管。
 set -euo pipefail
