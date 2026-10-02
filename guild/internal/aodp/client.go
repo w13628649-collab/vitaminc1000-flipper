@@ -3,6 +3,7 @@ package aodp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -126,6 +127,63 @@ type Client struct {
 
 	mu       sync.Mutex
 	requests int
+
+	// 健康状态:AODP 不响应的时候(实测 TCP 连得上、HTTP 一直不回),查价页每点一次
+	// 都白等满 lookupAODPWait。记下最近一次成功/失败,让交互式的调用方知道
+	// "现在多半连不上",少等一会儿就先回本地数据
+	//
+	// 先后用一个布尔记,不比时间戳:Windows 上紧挨着的两次请求可能落在同一个
+	// 时钟刻度里,"失败时刻晚于成功时刻"判不出来
+	lastFailed bool
+	lastFail   time.Time
+	failSince  time.Time // 这一轮连续失败从什么时候开始
+	failWhy    string
+}
+
+// Down 报告 AODP 是不是"最近一直连不上":最近一次请求的结果是失败,而且就在 within
+// 之内。since 是这一轮连续失败的开始时刻,why 是最近一次失败的原因。
+//
+// 429 限流和 4xx 都算"连得上":对面回话了,只是不给数据。
+func (c *Client) Down(now time.Time, within time.Duration) (since time.Time, why string, down bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.lastFailed || now.Sub(c.lastFail) > within {
+		return time.Time{}, "", false
+	}
+	return c.failSince, c.failWhy, true
+}
+
+func (c *Client) noteOK() {
+	c.mu.Lock()
+	c.lastFailed = false
+	c.mu.Unlock()
+}
+
+func (c *Client) noteFail(why string) {
+	now := time.Now()
+	c.mu.Lock()
+	if !c.lastFailed {
+		c.failSince = now
+	}
+	c.lastFailed, c.lastFail, c.failWhy = true, now, why
+	c.mu.Unlock()
+}
+
+// failReason 把传输层错误压成一句短话。url.Error 里带整条 URL,
+// 几百个字符,直接摆到界面上没法看
+func failReason(err error) string {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		if ue.Timeout() {
+			return "请求超时"
+		}
+		err = ue.Err
+	}
+	s := err.Error()
+	if r := []rune(s); len(r) > 80 {
+		s = string(r[:80]) + "…"
+	}
+	return s
 }
 
 func New(baseURL string, cfg conf.API) *Client {
@@ -166,6 +224,10 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out an
 
 		resp, err := c.http.Do(req)
 		if err != nil {
+			// 调用方自己取消/到期的不算 AODP 的锅:那是"我不等了",不是"它没回"
+			if ctx.Err() == nil {
+				c.noteFail(failReason(err))
+			}
 			if attempt == c.cfg.MaxRetries-1 {
 				return err
 			}
@@ -175,6 +237,12 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out an
 			}
 			delay *= 2
 			continue
+		}
+
+		if resp.StatusCode >= 500 {
+			c.noteFail(fmt.Sprintf("服务端 %d", resp.StatusCode))
+		} else {
+			c.noteOK()
 		}
 
 		switch {

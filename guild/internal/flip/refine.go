@@ -557,11 +557,14 @@ func (s *Service) refinePrices(ctx context.Context, src RefineSource, items, cit
 	now time.Time) ([]aodp.PriceRecord, error) {
 
 	key := strings.Join(items, ",") + "|" + strings.Join(cities, ",")
-	waitCtx, cancel := context.WithTimeout(ctx, lookupAODPWait)
+	// AODP 已知连不上时只等一小会儿(见 aodp_wait.go),不然精炼页每次重算都卡 12 秒
+	wait, down := s.aodpWait(now)
+	waitCtx, cancel := context.WithTimeout(ctx, wait)
 	defer cancel()
 	fetched, _, err := s.refine.prices.get(waitCtx, key, func(c context.Context) ([]aodp.PriceRecord, error) {
 		return src.AODPPrices(c, items, cities)
 	})
+	err = asDown(err, down)
 	if err != nil {
 		slog.Warn("精炼页 AODP 当前价没取到", "items", len(items), "cities", cities, "err", err)
 	}

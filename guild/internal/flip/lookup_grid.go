@@ -630,6 +630,10 @@ func buildGrid(in gridInput) *LookupGrid {
 }
 
 func aodpErrText(err error) string {
+	var d *aodpDown
+	if errors.As(err, &d) {
+		return d.Error() + ",这次先只用抓包数据;后台会继续重试,连上了自动补上"
+	}
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return "等了 " + lookupAODPWait.String() + " 还没回来(多半在和定时扫描排队限流),请求在后台继续,稍后再点一次"
 	}
@@ -675,7 +679,8 @@ func (s *Service) LookupGrid(ctx context.Context, itemID string) (*LookupGrid, e
 		Conflicted: s.itemConflicts(itemID, orders, since),
 	}
 	key := itemID + "|" + strings.Join(cities, ",")
-	waitCtx, cancel := context.WithTimeout(ctx, lookupAODPWait)
+	wait, down := s.aodpWait(now)
+	waitCtx, cancel := context.WithTimeout(ctx, wait)
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -695,6 +700,7 @@ func (s *Service) LookupGrid(ctx context.Context, itemID string) (*LookupGrid, e
 			})
 	}()
 	wg.Wait()
+	in.PricesErr, in.HistoryErr = asDown(in.PricesErr, down), asDown(in.HistoryErr, down)
 	if in.PricesErr != nil || in.HistoryErr != nil {
 		slog.Warn("查价时 AODP 没取全", "item", itemID, "prices", in.PricesErr, "history", in.HistoryErr)
 	}
