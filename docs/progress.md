@@ -63,7 +63,7 @@
 | 界面 | 总览 / 机会 / 查价 / 销量榜 / 记账 / 实时 | `guild/internal/webui/assets/` |
 | 客户端窗口 | WebView2,纯 Go 无 cgo,可交叉编译 | `guild/cmd/client/ui_windows.go` |
 | 客户端图标 | 墨底上三块锭(上银下铜),底板一圈 `--ink-mid` 描边,深色任务栏上也有轮廓。exe、窗口、任务栏、界面顶栏、favicon 出自同一份几何,各尺寸按像素吸附、左右镜像一致;改了跑 `go generate ./cmd/client` | `guild/cmd/genicon/` |
-| 桌面快捷方式 | 以 `flipper-client.exe` 运行时后台建「Albion 行情终端」;挪了 exe 跟着改,成员删了不再建回来(删 `%APPDATA%\AlbionFlipper\desktop-shortcut.txt` 恢复);`-no-shortcut` 关掉 | `guild/cmd/client/shortcut*.go` |
+| 桌面快捷方式 | 以 `flipper-client.exe`(含浏览器重名下载的 `flipper-client (1).exe`)运行时后台建「Albion 行情终端」;挪了 exe 只改目标,成员加的参数、「以管理员身份运行」、快捷键都留着;成员删了不再建回来(删 `%APPDATA%\AlbionFlipper\desktop-shortcut.txt` 恢复);桌面不让写(受控文件夹访问)只试一次;`-no-shortcut` 关掉 | `guild/cmd/client/shortcut*.go` |
 | 本地反向代理 | 同源、注入令牌、服务端挂了给人话 | `guild/internal/clientui/` |
 | 周转模型 | 按执行方式算一轮耗时,同城跨城共用 | `guild/internal/econ/exec.go` |
 | 发布与下载 | manifest + 白名单 + Range 续传 | `guild/internal/api/release.go` |
@@ -178,6 +178,8 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
 
 exe 图标和版本信息在 `cmd/client/rsrc_windows_amd64.syso` 里(提交在仓库,`cmd/genicon` 生成),
 编 Windows amd64 时 go build 自动链接进去,不用额外步骤;服务端和 Linux 构建看不见它。
+只有 amd64 有图标——编 386 / arm64 的 Windows 客户端会退回系统默认图标,
+读资源的那两个测试(`ui_windows_amd64_test.go`)也只在 amd64 上跑。
 版本信息里的数字版本是 0——真实版本只在 `-X main.version` 里(客户端日志和诊断上报里有)。
 
 ## 还没做

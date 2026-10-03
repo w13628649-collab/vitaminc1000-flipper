@@ -15,6 +15,11 @@ func TestShortcutEligible(t *testing.T) {
 	}{
 		{"正式文件名", filepath.Join(root, "dist", "flipper-client.exe"), true},
 		{"大小写不同也算", filepath.Join(root, "dist", "Flipper-Client.EXE"), true},
+		{"Chrome / Edge 重名下载", filepath.Join(root, "Downloads", "flipper-client (1).exe"), true},
+		{"Firefox 重名下载", filepath.Join(root, "Downloads", "flipper-client(12).exe"), true},
+		{"成员自己复制的", filepath.Join(root, "Downloads", "flipper-client - 副本.exe"), false},
+		{"序号后面又改了名", filepath.Join(root, "Downloads", "flipper-client (1).exe.old-120301"), false},
+		{"括号里不是序号", filepath.Join(root, "Downloads", "flipper-client (old).exe"), false},
 		{"dev-up 改名的旧版本", filepath.Join(root, "dist", "flipper-client.exe.old-120301"), false},
 		{"go run 的临时产物", filepath.Join(tmp, "go-build123", "b001", "exe", "client.exe"), false},
 		{"本地测试构建", filepath.Join(root, "scratch", "flipper-client-test.exe"), false},

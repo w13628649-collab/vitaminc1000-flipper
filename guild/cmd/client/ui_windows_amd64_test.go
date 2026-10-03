@@ -1,4 +1,7 @@
-//go:build windows
+//go:build windows && amd64
+
+// 图标和版本信息只在 rsrc_windows_amd64.syso 里,别的 Windows 架构(386 / arm64)
+// 编出来就没有这些资源——文件名和构建约束要和 .syso 一致,不然在那些架构上必红。
 
 package main
 

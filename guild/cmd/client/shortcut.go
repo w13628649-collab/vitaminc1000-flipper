@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -23,10 +24,18 @@ const (
 	shortcutMarker = "desktop-shortcut.txt"
 )
 
+// releaseExeRe 认正式文件名,外加浏览器重名下载时加的序号:
+// 成员更新就是在浏览器里再下一次 /download/flipper-client.exe,
+// 下载目录里已经有旧的,Chrome / Edge 存成 "flipper-client (1).exe",
+// Firefox 存成 "flipper-client(1).exe"。不认它们的话,新版本不碰快捷方式,
+// 桌面上点开的永远是旧版本。
+// "flipper-client - 副本.exe" 这类是成员自己复制的,不算。
+var releaseExeRe = regexp.MustCompile(`(?i)^flipper-client(?: ?\(\d+\))?\.exe$`)
+
 // shortcutEligible 判断以 exe 这个路径运行时该不该管桌面快捷方式。
 // tempDir 是系统临时目录;从那里面运行的 exe 过后会被清掉。
 func shortcutEligible(exe, tempDir string) (ok bool, why string) {
-	if !strings.EqualFold(filepath.Base(exe), releaseExeName) {
+	if !releaseExeRe.MatchString(filepath.Base(exe)) {
 		return false, "文件名不是 " + releaseExeName + "(改过名的旧版本、go run、测试构建)"
 	}
 	// 资源管理器里直接双击压缩包里的 exe,它会被解到临时目录再运行;
