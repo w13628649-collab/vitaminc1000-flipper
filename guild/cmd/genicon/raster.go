@@ -46,18 +46,27 @@ func (r rrect) svg(fill string) string {
 
 type pt struct{ X, Y float64 }
 
-// poly 是简单多边形,奇偶规则判内外。
+// poly 是凸多边形(锭都是梯形),顶点顺时针逆时针都行。
 type poly []pt
 
+// contains 判断点是否在多边形内,边上算在内。
+//
+// 不用奇偶射线法:它把正好压在左边上的子样本算进来、压在右边上的算出去,
+// 斜边吸到整像素之后子样本经常正好压在边上,左右两条斜边的抗锯齿就差几个色阶,
+// 图不再左右对称。容差吸收 k 不是 2 的幂时(20/24/36/40px)坐标换算的浮点误差。
 func (p poly) contains(x, y float64) bool {
-	in := false
-	for i, j := 0, len(p)-1; i < len(p); j, i = i, i+1 {
-		a, b := p[i], p[j]
-		if (a.Y > y) != (b.Y > y) && x < (b.X-a.X)*(y-a.Y)/(b.Y-a.Y)+a.X {
-			in = !in
+	const eps = 1e-9
+	var pos, neg bool
+	for i := range p {
+		a, b := p[i], p[(i+1)%len(p)]
+		switch c := (b.X-a.X)*(y-a.Y) - (b.Y-a.Y)*(x-a.X); {
+		case c > eps:
+			pos = true
+		case c < -eps:
+			neg = true
 		}
 	}
-	return in
+	return !(pos && neg)
 }
 
 func (p poly) svg(fill string) string {
@@ -72,16 +81,59 @@ func num(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
 
 func hex(c color.NRGBA) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
 
-// snapFor 返回 size 像素图标用的吸附函数:把网格坐标吸到最近的像素边界。
+// pixels 是某个输出尺寸的像素网格,负责把设计网格上的坐标和长度吸到整像素。
+// k 是每格多少像素;k == 0 表示不吸附(SVG,浏览器按什么尺寸画都行)。
+type pixels struct{ k float64 }
+
+func pixelsFor(size int) pixels { return pixels{float64(size) / grid} }
+
+// vector 是不吸附的网格,给 SVG 用。
+var vector = pixels{}
+
+// out 把网格坐标吸到最近的像素边界,正好在两条像素线中间时远离中线。
 //
-// 以中线 x=y=8 为原点、四舍五入远离中线,左右(上下)对称的边吸完还对称。
+// 以中线 x=y=8 为原点取整,左右(上下)对称的边吸完还对称。
 // 直接 math.Round(v*k)/k 的话 .5 一律远离 0:16px 下 2.5→3、13.5→14,
 // 两条边都往右挪,整个字形偏半像素。所有尺寸都是偶数,中线本身一定是像素边界。
-func snapFor(size int) func(float64) float64 {
-	k := float64(size) / grid
-	return func(v float64) float64 {
-		d := v - grid/2
-		return grid/2 + math.Copysign(math.Round(math.Abs(d)*k)/k, d)
+func (p pixels) out(v float64) float64 { return p.snap(v, math.Round) }
+
+// in 同 out,但正好在中间时靠向中线。给"两块东西之间的缝"用:
+// 缝宽在 24/40px 下吸完是奇数半像素,往小了取,省下的像素归锭。
+func (p pixels) in(v float64) float64 {
+	return p.snap(v, func(x float64) float64 { return math.Ceil(x - 0.5) })
+}
+
+func (p pixels) snap(v float64, round func(float64) float64) float64 {
+	if p.k == 0 {
+		return v
+	}
+	d := v - grid/2
+	return grid/2 + math.Copysign(round(math.Abs(d)*p.k)/p.k, d)
+}
+
+// span 把一段长度(网格单位)取整到整像素,至少 min 个像素,再换回网格单位。
+// 吸附过的两条边各自加减同一个 span,中间那块就还是对称的。
+func (p pixels) span(v, min float64) float64 {
+	if p.k == 0 {
+		return v
+	}
+	return math.Max(min, math.Round(v*p.k)) / p.k
+}
+
+// hairline 是底板描边的宽度(网格单位)。
+//
+// 16/20px 下是半个像素:一整个像素的边会把底板吃掉一圈,半个像素经过抗锯齿
+// 是一道浅一档的灰线,够在深色任务栏上把轮廓勾出来。24px 起至少一整个像素,
+// 大尺寸按比例加粗,256px 下 4px——1px 的线在那么大的图上就看不见了。
+// SVG 按 16px 的比例给半格。
+func (p pixels) hairline() float64 {
+	switch size := p.k * grid; {
+	case p.k == 0:
+		return 0.5
+	case size < 24:
+		return 0.5 / p.k
+	default:
+		return math.Max(1, math.Round(size/64)) / p.k
 	}
 }
 
@@ -95,7 +147,7 @@ const samples = 16
 // 直接平均 sRGB 值的话,铜锭在墨色底板上的边缘会发黑、看着比实际细。
 // alpha 是覆盖率,只有底板圆角外面才不是 255。
 func render(size int) *image.NRGBA {
-	layers := logo(snapFor(size))
+	layers := logo(pixelsFor(size))
 	lin := make([][3]float64, len(layers))
 	for i, l := range layers {
 		lin[i] = [3]float64{toLinear(l.fill.R), toLinear(l.fill.G), toLinear(l.fill.B)}
@@ -162,7 +214,7 @@ func svgDoc() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 %d %d">`+"\n", grid, grid)
 	b.WriteString("<!-- 由 guild/cmd/genicon 生成,别手改:改 logo.go 再 go generate ./cmd/client -->\n")
-	for _, l := range logo(func(v float64) float64 { return v }) {
+	for _, l := range logo(vector) {
 		b.WriteString(l.shape.svg(hex(l.fill)))
 		b.WriteByte('\n')
 	}

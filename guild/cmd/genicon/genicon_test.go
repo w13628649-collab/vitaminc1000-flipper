@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,6 +28,63 @@ func TestCommittedPNGs(t *testing.T) {
 	for _, s := range sizes {
 		name := filepath.Join(clientDir, "icon", fmt.Sprintf("icon-%d.png", s))
 		samePixels(t, name, decodePNG(t, name, readFile(t, name)), want(s))
+	}
+}
+
+func TestCommittedWebPNGs(t *testing.T) {
+	for _, s := range webSizes {
+		name := filepath.Join(webuiDir, fmt.Sprintf("logo-%d.png", s))
+		samePixels(t, name, decodePNG(t, name, readFile(t, name)), want(s))
+	}
+}
+
+// 吸附之后每块锭的顶点都在整像素上,且每块锭自己左右对称——
+// 以前顶边两个顶点各自吸附,32/40px 下铜锭一侧斜 1px、一侧斜 2px。
+func TestIngotsSnapSymmetric(t *testing.T) {
+	// 坐标是网格单位,k 不是 2 的幂时换算有浮点误差
+	near := func(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
+	for _, s := range slices.Concat(sizes, webSizes) {
+		px := pixelsFor(s)
+		var ingots int
+		for i, l := range logo(px) {
+			p, ok := l.shape.(poly)
+			if !ok {
+				continue
+			}
+			ingots++
+			for _, v := range p {
+				for _, c := range []float64{v.X, v.Y} {
+					if f := c * px.k; !near(f, math.Round(f)) {
+						t.Errorf("%dpx 第 %d 层顶点 %v 不在整像素上(%g px)", s, i, v, f)
+					}
+				}
+			}
+			// 顶点顺序:左上、右上、右下、左下
+			left, right := (p[0].X-p[3].X)*px.k, (p[2].X-p[1].X)*px.k
+			if !near(left, right) || left < 1-1e-9 {
+				t.Errorf("%dpx 第 %d 层左侧内收 %gpx、右侧 %gpx", s, i, left, right)
+			}
+		}
+		if ingots != 3 {
+			t.Fatalf("%dpx 有 %d 块锭", s, ingots)
+		}
+	}
+}
+
+// 整张图左右镜像一致。几何对称而光栅化有偏差(采样点、半开区间)的话这里会红。
+func TestRenderMirrorSymmetric(t *testing.T) {
+	for _, s := range slices.Concat(sizes, webSizes) {
+		img := want(s)
+		for y := range s {
+			for x := range s / 2 {
+				a, b := img.NRGBAAt(x, y), img.NRGBAAt(s-1-x, y)
+				for _, d := range [][2]uint8{{a.R, b.R}, {a.G, b.G}, {a.B, b.B}, {a.A, b.A}} {
+					if diff := int(d[0]) - int(d[1]); diff > 2 || diff < -2 {
+						t.Fatalf("%dpx 第 %d 行:第 %d 列 %v 和镜像列 %v 不一样", s, y, x, a, b)
+					}
+				}
+			}
+		}
 	}
 }
 
