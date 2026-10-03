@@ -63,6 +63,7 @@
 | 界面 | 总览 / 机会 / 查价 / 销量榜 / 记账 / 实时 | `guild/internal/webui/assets/` |
 | 客户端窗口 | WebView2,纯 Go 无 cgo,可交叉编译 | `guild/cmd/client/ui_windows.go` |
 | 客户端图标 | 墨底上三块锭(上银下铜)。exe、窗口、任务栏、界面顶栏出自同一份几何,16×16 逐像素对齐;改了跑 `go generate ./cmd/client` | `guild/cmd/genicon/` |
+| 桌面快捷方式 | 以 `flipper-client.exe` 运行时后台建「Albion 行情终端」;挪了 exe 跟着改,成员删了不再建回来(删 `%APPDATA%\AlbionFlipper\desktop-shortcut.txt` 恢复);`-no-shortcut` 关掉 | `guild/cmd/client/shortcut*.go` |
 | 本地反向代理 | 同源、注入令牌、服务端挂了给人话 | `guild/internal/clientui/` |
 | 周转模型 | 按执行方式算一轮耗时,同城跨城共用 | `guild/internal/econ/exec.go` |
 | 发布与下载 | manifest + 白名单 + Range 续传 | `guild/internal/api/release.go` |

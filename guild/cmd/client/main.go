@@ -54,6 +54,7 @@ func main() {
 		interval = flag.Duration("interval", 3*time.Second, "上传间隔")
 		token    = flag.String("token", "", "CDK 换来的访问令牌(暂未启用)")
 		headless = flag.Bool("headless", false, "不开窗口,只抓包上传")
+		noLink   = flag.Bool("no-shortcut", false, "不在桌面建、也不更新快捷方式")
 	)
 	flag.Parse()
 
@@ -177,6 +178,13 @@ func main() {
 		}
 		slog.Info("本地界面已就绪", "url", uiURL)
 		fmt.Fprintf(os.Stderr, "\n  界面:%s\n\n", uiURL)
+
+		// 成员拿到的就是一个 exe,随手放在下载目录里,过两天就找不着了。
+		// 桌面快捷方式在后台建,不拖慢窗口,出错只记日志。
+		// -headless 是脚本和服务在用,不走到这里,也就不碰桌面
+		if !*noLink {
+			go ensureDesktopShortcut()
+		}
 
 		// 窗口占住主线程直到用户关掉它。关窗口 = 退出程序,
 		// 和任何桌面软件一样;抓包跟着一起停
