@@ -54,6 +54,9 @@ header{display:flex; flex-wrap:wrap; gap:20px; align-items:baseline;
        padding:22px 0 16px; border-bottom:2px solid var(--ink)}
 .brand{font-size:19px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
 .brand span{color:var(--bronze)}
+/* 顶栏按基线对齐,logo 不能把 .brand 改成 flex(那样它的基线就变了,整排错位)。
+   往下沉到大致和字的中线齐 */
+.brand img{display:inline-block; vertical-align:-5px; margin-right:8px}
 .facts{display:flex; gap:22px; flex-wrap:wrap}
 .fact{display:flex; flex-direction:column; gap:1px; text-align:right}
 #quit{align-self:center; margin-left:4px}

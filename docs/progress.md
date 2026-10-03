@@ -62,6 +62,7 @@
 | 交易记账 | 反推 `absorb_ratio` 和模型准确度 | `guild/internal/store/journal.go` |
 | 界面 | 总览 / 机会 / 查价 / 销量榜 / 记账 / 实时 | `guild/internal/webui/assets/` |
 | 客户端窗口 | WebView2,纯 Go 无 cgo,可交叉编译 | `guild/cmd/client/ui_windows.go` |
+| 客户端图标 | 墨底上三块锭(上银下铜)。exe、窗口、任务栏、界面顶栏出自同一份几何,16×16 逐像素对齐;改了跑 `go generate ./cmd/client` | `guild/cmd/genicon/` |
 | 本地反向代理 | 同源、注入令牌、服务端挂了给人话 | `guild/internal/clientui/` |
 | 周转模型 | 按执行方式算一轮耗时,同城跨城共用 | `guild/internal/econ/exec.go` |
 | 发布与下载 | manifest + 白名单 + Range 续传 | `guild/internal/api/release.go` |
@@ -173,6 +174,10 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags pcap \
 的字典序小于 `20260922-7`,版本比较只能做"不相等 = 有新版",没法排序。
 
 `defaultServer` 用 ldflags 注入,发给成员的构建自带服务端地址,他们双击就行。
+
+exe 图标和版本信息在 `cmd/client/rsrc_windows_amd64.syso` 里(提交在仓库,`cmd/genicon` 生成),
+编 Windows amd64 时 go build 自动链接进去,不用额外步骤;服务端和 Linux 构建看不见它。
+版本信息里的数字版本是 0——真实版本只在 `-X main.version` 里(客户端日志和诊断上报里有)。
 
 ## 还没做
 

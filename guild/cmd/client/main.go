@@ -180,7 +180,7 @@ func main() {
 
 		// 窗口占住主线程直到用户关掉它。关窗口 = 退出程序,
 		// 和任何桌面软件一样;抓包跟着一起停
-		if showWindow(ctx, "Albion 行情终端", uiURL) {
+		if showWindow(ctx, appName, uiURL) {
 			stop()
 		} else {
 			// 开不出窗口(没装 WebView2)就退回默认浏览器。

@@ -3,3 +3,8 @@
 # 反过来 .cmd/.bat 必须是 CRLF,LF 的批处理在 cmd 里会逐行错位
 *.cmd text eol=crlf
 *.bat text eol=crlf
+# 图标生成物(guild/cmd/genicon)。core.autocrlf=true 的检出里,被误判成文本的
+# 二进制会被改换行、静悄悄地坏掉;明说是二进制
+*.syso binary
+*.ico binary
+*.png binary

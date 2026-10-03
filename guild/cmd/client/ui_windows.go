@@ -30,6 +30,7 @@ func showWindow(ctx context.Context, title, url string) bool {
 		DataPath: filepath.Join(configDir(), "webview"),
 		WindowOptions: webview2.WindowOptions{
 			Title: title, Width: 1440, Height: 920, Center: true,
+			IconId: iconResourceID,
 		},
 	})
 	if w == nil {
@@ -38,6 +39,7 @@ func showWindow(ctx context.Context, title, url string) bool {
 		return false
 	}
 	defer w.Destroy()
+	setWindowIcons(uintptr(w.Window()))
 
 	// 收到 Ctrl+C / SIGTERM 时得主动把窗口关掉,否则 Run() 永远不返回,
 	// 进程卡在那里不退
@@ -49,6 +51,48 @@ func showWindow(ctx context.Context, title, url string) bool {
 	w.Navigate(url)
 	w.Run() // 阻塞到窗口被关闭
 	return true
+}
+
+var (
+	user32               = windows.NewLazySystemDLL("user32.dll")
+	procLoadImageW       = user32.NewProc("LoadImageW")
+	procGetSystemMetrics = user32.NewProc("GetSystemMetrics")
+	procSendMessageW     = user32.NewProc("SendMessageW")
+)
+
+// loadIcon 按指定像素尺寸从本 exe 的资源里取图标组 iconResourceID。
+// 图标组里有这个尺寸就原样拿,没有才由系统缩放。返回 0 表示没取到。
+func loadIcon(size int) uintptr {
+	const imageIcon, lrShared = 1, 0x8000
+	var self windows.Handle
+	if err := windows.GetModuleHandleEx(0, nil, &self); err != nil {
+		return 0
+	}
+	h, _, _ := procLoadImageW.Call(uintptr(self), iconResourceID, imageIcon,
+		uintptr(size), uintptr(size), lrShared)
+	return h
+}
+
+// setWindowIcons 给窗口分别设大小两个图标。
+//
+// go-webview2 只按 IconId 取一次默认尺寸(32px),窗口类的大图标和小图标
+// 用的是同一个句柄,标题栏的 16px 就成了 32px 现场缩小的,发虚。
+// 图标组里有专门对齐过像素的 16px,这里按系统要的尺寸各取一次。
+// 取不到就算了,窗口类上那个 32px 的照样能用。
+func setWindowIcons(hwnd uintptr) {
+	const (
+		wmSetIcon            = 0x0080
+		iconSmall, iconBig   = 0, 1
+		smCxIcon, smCxSmIcon = 11, 49
+	)
+	for _, k := range []struct{ which, metric uintptr }{
+		{iconSmall, smCxSmIcon}, {iconBig, smCxIcon},
+	} {
+		size, _, _ := procGetSystemMetrics.Call(k.metric)
+		if h := loadIcon(int(size)); h != 0 {
+			procSendMessageW.Call(hwnd, wmSetIcon, k.which, h)
+		}
+	}
 }
 
 // alert 弹一个系统对话框。
