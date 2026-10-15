@@ -13,9 +13,15 @@
   ("这个黄色背景我也不喜欢,还是以前那种配色好看"),推翻了之前"深暗木底 + 金边 + 羊皮纸字色、
   跟着游戏走"的做法。不要加暗色模式分支,也别再引入 Cinzel 那种游戏风字体
 - 交易模型:四种执行方式、跨城套利、风险指标、吃深度、资金分配、实盘记账
-- 精炼/制造利润系统还没动工。但**配方数据已经齐了**
-  (`docs/client-data/recipes.jsonl.gz`,2,946 个可制造物品、12,437 条配方,
-  带输入物品数量、专注消耗、产出数量、制造线),原料盈亏平衡价现在就能算
+- 精炼/制造利润系统还没动工。但**数据地基已经齐了**:
+  - **配方**:`docs/client-data/recipes.jsonl.gz`,2,946 个可制造物品、
+    12,437 条配方,带输入物品数量、专注消耗、产出数量、制造线
+  - **工作站手续费**:操作 **197 `GetClusterMapInfo`**(不是之前记的事件 49)。
+    一个区一次请求,响应 92 个键,带 `PublicFee` / `AssociateFee` /
+    `AvailableFood` / `Durability` / `BuildingType`。接进来只要在
+    `HandleResponse` 的 switch 加一个分支,事件通路不用碰。
+    详见 `docs/client-data.md` 第二点六节。
+    **注意不要照抄 AODP 的结构体**——它把 `long[]` 写成 `[]int` 会溢出
 
 进度和接口清单见 `docs/progress.md`,口径和设计取舍见 `docs/flipper.md`。
 
@@ -73,8 +79,13 @@ SETUP_FEE  = 0.025       # 创建费,买单卖单都收,下单当场扣、不成
 **prices 端点不返回挂单深度。** 只有 `sell_price_min` / `buy_price_max` 等价格,
 **没有数量**。所以"最低卖价 1000"可能只对应 1 件货。
 
-这是 troll 过滤必须存在的根本原因,也是本地抓包(AlbionSnipe / albiondata-client)
-优于纯 API 的地方。
+这是 troll 过滤必须存在的根本原因。
+
+**但"抓包优于纯 API"这句要打折。** AODP 服务端源码里有一个**带深度**的端点:
+`/api/v2/stats/orderbook/:id`,`MarketOrderbookService` 按
+item/location/quality/auction_type/price 分组,返回每个价位的 `SUM(amount)`,
+卖单升序买单降序排好。只验到了服务端源码,**没验 east 主机上是否部署、
+亚服数据厚度如何**——这条要单独测一次。如果可用,抓包的不可替代性要重新评估。
 
 其他限制:
 
@@ -90,6 +101,7 @@ Base: https://east.albion-online-data.com
 /api/v2/stats/prices/{items}.json?locations=&qualities=
 /api/v2/stats/history/{items}.json?date=&end_date=&locations=&time-scale=
 /api/v2/stats/gold.json?count=
+/api/v2/stats/orderbook/{id}          ← 带深度,但未验证 east 是否部署
 ```
 
 ## 游戏机制常量(已核实)
@@ -188,8 +200,14 @@ is acceptable" —— 两个被动动词,且 "this way" 特指抓包。
    2024-01 SBI 把市场数据对**所有账号**加密过,后来只放行了"许多账号",
    判定规则连 AODP 都不知道(FAQ 原文:"based on some combination of variables
    that we are not aware of")。明文**不是协议属性,是服务端对账号的当前取值**。
-   这条不成立,整条被动抓包路线归零。开一次游戏看 albiondata-client 的
-   `EncryptionClear` / `Detected` 就能定。比下面所有事都优先
+   这条不成立,整条被动抓包路线归零。比下面所有事都优先。
+   **但口径要注意两点**(见 `docs/client-data.md` 第二点七节):
+   - 加密是**按消息粒度**不是按连接。AODP FAQ 原文:加密生效时
+     market history 和 gold history 照常上传,只有 live market data 不发。
+     所以 Clear/Detected **只说明 op 81**,对地图/建筑事件不作任何陈述
+   - **我们的客户端现在答不了这个问题**:没有正向 Clear 信号(对任何加密包
+     都喊"市场数据被加密"),而且只认 `msgType==131`、`switch` 无 `default`,
+     别的加密消息类型会静默消失。**上场前先补这两处**,否则会误诊
 6. **市场列表页的实测**(回家后在游戏里试,一轮抓包能同时关掉好几条):
    开市场做四个动作——清空筛选选矿石翻一页、换一次排序、距离拉满、
    拨「显示基础价」开关。然后看:响应里 AuctionDTO 的条数 vs distinct

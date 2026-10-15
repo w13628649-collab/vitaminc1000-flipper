@@ -283,6 +283,125 @@ AODP FAQ 里对 SBI 立场最接近原文的引用是:
    成员把筛选设一次就会被记住,之后路过市场点一下刷新就是一次完整批量请求。
    零检测面、零合规风险、零工程量
 
+## 二点六、制造手续费:答案是操作 197,不是事件 49
+
+你那条抱怨("按 N 键打开小地图就可以看到所有商品的制造手续费")**能解决**,
+而且来源比原先猜的好得多。
+
+之前 CLAUDE.md 里记的线索是事件 49 `CraftBuildingInfo`。那条是**服务端推送**的
+单建筑消息。真正值钱的是另一个:
+
+### `GetClusterMapInfo = 197`(操作,客户端主动请求)
+
+| | |
+|---|---|
+| **请求** | 只有一个参数:`key0 = string`(区域 id) |
+| **响应** | 类型 `afb`,**92 个参数键**,一次覆盖整个区所有建筑 |
+
+响应里装的正好是精炼/制造成本模型缺的那几个输入:
+
+| 键 | 类型 | 含义 |
+|---|---|---|
+| `key17` | `int[]` | BuildingType |
+| `key18` | `float[][]` | 坐标 |
+| `key20` | `long[]` | Durability(耐久) |
+| `key22` | `long[]` | AvailableFood(营养余量) |
+| `key24` | `long[]` | AvailableSilver |
+| `key25` | `string[]` | Owners |
+| `key33` | `long[]` | **AssociateFee** |
+| `key34` | `long[]` | **PublicFee** ← 使用费 |
+
+CLAUDE.md 里"使用费按每 100 营养消耗计价、站点没耐久或没营养不能制造"说的
+就是 `key34` / `key22` / `key20`。**一个城一次请求,不是一个物品一次**——
+这正是市场数据死活拿不到的那种批量形状。
+
+### 接进来的工作量:很小
+
+`op 197` 是 **operation response**,`params[253] == 197`。只要在
+[protocol.go](../guild/internal/protocol/protocol.go) 的 `HandleResponse`
+switch 里加一个分支就行,**事件通路完全不用碰**。
+
+解码也是零工作量:AODP 读的那 11 个键全是基本类型或基本类型数组,
+`deserializer.go` 现成支持(`float[][]` 走 `deserializeNestedArray` 递归)。
+要坐标里的 `Vector2[]` 或所有者 `Guid[]` 才需要写自定义类型解码器——先不做。
+
+**⚠️ 不要照抄 AODP 的结构体。** `operation_get_cluster_map_info.go` 把
+坐标声明成 `[][]int`、费用/营养/耐久全声明成 `[]int`,而客户端声明的是
+`float[][]` 和 `long[]`。坐标会被截成整数丢精度,银币类 `long` 塞进 `int`
+有溢出风险。**按客户端声明的类型落库。**
+
+### 没定死的一条:谁触发 op 197
+
+`AlbionGui.ClusterMap.ClusterMapBase`(N 键那个区域地图类)有
+`OnGetClusterInfo` `0x18114ac90`、`PostOpen` `0x18114bbf0`、
+`AddBuilding` `0x181147000`、`AddRealEstate` `0x181147610`,
+但**发请求的调用点没找到**。已恢复的 `0x180a9c910` 只是通用的
+"响应 → `ci9.b<afb>` 解析 → 回调"壳子,只覆盖收方向。
+
+所以"按 N 开图才发 / 进区就发 / 能不能请求自己不在的区"三种可能都排除不掉。
+**覆盖率天花板悬在这里**——要是只有按 N 才发,成员路过城市不开图就一条不贡献。
+实测很简单:开一次城里的 N 键地图,看有没有 op 197。
+
+### 这块数据没有 AODP 兜底
+
+AODP 的地图数据是**只写的**:客户端上传到 NATS 的 `mapdata.ingest`,
+但服务端完整路由表(`config/routes.rb`)里**没有任何地图端点**。
+建筑和费用数据没有任何公开来源——想要只能自己抓,也就没有第二路交叉校验。
+这和市场数据"抓包 + AODP 双路"的格局完全不同。
+
+(AODP 自己处理 op 197 时,ZoneID 不是纯数字就直接跳过,即地下城/藏身处/
+个人岛一概不要。我们只要城里的制造站,这个取舍可以照抄。)
+
+## 二点七、加密是按消息粒度,不是按连接
+
+这条修正了第 0 号实测项的口径。
+
+包头 `flags==1` 是包级,每条消息自己的 `msgType==131` 是消息级,
+一个 Photon 包里 `commandCount` 条命令各带自己的 `channelId` 和 `msgType`
+——**同一个包里可以一条响应是密文、旁边的事件是明文**。
+
+AODP FAQ 原文直接证实它是按数据种类施加的:加密生效时
+"market history and gold history are still sent to the AODP server;
+only **live market data** is not sent"。也就是说 op 81 的响应是密文,
+而 op 95/96(历史)和 gold 在同一条会话里仍然明文可读。
+
+**推论:市场被加密 ≠ 地图被加密,反之亦然。** 2024-01 那次改动针对的是
+挂单列表这一个东西。
+
+但客户端里找不到任何 Albion/Photon 自有的加解密配置(全表 31,553 条常量里
+带 crypt 的全是 .NET/Steam/Epic 库),所以**静态上判不出 SBI 对哪些 op
+开了加密,只能实测**。
+
+### ⚠️ 我们的客户端现在答不了第 0 号问题
+
+上场实测前必须先补两处,否则会误诊:
+
+1. **没有正向 Clear 信号。** AODP 是在一条 `AuctionGetOffers` 响应成功
+   解出订单后才置 `EncryptionClear` 的,还有"最近是否发过市场请求"做门控。
+   我们 [main.go:145](../guild/cmd/client/main.go#L145) 对**任何**加密包
+   都喊"市场数据被加密"
+2. **只认 `msgType==131`,`switch` 没有 `default` 分支。**
+   ([parser.go:370](../guild/internal/photon/parser.go#L370) 和 :380-387)
+   若出现别的加密消息类型(按 Photon 惯例 `0x80|kind`,比如加密事件),
+   它连 `OnEncrypted` 都不触发,**静默消失**。`parser_test.go` 对这些零覆盖
+
+另外:AODP 那个 Clear/Detected 指示灯**只说明 op 81**,对事件命名空间
+(地图/建筑/资源)不作任何陈述。绿灯不保证地图事件可读,红灯也不证明不可读。
+
+## 二点八、我们的抓包层现状
+
+查的时候顺手核的,记下来:
+
+- **码表已对着你实际装的客户端逐位验过,完全吻合**:操作 555/555、
+  事件 710/710,名字零不匹配。客户端比 AODP 各多一条
+  (op 555 `RequestDebugMobInfo`、event 711 `InventoryFrozenSlotsUpdate`)。
+  这一版的漂移是**在尾部追加**,不同于 2026-06-29 那次中间插入导致 ≥248 全 +2,
+  所以既有码位安全
+- **解析器现在只认 4 个码**:81、82、`Join=2`、`GetGameServerByCluster=17`
+- **全部事件被丢弃**:[main.go:139](../guild/cmd/client/main.go#L139) 的
+  `capture.Handler` 字面量压根没填 `OnEvent`,711 个事件码解析完即丢。
+  Photon 层本身是完整的,缺的是上面这一层接线
+
 ## 三、配方:精炼功能的整个地基
 
 `recipes.jsonl.gz` 每行一个可制造物品。实样(T5 精布):
