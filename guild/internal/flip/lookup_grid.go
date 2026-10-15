@@ -33,12 +33,15 @@ import (
 // 请求留在后台跑完进缓存(见 lookup_cache.go)
 const lookupAODPWait = 12 * time.Second
 
-// BlackMarket 是 AODP 里黑市的城市名。它只收不卖,卖侧天然是空的。
-const BlackMarket = "Black Market"
-
-// Brecilien 是 AODP 和 world.City 都认的城市名。旧版查价页没有它,
-// 但成员在那里翻市场时抓包是有数据的,不放进来就又是"刚翻过却显示无数据"
-const Brecilien = "Brecilien"
+// 黑市和 Brecilien 的名字统一从 conf 取,**不要在这里另立一份**:
+// 两处各写一个字符串,改一处漏一处就是"查价页有、扫描没有"。
+//
+// 黑市只收不卖(只有 NPC 买单),卖侧天然是空的;Brecilien 旧版查价页没有,
+// 但成员在那里翻市场时抓包是有数据的,不放进来就又是"刚翻过却显示无数据"。
+const (
+	BlackMarket = conf.BlackMarket
+	Brecilien   = conf.Brecilien
+)
 
 // lookupCities 是查价矩阵的行:配置里的城市,加 Brecilien,黑市固定放最后一行。
 func lookupCities(cfgCities []string) []string {
