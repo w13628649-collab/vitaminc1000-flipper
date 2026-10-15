@@ -315,6 +315,75 @@ CLAUDE.md 里"使用费按每 100 营养消耗计价、站点没耐久或没营�
 就是 `key34` / `key22` / `key20`。**一个城一次请求,不是一个物品一次**——
 这正是市场数据死活拿不到的那种批量形状。
 
+消费链是闭合的,而且字段语义**不靠猜**——是客户端自己的参数名:
+
+```
+ClusterMapBase.Process(afb clusterMapInfo)        VA 0x18114bf50
+  → AddBuilding(long id, b5j info, Vector2 position, Vector2 size,
+                float constructed, string owner, bool canUse, bool usable,
+                bool guildAcess, AccessRights.Preset accessRights,
+                a7m usageFeeUser, a7m usageFeeFriends,     ← 两档费率
+                a7m durability, a7m nutrition,
+                a7m nutritionReward, a7m nutritionDeposit)  VA 0x181147000
+```
+
+同一条响应里还有 `AddRealEstate(long id, Vector2, Vector2, bool onSale,
+a7m salesPrice, Guid ownerCharacter, Guid ownerGuild)` ——**城市地皮的挂牌价**,
+那是另一条真实的市场信号,之前没人提过。
+
+### ⚠️ 但"所有商品的手续费"是派生值,不是下发值
+
+这一条要说清楚,否则会白做。**地图给的是每个建筑一个费率,不是每个物品一个费用。**
+
+客户端自己的 Calculation 面板把链条写出来了:
+
+```
+Nutrition Consumed = Item Value × Nutrition Factor      (gamedata: ItemValueToNutrition = 0.1125)
+Silver             = Nutrition Consumed per Item × Usage Fee × Amount Crafted
+                     + Base cost / Global discount / Region tax
+```
+
+所以要算单品费用,得有那个物品的 **Item Value**。而:
+
+| | itemvalue |
+|---|---|
+| `simpleitem`(精炼材料) | **有** |
+| `equipmentitem`(881 个) | **没有** |
+| `weapon`(754 个) | **没有** |
+
+**也就是说:这条链对精炼是通的,对装备是断的。** 你抱怨的正好是精炼,
+所以眼下够用;以后要做装备制造,得先追
+`ItemStatsView.get_ItemValueStat`(VA `0x181532360`)确认装备的 item value
+是不是从 `craftresource` 递归算出来的。**在那之前别写任何单品成本公式。**
+
+### 口径对上了,但线上标度没定
+
+静态表证实你记的两个数都对:
+
+```xml
+<BuildingManagement maxuseagefee="1000" maxnutritionreward="100000"
+                    lownutritionratio="0.1" lowdurabilityratio="0.1"/>
+```
+`@CLUSTERMAP_BUILDINGINFO_USERFEE_NEW` = "Usage Fee per 100 Nutrition consumed (Users)"。
+另外 **T2 及以下免制造费且不消耗营养**(`@ITEMDETAILS_REQUIREMENTS_USAGEFEE_INFO`)。
+
+**但线上 `key33/34` 的实际标度定不了**:协议里是 `long[]`,客户端字段是 `a7m`
+(定点类型,比例因子 10000),换算发生在没反汇编的 `Process` 里。
+
+`a7m` **不只管钱**——营养和耐久也用它,所以不能一律除以 10000。
+落地时用 `maxuseagefee=1000` 做量纲断言:**取到值 > 1000 就按 /10000 处理,
+≤1000 按整银币**。不要硬编码假设。
+
+还有一条真歧义:**`key33` = 关联费还是 `key34` = 公开费,只有社区一个来源**,
+客户端侧区分不了哪个是哪个。要一张游戏内截图钉死。
+
+### 事件 49 为什么不是答案
+
+`CraftBuildingInfo = 49` 号码是对的(全表核过),但它是 **ObjectEvent 派生**
+(基类 `avk` = `EventCodes.ObjectEvent=108`,`key0` 是 long 对象 id),
+**逐建筑、而且要先用 op 45 `RegisterToObject` 注册到那个对象**。
+它不是地图的数据源。
+
 ### 接进来的工作量:很小
 
 `op 197` 是 **operation response**,`params[253] == 197`。只要在
@@ -385,8 +454,13 @@ only **live market data** is not sent"。也就是说 op 81 的响应是密文,
    若出现别的加密消息类型(按 Photon 惯例 `0x80|kind`,比如加密事件),
    它连 `OnEncrypted` 都不触发,**静默消失**。`parser_test.go` 对这些零覆盖
 
-另外:AODP 那个 Clear/Detected 指示灯**只说明 op 81**,对事件命名空间
-(地图/建筑/资源)不作任何陈述。绿灯不保证地图事件可读,红灯也不证明不可读。
+另外:AODP 那个 Clear/Detected 指示灯是**只由拍卖路径置位的**
+(`operation_auction_get_offers.go:89`,一条 `AuctionGetOffers` 响应成功解出
+订单才正向置 Clear)。所以它**只说明 op 81**——不只是对事件不作陈述,
+**对 op 197 这种别的操作响应一样零陈述**。
+
+**这条推翻了"开一次游戏看 Clear/Detected 就能定"的说法**:那个绿灯做完,
+op 197 是不是明文照样未知。要单独验。
 
 ## 二点八、我们的抓包层现状
 
@@ -401,6 +475,136 @@ only **live market data** is not sent"。也就是说 op 81 的响应是密文,
 - **全部事件被丢弃**:[main.go:139](../guild/cmd/client/main.go#L139) 的
   `capture.Handler` 字面量压根没填 `OnEvent`,711 个事件码解析完即丢。
   Photon 层本身是完整的,缺的是上面这一层接线
+
+## 二点九、意外收获:最马上能用的东西一个封包都不用抓
+
+查地图的时候发现,地图这一维**抓包基本是白费力气**——真正需要网络的只剩
+一件事:**城市地块上现在盖的是哪台站、费率多少、归谁**。其余全部静态可得,
+而且已经解码在本地。
+
+### 1. 运输时间终于有依据了(现在是拍脑袋的固定小时数)
+
+区域连接**可以完整恢复**:
+
+- **2,619 条区域出口**,99.4% 双向闭合
+- 所有真实开放世界簇无一缺席(缺的 7 个全是 Debug/WIP)
+- 连通分量正好 4 个:皇家大陆 255、黑区 444、Brecilien 8、绿区小组 4
+
+而且不止跳数——**用出口坐标能算距离**。Thetford↔Lymhurst = 10 跳 / 5,461 单位,
+配 `movespeed=5.5` 和坐骑加成就能换算成分钟。
+`conf.Sizing.TravelHours` 那个拍脑袋的数可以换掉了。
+
+### 2. 一条直接改变建模方式的发现
+
+快速旅行网络 62 条边全带 `costmodifier` 和 **`noluggage`** 标志。
+
+**进出 Caerleon 的 10 条边全是 `noluggage=true`。**
+
+也就是说 **Caerleon 套利不能用快速旅行搬货,必须骑马**。我们现在
+`TravelHoursBetween` 对所有跨城都用同一个 `TravelHours`,这条必须分开。
+
+### 3. 聚合去重:三个地点是同一个订单簿
+
+`marketplacegroup` 证明 **Thetford Portal、Antiquarian's Den 和 Thetford Market
+是同一个订单簿**(AODP 的 `PORTAL_TO_CITY` 独立印证)。
+
+做聚合时不去重,**会把同一批挂单当成两个城市的独立供给**。
+`world.go` 的 `portals` 表已经处理了传送门,但 Antiquarian's Den 要确认。
+
+### 4. 城里有什么、没什么
+
+| | 静态数据里 |
+|---|---|
+| 市场 / 银行 / 修理 / 熔铸 / 竞技场 / 阵营商人 | **在**,精确坐标 |
+| 精炼站 / 制造站 | **不在** —— 只有 80 块地产地块(Caerleon 120、Brecilien 87) |
+
+城市 `templateinstance` 是 `0 0 0`,所以模板坐标直接等于簇内坐标。
+名字里带 `CRAFTER_TANNERY` 的全是装饰件,不是功能建筑。
+
+**这正好解释了为什么工作站费率必须走网络**:站是玩家盖在地产地块上的,
+静态表里只有地皮网格。
+
+### 5. 静态表把公式里除了"业主设的那个数"以外全补齐了
+
+- `craftingmodifiers.xml` —— **141 条 craftinglocation**,7 个主城完整的
+  精炼/制造加成(基础全 0.18,各城 +0.40 专属资源、+0.15 专属品类)。
+  和 CLAUDE.md 里记的常量对上
+- `buildings.xml` —— **9,199 条站点↔物品映射**(craftingitemlist)
+- 148 个 craftbuilding 的 craftcapacity / nutritionstorage / durability
+- `ItemValueToNutrition = 0.1125`、`maxuseagefee = 1000`
+- 返还率两个锚点都能对上(15.25% / 43.5%)
+- **转换(TRANSMUTATION)挂在精炼站上,和精炼共用同一份使用费**
+- 市场常量静态证实:`setupfee` 2.5%、`transactiontax` 8%(非会员),
+  订单时长只有 **12 / 24 / 168 / 720 小时**四挡。Asia 版与基础版逐字节一致
+
+### 6. 配方↔资源两条键都闭合
+
+- `items.xml` 的 `resourcetype` 对上 harvestables 的 `resource`
+- `item.craftingcategory`(44 个取值)正好是 `craftingmodifiers` 的 name 取值域
+- 13,579 条配方 / 28,554 条物料 / 668 个 RareState(`T4_WOOD` → `T4_WOOD_LEVEL1/2/3`)
+
+**没碰任何实时资源节点。**
+
+## 二点十、边界:一条能写成 if 的判准
+
+这一维查完,结论是**条款里没有地图条文**——T&C 三段全文扫
+`map/radar/overlay/minimap/coordinate/position/location/gather/harvest`,
+**命中数全部为 0**。唯一一条位置性质的禁止是 §11.2 iii)"不得互相当斥候",
+写在多开规则里。所以"地图数据能不能收"这个问题,**条款不回答**。
+
+### 对上一个提交的修正:§13.3 是七条不是三条
+
+而且结构是**反直觉**的:挂了"unless permitted by the Game Rules"豁免的那两条,
+恰恰是 overlay/radar 形状的;而 **capture / data mining 那条没有任何放行路径**。
+**被动读数据那条最死。**
+
+§21 的 Game Rules 不在客户端里(只给外链,Effective August 31, 2026),
+所以那两个口子到底放行什么,**从客户端定不了**。
+
+### 检测面:没有任何位置相关的探针
+
+全表扫 556 个操作码 + 711 个事件码,按 `position|map|radar|coord`
+——**没有任何位置/地图相关的检测上报**。
+
+422/423/424 确认在 `OperationCodes`,是客户端主动上报,但**字段里一个坐标都没有**
+(424 = `long` + 6×`int`,测的是采集点击节奏)。
+
+地图数据的风险**不来自客户端探针**,来自 `@BAN_REASON_NAKED_SCOUTING`
+那一侧——行为模式可罚,玩家 `/reportbot` 举报是入口,举报分类只有
+Bot/Exploit/Hack,**封号理由全表 21 条里不区分第三方程序的性质**。
+
+### 判准
+
+> **这条数据换个人、换个时间去看,是不是同一个值?**
+> 是 → 可以收;否 → 不能收。
+
+手续费/税率/所有者/建筑布局:**是**(所有者不改,谁看都一样,明天还在)。
+资源节点/怪/人物位置:**否**(我采了就没了,你看到的和我看到的不一样)。
+
+落到代码,还有一条更机械、直接能写成 `if` 的:
+
+> **只解操作响应(`params[253]`),一条事件(`params[252]`)都不解。**
+
+这条线和 AODP 的实际采集面**逐字重合**(它只有 81/82/95/96/197 四个
+operation 处理器、**零个事件处理器**),而且正好把"服务端因为你站在那里
+才推给你的东西"整类排除在外。
+
+白名单按 **(码, 参数键)** 显式枚举,默认丢弃,**不许"全抓后过滤"**:
+
+| | |
+|---|---|
+| **收** | op 81/82/95/96/97;op 197 的 key 0/17/20/22/23/24/25/31/33/34(key18 坐标**只当"哪个建筑"的连接键,不建地图层**);ev 49/50/51/58 BuildingInfo;本地 GameData |
+| **不收** | 任何服务端主动推送且带 `Vector2` 的事件(ev 38/39/40/46 资源、123/47 怪、29/3/1 人物);ev 328/329/447/487/563 minimap 标记流;**op 486 `GetPlayerInfoForStalk`** |
+
+**但要说清楚:这是风险线,不是合规线。** §13.3 那条罚的是 capture 不是 use,
+"可以收"那一侧在文本上同样没被允许。这条线追踪的是 **SBI 事实上选择不执行
+的范围**(恰好等于 AODP 的采集面)和它实际建了探针与封号理由的范围。
+
+### radar-roadmap 落在哪
+
+§13.3 帽子句"给予相对其他玩家的优势" + 第一条 "modify the gaming experience"
++ 2020 标准的两个禁止分支**同时命中**,而且是唯一有专门探针(op 424)
+对着的一支。**"数据聚合通常可接受"对它文本上不可用。** 不做。
 
 ## 三、配方:精炼功能的整个地基
 
