@@ -153,6 +153,22 @@ def return_rate(base, city, focus):
 被动抓包(albiondata-client)被默许,依据是 SBI 前技术负责人 MadDave 2017 年
 和社区经理 SirisLi 2025 年的公开表态,都挂在 AODP 首页。
 
+**但要说清楚:那是选择性不执行,不是条款豁免。** 客户端自己打包的 SBI 完整
+《条款与条件》(当前版本,可逐句引用)§13.3 明文禁止三件事,而且**都没有挂
+"除非游戏规则允许"的口子**:
+
+> - Use software playing in place of the player (such as scripts or bots)
+> - Use measures that may cause an unreasonable or excessive load on technical capacities
+> - Use software enabling "data mining" or which intercepts or captures data otherwise
+
+第三条字面上把被动抓包也写进去了。所以**不能说"被动抓包在条款里是合规的"**。
+AODP FAQ 里对 SBI 立场最接近原文的引用是 "analyzing and viewing data in this way
+is acceptable" —— 两个被动动词,且 "this way" 特指抓包。
+
+**主动向游戏服务器发请求不在这个范围里,不做。** 完整论证见 `docs/client-data.md`
+第二点五节。另外 §4.2.2 禁止任何商业用途,这条和采集方式无关,**独立压在 CDK
+售卖计划上**,要单独决策。
+
 ## 待验证 / 待办
 
 1. ~~挂买单是否收 2.5% 手续费~~ → **已确认:收**。依据是游戏自己的本地化文本
@@ -168,13 +184,24 @@ def return_rate(base, city, focus):
    详见 `docs/packet-capture.md`
 3. 向 SBI support 邮件确认非同时登录的免费小号是否受 premium 条款约束
 4. 亚服实际数据覆盖率摸底
-5. **市场列表页批量抓取的实测**(回家后在游戏里试):清空 tier 和附魔筛选、
-   只选「矿石」、翻一页,看库里这一下进来了多少个不同的 `(物品, 品质)`。
-   27 个 ⇒ 列表那 50 条是物品,一次能覆盖整个子类;远少于 27 ⇒ 是挂单,页数要重算。
-   顺带确认分类下拉能不能选到「资源」这一层、以及「买单」标签页是不是真批量。
-   背景和推导见 `docs/client-data.md` 第二节。
-   **已经能定的一条:历史成交拿不到**——只有物品详情弹窗请求它(op 95/96),
-   浏览列表的视图一个都不发,所以历史只能一个个点,或者走 AODP
+5. **⚠️ 第 0 号:确认你的账号现在收到的市场数据是不是明文。**
+   2024-01 SBI 把市场数据对**所有账号**加密过,后来只放行了"许多账号",
+   判定规则连 AODP 都不知道(FAQ 原文:"based on some combination of variables
+   that we are not aware of")。明文**不是协议属性,是服务端对账号的当前取值**。
+   这条不成立,整条被动抓包路线归零。开一次游戏看 albiondata-client 的
+   `EncryptionClear` / `Detected` 就能定。比下面所有事都优先
+6. **市场列表页的实测**(回家后在游戏里试,一轮抓包能同时关掉好几条):
+   开市场做四个动作——清空筛选选矿石翻一页、换一次排序、距离拉满、
+   拨「显示基础价」开关。然后看:响应里 AuctionDTO 的条数 vs distinct
+   `ItemTypeId`、请求里三个 int 哪个变了、`key8` 塞了几个 short。
+   最要紧的一条是:**服务端在一批物品里怎么挑那 50 条挂单**(全局按价排,
+   还是每个物品各给几条)。推导见 `docs/client-data.md` 第二节
+   - 已定:**那 50 条是挂单不是物品**(`MarketPlaceBuyEntry.a : dgc`,
+     `dgc` 包 `AuctionDTO`,行里带到期和距离标签)。之前算的"27 个变体
+     一页拿全"是错的
+   - 已定:**历史成交拿不到**——只有物品详情弹窗请求 op 95/96,
+     浏览列表的视图一个都不发
+   - 已定:**主动发请求这条路不走**,理由见 `docs/client-data.md` 第二点五节
 
 ## 参考
 

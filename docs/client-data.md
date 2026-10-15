@@ -86,16 +86,39 @@ MarketPlaceFooterView.MaxPage = 19
 (客户端自己有全量物品表),分页决定这一页是哪 50 个,再把这批索引
 (请求里那个 `short[]`)发给服务器。
 
-**但正因为每页 50 条,大多数情况根本不用翻页:**
+**那 50 条是挂单,不是物品。** 这条之前写反了,改过来:
 
-| 选什么 | 变体数 | 页数 |
-|---|---|---|
-| 「矿石」子类(含全部等级和附魔) | 27 | **1** |
-| 整个 `crafting/resources`(五种原料) | 133 | 3 |
-| 整个 `crafting/refinedresources`(五种成品) | 115 | 3 |
+```
+MarketPlaceBuyEntry        字段 a : dgc   + TimeLabel(到期) + DistanceLabel
+MarketPlaceBuyOrdersEntry  字段 a : dgc   + TimeLabel
+```
 
-矿的 27 个变体(T2–T8 × 5 档附魔)**全在一页上**。清空 tier 和附魔筛选,
-一次请求全拿到——不是 21 次。
+`dgc..ctor(string)`(VA `0x180b20e70`)用 JsonFx 把响应里的一条 JSON 解成
+`Albion.Common.Auction.AuctionDTO`,存在 this+0x10。这个 DTO 有 21 个字段,
+含订单 id、卖家角色 id、数量、到期时间、ReferenceId——**是一条挂单**。
+列表行自带「到期」和「距离」两个标签,物品级的行不会有到期时间。
+
+所以 `PageSize=50` = 一页 50 **条挂单**。之前算的"矿的 27 个变体全在一页上、
+一次就拿全"是错的。
+
+### 请求点名一批物品,响应回一页挂单
+
+这两件事要分开看:
+
+| | 内容 |
+|---|---|
+| **请求** | `key8 : short[]` 是**物品索引数组**,一次点名一批物品;`key12` 是 MaxResults |
+| **响应** | `params[0] : string[]`,每条是一个 AuctionDTO,**一页 50 条挂单** |
+
+所以"一次请求覆盖多个物品"成立,但**回来的不是每个物品一行**,而是这批物品
+里的 50 条挂单。上限 `MaxPage=19` ⇒ 一套筛选最多翻出 20 × 50 = 1000 条挂单。
+
+**这反而让"清空筛选"变得可疑。** 如果服务端是按价格全局排序,清空附魔和 tier
+去查矿,排在前面的会是最便宜的 T2 矿的几十条挂单,贵的 T7/T8 可能一条都排不进来
+——覆盖面不但没变宽,还可能变窄。按单个物品筛反而每次都拿到该物品完整的盘口。
+
+服务端到底怎么在 27 个物品里挑这 50 条(全局按价排?还是每个物品各给几条?),
+代码里定不了,**这是现在最该实测的一条**。
 
 ### 和之前那条结论的出入
 
@@ -121,21 +144,144 @@ MarketPlaceFooterView.MaxPage = 19
 那个(历史)变化慢**。历史是按天分桶的,而且 AODP 本来就给
 (虽然 `item_count` 只统计卖单)。
 
-### 待办:这几条要进游戏实测才能定
+### 待办:进游戏实测才能定的
 
-代码只能推到这里,下面三条必须有实时样本:
+1. **服务端在一批物品里怎么挑那 50 条挂单。** 全局按价排序,还是每个物品各给几条?
+   这条决定"清空筛选"到底是帮忙还是帮倒忙,是优先级最高的一条
+2. **分类下拉能选到哪一层**(能不能选到「资源」大类,还是只能下钻到「矿石」)
+3. **买单页是不是真批量。** 结构和购买页一模一样,但没实测过
+4. 三个 int(`key11/12/13`)里哪个是页码。`key12` 社区标注为 MaxResults,
+   另两个一个大概是 Max Distance,剩下那个是页码——翻一页看哪个变就知道
+5. 一次请求的 `short[]` 能塞多少个物品(协议上限 / 服务端上限 / UDP 分片上限)
 
-1. **分类下拉能选到哪一层。** 能直接选「资源」大类就是 3 页覆盖五种原料;
-   只能下钻到「矿石」就是每个子类 1 页(也才 5 次)
-2. **列表那 50 条是物品还是挂单。** 推断是物品(`BuildItemListFromFilter`
-   是"建物品列表",`SortItemsByPrice` 排的也是 items),但没有实时样本证实。
-   如果是挂单,热门货一个物品就能占满一页,页数要重算
-3. **买单页到底是不是批量的。** 结构上和购买页一模一样,但没实测过
+**一轮抓包能同时关掉上面全部。** 开一次市场,做四个动作:
+清空筛选选矿石翻一页、换一次排序、把距离拉满、拨一下「显示基础价」开关。
+然后对着这一轮的包看:响应里 AuctionDTO 的条数 vs distinct `ItemTypeId`
+(DTO 里 `ItemTypeId` 就是字符串 id,不需要 short↔item_id 映射)、
+请求里哪个 int 变了、`key8` 里装了几个 short。
 
-**怎么测**:清空筛选、选矿石、翻一页,然后查库里这一下进来了多少个不同的
-`(物品, 品质)`。27 个 ⇒ 是物品清单;远少于 27 ⇒ 是挂单。
-`store.CapturedItems` 本来就按 `(物品, 品质)` 记了件数和 `last_seen`,
-一条 SQL 就能看。
+### ⚠️ 第 0 号实测项:确认你的账号现在是不是明文
+
+比上面所有都优先。AODP 自己的 FAQ 原文:
+
+> In January 2024, SBI made changes to market data. **All accounts were receiving
+> encrypted data** making the AODP client unable to capture live market data.
+> We worked with a community manager at SBI; they decided to allow **many accounts**
+> to receive unencrypted market data again. However, unencrypted data is based on
+> **some combination of variables that we are not aware of.**
+
+也就是说明文**不是协议属性,是服务端对部分账号的当前取值**,而且判定规则
+连 AODP 都不知道。albiondata-client 自己有 `EncryptionClear` / `Detected` 指示。
+**这一条不成立,整条被动抓包路线归零。**开一次游戏看一眼就能定。
+
+## 二点五、能不能自己批量发请求(结论:不走这条路)
+
+这是单独查过的一轮(六维取证 + 证伪 + 查漏)。结论分三段。
+
+### 协议层面:支持批量
+
+`AuctionGetOffers(81)` 的请求有 17 个键,其中:
+
+| 键 | 类型 | 含义 |
+|---|---|---|
+| `key0` | long | 继承自拍卖基类 `aj8.bqs`,**极可能是市场建筑对象 id** |
+| `key8` | `short[]` | **物品索引数组** —— 一次点名一批物品 |
+| `key12` | int | MaxResults |
+
+两个独立来源互相印证:客户端 IL2CPP 元数据(`aj2` 的字段表),和
+albiondata-client 的 `operation_auction_get_offers.go` 里的 mapstructure 标签
+(`ItemIds []uint16 "8"`、`MaxResults uint32 "12"`),8 个键位置类型全对。
+客户端侧签名也一致:`MarketPlaceBuyView.DemandOffers(gav pFilter, short[] pItemTypes)`。
+
+**所以"能不能批量"的答案在协议里是能。** 拦路的不是协议。
+
+### 但"调接口"这个东西不存在
+
+没有 HTTP,没有 RPC,没有任何可以"调"的入口。只有一条**已登录玩家的
+Photon 可靠 UDP 会话**。把一个包塞进那条会话,需要三样东西,而这轮调查
+对这三样**一行证据都没有**:
+
+1. **写方向的序列化器** —— 已定位的 `ci9.b<T>` 全是读方向。
+   谁把 `aj2` 的 17 个字段写进 `Dictionary<byte,object>`,没找到
+2. **Photon 可靠层** —— peerID、握手 challenge、每通道序列号、CRC 开关,
+   全是按公开 Photon 标准推的,混淆过的 `Photon3Unity3D.dll` 一个函数都没反汇编过
+3. **登录握手 op5** —— 请求类 `xn` 有 28 个字段(含 `byte[]` 和多个平台 token),
+   响应 `ahw` 有 99 个字段,结果码里有 `IncorrectClientVersion=200` /
+   `ClientCorrupted=208` / `AccountAlreadyInUse=203`
+
+换句话说:**"请求体可重建"只覆盖了链条的前三分之一**,后面两段是空白。
+
+### 就算做成了,收益也很小
+
+`key0` 那个 long 极可能是**市场建筑对象 id**(旁证:它只挂在拍卖族基类上,
+不在通用请求基类 `x6` 上;事件基类 `avk.ddn` 同样是 long 且已定为对象 id;
+客户端有 `MarketPlaceGui.get_BuildingId() -> long`)。
+
+如果是,那就意味着**你必须站在那个市场里才能发这个包**——而站在市场里,
+你本来就能点刷新。省掉的是几次鼠标点击,不是解锁新能力。跨城查盘口
+在协议层面解决不了。
+
+(注:这条是推断。`MarketPlaceFilterSearchBar` 有 `DistanceDropdown` 和
+`get_CurrentSetDistance()`,走私贩网络也确实全网共享订单,所以"距离"维度
+存在;但那是走私网络的机制,不等于能任选城市。)
+
+### 合规:条款比我们之前记的严
+
+客户端自己打包了 SBI 完整《条款与条件》
+(`localization.xml` 的 `@LOGIN_POPUP_GENERAL_TERMS_AND_CONDITIONS`,约 5 万字符),
+绑在 1.32.030.345319 上,是当前有效、可逐句引用的一手文本。§13.3「禁止操纵」
+有三条直接压在这件事上,**且都没有挂"除非游戏规则允许"的豁免**:
+
+> - Use software playing in place of the player (such as scripts or bots)
+> - Use measures that may cause an unreasonable or excessive load on technical capacities
+> - Use software enabling "data mining" or which intercepts or captures data otherwise
+
+第一条管手段,第二条管量("批量"二字本身就落在这里),**第三条字面上把
+被动抓包也写进去了**。
+
+**这是对 CLAUDE.md 旧说法的纠偏**:不能说"被动抓包在条款里是合规的"。
+条款字面不允许;AODP 能存在靠的是 SBI 针对那个具体项目的单独公开表态
+(MadDave 2017 / SirisLi 2025,两张截图确实挂在 AODP 服务端仓库里:
+`app/assets/images/maddave-approval.png`),属于**选择性不执行,不是条款豁免**。
+这种默许不会自动延伸到一个条款里有独立禁止条文的新行为上。
+
+AODP FAQ 里对 SBI 立场最接近原文的引用是:
+
+> Sandbox Interactive has stated that **analyzing and viewing** data **in this way**
+> is acceptable. You must not modify, manipulate, or **interfere with** the game.
+
+"analyzing and viewing" 都是被动动词,"in this way" 指的是前文的抓包方式。
+主动发包既不是 viewing,也不在 "this way" 范围内。
+
+另外两条顺带查到的:
+
+- **§4.2.2 禁止任何商业用途**("any use of the Services for commercial purposes
+  is prohibited unless specifically allowed")。这条和采集方式无关,**独立压在
+  CDK 售卖计划上**,是一个平行的风险面,要单独决策
+- 客户端装了 **EAC + XignCode 两套反作弊**,而且操作码全表里有
+  `ClientAntiAutoClickerInfo=422`、`ClientBotPatternDetectionInfo=423`、
+  `ClientAntiGatherClickerInfo=424`——客户端会主动向服务端上报行为模式特征。
+  封号理由枚举里 `@BAN_REASON_NEW_THIRD_PARTY_PROGRAMS` 和 `@BAN_REASON_BOTTING`
+  是常备的可勾选类别
+
+还有一条检测面值得记:`MarketPlaceCreateBuyOrderView.DemandLowestOfferPrices`
+的 VA 是空壳 `0x1804873c0`,即**本版本客户端从不发 op 97**。客户端从不发的包,
+你一发就是真实客户端永远不会产生的流量。同理,自建请求如果填了客户端从不填的
+键组合,也是同类指纹。
+
+### 真正能少点鼠标的两条路
+
+都不在"发包"这边:
+
+1. **AODP REST 本身就是批量接口。** 官方文档原文:"You can request a lot of
+   data in a single call by combining the items and locations you need"。
+   URL 上限 4096 字符、180 次/分钟(**注意:不声明 gzip 会被 rack_attack 压到
+   6 次/分钟**)。248 个原料 × 8 城 × 5 品质 ≈ **2 次 HTTP**。
+   零数据包、零会话状态、零密钥。让 AODP 当覆盖率基线,自己只补它缺的
+2. **200 人天然分布在 8 城。** 客户端有 `MarketPlaceGui.StoreState` /
+   `RestoreState`(配 `StateKey.ForCharacter` + `StateLifeTime.Permanent`),
+   成员把筛选设一次就会被记住,之后路过市场点一下刷新就是一次完整批量请求。
+   零检测面、零合规风险、零工程量
 
 ## 三、配方:精炼功能的整个地基
 
