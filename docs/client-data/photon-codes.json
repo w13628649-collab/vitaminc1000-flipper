@@ -1,0 +1,3810 @@
+{
+ "_source": "Albion 客户端的 IL2CPP 元数据(metadata v39),取自 Albion.Common.Photon.OperationCodes / EventCodes 两个枚举",
+ "_note": "这是客户端里**声明**的码表,不代表服务端一定会发;同一个码可能对应多个名字(枚举别名)",
+ "client_version": "1.32.030.345319",
+ "operations": {
+  "0": [
+   "Unused"
+  ],
+  "1": [
+   "Ping"
+  ],
+  "2": [
+   "Join"
+  ],
+  "3": [
+   "VersionedOperation"
+  ],
+  "4": [
+   "CreateAccount"
+  ],
+  "5": [
+   "Login"
+  ],
+  "6": [
+   "CreateGuestAccount"
+  ],
+  "7": [
+   "CreatePlatformOnlyAccount"
+  ],
+  "8": [
+   "SendCrashLog"
+  ],
+  "9": [
+   "SendTraceRoute"
+  ],
+  "10": [
+   "SendVfxStats"
+  ],
+  "11": [
+   "SendGamePingInfo"
+  ],
+  "12": [
+   "CreateCharacter"
+  ],
+  "13": [
+   "DeleteCharacter"
+  ],
+  "14": [
+   "SelectCharacter"
+  ],
+  "15": [
+   "AcceptPopups"
+  ],
+  "16": [
+   "RedeemKeycode"
+  ],
+  "17": [
+   "GetGameServerByCluster"
+  ],
+  "18": [
+   "GetShopPurchaseUrl"
+  ],
+  "19": [
+   "GetReferralSeasonDetails"
+  ],
+  "20": [
+   "GetReferralLink"
+  ],
+  "21": [
+   "GetShopTilesForCategory"
+  ],
+  "22": [
+   "Move"
+  ],
+  "23": [
+   "AttackStart"
+  ],
+  "24": [
+   "CastStart"
+  ],
+  "25": [
+   "CastCancel"
+  ],
+  "26": [
+   "TerminateToggleSpell"
+  ],
+  "27": [
+   "ChannelingCancel"
+  ],
+  "28": [
+   "AttackBuildingStart"
+  ],
+  "29": [
+   "InventoryDestroyItem"
+  ],
+  "30": [
+   "InventoryMoveItem"
+  ],
+  "31": [
+   "InventoryRecoverItem"
+  ],
+  "32": [
+   "InventoryRecoverAllItems"
+  ],
+  "33": [
+   "InventorySplitStack"
+  ],
+  "34": [
+   "InventorySplitStackInto"
+  ],
+  "35": [
+   "InventoryStack"
+  ],
+  "36": [
+   "InventoryReorder"
+  ],
+  "37": [
+   "InventoryDropAll"
+  ],
+  "38": [
+   "InventoryAddToStacks"
+  ],
+  "39": [
+   "InventoryMoveGivenItems"
+  ],
+  "40": [
+   "GetClusterData"
+  ],
+  "41": [
+   "ChangeCluster"
+  ],
+  "42": [
+   "ConsoleCommand"
+  ],
+  "43": [
+   "ChatMessage"
+  ],
+  "44": [
+   "ReportClientError"
+  ],
+  "45": [
+   "RegisterToObject"
+  ],
+  "46": [
+   "UnRegisterFromObject"
+  ],
+  "47": [
+   "CraftBuildingChangeSettings"
+  ],
+  "48": [
+   "CraftBuildingTakeMoney"
+  ],
+  "49": [
+   "RepairBuildingChangeSettings"
+  ],
+  "50": [
+   "RepairBuildingTakeMoney"
+  ],
+  "51": [
+   "ActionBuildingChangeSettings"
+  ],
+  "52": [
+   "HarvestStart"
+  ],
+  "53": [
+   "HarvestCancel"
+  ],
+  "54": [
+   "TakeSilver"
+  ],
+  "55": [
+   "ActionOnBuildingStart"
+  ],
+  "56": [
+   "ActionOnBuildingCancel"
+  ],
+  "57": [
+   "InstallResourceStart"
+  ],
+  "58": [
+   "InstallResourceCancel"
+  ],
+  "59": [
+   "InstallSilver"
+  ],
+  "60": [
+   "BuildingFillNutrition"
+  ],
+  "61": [
+   "BuildingChangeRenovationState"
+  ],
+  "62": [
+   "BuildingBuySkin"
+  ],
+  "63": [
+   "BuildingClaim"
+  ],
+  "64": [
+   "BuildingGiveup"
+  ],
+  "65": [
+   "BuildingNutritionSilverStorageDeposit"
+  ],
+  "66": [
+   "BuildingNutritionSilverStorageWithdraw"
+  ],
+  "67": [
+   "BuildingNutritionSilverRewardSet"
+  ],
+  "68": [
+   "ConstructionSiteCreate"
+  ],
+  "69": [
+   "PlaceableObjectPlace"
+  ],
+  "70": [
+   "PlaceableObjectPlaceCancel"
+  ],
+  "71": [
+   "PlaceableObjectPickup"
+  ],
+  "72": [
+   "FurnitureObjectUse"
+  ],
+  "73": [
+   "FarmableHarvest"
+  ],
+  "74": [
+   "FarmableFinishGrownItem"
+  ],
+  "75": [
+   "FarmableDestroy"
+  ],
+  "76": [
+   "FarmableGetProduct"
+  ],
+  "77": [
+   "FarmableFill"
+  ],
+  "78": [
+   "TearDownConstructionSite"
+  ],
+  "79": [
+   "AuctionCreateOffer"
+  ],
+  "80": [
+   "AuctionCreateRequest"
+  ],
+  "81": [
+   "AuctionGetOffers"
+  ],
+  "82": [
+   "AuctionGetRequests"
+  ],
+  "83": [
+   "AuctionBuyOffer"
+  ],
+  "84": [
+   "AuctionAbortAuction"
+  ],
+  "85": [
+   "AuctionModifyAuction"
+  ],
+  "86": [
+   "AuctionAbortOffer"
+  ],
+  "87": [
+   "AuctionAbortRequest"
+  ],
+  "88": [
+   "AuctionSellRequest"
+  ],
+  "89": [
+   "AuctionGetFinishedAuctions"
+  ],
+  "90": [
+   "AuctionGetFinishedAuctionsCount"
+  ],
+  "91": [
+   "AuctionFetchAuction"
+  ],
+  "92": [
+   "AuctionGetMyOpenOffers"
+  ],
+  "93": [
+   "AuctionGetMyOpenRequests"
+  ],
+  "94": [
+   "AuctionGetMyOpenAuctions"
+  ],
+  "95": [
+   "AuctionGetItemAverageStats"
+  ],
+  "96": [
+   "AuctionGetItemAverageValue"
+  ],
+  "97": [
+   "AuctionGetLowestOfferPrices"
+  ],
+  "98": [
+   "ContainerOpen"
+  ],
+  "99": [
+   "ContainerClose"
+  ],
+  "100": [
+   "ContainerManageSubContainer"
+  ],
+  "101": [
+   "Respawn"
+  ],
+  "102": [
+   "Suicide"
+  ],
+  "103": [
+   "JoinGuild"
+  ],
+  "104": [
+   "LeaveGuild"
+  ],
+  "105": [
+   "CreateGuild"
+  ],
+  "106": [
+   "InviteToGuild"
+  ],
+  "107": [
+   "DeclineGuildInvitation"
+  ],
+  "108": [
+   "KickFromGuild"
+  ],
+  "109": [
+   "InstantJoinGuild"
+  ],
+  "110": [
+   "DuellingChallengePlayer"
+  ],
+  "111": [
+   "DuellingAcceptChallenge"
+  ],
+  "112": [
+   "DuellingDenyChallenge"
+  ],
+  "113": [
+   "ChangeClusterTax"
+  ],
+  "114": [
+   "ClaimTerritory"
+  ],
+  "115": [
+   "GiveUpTerritory"
+  ],
+  "116": [
+   "ChangeTerritoryAccessRights"
+  ],
+  "117": [
+   "GetMonolithInfo"
+  ],
+  "118": [
+   "GetClaimInfo"
+  ],
+  "119": [
+   "GetAttackInfo"
+  ],
+  "120": [
+   "GetTerritorySeasonPoints"
+  ],
+  "121": [
+   "GetAttackSchedule"
+  ],
+  "122": [
+   "GetMatches"
+  ],
+  "123": [
+   "GetMatchDetails"
+  ],
+  "124": [
+   "JoinMatch"
+  ],
+  "125": [
+   "LeaveMatch"
+  ],
+  "126": [
+   "GetClusterInstanceInfoForStaticCluster"
+  ],
+  "127": [
+   "ChangeChatSettings"
+  ],
+  "128": [
+   "LogoutStart"
+  ],
+  "129": [
+   "LogoutCancel"
+  ],
+  "130": [
+   "ClaimOrbStart"
+  ],
+  "131": [
+   "ClaimOrbCancel"
+  ],
+  "132": [
+   "MatchLootChestOpeningStart"
+  ],
+  "133": [
+   "MatchLootChestOpeningCancel"
+  ],
+  "134": [
+   "DepositToGuildAccount"
+  ],
+  "135": [
+   "WithdrawalFromAccount"
+  ],
+  "136": [
+   "ChangeGuildPayUpkeepFlag"
+  ],
+  "137": [
+   "ChangeGuildTax"
+  ],
+  "138": [
+   "GetMyTerritories"
+  ],
+  "139": [
+   "MorganaCommand"
+  ],
+  "140": [
+   "GetServerInfo"
+  ],
+  "141": [
+   "SubscribeToCluster"
+  ],
+  "142": [
+   "AnswerMercenaryInvitation"
+  ],
+  "143": [
+   "GetCharacterEquipment"
+  ],
+  "144": [
+   "GetCharacterSteamAchievements"
+  ],
+  "145": [
+   "GetCharacterStats"
+  ],
+  "146": [
+   "GetKillHistoryDetails"
+  ],
+  "147": [
+   "ReSpecAchievement"
+  ],
+  "148": [
+   "ChangeAvatar"
+  ],
+  "149": [
+   "GetRankings"
+  ],
+  "150": [
+   "GetRank"
+  ],
+  "151": [
+   "GetGvgSeasonRankings"
+  ],
+  "152": [
+   "GetGvgSeasonRank"
+  ],
+  "153": [
+   "GetGvgSeasonHistoryRankings"
+  ],
+  "154": [
+   "GetGvgSeasonGuildMemberHistory"
+  ],
+  "155": [
+   "KickFromGvGMatch"
+  ],
+  "156": [
+   "GetCrystalLeagueDailySeasonPoints"
+  ],
+  "157": [
+   "GetChestLogs"
+  ],
+  "158": [
+   "GetAccessRightLogs"
+  ],
+  "159": [
+   "GetGuildAccountLogs"
+  ],
+  "160": [
+   "GetGuildAccountLogsLargeAmount"
+  ],
+  "161": [
+   "InviteToPlayerTrade"
+  ],
+  "162": [
+   "PlayerTradeCancel"
+  ],
+  "163": [
+   "PlayerTradeInvitationAccept"
+  ],
+  "164": [
+   "PlayerTradeAddItem"
+  ],
+  "165": [
+   "PlayerTradeRemoveItem"
+  ],
+  "166": [
+   "PlayerTradeAcceptTrade"
+  ],
+  "167": [
+   "PlayerTradeSetSilverOrGold"
+  ],
+  "168": [
+   "SendMiniMapPing"
+  ],
+  "169": [
+   "Stuck"
+  ],
+  "170": [
+   "BuyRealEstate"
+  ],
+  "171": [
+   "ClaimRealEstate"
+  ],
+  "172": [
+   "GiveUpRealEstate"
+  ],
+  "173": [
+   "ChangeRealEstateOutline"
+  ],
+  "174": [
+   "GetMailInfos"
+  ],
+  "175": [
+   "GetMailCount"
+  ],
+  "176": [
+   "ReadMail"
+  ],
+  "177": [
+   "SendNewMail"
+  ],
+  "178": [
+   "DeleteMail"
+  ],
+  "179": [
+   "MarkMailUnread"
+  ],
+  "180": [
+   "ClaimAttachmentFromMail"
+  ],
+  "181": [
+   "ApplyToGuild"
+  ],
+  "182": [
+   "AnswerGuildApplication"
+  ],
+  "183": [
+   "RequestGuildFinderFilteredList"
+  ],
+  "184": [
+   "UpdateGuildRecruitmentInfo"
+  ],
+  "185": [
+   "RequestGuildRecruitmentInfo"
+  ],
+  "186": [
+   "RequestGuildFinderNameSearch"
+  ],
+  "187": [
+   "RequestGuildFinderRecommendedList"
+  ],
+  "188": [
+   "RegisterChatPeer"
+  ],
+  "189": [
+   "SendChatMessage"
+  ],
+  "190": [
+   "SendModeratorMessage"
+  ],
+  "191": [
+   "JoinChatChannel"
+  ],
+  "192": [
+   "LeaveChatChannel"
+  ],
+  "193": [
+   "SendWhisperMessage"
+  ],
+  "194": [
+   "Say"
+  ],
+  "195": [
+   "PlayEmote"
+  ],
+  "196": [
+   "StopEmote"
+  ],
+  "197": [
+   "GetClusterMapInfo"
+  ],
+  "198": [
+   "AccessRightsChangeSettings"
+  ],
+  "199": [
+   "Mount"
+  ],
+  "200": [
+   "MountCancel"
+  ],
+  "201": [
+   "BuyJourney"
+  ],
+  "202": [
+   "SetSaleStatusForEstate"
+  ],
+  "203": [
+   "ResolveGuildOrPlayerName"
+  ],
+  "204": [
+   "GetRespawnInfos"
+  ],
+  "205": [
+   "MakeHome"
+  ],
+  "206": [
+   "LeaveHome"
+  ],
+  "207": [
+   "ResurrectionReply"
+  ],
+  "208": [
+   "AllianceCreate"
+  ],
+  "209": [
+   "AllianceDisband"
+  ],
+  "210": [
+   "AllianceGetMemberInfos"
+  ],
+  "211": [
+   "AllianceInvite"
+  ],
+  "212": [
+   "AllianceAnswerInvitation"
+  ],
+  "213": [
+   "AllianceCancelInvitation"
+  ],
+  "214": [
+   "AllianceKickGuild"
+  ],
+  "215": [
+   "AllianceLeave"
+  ],
+  "216": [
+   "AllianceChangeGoldPaymentFlag"
+  ],
+  "217": [
+   "AllianceGetDetailInfo"
+  ],
+  "218": [
+   "GetIslandInfos"
+  ],
+  "219": [
+   "BuyMyIsland"
+  ],
+  "220": [
+   "BuyGuildIsland"
+  ],
+  "221": [
+   "UpgradeMyIsland"
+  ],
+  "222": [
+   "UpgradeGuildIsland"
+  ],
+  "223": [
+   "TerritoryFillNutrition"
+  ],
+  "224": [
+   "TeleportBack"
+  ],
+  "225": [
+   "PartyInvitePlayer"
+  ],
+  "226": [
+   "PartyRequestJoin"
+  ],
+  "227": [
+   "PartyAnswerInvitation"
+  ],
+  "228": [
+   "PartyAnswerJoinRequest"
+  ],
+  "229": [
+   "PartyLeave"
+  ],
+  "230": [
+   "PartyKickPlayer"
+  ],
+  "231": [
+   "PartyMakeLeader"
+  ],
+  "232": [
+   "PartyChangeLootSetting"
+  ],
+  "233": [
+   "PartyMarkObject"
+  ],
+  "234": [
+   "PartySetRole"
+  ],
+  "235": [
+   "PartyChangeFactionWarfareRequestReinforcementsSetting"
+  ],
+  "236": [
+   "SetGuildCodex"
+  ],
+  "237": [
+   "ExitEnterStart"
+  ],
+  "238": [
+   "ExitEnterCancel"
+  ],
+  "239": [
+   "QuestGiverRequest"
+  ],
+  "240": [
+   "GoldMarketGetBuyOffer"
+  ],
+  "241": [
+   "GoldMarketGetBuyOfferFromSilver"
+  ],
+  "242": [
+   "GoldMarketGetSellOffer"
+  ],
+  "243": [
+   "GoldMarketGetSellOfferFromSilver"
+  ],
+  "244": [
+   "GoldMarketBuyGold"
+  ],
+  "245": [
+   "GoldMarketSellGold"
+  ],
+  "246": [
+   "GoldMarketCreateSellOrder"
+  ],
+  "247": [
+   "GoldMarketCreateBuyOrder"
+  ],
+  "248": [
+   "GoldMarketGetInfos"
+  ],
+  "249": [
+   "GoldMarketCancelOrder"
+  ],
+  "250": [
+   "GoldMarketGetAverageInfo"
+  ],
+  "251": [
+   "TreasureChestUsingStart"
+  ],
+  "252": [
+   "TreasureChestUsingCancel"
+  ],
+  "253": [
+   "UseLootChest"
+  ],
+  "254": [
+   "UseShrine"
+  ],
+  "255": [
+   "UseHellgateShrine"
+  ],
+  "256": [
+   "GetSiegeBannerInfo"
+  ],
+  "257": [
+   "LaborerStartJob"
+  ],
+  "258": [
+   "LaborerTakeJobLoot"
+  ],
+  "259": [
+   "LaborerDismiss"
+  ],
+  "260": [
+   "LaborerMove"
+  ],
+  "261": [
+   "LaborerBuyItem"
+  ],
+  "262": [
+   "LaborerUpgrade"
+  ],
+  "263": [
+   "BuyPremium"
+  ],
+  "264": [
+   "RealEstateGetAuctionData"
+  ],
+  "265": [
+   "RealEstateBidOnAuction"
+  ],
+  "266": [
+   "FriendInvite"
+  ],
+  "267": [
+   "FriendAnswerInvitation"
+  ],
+  "268": [
+   "FriendCancelnvitation"
+  ],
+  "269": [
+   "FriendRemove"
+  ],
+  "270": [
+   "EquipmentItemChangeSpell"
+  ],
+  "271": [
+   "ExpeditionRegister"
+  ],
+  "272": [
+   "ExpeditionRegisterCancel"
+  ],
+  "273": [
+   "JoinExpedition"
+  ],
+  "274": [
+   "DeclineExpeditionInvitation"
+  ],
+  "275": [
+   "VoteStart"
+  ],
+  "276": [
+   "VoteDoVote"
+  ],
+  "277": [
+   "RatingDoRate"
+  ],
+  "278": [
+   "EnteringExpeditionStart"
+  ],
+  "279": [
+   "EnteringExpeditionCancel"
+  ],
+  "280": [
+   "ActivateExpeditionCheckPoint"
+  ],
+  "281": [
+   "ArenaRegister"
+  ],
+  "282": [
+   "ArenaAddInvite"
+  ],
+  "283": [
+   "ArenaRegisterCancel"
+  ],
+  "284": [
+   "ArenaLeave"
+  ],
+  "285": [
+   "JoinArenaMatch"
+  ],
+  "286": [
+   "DeclineArenaInvitation"
+  ],
+  "287": [
+   "EnteringArenaStart"
+  ],
+  "288": [
+   "EnteringArenaCancel"
+  ],
+  "289": [
+   "ArenaCustomMatch"
+  ],
+  "290": [
+   "UpdateCharacterStatement"
+  ],
+  "291": [
+   "BoostFarmable"
+  ],
+  "292": [
+   "GetStrikeHistory"
+  ],
+  "293": [
+   "UseFunction"
+  ],
+  "294": [
+   "UsePortalEntrance"
+  ],
+  "295": [
+   "ResetPortalBinding"
+  ],
+  "296": [
+   "QueryPortalBinding"
+  ],
+  "297": [
+   "ClaimPaymentTransaction"
+  ],
+  "298": [
+   "ChangeUseFlag"
+  ],
+  "299": [
+   "ClientPerformanceStats"
+  ],
+  "300": [
+   "ExtendedHardwareStats"
+  ],
+  "301": [
+   "ClientLowMemoryWarning"
+  ],
+  "302": [
+   "TerritoryClaimStart"
+  ],
+  "303": [
+   "TerritoryClaimCancel"
+  ],
+  "304": [
+   "DeliverCarriableObjectStart"
+  ],
+  "305": [
+   "DeliverCarriableObjectCancel"
+  ],
+  "306": [
+   "TerritoryUpgradeWithPowerCrystal"
+  ],
+  "307": [
+   "RequestAppStoreProducts"
+  ],
+  "308": [
+   "VerifyProductPurchase"
+  ],
+  "309": [
+   "QueryGuildPlayerStats"
+  ],
+  "310": [
+   "QueryAllianceGuildStats"
+  ],
+  "311": [
+   "TrackAchievements"
+  ],
+  "312": [
+   "SetAchievementsAutoLearn"
+  ],
+  "313": [
+   "DepositItemToGuildCurrency"
+  ],
+  "314": [
+   "WithdrawalItemFromGuildCurrency"
+  ],
+  "315": [
+   "AuctionSellSpecificItemRequest"
+  ],
+  "316": [
+   "FishingStart"
+  ],
+  "317": [
+   "FishingCasting"
+  ],
+  "318": [
+   "FishingCast"
+  ],
+  "319": [
+   "FishingCatch"
+  ],
+  "320": [
+   "FishingPull"
+  ],
+  "321": [
+   "FishingGiveLine"
+  ],
+  "322": [
+   "FishingFinish"
+  ],
+  "323": [
+   "FishingCancel"
+  ],
+  "324": [
+   "CreateGuildAccessTag"
+  ],
+  "325": [
+   "DeleteGuildAccessTag"
+  ],
+  "326": [
+   "RenameGuildAccessTag"
+  ],
+  "327": [
+   "FlagGuildAccessTagGuildPermission"
+  ],
+  "328": [
+   "AssignGuildAccessTag"
+  ],
+  "329": [
+   "RemoveGuildAccessTagFromPlayer"
+  ],
+  "330": [
+   "ModifyGuildAccessTagEditors"
+  ],
+  "331": [
+   "RequestPublicAccessTags"
+  ],
+  "332": [
+   "ChangeAccessTagPublicFlag"
+  ],
+  "333": [
+   "UpdateGuildAccessTag"
+  ],
+  "334": [
+   "SteamStartMicrotransaction"
+  ],
+  "335": [
+   "SteamFinishMicrotransaction"
+  ],
+  "336": [
+   "RequestXboxPurchaseIntent"
+  ],
+  "337": [
+   "CloseXboxPurchaseIntent"
+  ],
+  "338": [
+   "RequestPlayStationPurchaseIntent"
+  ],
+  "339": [
+   "ClosePlayStationPurchaseIntent"
+  ],
+  "340": [
+   "SteamIdHasActiveAccount"
+  ],
+  "341": [
+   "CheckEmailAccountState"
+  ],
+  "342": [
+   "LinkAccountToSteamId"
+  ],
+  "343": [
+   "EpicIdHasActiveAccount"
+  ],
+  "344": [
+   "LinkAccountToEpicId"
+  ],
+  "345": [
+   "XboxIdHasActiveAccount"
+  ],
+  "346": [
+   "PlayStationIdHasActiveAccount"
+  ],
+  "347": [
+   "InAppConfirmPaymentGooglePlay"
+  ],
+  "348": [
+   "InAppConfirmPaymentAppleAppStore"
+  ],
+  "349": [
+   "InAppPurchaseRequest"
+  ],
+  "350": [
+   "InAppPurchaseFailed"
+  ],
+  "351": [
+   "CharacterSubscriptionInfo"
+  ],
+  "352": [
+   "AccountSubscriptionInfo"
+  ],
+  "353": [
+   "BuyGvgSeasonBooster"
+  ],
+  "354": [
+   "ChangeFlaggingPrepare"
+  ],
+  "355": [
+   "OverCharge"
+  ],
+  "356": [
+   "OverChargeEnd"
+  ],
+  "357": [
+   "RequestTrusted"
+  ],
+  "358": [
+   "ChangeGuildLogo"
+  ],
+  "359": [
+   "PartyFinderRegisterForUpdates"
+  ],
+  "360": [
+   "PartyFinderUnregisterForUpdates"
+  ],
+  "361": [
+   "PartyFinderEnlistNewPartySearch"
+  ],
+  "362": [
+   "PartyFinderDeletePartySearch"
+  ],
+  "363": [
+   "PartyFinderChangePartySearch"
+  ],
+  "364": [
+   "PartyFinderChangeRole"
+  ],
+  "365": [
+   "PartyFinderApplyForGroup"
+  ],
+  "366": [
+   "PartyFinderAcceptOrDeclineApplyForGroup"
+  ],
+  "367": [
+   "PartyFinderGetEquipmentSnapshot"
+  ],
+  "368": [
+   "PartyFinderRegisterApplicants"
+  ],
+  "369": [
+   "PartyFinderUnregisterApplicants"
+  ],
+  "370": [
+   "PartyFinderFulltextSearch"
+  ],
+  "371": [
+   "PartyFinderRequestEquipmentSnapshot"
+  ],
+  "372": [
+   "GetPersonalSeasonTrackerData"
+  ],
+  "373": [
+   "GetPersonalSeasonPastRewardData"
+  ],
+  "374": [
+   "UseConsumableFromInventory"
+  ],
+  "375": [
+   "ClaimPersonalSeasonReward"
+  ],
+  "376": [
+   "XignCodeMessageToServer"
+  ],
+  "377": [
+   "AceMessage"
+  ],
+  "378": [
+   "BattlEyeMessageToServer"
+  ],
+  "379": [
+   "SetNextTutorialState"
+  ],
+  "380": [
+   "AddPlayerToMuteList"
+  ],
+  "381": [
+   "RemovePlayerFromMuteList"
+  ],
+  "382": [
+   "ProductShopUserEvent"
+  ],
+  "383": [
+   "GetVanityUnlocks"
+  ],
+  "384": [
+   "BuyVanityUnlocks"
+  ],
+  "385": [
+   "GetMountSkins"
+  ],
+  "386": [
+   "SetMountSkin"
+  ],
+  "387": [
+   "SetWardrobe"
+  ],
+  "388": [
+   "ChangeCustomization"
+  ],
+  "389": [
+   "ChangePlayerIslandData"
+  ],
+  "390": [
+   "GetGuildChallengePoints"
+  ],
+  "391": [
+   "SmartQueueJoin"
+  ],
+  "392": [
+   "SmartQueueLeave"
+  ],
+  "393": [
+   "SmartQueueSelectSpawnCluster"
+  ],
+  "394": [
+   "UpgradeHideout"
+  ],
+  "395": [
+   "InitHideoutAttackStart"
+  ],
+  "396": [
+   "InitHideoutAttackCancel"
+  ],
+  "397": [
+   "HideoutFillNutrition"
+  ],
+  "398": [
+   "HideoutGetInfo"
+  ],
+  "399": [
+   "HideoutGetOwnerInfo"
+  ],
+  "400": [
+   "HideoutSetTribute"
+  ],
+  "401": [
+   "HideoutUpgradeWithPowerCrystal"
+  ],
+  "402": [
+   "HideoutDeclareHQ"
+  ],
+  "403": [
+   "HideoutUndeclareHQ"
+  ],
+  "404": [
+   "HideoutGetHQRequirements"
+  ],
+  "405": [
+   "HideoutBoost"
+  ],
+  "406": [
+   "HideoutBoostConstruction"
+  ],
+  "407": [
+   "OpenWorldAttackScheduleStart"
+  ],
+  "408": [
+   "OpenWorldAttackScheduleCancel"
+  ],
+  "409": [
+   "OpenWorldAttackConquerStart"
+  ],
+  "410": [
+   "OpenWorldAttackConquerCancel"
+  ],
+  "411": [
+   "GetOpenWorldAttackDetails"
+  ],
+  "412": [
+   "GetNextOpenWorldAttackScheduleTime"
+  ],
+  "413": [
+   "RecoverVaultFromHideout"
+  ],
+  "414": [
+   "GetGuildEnergyDrainInfo"
+  ],
+  "415": [
+   "ChannelingUpdate"
+  ],
+  "416": [
+   "UseCorruptedShrine"
+  ],
+  "417": [
+   "RequestEstimatedMarketValue"
+  ],
+  "418": [
+   "LogFeedback"
+  ],
+  "419": [
+   "GetInfamyInfo"
+  ],
+  "420": [
+   "GetPartySmartClusterQueuePriority"
+  ],
+  "421": [
+   "SetPartySmartClusterQueuePriority"
+  ],
+  "422": [
+   "ClientAntiAutoClickerInfo"
+  ],
+  "423": [
+   "ClientBotPatternDetectionInfo"
+  ],
+  "424": [
+   "ClientAntiGatherClickerInfo"
+  ],
+  "425": [
+   "LoadoutCreate"
+  ],
+  "426": [
+   "LoadoutRead"
+  ],
+  "427": [
+   "LoadoutReadHeaders"
+  ],
+  "428": [
+   "LoadoutUpdate"
+  ],
+  "429": [
+   "LoadoutDelete"
+  ],
+  "430": [
+   "LoadoutOrderUpdate"
+  ],
+  "431": [
+   "LoadoutEquip"
+  ],
+  "432": [
+   "BatchUseItemCancel"
+  ],
+  "433": [
+   "EnlistFactionWarfare"
+  ],
+  "434": [
+   "GetFactionWarfareWeeklyReport"
+  ],
+  "435": [
+   "ClaimFactionWarfareWeeklyReport"
+  ],
+  "436": [
+   "GetFactionWarfareCampaignData"
+  ],
+  "437": [
+   "ClaimFactionWarfareItemReward"
+  ],
+  "438": [
+   "SendMemoryConsumption"
+  ],
+  "439": [
+   "PickupCarriableObjectStart"
+  ],
+  "440": [
+   "PickupCarriableObjectCancel"
+  ],
+  "441": [
+   "SetSavingChestLogsFlag"
+  ],
+  "442": [
+   "GetSavingChestLogsFlag"
+  ],
+  "443": [
+   "RegisterGuestAccount"
+  ],
+  "444": [
+   "ResendGuestAccountVerificationEmail"
+  ],
+  "445": [
+   "DoSimpleActionStart"
+  ],
+  "446": [
+   "DoSimpleActionCancel"
+  ],
+  "447": [
+   "GetGvgSeasonContributionByActivity"
+  ],
+  "448": [
+   "GetGvgSeasonContributionByCrystalLeague"
+  ],
+  "449": [
+   "GetGuildMightCategoryContribution"
+  ],
+  "450": [
+   "GetGuildMightCategoryOverview"
+  ],
+  "451": [
+   "GetPvpChallengeData"
+  ],
+  "452": [
+   "ClaimPvpChallengeWeeklyReward"
+  ],
+  "453": [
+   "GetPersonalMightStats"
+  ],
+  "454": [
+   "GetPvpChallengeSeasonRewards"
+  ],
+  "455": [
+   "GetPvpChallengeSeasonRewardItems"
+  ],
+  "456": [
+   "ClaimPvpChallengeSeasonRewards"
+  ],
+  "457": [
+   "ClaimPvpChallengeSeasonRewardItems"
+  ],
+  "458": [
+   "AuctionGetLoadoutOffers"
+  ],
+  "459": [
+   "AuctionBuyLoadoutOffer"
+  ],
+  "460": [
+   "AccountDeletionRequest"
+  ],
+  "461": [
+   "AccountReactivationRequest"
+  ],
+  "462": [
+   "CreateModeratorNotesForAccount"
+  ],
+  "463": [
+   "GetModeratorNotesForAccount"
+  ],
+  "464": [
+   "GetModerationEscalationDefiniton"
+  ],
+  "465": [
+   "EventBasedPopupAddSeen"
+  ],
+  "466": [
+   "GetItemKillHistory"
+  ],
+  "467": [
+   "GetVanityConsumables"
+  ],
+  "468": [
+   "EquipKillEmote"
+  ],
+  "469": [
+   "ChangeKillEmotePlayOnKnockdownSetting"
+  ],
+  "470": [
+   "BuyVanityConsumableCharges"
+  ],
+  "471": [
+   "ReclaimVanityItem"
+  ],
+  "472": [
+   "GetArenaRankings"
+  ],
+  "473": [
+   "GetCrystalLeagueStatistics"
+  ],
+  "474": [
+   "SendOptionsLog"
+  ],
+  "475": [
+   "SendControlsOptionsLog"
+  ],
+  "476": [
+   "MistsUseImmediateReturnExit"
+  ],
+  "477": [
+   "MistsUseStaticEntrance"
+  ],
+  "478": [
+   "MistsUseCityRoadsEntrance"
+  ],
+  "479": [
+   "ChangeNewGuildMemberMail"
+  ],
+  "480": [
+   "GetNewGuildMemberMail"
+  ],
+  "481": [
+   "ChangeGuildFactionAllegiance"
+  ],
+  "482": [
+   "GetGuildFactionAllegiance"
+  ],
+  "483": [
+   "GuildBannerChange"
+  ],
+  "484": [
+   "GuildGetOptionalStats"
+  ],
+  "485": [
+   "GuildSetOptionalStats"
+  ],
+  "486": [
+   "GetPlayerInfoForStalk"
+  ],
+  "487": [
+   "PayGoldForCharacterTypeChange"
+  ],
+  "488": [
+   "QuickSellAuctionQueryAction"
+  ],
+  "489": [
+   "QuickSellAuctionSellAction"
+  ],
+  "490": [
+   "FcmTokenToServer"
+  ],
+  "491": [
+   "ApnsTokenToServer"
+  ],
+  "492": [
+   "DeathRecap"
+  ],
+  "493": [
+   "AuctionFetchFinishedAuctions"
+  ],
+  "494": [
+   "AbortAuctionFetchFinishedAuctions"
+  ],
+  "495": [
+   "RequestLegendaryEvenHistory"
+  ],
+  "496": [
+   "PartyAnswerStartHuntRequest"
+  ],
+  "497": [
+   "HuntAbort"
+  ],
+  "498": [
+   "UseFindTrackSpellFromItemPrepare"
+  ],
+  "499": [
+   "InteractWithTrackStart"
+  ],
+  "500": [
+   "InteractWithTrackCancel"
+  ],
+  "501": [
+   "TerritoryRaidStart"
+  ],
+  "502": [
+   "TerritoryRaidCancel"
+  ],
+  "503": [
+   "TerritoryClaimRaidedRawEnergyCrystalResult"
+  ],
+  "504": [
+   "GvGSeasonPlayerGuildParticipationDetails"
+  ],
+  "505": [
+   "DailyMightBonus"
+  ],
+  "506": [
+   "ClaimDailyMightBonus"
+  ],
+  "507": [
+   "GetFortificationGroupInfo"
+  ],
+  "508": [
+   "UpgradeFortificationGroup"
+  ],
+  "509": [
+   "CancelUpgradeFortificationGroup"
+  ],
+  "510": [
+   "DowngradeFortificationGroup"
+  ],
+  "511": [
+   "GetClusterActivityChestEstimates"
+  ],
+  "512": [
+   "PartyReadyCheckBegin"
+  ],
+  "513": [
+   "PartyReadyCheckUpdate"
+  ],
+  "514": [
+   "ClaimAlbionJournalReward"
+  ],
+  "515": [
+   "TrackAlbionJournalAchievements"
+  ],
+  "516": [
+   "TrackAlbionJournalAchievementSubCategory"
+  ],
+  "517": [
+   "RequestOutlandsTeleportationUsage"
+  ],
+  "518": [
+   "PickupFromPiledObjectStart"
+  ],
+  "519": [
+   "PickupFromPiledObjectCancel"
+  ],
+  "520": [
+   "AssetOverview"
+  ],
+  "521": [
+   "AssetOverviewTabs"
+  ],
+  "522": [
+   "AssetOverviewTabContent"
+  ],
+  "523": [
+   "AssetOverviewUnfreezeCache"
+  ],
+  "524": [
+   "AssetOverviewSearch"
+  ],
+  "525": [
+   "AssetOverviewSearchTabs"
+  ],
+  "526": [
+   "AssetOverviewSearchTabContent"
+  ],
+  "527": [
+   "AssetOverviewRecoverPlayerVault"
+  ],
+  "528": [
+   "ImmortalizeKillTrophy"
+  ],
+  "529": [
+   "ArmorySearch"
+  ],
+  "530": [
+   "ArmoryItemUsageStatistics"
+  ],
+  "531": [
+   "ArmoryActivityUsageStatistics"
+  ],
+  "532": [
+   "HellDungeonUseStaticEntrance"
+  ],
+  "533": [
+   "TravelIslandShowroom"
+  ],
+  "534": [
+   "GetPlatformIds"
+  ],
+  "535": [
+   "XboxServiceTicket"
+  ],
+  "536": [
+   "EvaluatePlatformPerks"
+  ],
+  "537": [
+   "LinkAccountToXbox"
+  ],
+  "538": [
+   "LinkAccountToPlayStationId"
+  ],
+  "539": [
+   "TravelFactionWarfarePortal"
+  ],
+  "540": [
+   "RequestRedZoneEventStandings"
+  ],
+  "541": [
+   "GetZergDebuffInfo"
+  ],
+  "542": [
+   "RequestLoreSnippetStates"
+  ],
+  "543": [
+   "RetrieveCarriableObjectStart"
+  ],
+  "544": [
+   "RetrieveCarriableObjectCancel"
+  ],
+  "545": [
+   "ForfeitCustomMatch"
+  ],
+  "546": [
+   "GetPartyMemberCluster"
+  ],
+  "547": [
+   "SetPartyNavigation"
+  ],
+  "548": [
+   "EndPartyNavigation"
+  ],
+  "549": [
+   "UseDragonAreaEntrance"
+  ],
+  "550": [
+   "EnterDragonAreaEntrance"
+  ],
+  "551": [
+   "SmartQueueRegionQueueInfo"
+  ],
+  "552": [
+   "SurveyCompleted"
+  ],
+  "553": [
+   "GetSurveyLogs"
+  ],
+  "554": [
+   "ClientFrametimeSpike"
+  ],
+  "555": [
+   "RequestDebugMobInfo"
+  ]
+ },
+ "events": {
+  "1": [
+   "Leave"
+  ],
+  "2": [
+   "JoinFinished"
+  ],
+  "3": [
+   "Move"
+  ],
+  "4": [
+   "Teleport"
+  ],
+  "5": [
+   "ChangeEquipment"
+  ],
+  "6": [
+   "HealthUpdate"
+  ],
+  "7": [
+   "HealthUpdates"
+  ],
+  "8": [
+   "EnergyUpdate"
+  ],
+  "9": [
+   "DamageShieldUpdate"
+  ],
+  "10": [
+   "CraftingFocusUpdate"
+  ],
+  "11": [
+   "ActiveSpellEffectsUpdate"
+  ],
+  "12": [
+   "ResetCooldowns"
+  ],
+  "13": [
+   "Attack"
+  ],
+  "14": [
+   "CastStart"
+  ],
+  "15": [
+   "ChannelingUpdate"
+  ],
+  "16": [
+   "CastCancel"
+  ],
+  "17": [
+   "CastTimeUpdate"
+  ],
+  "18": [
+   "CastFinished"
+  ],
+  "19": [
+   "CastSpell"
+  ],
+  "20": [
+   "CastSpells"
+  ],
+  "21": [
+   "CastHit"
+  ],
+  "22": [
+   "CastHits"
+  ],
+  "23": [
+   "StoredTargetsUpdate"
+  ],
+  "24": [
+   "ChannelingEnded"
+  ],
+  "25": [
+   "AttackBuilding"
+  ],
+  "26": [
+   "InventoryPutItem"
+  ],
+  "27": [
+   "InventoryDeleteItem"
+  ],
+  "28": [
+   "InventoryState"
+  ],
+  "29": [
+   "NewCharacter"
+  ],
+  "30": [
+   "NewEquipmentItem"
+  ],
+  "31": [
+   "NewSiegeBannerItem"
+  ],
+  "32": [
+   "NewSimpleItem"
+  ],
+  "33": [
+   "NewFurnitureItem"
+  ],
+  "34": [
+   "NewKillTrophyItem"
+  ],
+  "35": [
+   "NewJournalItem"
+  ],
+  "36": [
+   "NewLaborerItem"
+  ],
+  "37": [
+   "NewEquipmentItemLegendarySoul"
+  ],
+  "38": [
+   "NewSimpleHarvestableObject"
+  ],
+  "39": [
+   "NewSimpleHarvestableObjectList"
+  ],
+  "40": [
+   "NewHarvestableObject"
+  ],
+  "41": [
+   "NewTreasureDestinationObject"
+  ],
+  "42": [
+   "TreasureDestinationObjectStatus"
+  ],
+  "43": [
+   "CloseTreasureDestinationObject"
+  ],
+  "44": [
+   "NewSilverObject"
+  ],
+  "45": [
+   "NewBuilding"
+  ],
+  "46": [
+   "HarvestableChangeState"
+  ],
+  "47": [
+   "MobChangeState"
+  ],
+  "48": [
+   "FactionBuildingInfo"
+  ],
+  "49": [
+   "CraftBuildingInfo"
+  ],
+  "50": [
+   "RepairBuildingInfo"
+  ],
+  "51": [
+   "MeldBuildingInfo"
+  ],
+  "52": [
+   "ConstructionSiteInfo"
+  ],
+  "53": [
+   "PlayerBuildingInfo"
+  ],
+  "54": [
+   "FarmBuildingInfo"
+  ],
+  "55": [
+   "TutorialBuildingInfo"
+  ],
+  "56": [
+   "LaborerObjectInfo"
+  ],
+  "57": [
+   "LaborerObjectJobInfo"
+  ],
+  "58": [
+   "MarketPlaceBuildingInfo"
+  ],
+  "59": [
+   "HarvestStart"
+  ],
+  "60": [
+   "HarvestCancel"
+  ],
+  "61": [
+   "HarvestFinished"
+  ],
+  "62": [
+   "TakeSilver"
+  ],
+  "63": [
+   "RemoveSilver"
+  ],
+  "64": [
+   "ActionOnBuildingStart"
+  ],
+  "65": [
+   "ActionOnBuildingCancel"
+  ],
+  "66": [
+   "ActionOnBuildingFinished"
+  ],
+  "67": [
+   "ItemRerollQualityFinished"
+  ],
+  "68": [
+   "InstallResourceStart"
+  ],
+  "69": [
+   "InstallResourceCancel"
+  ],
+  "70": [
+   "InstallResourceFinished"
+  ],
+  "71": [
+   "CraftItemFinished"
+  ],
+  "72": [
+   "LogoutCancel"
+  ],
+  "73": [
+   "ChatMessage"
+  ],
+  "74": [
+   "ChatSay"
+  ],
+  "75": [
+   "ChatWhisper"
+  ],
+  "76": [
+   "ChatMuted"
+  ],
+  "77": [
+   "PlayEmote"
+  ],
+  "78": [
+   "StopEmote"
+  ],
+  "79": [
+   "SystemMessage"
+  ],
+  "80": [
+   "UtilityTextMessage"
+  ],
+  "81": [
+   "UpdateMoney"
+  ],
+  "82": [
+   "UpdateFame"
+  ],
+  "83": [
+   "UpdateLearningPoints"
+  ],
+  "84": [
+   "UpdateReSpecPoints"
+  ],
+  "85": [
+   "UpdateCurrency"
+  ],
+  "86": [
+   "UpdateFactionStanding"
+  ],
+  "87": [
+   "UpdateStanding"
+  ],
+  "88": [
+   "Respawn"
+  ],
+  "89": [
+   "ServerDebugLog"
+  ],
+  "90": [
+   "CharacterEquipmentChanged"
+  ],
+  "91": [
+   "RegenerationHealthChanged"
+  ],
+  "92": [
+   "RegenerationEnergyChanged"
+  ],
+  "93": [
+   "RegenerationMountHealthChanged"
+  ],
+  "94": [
+   "RegenerationCraftingChanged"
+  ],
+  "95": [
+   "RegenerationHealthEnergyComboChanged"
+  ],
+  "96": [
+   "RegenerationPlayerComboChanged"
+  ],
+  "97": [
+   "DurabilityChanged"
+  ],
+  "98": [
+   "NewLoot"
+  ],
+  "99": [
+   "AttachItemContainer"
+  ],
+  "100": [
+   "DetachItemContainer"
+  ],
+  "101": [
+   "InvalidateItemContainer"
+  ],
+  "102": [
+   "LockItemContainer"
+  ],
+  "103": [
+   "GuildUpdate"
+  ],
+  "104": [
+   "GuildPlayerUpdated"
+  ],
+  "105": [
+   "InvitedToGuild"
+  ],
+  "106": [
+   "GuildMemberWorldUpdate"
+  ],
+  "107": [
+   "UpdateMatchDetails"
+  ],
+  "108": [
+   "ObjectEvent"
+  ],
+  "109": [
+   "NewMonolithObject"
+  ],
+  "110": [
+   "MonolithHasBannersPlacedUpdate"
+  ],
+  "111": [
+   "NewOrbObject"
+  ],
+  "112": [
+   "NewCastleObject"
+  ],
+  "113": [
+   "NewSpellEffectArea"
+  ],
+  "114": [
+   "UpdateSpellEffectArea"
+  ],
+  "115": [
+   "NewChainSpell"
+  ],
+  "116": [
+   "UpdateChainSpell"
+  ],
+  "117": [
+   "NewTreasureChest"
+  ],
+  "118": [
+   "StartMatch"
+  ],
+  "119": [
+   "StartArenaMatchInfos"
+  ],
+  "120": [
+   "EndArenaMatch"
+  ],
+  "121": [
+   "MatchUpdate"
+  ],
+  "122": [
+   "ActiveMatchUpdate"
+  ],
+  "123": [
+   "NewMob"
+  ],
+  "124": [
+   "DebugVariablesInfo"
+  ],
+  "125": [
+   "DebugReputationInfo"
+  ],
+  "126": [
+   "DebugDiminishingReturnInfo"
+  ],
+  "127": [
+   "DebugSmartClusterQueueInfo"
+  ],
+  "128": [
+   "ClaimOrbStart"
+  ],
+  "129": [
+   "ClaimOrbFinished"
+  ],
+  "130": [
+   "ClaimOrbCancel"
+  ],
+  "131": [
+   "OrbUpdate"
+  ],
+  "132": [
+   "OrbClaimed"
+  ],
+  "133": [
+   "OrbReset"
+  ],
+  "134": [
+   "NewWarCampObject"
+  ],
+  "135": [
+   "NewMatchLootChestObject"
+  ],
+  "136": [
+   "NewArenaExit"
+  ],
+  "137": [
+   "GuildMemberTerritoryUpdate"
+  ],
+  "138": [
+   "InvitedMercenaryToMatch"
+  ],
+  "139": [
+   "ClusterInfoUpdate"
+  ],
+  "140": [
+   "ForcedMovement"
+  ],
+  "141": [
+   "ForcedMovementCancel"
+  ],
+  "142": [
+   "CharacterStats"
+  ],
+  "143": [
+   "CharacterStatsKillHistory"
+  ],
+  "144": [
+   "CharacterStatsDeathHistory"
+  ],
+  "145": [
+   "CharacterStatsKnockDownHistory"
+  ],
+  "146": [
+   "CharacterStatsKnockedDownHistory"
+  ],
+  "147": [
+   "GuildStats"
+  ],
+  "148": [
+   "KillHistoryDetails"
+  ],
+  "149": [
+   "ItemKillHistoryDetails"
+  ],
+  "150": [
+   "FullAchievementInfo"
+  ],
+  "151": [
+   "FinishedAchievement"
+  ],
+  "152": [
+   "AchievementProgressInfo"
+  ],
+  "153": [
+   "FullAchievementProgressInfo"
+  ],
+  "154": [
+   "FullTrackedAchievementInfo"
+  ],
+  "155": [
+   "FullAutoLearnAchievementInfo"
+  ],
+  "156": [
+   "QuestGiverQuestOffered"
+  ],
+  "157": [
+   "QuestGiverDebugInfo"
+  ],
+  "158": [
+   "ConsoleEvent"
+  ],
+  "159": [
+   "TimeSync"
+  ],
+  "160": [
+   "ChangeAvatar"
+  ],
+  "161": [
+   "ChangeMountSkin"
+  ],
+  "162": [
+   "GameEvent"
+  ],
+  "163": [
+   "KilledPlayer"
+  ],
+  "164": [
+   "Died"
+  ],
+  "165": [
+   "KnockedDown"
+  ],
+  "166": [
+   "Unconcious"
+  ],
+  "167": [
+   "MatchPlayerJoinedEvent"
+  ],
+  "168": [
+   "MatchPlayerStatsEvent"
+  ],
+  "169": [
+   "MatchPlayerStatsCompleteEvent"
+  ],
+  "170": [
+   "MatchTimeLineEventEvent"
+  ],
+  "171": [
+   "MatchNewCombatRound"
+  ],
+  "172": [
+   "MatchEndCombatRound"
+  ],
+  "173": [
+   "MatchPlayerMainGearStatsEvent"
+  ],
+  "174": [
+   "MatchPlayerChangedAvatarEvent"
+  ],
+  "175": [
+   "InvitationPlayerTrade"
+  ],
+  "176": [
+   "PlayerTradeStart"
+  ],
+  "177": [
+   "PlayerTradeCancel"
+  ],
+  "178": [
+   "PlayerTradeUpdate"
+  ],
+  "179": [
+   "PlayerTradeFinished"
+  ],
+  "180": [
+   "PlayerTradeAcceptChange"
+  ],
+  "181": [
+   "MiniMapPing"
+  ],
+  "182": [
+   "MarketPlaceNotification"
+  ],
+  "183": [
+   "DuellingChallengePlayer"
+  ],
+  "184": [
+   "NewDuellingPost"
+  ],
+  "185": [
+   "DuelStarted"
+  ],
+  "186": [
+   "DuelEnded"
+  ],
+  "187": [
+   "DuelDenied"
+  ],
+  "188": [
+   "DuelRequestCanceled"
+  ],
+  "189": [
+   "DuelLeftArea"
+  ],
+  "190": [
+   "DuelReEnteredArea"
+  ],
+  "191": [
+   "NewRealEstate"
+  ],
+  "192": [
+   "MiniMapOwnedBuildingsPositions"
+  ],
+  "193": [
+   "RealEstateListUpdate"
+  ],
+  "194": [
+   "GuildLogoUpdate"
+  ],
+  "195": [
+   "GuildLogoChanged"
+  ],
+  "196": [
+   "PlaceableObjectPlace"
+  ],
+  "197": [
+   "PlaceableObjectPlaceCancel"
+  ],
+  "198": [
+   "FurnitureObjectBuffProviderInfo"
+  ],
+  "199": [
+   "FurnitureObjectCheatProviderInfo"
+  ],
+  "200": [
+   "FarmableObjectInfo"
+  ],
+  "201": [
+   "NewUnreadMails"
+  ],
+  "202": [
+   "MailOperationPossible"
+  ],
+  "203": [
+   "GuildLogoObjectUpdate"
+  ],
+  "204": [
+   "StartLogout"
+  ],
+  "205": [
+   "NewChatChannels"
+  ],
+  "206": [
+   "JoinedChatChannel"
+  ],
+  "207": [
+   "LeftChatChannel"
+  ],
+  "208": [
+   "RemovedChatChannel"
+  ],
+  "209": [
+   "AccessStatus"
+  ],
+  "210": [
+   "Mounted"
+  ],
+  "211": [
+   "MountStart"
+  ],
+  "212": [
+   "MountCancel"
+  ],
+  "213": [
+   "NewTravelpoint"
+  ],
+  "214": [
+   "NewIslandAccessPoint"
+  ],
+  "215": [
+   "NewExit"
+  ],
+  "216": [
+   "UpdateHome"
+  ],
+  "217": [
+   "UpdateChatSettings"
+  ],
+  "218": [
+   "ResurrectionOffer"
+  ],
+  "219": [
+   "ResurrectionReply"
+  ],
+  "220": [
+   "LootEquipmentChanged"
+  ],
+  "221": [
+   "UpdateUnlockedGuildLogos"
+  ],
+  "222": [
+   "UpdateUnlockedAvatars"
+  ],
+  "223": [
+   "UpdateUnlockedAvatarRings"
+  ],
+  "224": [
+   "UpdateUnlockedBuildings"
+  ],
+  "225": [
+   "NewIslandManagement"
+  ],
+  "226": [
+   "NewTeleportStone"
+  ],
+  "227": [
+   "Cloak"
+  ],
+  "228": [
+   "PartyInvitation"
+  ],
+  "229": [
+   "PartyJoinRequest"
+  ],
+  "230": [
+   "PartyJoined"
+  ],
+  "231": [
+   "PartyDisbanded"
+  ],
+  "232": [
+   "PartyPlayerJoined"
+  ],
+  "233": [
+   "PartyChangedOrder"
+  ],
+  "234": [
+   "PartyPlayerLeft"
+  ],
+  "235": [
+   "PartyLeaderChanged"
+  ],
+  "236": [
+   "PartyLootSettingChangedPlayer"
+  ],
+  "237": [
+   "PartySilverGained"
+  ],
+  "238": [
+   "PartyPlayerUpdated"
+  ],
+  "239": [
+   "PartyInvitationAnswer"
+  ],
+  "240": [
+   "PartyJoinRequestAnswer"
+  ],
+  "241": [
+   "PartyMarkedObjectsUpdated"
+  ],
+  "242": [
+   "PartyOnClusterPartyJoined"
+  ],
+  "243": [
+   "PartySetRoleFlag"
+  ],
+  "244": [
+   "PartyInviteOrJoinPlayerEquipmentInfo"
+  ],
+  "245": [
+   "PartyReadyCheckUpdate"
+  ],
+  "246": [
+   "PartyFactionWarfareReinforcementSettingChangedPlayer"
+  ],
+  "247": [
+   "SetPartyNavigation"
+  ],
+  "248": [
+   "EndPartyNavigation"
+  ],
+  "249": [
+   "SpellCooldownUpdate"
+  ],
+  "250": [
+   "NewHellgateExitPortal"
+  ],
+  "251": [
+   "NewExpeditionExit"
+  ],
+  "252": [
+   "NewExpeditionNarrator"
+  ],
+  "253": [
+   "ExitEnterStart"
+  ],
+  "254": [
+   "ExitEnterCancel"
+  ],
+  "255": [
+   "ExitEnterFinished"
+  ],
+  "256": [
+   "NewQuestGiverObject"
+  ],
+  "257": [
+   "FullQuestInfo"
+  ],
+  "258": [
+   "QuestProgressInfo"
+  ],
+  "259": [
+   "QuestGiverInfoForPlayer"
+  ],
+  "260": [
+   "FullExpeditionInfo"
+  ],
+  "261": [
+   "ExpeditionQuestProgressInfo"
+  ],
+  "262": [
+   "InvitedToExpedition"
+  ],
+  "263": [
+   "ExpeditionRegistrationInfo"
+  ],
+  "264": [
+   "EnteringExpeditionStart"
+  ],
+  "265": [
+   "EnteringExpeditionCancel"
+  ],
+  "266": [
+   "RewardGranted"
+  ],
+  "267": [
+   "ArenaRegistrationInfo"
+  ],
+  "268": [
+   "EnteringArenaStart"
+  ],
+  "269": [
+   "EnteringArenaCancel"
+  ],
+  "270": [
+   "EnteringArenaLockStart"
+  ],
+  "271": [
+   "EnteringArenaLockCancel"
+  ],
+  "272": [
+   "InvitedToArenaMatch"
+  ],
+  "273": [
+   "UsingHellgateShrine"
+  ],
+  "274": [
+   "EnteringHellgateLockStart"
+  ],
+  "275": [
+   "EnteringHellgateLockCancel"
+  ],
+  "276": [
+   "PlayerCounts"
+  ],
+  "277": [
+   "InCombatStateUpdate"
+  ],
+  "278": [
+   "OtherGrabbedLoot"
+  ],
+  "279": [
+   "TreasureChestUsingStart"
+  ],
+  "280": [
+   "TreasureChestUsingFinished"
+  ],
+  "281": [
+   "TreasureChestUsingCancel"
+  ],
+  "282": [
+   "TreasureChestUsingOpeningComplete"
+  ],
+  "283": [
+   "TreasureChestForceCloseInventory"
+  ],
+  "284": [
+   "LocalTreasuresUpdate"
+  ],
+  "285": [
+   "LootChestSpawnpointsUpdate"
+  ],
+  "286": [
+   "PremiumChanged"
+  ],
+  "287": [
+   "PremiumExtended"
+  ],
+  "288": [
+   "PremiumLifeTimeRewardGained"
+  ],
+  "289": [
+   "GoldPurchased"
+  ],
+  "290": [
+   "LaborerGotUpgraded"
+  ],
+  "291": [
+   "JournalGotFull"
+  ],
+  "292": [
+   "JournalFillError"
+  ],
+  "293": [
+   "FriendRequest"
+  ],
+  "294": [
+   "FriendRequestInfos"
+  ],
+  "295": [
+   "FriendInfos"
+  ],
+  "296": [
+   "FriendRequestAnswered"
+  ],
+  "297": [
+   "FriendOnlineStatus"
+  ],
+  "298": [
+   "FriendRequestCanceled"
+  ],
+  "299": [
+   "FriendRemoved"
+  ],
+  "300": [
+   "FriendUpdated"
+  ],
+  "301": [
+   "PartyLootItems"
+  ],
+  "302": [
+   "PartyLootItemsRemoved"
+  ],
+  "303": [
+   "PartyLootItemTypesRemoved"
+  ],
+  "304": [
+   "ReputationUpdate"
+  ],
+  "305": [
+   "DefenseUnitAttackBegin"
+  ],
+  "306": [
+   "DefenseUnitAttackEnd"
+  ],
+  "307": [
+   "DefenseUnitAttackDamage"
+  ],
+  "308": [
+   "UnrestrictedPvpZoneUpdate"
+  ],
+  "309": [
+   "UnrestrictedPvpZoneStatus"
+  ],
+  "310": [
+   "ReputationImplicationUpdate"
+  ],
+  "311": [
+   "NewMountObject"
+  ],
+  "312": [
+   "MountHealthUpdate"
+  ],
+  "313": [
+   "MountCooldownUpdate"
+  ],
+  "314": [
+   "NewExpeditionAgent"
+  ],
+  "315": [
+   "NewExpeditionCheckPoint"
+  ],
+  "316": [
+   "ExpeditionStartEvent"
+  ],
+  "317": [
+   "VoteEvent"
+  ],
+  "318": [
+   "RatingEvent"
+  ],
+  "319": [
+   "NewArenaAgent"
+  ],
+  "320": [
+   "BoostFarmable"
+  ],
+  "321": [
+   "UseFunction"
+  ],
+  "322": [
+   "NewPortalEntrance"
+  ],
+  "323": [
+   "NewPortalExit"
+  ],
+  "324": [
+   "NewRandomDungeonExit"
+  ],
+  "325": [
+   "WaitingQueueUpdate"
+  ],
+  "326": [
+   "PlayerMovementRateUpdate"
+  ],
+  "327": [
+   "ObserveStart"
+  ],
+  "328": [
+   "MinimapZergs"
+  ],
+  "329": [
+   "MinimapSmartClusterZergs"
+  ],
+  "330": [
+   "PaymentTransactions"
+  ],
+  "331": [
+   "PerformanceStatsUpdate"
+  ],
+  "332": [
+   "OverloadModeUpdate"
+  ],
+  "333": [
+   "DebugDrawEvent"
+  ],
+  "334": [
+   "RecordCameraMove"
+  ],
+  "335": [
+   "RecordStart"
+  ],
+  "336": [
+   "DeliverCarriableObjectStart"
+  ],
+  "337": [
+   "DeliverCarriableObjectCancel"
+  ],
+  "338": [
+   "DeliverCarriableObjectReset"
+  ],
+  "339": [
+   "DeliverCarriableObjectFinished"
+  ],
+  "340": [
+   "TerritoryClaimStart"
+  ],
+  "341": [
+   "TerritoryClaimCancel"
+  ],
+  "342": [
+   "TerritoryClaimFinished"
+  ],
+  "343": [
+   "TerritoryScheduleResult"
+  ],
+  "344": [
+   "TerritoryUpgradeWithPowerCrystalResult"
+  ],
+  "345": [
+   "ReceiveCarriableObjectStart"
+  ],
+  "346": [
+   "ReceiveCarriableObjectFinished"
+  ],
+  "347": [
+   "UpdateAccountState"
+  ],
+  "348": [
+   "StartDeterministicRoam"
+  ],
+  "349": [
+   "GuildFullAccessTagsUpdated"
+  ],
+  "350": [
+   "GuildAccessTagUpdated"
+  ],
+  "351": [
+   "GvgSeasonUpdate"
+  ],
+  "352": [
+   "GvgSeasonCheatCommand"
+  ],
+  "353": [
+   "SeasonPointsByKillingBooster"
+  ],
+  "354": [
+   "FishingStart"
+  ],
+  "355": [
+   "FishingCast"
+  ],
+  "356": [
+   "FishingCatch"
+  ],
+  "357": [
+   "FishingFinished"
+  ],
+  "358": [
+   "FishingCancel"
+  ],
+  "359": [
+   "NewFloatObject"
+  ],
+  "360": [
+   "NewFishingZoneObject"
+  ],
+  "361": [
+   "FishingMiniGame"
+  ],
+  "362": [
+   "AlbionJournalAchievementCompleted"
+  ],
+  "363": [
+   "UpdatePuppet"
+  ],
+  "364": [
+   "ChangeFlaggingFinished"
+  ],
+  "365": [
+   "NewOutpostObject"
+  ],
+  "366": [
+   "OutpostUpdate"
+  ],
+  "367": [
+   "OutpostClaimed"
+  ],
+  "368": [
+   "OverChargeEnd"
+  ],
+  "369": [
+   "OverChargeStatus"
+  ],
+  "370": [
+   "PartyFinderFullUpdate"
+  ],
+  "371": [
+   "PartyFinderUpdate"
+  ],
+  "372": [
+   "PartyFinderApplicantsUpdate"
+  ],
+  "373": [
+   "PartyFinderEquipmentSnapshot"
+  ],
+  "374": [
+   "PartyFinderJoinRequestDeclined"
+  ],
+  "375": [
+   "NewUnlockedPersonalSeasonRewards"
+  ],
+  "376": [
+   "PersonalSeasonPointsGained"
+  ],
+  "377": [
+   "PersonalSeasonPastSeasonDataEvent"
+  ],
+  "378": [
+   "MatchLootChestOpeningStart"
+  ],
+  "379": [
+   "MatchLootChestOpeningFinished"
+  ],
+  "380": [
+   "MatchLootChestOpeningCancel"
+  ],
+  "381": [
+   "NotifyCrystalMatchReward"
+  ],
+  "382": [
+   "CrystalRealmFeedback"
+  ],
+  "383": [
+   "NewLocationMarker"
+  ],
+  "384": [
+   "NewTutorialBlocker"
+  ],
+  "385": [
+   "NewTileSwitch"
+  ],
+  "386": [
+   "NewInformationProvider"
+  ],
+  "387": [
+   "NewDynamicGuildLogo"
+  ],
+  "388": [
+   "NewDecoration"
+  ],
+  "389": [
+   "TutorialUpdate"
+  ],
+  "390": [
+   "TriggerHintBox"
+  ],
+  "391": [
+   "RandomDungeonPositionInfo"
+  ],
+  "392": [
+   "NewLootChest"
+  ],
+  "393": [
+   "UpdateLootChest"
+  ],
+  "394": [
+   "LootChestOpened"
+  ],
+  "395": [
+   "UpdateLootProtectedByMobsWithMinimapDisplay"
+  ],
+  "396": [
+   "NewShrine"
+  ],
+  "397": [
+   "UpdateShrine"
+  ],
+  "398": [
+   "UpdateRoom"
+  ],
+  "399": [
+   "NewMobSoul"
+  ],
+  "400": [
+   "NewHellgateShrine"
+  ],
+  "401": [
+   "UpdateHellgateShrine"
+  ],
+  "402": [
+   "ActivateHellgateExit"
+  ],
+  "403": [
+   "MutePlayerUpdate"
+  ],
+  "404": [
+   "ShopTileUpdate"
+  ],
+  "405": [
+   "ShopUpdate"
+  ],
+  "406": [
+   "AntiCheatKick"
+  ],
+  "407": [
+   "BattlEyeServerMessage"
+  ],
+  "408": [
+   "UnlockVanityUnlock"
+  ],
+  "409": [
+   "AvatarUnlocked"
+  ],
+  "410": [
+   "CustomizationChanged"
+  ],
+  "411": [
+   "BaseVaultInfo"
+  ],
+  "412": [
+   "GuildVaultInfo"
+  ],
+  "413": [
+   "BankVaultInfo"
+  ],
+  "414": [
+   "RecoveryVaultPlayerInfo"
+  ],
+  "415": [
+   "RecoveryVaultGuildInfo"
+  ],
+  "416": [
+   "UpdateWardrobe"
+  ],
+  "417": [
+   "CastlePhaseChanged"
+  ],
+  "418": [
+   "GuildAccountLogEvent"
+  ],
+  "419": [
+   "NewHideoutObject"
+  ],
+  "420": [
+   "NewHideoutManagement"
+  ],
+  "421": [
+   "NewHideoutExit"
+  ],
+  "422": [
+   "InitHideoutAttackStart"
+  ],
+  "423": [
+   "InitHideoutAttackCancel"
+  ],
+  "424": [
+   "InitHideoutAttackFinished"
+  ],
+  "425": [
+   "HideoutManagementUpdate"
+  ],
+  "426": [
+   "HideoutUpgradeWithPowerCrystalResult"
+  ],
+  "427": [
+   "IpChanged"
+  ],
+  "428": [
+   "SmartClusterQueueUpdateInfo"
+  ],
+  "429": [
+   "SmartClusterQueueActiveInfo"
+  ],
+  "430": [
+   "SmartClusterQueueKickWarning"
+  ],
+  "431": [
+   "SmartClusterQueueInvite"
+  ],
+  "432": [
+   "ReceivedGvgSeasonPoints"
+  ],
+  "433": [
+   "TowerPowerPointUpdate"
+  ],
+  "434": [
+   "OpenWorldAttackScheduleStart"
+  ],
+  "435": [
+   "OpenWorldAttackScheduleFinished"
+  ],
+  "436": [
+   "OpenWorldAttackScheduleCancel"
+  ],
+  "437": [
+   "OpenWorldAttackConquerStart"
+  ],
+  "438": [
+   "OpenWorldAttackConquerFinished"
+  ],
+  "439": [
+   "OpenWorldAttackConquerCancel"
+  ],
+  "440": [
+   "OpenWorldAttackConquerStatus"
+  ],
+  "441": [
+   "OpenWorldAttackStart"
+  ],
+  "442": [
+   "OpenWorldAttackEnd"
+  ],
+  "443": [
+   "NewRandomResourceBlocker"
+  ],
+  "444": [
+   "NewHomeObject"
+  ],
+  "445": [
+   "HideoutObjectUpdate"
+  ],
+  "446": [
+   "UpdateInfamy"
+  ],
+  "447": [
+   "MinimapPositionMarkers"
+  ],
+  "448": [
+   "NewTunnelExit"
+  ],
+  "449": [
+   "CorruptedDungeonUpdate"
+  ],
+  "450": [
+   "CorruptedDungeonStatus"
+  ],
+  "451": [
+   "CorruptedDungeonInfamy"
+  ],
+  "452": [
+   "HellgateRestrictedAreaUpdate"
+  ],
+  "453": [
+   "HellgateInfamy"
+  ],
+  "454": [
+   "HellgateStatus"
+  ],
+  "455": [
+   "HellgateStatusUpdate"
+  ],
+  "456": [
+   "HellgateSuspense"
+  ],
+  "457": [
+   "ReplaceSpellSlotWithMultiSpell"
+  ],
+  "458": [
+   "NewCorruptedShrine"
+  ],
+  "459": [
+   "UpdateCorruptedShrine"
+  ],
+  "460": [
+   "CorruptedShrineUsageStart"
+  ],
+  "461": [
+   "CorruptedShrineUsageCancel"
+  ],
+  "462": [
+   "ExitUsed"
+  ],
+  "463": [
+   "LinkedToObject"
+  ],
+  "464": [
+   "LinkToObjectBroken"
+  ],
+  "465": [
+   "EstimatedMarketValueUpdate"
+  ],
+  "466": [
+   "StuckCancel"
+  ],
+  "467": [
+   "DungonEscapeReady"
+  ],
+  "468": [
+   "FactionWarfareClusterState"
+  ],
+  "469": [
+   "FactionWarfareHasUnclaimedWeeklyReportsEvent"
+  ],
+  "470": [
+   "SimpleFeedback"
+  ],
+  "471": [
+   "SmartClusterQueueSkipClusterError"
+  ],
+  "472": [
+   "XignCodeEvent"
+  ],
+  "473": [
+   "AceTokenEvent"
+  ],
+  "474": [
+   "BatchUseItemStart"
+  ],
+  "475": [
+   "BatchUseItemEnd"
+  ],
+  "476": [
+   "RedZonePlayerNotification"
+  ],
+  "477": [
+   "RedZoneEventCheatCleanup"
+  ],
+  "478": [
+   "RedZoneFortressEventChestOpened"
+  ],
+  "479": [
+   "RedZoneWorldMapEvent"
+  ],
+  "480": [
+   "FactionWarfareStats"
+  ],
+  "481": [
+   "UpdateFactionBalanceFactors"
+  ],
+  "482": [
+   "FactionEnlistmentChanged"
+  ],
+  "483": [
+   "UpdateFactionRank"
+  ],
+  "484": [
+   "FactionWarfareCampaignRewardsUnlocked"
+  ],
+  "485": [
+   "FeaturedFeatureUpdate"
+  ],
+  "486": [
+   "NewCarriableObject"
+  ],
+  "487": [
+   "MinimapCrystalPositionMarker"
+  ],
+  "488": [
+   "CarriedObjectUpdate"
+  ],
+  "489": [
+   "PickupCarriableObjectStart"
+  ],
+  "490": [
+   "PickupCarriableObjectCancel"
+  ],
+  "491": [
+   "PickupCarriableObjectFinished"
+  ],
+  "492": [
+   "DoSimpleActionStart"
+  ],
+  "493": [
+   "DoSimpleActionCancel"
+  ],
+  "494": [
+   "DoSimpleActionFinished"
+  ],
+  "495": [
+   "NotifyGuestAccountVerified"
+  ],
+  "496": [
+   "MightAndFavorReceivedEvent"
+  ],
+  "497": [
+   "WeeklyPvpChallengeRewardStateUpdate"
+  ],
+  "498": [
+   "NewUnlockedPvpSeasonChallengeRewards"
+  ],
+  "499": [
+   "StaticDungeonEntrancesDungeonEventStatusUpdates"
+  ],
+  "500": [
+   "StaticDungeonDungeonValueUpdate"
+  ],
+  "501": [
+   "StaticDungeonEntranceDungeonEventsAborted"
+  ],
+  "502": [
+   "InAppPurchaseConfirmedGooglePlay"
+  ],
+  "503": [
+   "FeatureSwitchInfo"
+  ],
+  "504": [
+   "PartyJoinRequestAborted"
+  ],
+  "505": [
+   "PartyInviteAborted"
+  ],
+  "506": [
+   "PartyStartHuntRequest"
+  ],
+  "507": [
+   "PartyStartHuntRequested"
+  ],
+  "508": [
+   "PartyStartHuntRequestAnswer"
+  ],
+  "509": [
+   "PartyPlayerLeaveScheduled"
+  ],
+  "510": [
+   "GuildInviteDeclined"
+  ],
+  "511": [
+   "CancelMultiSpellSlots"
+  ],
+  "512": [
+   "NewVisualEventObject"
+  ],
+  "513": [
+   "CastleClaimProgress"
+  ],
+  "514": [
+   "CastleClaimProgressLogo"
+  ],
+  "515": [
+   "TownPortalUpdateState"
+  ],
+  "516": [
+   "TownPortalFailed"
+  ],
+  "517": [
+   "ConsumableVanityChargesAdded"
+  ],
+  "518": [
+   "FestivitiesUpdate"
+  ],
+  "519": [
+   "NewBannerObject"
+  ],
+  "520": [
+   "NewMistsImmediateReturnExit"
+  ],
+  "521": [
+   "MistsPlayerJoinedInfo"
+  ],
+  "522": [
+   "NewMistsStaticEntrance"
+  ],
+  "523": [
+   "NewMistsOpenWorldExit"
+  ],
+  "524": [
+   "NewTunnelExitTemp"
+  ],
+  "525": [
+   "NewMistsWispSpawn"
+  ],
+  "526": [
+   "MistsWispSpawnStateChange"
+  ],
+  "527": [
+   "NewMistsCityEntrance"
+  ],
+  "528": [
+   "NewMistsCityRoadsEntrance"
+  ],
+  "529": [
+   "MistsCityRoadsEntrancePartyStateUpdate"
+  ],
+  "530": [
+   "MistsCityRoadsEntranceClearStateForParty"
+  ],
+  "531": [
+   "MistsEntranceDataChanged"
+  ],
+  "532": [
+   "NewCagedObject"
+  ],
+  "533": [
+   "CagedObjectStateUpdated"
+  ],
+  "534": [
+   "EntrancePartyBindingCreated"
+  ],
+  "535": [
+   "EntrancePartyBindingCleared"
+  ],
+  "536": [
+   "EntrancePartyBindingInfos"
+  ],
+  "537": [
+   "NewMistsBorderExit"
+  ],
+  "538": [
+   "NewMistsDungeonExit"
+  ],
+  "539": [
+   "LocalQuestInfos"
+  ],
+  "540": [
+   "LocalQuestStarted"
+  ],
+  "541": [
+   "LocalQuestActive"
+  ],
+  "542": [
+   "LocalQuestInactive"
+  ],
+  "543": [
+   "LocalQuestProgressUpdate"
+  ],
+  "544": [
+   "NewUnrestrictedPvpZone"
+  ],
+  "545": [
+   "TemporaryFlaggingStatusUpdate"
+  ],
+  "546": [
+   "SpellTestPerformanceUpdate"
+  ],
+  "547": [
+   "Transformation"
+  ],
+  "548": [
+   "TransformationEnd"
+  ],
+  "549": [
+   "UpdateTrustlevel"
+  ],
+  "550": [
+   "RevealHiddenTimeStamps"
+  ],
+  "551": [
+   "ModifyItemTraitFinished"
+  ],
+  "552": [
+   "RerollItemTraitValueFinished"
+  ],
+  "553": [
+   "HuntQuestProgressInfo"
+  ],
+  "554": [
+   "HuntStarted"
+  ],
+  "555": [
+   "HuntFinished"
+  ],
+  "556": [
+   "HuntAborted"
+  ],
+  "557": [
+   "HuntMissionStepStateUpdate"
+  ],
+  "558": [
+   "NewHuntTrack"
+  ],
+  "559": [
+   "HuntMissionUpdate"
+  ],
+  "560": [
+   "HuntQuestMissionProgressUpdate"
+  ],
+  "561": [
+   "HuntTrackUsed"
+  ],
+  "562": [
+   "HuntTrackUseableAgain"
+  ],
+  "563": [
+   "MinimapHuntTrackMarkers"
+  ],
+  "564": [
+   "NoTracksFound"
+  ],
+  "565": [
+   "HuntQuestAborted"
+  ],
+  "566": [
+   "InteractWithTrackStart"
+  ],
+  "567": [
+   "InteractWithTrackCancel"
+  ],
+  "568": [
+   "InteractWithTrackFinished"
+  ],
+  "569": [
+   "NewDynamicCompound"
+  ],
+  "570": [
+   "NewDynamicTileComposition"
+  ],
+  "571": [
+   "DestroyDynamicTileComposition"
+  ],
+  "572": [
+   "LegendaryItemDestroyed"
+  ],
+  "573": [
+   "AttunementInfo"
+  ],
+  "574": [
+   "TerritoryClaimRaidedRawEnergyCrystalResult"
+  ],
+  "575": [
+   "CarriedObjectExpiryWarning"
+  ],
+  "576": [
+   "CarriedObjectExpired"
+  ],
+  "577": [
+   "TerritoryRaidStart"
+  ],
+  "578": [
+   "TerritoryRaidCancel"
+  ],
+  "579": [
+   "TerritoryRaidFinished"
+  ],
+  "580": [
+   "TerritoryRaidResult"
+  ],
+  "581": [
+   "TerritoryMonolithActiveRaidStatus"
+  ],
+  "582": [
+   "TerritoryMonolithActiveRaidCancelled"
+  ],
+  "583": [
+   "MonolithEnergyStorageUpdate"
+  ],
+  "584": [
+   "MonolithNextScheduledOpenWorldAttackUpdate"
+  ],
+  "585": [
+   "MonolithProtectedBuildingsDamageReductionUpdate"
+  ],
+  "586": [
+   "NewBuildingBaseEvent"
+  ],
+  "587": [
+   "NewFortificationBuilding"
+  ],
+  "588": [
+   "NewCastleGateBuilding"
+  ],
+  "589": [
+   "BuildingDurabilityUpdate"
+  ],
+  "590": [
+   "MonolithFortificationPointsUpdate"
+  ],
+  "591": [
+   "FortificationBuildingUpgradeInfo"
+  ],
+  "592": [
+   "FortificationBuildingsDamageStateUpdate"
+  ],
+  "593": [
+   "SiegeNotificationEvent"
+  ],
+  "594": [
+   "UpdateEnemyWarBannerActive"
+  ],
+  "595": [
+   "TerritoryAnnouncePlayerEjection"
+  ],
+  "596": [
+   "CastleGateSwitchUseStarted"
+  ],
+  "597": [
+   "CastleGateSwitchUseFinished"
+  ],
+  "598": [
+   "FortificationBuildingWillDowngrade"
+  ],
+  "599": [
+   "BotCommand"
+  ],
+  "600": [
+   "JournalAchievementProgressUpdate"
+  ],
+  "601": [
+   "JournalClaimableRewardUpdate"
+  ],
+  "602": [
+   "KeySync"
+  ],
+  "603": [
+   "LocalQuestAreaGone"
+  ],
+  "604": [
+   "DynamicTemplate"
+  ],
+  "605": [
+   "DynamicTemplateForcedStateChange"
+  ],
+  "606": [
+   "NewOutlandsTeleportationPortal"
+  ],
+  "607": [
+   "NewOutlandsTeleportationReturnPortal"
+  ],
+  "608": [
+   "OutlandsTeleportationBindingCleared"
+  ],
+  "609": [
+   "OutlandsTeleportationReturnPortalUpdateEvent"
+  ],
+  "610": [
+   "PlayerUsedOutlandsTeleportationPortal"
+  ],
+  "611": [
+   "EncumberedRestricted"
+  ],
+  "612": [
+   "NewPiledObject"
+  ],
+  "613": [
+   "PiledObjectStateChanged"
+  ],
+  "614": [
+   "NewSmugglerCrateDeliveryStation"
+  ],
+  "615": [
+   "KillRewardedNoFame"
+  ],
+  "616": [
+   "PickupFromPiledObjectStart"
+  ],
+  "617": [
+   "PickupFromPiledObjectCancel"
+  ],
+  "618": [
+   "PickupFromPiledObjectReset"
+  ],
+  "619": [
+   "PickupFromPiledObjectFinished"
+  ],
+  "620": [
+   "ArmoryActivityChange"
+  ],
+  "621": [
+   "NewKillTrophyFurnitureBuilding"
+  ],
+  "622": [
+   "HellDungeonsPlayerJoinedInfo"
+  ],
+  "623": [
+   "NewTileSwitchTrigger"
+  ],
+  "624": [
+   "NewMultiRewardObject"
+  ],
+  "625": [
+   "NewHellDungeonSoulShrineObject"
+  ],
+  "626": [
+   "HellDungeonSoulShrineStateUpdate"
+  ],
+  "627": [
+   "NewResurrectionShrine"
+  ],
+  "628": [
+   "UpdateResurrectionShrine"
+  ],
+  "629": [
+   "StandTimeFinished"
+  ],
+  "630": [
+   "EpicAchievementAndStatsUpdate"
+  ],
+  "631": [
+   "SpectateTargetAfterDeathUpdate"
+  ],
+  "632": [
+   "SpectateTargetAfterDeathEnded"
+  ],
+  "633": [
+   "NewHellDungeonUpwardExit"
+  ],
+  "634": [
+   "NewHellDungeonSoulExit"
+  ],
+  "635": [
+   "NewHellDungeonDownwardExit"
+  ],
+  "636": [
+   "NewHellDungeonChestExit"
+  ],
+  "637": [
+   "NewCorruptedStaticEntrance"
+  ],
+  "638": [
+   "NewHellDungeonStaticEntrance"
+  ],
+  "639": [
+   "UpdateHellDungeonStaticEntranceState"
+  ],
+  "640": [
+   "DebugTriggerHellDungeonShutdownStart"
+  ],
+  "641": [
+   "FullJournalQuestInfo"
+  ],
+  "642": [
+   "JournalQuestProgressInfo"
+  ],
+  "643": [
+   "NewHellDungeonRoomShrineObject"
+  ],
+  "644": [
+   "HellDungeonRoomShrineStateUpdate"
+  ],
+  "645": [
+   "SimpleBehaviourBuildingStateUpdate"
+  ],
+  "646": [
+   "SetTimeScaling"
+  ],
+  "647": [
+   "StopTimeScaling"
+  ],
+  "648": [
+   "KeyValidation"
+  ],
+  "649": [
+   "PlayerJoinMapMarkerTimerStates"
+  ],
+  "650": [
+   "NewMapMarkerTimer"
+  ],
+  "651": [
+   "RemoveMapMarkerTimer"
+  ],
+  "652": [
+   "NewFactionFortressObject"
+  ],
+  "653": [
+   "FactionFortressAnnouncePlayerEjection"
+  ],
+  "654": [
+   "RewardFactionWarfareSupply"
+  ],
+  "655": [
+   "FactionCaptureAreaProgressUpdate"
+  ],
+  "656": [
+   "FactionFortressClaimed"
+  ],
+  "657": [
+   "FactionFortressWeaponCachesSpawned"
+  ],
+  "658": [
+   "FactionFortressWeaponCacheClaimed"
+  ],
+  "659": [
+   "FactionFortressFightStateUpdate"
+  ],
+  "660": [
+   "FactionFortressCutoffFightStateUpdate"
+  ],
+  "661": [
+   "FactionFortressFightEnded"
+  ],
+  "662": [
+   "NewFactionWarfarePortal"
+  ],
+  "663": [
+   "FactionPortalTargetUpdate"
+  ],
+  "664": [
+   "FactionFortressFightStartedInRemoteClusterEvent"
+  ],
+  "665": [
+   "FactionFortressFightFinishedInRemoteClusterEvent"
+  ],
+  "666": [
+   "FactionDuchySupplyWarDefensiveVictoryEvent"
+  ],
+  "667": [
+   "FactionDuchyReconnectedFromCutoffEvent"
+  ],
+  "668": [
+   "FactionFortressCutoffFightCancelledByClusterOwnerChangeEvent"
+  ],
+  "669": [
+   "FactionDuchyEnteredCutoffStateEvent"
+  ],
+  "670": [
+   "LeaveProtectionStateUpdate"
+  ],
+  "671": [
+   "RedZoneEventStandings"
+  ],
+  "672": [
+   "NewFactionBattleStandardDeliveryStation"
+  ],
+  "673": [
+   "NewLoreSnippetObject"
+  ],
+  "674": [
+   "LoreSnippetObjectStateUpdate"
+  ],
+  "675": [
+   "LoreSnippedClaimed"
+  ],
+  "676": [
+   "LoreSnippetStatesChangedByCheat"
+  ],
+  "677": [
+   "NewTeleporterNode"
+  ],
+  "678": [
+   "TeleporterNodeStateChanged"
+  ],
+  "679": [
+   "TeleporterConnectionsFullStateUpdate"
+  ],
+  "680": [
+   "TeleporterConnectionStateChanged"
+  ],
+  "681": [
+   "RetrieveCarriableObjectStart"
+  ],
+  "682": [
+   "RetrieveCarriableObjectCancel"
+  ],
+  "683": [
+   "RetrieveCarriableObjectReset"
+  ],
+  "684": [
+   "RetrieveCarriableObjectFinished"
+  ],
+  "685": [
+   "LosingCarriableObjectStart"
+  ],
+  "686": [
+   "LosingCarriableObjectFinished"
+  ],
+  "687": [
+   "DragonIncursionClusterState"
+  ],
+  "688": [
+   "NotifyPlatformAccountConfirmed"
+  ],
+  "689": [
+   "DragonAreaMainQuestStateUpdateBase"
+  ],
+  "690": [
+   "DragonAreaPlayerJoinedInfo"
+  ],
+  "691": [
+   "DragonAreaMainQuestStateUpdate"
+  ],
+  "692": [
+   "DebugTriggerDragonAreaShutdownStart"
+  ],
+  "693": [
+   "BleedOut"
+  ],
+  "694": [
+   "NewDragonAreaEntrance"
+  ],
+  "695": [
+   "NewDragonAreaExit"
+  ],
+  "696": [
+   "DragonAreaExitStatusUpdate"
+  ],
+  "697": [
+   "UpdateDragonEnergy"
+  ],
+  "698": [
+   "DragonAreaTeleporterKeyUpdate"
+  ],
+  "699": [
+   "UsingDragonAreaEntranceStateUpdate"
+  ],
+  "700": [
+   "DragonAreaEntranceBindingStateUpdate"
+  ],
+  "701": [
+   "FactionTraderZoneBuffFailure"
+  ],
+  "702": [
+   "SmartClusterQueueContingentEntered"
+  ],
+  "703": [
+   "NewCorpseObject"
+  ],
+  "704": [
+   "ClusterSyncedStringValueUpdate"
+  ],
+  "705": [
+   "ClusterSyncedBoolValueUpdate"
+  ],
+  "706": [
+   "ClusterSyncedIntValueUpdate"
+  ],
+  "707": [
+   "ClusterSyncedStringValuesSnapshot"
+  ],
+  "708": [
+   "ClusterSyncedBoolValuesSnapshot"
+  ],
+  "709": [
+   "ClusterSyncedIntValuesSnapshot"
+  ],
+  "710": [
+   "FixedRotationForcedMovementPositionUpdate"
+  ],
+  "711": [
+   "InventoryFrozenSlotsUpdate"
+  ]
+ }
+}
