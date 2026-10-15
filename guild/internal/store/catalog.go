@@ -64,7 +64,7 @@ func (s *Store) LoadCatalog(ctx context.Context) ([]catalog.Item, []catalog.Cate
 
 // SaveCatalog 整份替换。目录是上游 dump 的镜像,增量合并没有意义,
 // 反而会把上游删掉的条目永久留在库里。
-func (s *Store) SaveCatalog(ctx context.Context, items []catalog.Item, cats []catalog.Category) error {
+func (s *Store) SaveCatalog(ctx context.Context, items []catalog.Item, cats []catalog.Category, source string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -100,10 +100,12 @@ func (s *Store) SaveCatalog(ctx context.Context, items []catalog.Item, cats []ca
 		return err
 	}
 
+	// source 记"这份目录是哪来的"。客户端解出来的和 GitHub 的二手 dump
+	// 准确度差一截,出问题时第一件事就是看当前用的是哪份
 	if _, err := tx.Exec(ctx, `INSERT INTO catalog_meta (key, value) VALUES
-		('synced_at', $1), ('item_count', $2)
+		('synced_at', $1), ('item_count', $2), ('source', $3)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-		time.Now().UTC().Format(time.RFC3339), strconv.Itoa(len(items))); err != nil {
+		time.Now().UTC().Format(time.RFC3339), strconv.Itoa(len(items)), source); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

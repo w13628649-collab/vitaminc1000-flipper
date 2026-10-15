@@ -91,21 +91,47 @@ func (s *Service) LoadCatalog(ctx context.Context) error {
 		return err
 	}
 	if len(items) == 0 {
-		slog.Info("物品目录是空的,去上游同步")
-		return s.SyncCatalog(ctx)
+		// 用内置的那份,不去 GitHub。它是从游戏客户端自己解出来的,
+		// 比社区二手 dump 准,而且不依赖网络——服务端第一次起来就有完整目录,
+		// 不会因为拉不到 GitHub 整个倒爷页面 503
+		slog.Info("物品目录是空的,装载内置目录", "client_version", catalog.ClientVersion)
+		return s.LoadBuiltinCatalog(ctx)
 	}
 	s.cat.Store(catalog.New(items, cats, syncedAt))
 	slog.Info("物品目录已载入", "items", len(items), "synced_at", syncedAt)
 	return nil
 }
 
+// LoadBuiltinCatalog 把编进二进制的那份目录写库再换进内存。
+//
+// 这是**默认来源**:它从游戏客户端的 items.xml + localization.xml 解出来,
+// 跟着实际安装的客户端版本走。代价是版本更新后要人工重新解
+// (docs/client-data/extract.py),所以 SyncCatalog 那条路留着当临时补丁。
+func (s *Service) LoadBuiltinCatalog(ctx context.Context) error {
+	items, cats, err := catalog.Builtin()
+	if err != nil {
+		return err
+	}
+	source := "client/" + catalog.ClientVersion
+	if err := s.Store.SaveCatalog(ctx, items, cats, source); err != nil {
+		return err
+	}
+	s.cat.Store(catalog.New(items, cats, time.Now().UTC().Format(time.RFC3339)))
+	slog.Info("内置物品目录已装载", "items", len(items), "source", source)
+	return nil
+}
+
 // SyncCatalog 从 ao-bin-dumps 拉一份新的写库,再换进内存。
+//
+// **这是退路,不是默认。** ao-bin-dumps 是社区按自己节奏从某个版本导出的
+// 二手数据,和成员实际装的客户端不保证同版本。只在内置目录明显过期、
+// 又来不及重新解客户端时用。
 func (s *Service) SyncCatalog(ctx context.Context) error {
 	items, cats, err := catalog.Fetch(ctx)
 	if err != nil {
 		return err
 	}
-	if err := s.Store.SaveCatalog(ctx, items, cats); err != nil {
+	if err := s.Store.SaveCatalog(ctx, items, cats, "ao-bin-dumps"); err != nil {
 		return err
 	}
 	s.cat.Store(catalog.New(items, cats, time.Now().UTC().Format(time.RFC3339)))

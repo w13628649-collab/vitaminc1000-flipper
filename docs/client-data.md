@@ -51,7 +51,51 @@ GetGameServerByCluster = 17   ✓
 我们现在的 `market_history` 只有 AODP 那一路(而 AODP 的 `item_count`
 只统计卖单成交)。这个操作如果能抓到,就是第一手的双边成交。
 
-## 二、配方:精炼功能的整个地基
+## 二、不用一个个点物品:市场界面本来就有批量路径
+
+这是从客户端 GUI 代码读出来的,是这份调查里最直接能省力的一条。
+
+被动抓包只看得到**客户端自己请求了什么**,所以覆盖率的上限由"成员在游戏里
+点了哪些界面"决定。但市场界面本身就有按筛选条件的**批量查询**,不是只能
+一个物品一个物品点:
+
+| 界面 | 方法 | 一次请求拿到 |
+|---|---|---|
+| **购买** 标签页 | `MarketPlaceBuyView.DemandOffers` + `GetCurrentFilter` | 按筛选条件的一整页**卖单**,多个物品 |
+| **买单** 标签页 | `MarketPlaceBuyOrdersView.DemandRequests` + `GetCurrentFilter` | 按筛选条件的一整页**买单**,多个物品 |
+| 物品详情弹窗 | `MarketPlacePopUpGui` | 单个物品的两侧 + 历史曲线 |
+| 创建买单 | `MarketPlaceCreateBuyOrderView.DemandLowestOfferPrices` | 该物品各品质的最低卖价(op 97) |
+
+两个标签页发的请求参数结构一模一样(`AuctionGetOffers` / `AuctionGetRequests`,
+14–16 个字段:分类、子类、搜索词、tier、`short[]` 品质数组、翻页),
+**都是过滤查询,不是单物品查询**。
+
+### 和之前那条结论的出入
+
+调查报告里写过"「从集市购买」列表页只发卖单请求,必须点进物品详情页
+才同时抓到买单"(实测 153 个组合只有卖单、只有 15 个两侧都有)。
+那条观察本身没错,但结论下窄了:**那是只翻了「购买」页的结果**。
+买单有自己的标签页,它一样是批量的。
+
+### 所以采集动作应该是
+
+```
+进城 → 市场 → 购买页:设好 tier / 附魔筛选 → 逐页翻
+            → 买单页:同样的筛选 → 逐页翻
+```
+
+一个品类两个标签页各翻几页,抵得上几百次单物品点击。**翻页本身就是请求**,
+`MarketPlaceFooterView.OnPagingChanged` 证实分页会重新发请求。
+
+### 还是省不掉的部分
+
+- 客户端不请求的东西抓不到。没人翻过的城市、没人筛过的品类就是空白
+- 主动构造请求去问服务器属于另一回事,不在被动抓包范围内,这份调查也
+  明确没做(原话:"本次未提供实时捕获或主动操作游戏步骤")
+- 所以覆盖率是**人力调度问题**:工具该做的是告诉成员"现在哪些
+  (城市 × 品类 × 品质)最旧、最值得去翻",而不是让他们盲翻
+
+## 三、配方:精炼功能的整个地基
 
 `recipes.jsonl.gz` 每行一个可制造物品。实样(T5 精布):
 
@@ -83,7 +127,7 @@ T4_STONEBLOCK  [rock ] 产1 专注  54   2×T4_ROCK  + 1×T3_STONEBLOCK
 **比 GitHub 的 `ao-bin-dumps` 可靠**:这份是本机实际安装的那个客户端版本
 解出来的,不是上游某次快照。我们现在的目录同步走的是 GitHub。
 
-## 三、专精和制造费:确认可抓,码也找到了
+## 四、专精和制造费:确认可抓,码也找到了
 
 这两件事 `CLAUDE.md` 和待办里一直记着"要手填",现在有了具体入口。
 
@@ -126,51 +170,108 @@ SetUsageFee · SetNutritionConsumption · SetCraftingCapacityConsumption
 同理,`radar-roadmap/ENCRYPTION-BOUNDARY.md` 对"哪些包不加密"的结论是:
 不能静态断言,得有实时样本才知道某次连接启没启用保护。
 
-## 四、物品目录:可以换一份更准的
+## 五、物品目录:已经换成客户端那份
 
-`static-data/catalogs/market-items.jsonl`(17 MB,在调查工作区里)有
-**12,237 个展开 ID**,带 EN-US / ZH-CN / **ZH-TW** 三语名,
-外加 `weight`、`maxstacksize`、`unlockedtocraft`、完整 shopcategory 树。
-名字是从客户端自己的 `localization.xml` 解的。
+**做完了。** `guild/internal/catalog/data/items.jsonl.gz`(127 KB,编进二进制),
+**11,601 个物品**,中英文名、分类、等级、附魔、品质档数全来自客户端的
+`items.xml` + `localization.xml`。
 
-我们现在是 11,391 个、只有中英、走 GitHub 的 dump。
+| | 以前 | 现在 |
+|---|---|---|
+| 来源 | GitHub `ao-data/ao-bin-dumps` | 客户端 `1.32.030.345319` |
+| 物品数 | 11,391 | **11,601** |
+| 拿法 | 服务端启动时 HTTP 拉两份 dump(17+24 MB) | 编在二进制里,解压即用 |
+| 没网 | 整个倒爷页面 503 | 照常 |
 
-那份文件老实标了 **636 个 ID 没有这三种语言的名字,不伪造填充** ——
-换过来的话我们的 `NameOf` 退回 item_id 的分支会更常走到,这是对的。
+为什么内置而不是每次拉:
 
-没把它放进仓库,是因为 17 MB 而且和现有 `catalog` 同步路径重叠,
-换不换是另一个决定。要换的话 `extract.py` 里加一段就行。
+- **准。** ao-bin-dumps 是社区按自己节奏从某个版本导出的二手数据,
+  和成员实际装的客户端不保证同版本
+- **不依赖网络。** 服务端第一次起来就有完整目录
+- **小。** 127 KB,比一次 HTTP 请求的抖动代价还低
 
-## 五、市场位置:可以校验 `world` 包
+代价是跟着客户端版本走,**游戏大版本更新后要人工重新解**:
+重新跑一遍调查 → `python3 docs/client-data/extract.py <工作区>`。
 
-`static-data/catalogs/market-locations.json` 给了每座城的
-`city_cluster_ids` 和 `market_cluster_candidates`,带 displayname、
-cluster_type 和 marketplace GUID。例如:
+`POST /api/catalog/sync`(走 GitHub)那条路留着,当作"客户端数据过期、
+又来不及重新解"时的临时补丁。`catalog_meta` 里记了 `source`
+(`client/1.32.030.345319` 或 `ao-bin-dumps`),随时能查现在用的是哪份。
 
-```
-Thetford  城市本体 0000  ·  市场 0007 "Thetford Market"
-```
+**636 个没有中英文名的占位条目不收。** 那份数据自己标了这件事、不伪造填充,
+我们跟着它的口径——收进来只会让搜索和菜单里多出一堆看不懂的 id。
 
-和我们 `internal/world` 里那张表对得上。它还多给了黑市、Brecilien
-这些边界情况的依据,如果要扩 `world` 的覆盖,从这里取证比猜强。
+## 六、市场位置:已经按 AODP 权威表重写
 
-## 六、对那 8 条优化诉求的影响
+**做完了。** 工作区里冻结了 AODP 服务端自己的 `lib/location.rb`
+(`public-data/sources/aodp-server/lib/location.rb`),`internal/world`
+照抄它的表和归一化规则,再用客户端的 `market-locations.json` 交叉核对。
+
+照抄而不是自己推,是因为融合的另一端就是 AODP:**它认什么我们就得认什么**,
+推得再合理只要不一致就合不上。
+
+### 黑市:从"拿不准"变成"确认是独立地点"
+
+原来 `world` 的注释猜 3003 可能是黑市、怕并进 Caerleon 会让 NPC 求购
+冒充买单。两头都证实了:
+
+- 客户端 `market-locations.json`:cluster 3003 绑的 marketplace 实体
+  类型就是 `BLACKMARKET`
+- AODP 的 `location.rb`:`3003 → Black Market`,和 Caerleon 市场 3005 分开
+
+所以不再原样放行,而是收敛成 `Black Market` 这个独立 key。
+
+**黑市机制**(客户端本地化原文 `@TUTORIAL_BLACK_MARKET_HOW_TEXT`):
+
+> 当野怪掉落作为战利品的物品时,该物品实际上来自黑市自身的库存。
+> 当黑市的库存中有某项物品特别稀缺时,该物品就能以更高的价格售出。
+
+界面上那个标签页叫「需求」(`@BLACKMARKETUI_DEMANDTAB`),分类叫
+「黑市需求订单」。所以**黑市挂的是 NPC 买单,它的买价是需求信号而不是
+玩家报价**。两条硬特性:
+
+- **只有 NPC 买单,买不到货** → 往黑市的路线成立,从黑市出来的不成立。
+  不用特判,`arb.playable` 发现缺卖价自然不出那条路线
+- **只收装备**(`@BUILDINGS_BLACKMARKET_DESC`:"出售装备 - 它会成为
+  阿尔比恩战利品的一部分")→ 精炼材料扫到也是空的
+
+另外黑市 NPC 就站在 Caerleon 城里,和 Caerleon 市场隔一条街。
+按跨城收路上时间会把"在 Caerleon 买装备、走过去卖给黑市"这条最实在的
+路子算差一截,所以 `TravelHoursBetween` 给同 cluster 的一对 0.05 小时。
+
+### 其余新支持的地点
+
+| 原始 | 收敛成 | 依据 |
+|---|---|---|
+| `0301` / `1301` / … | 传送门城并进主城 | `PORTAL_TO_CITY` |
+| `3013-Auction2` | 去后缀 → `3013` → Caerleon | `PORTAL_TO_CITY` |
+| `BLACKBANK-####`、`xxxx@BLACKBANK-####` | 走私贩网络(**一个共享盘口**) | `SMUGGLERS_NETWORK_LOCATIONS` |
+| `####-HellDen` | 并进主城市场 | `HELLDEN_TO_MARKET` |
+| `"0007"` 和 `"7"` | 同一个地点 | AODP 内部存整数 |
+
+走私贩网络那条值得单说:**AODP 把 ~38 个据点当成一个共享盘口**,
+请求其中任何一个,它会把整个清单展开返回(`get_locations`)。
+所以分开记没有意义。
+
+`HELLDEN_TO_MARKET` 里 AODP 自己留了条警告:`3003-HellDen` 并进
+**Caerleon 市场**而不是黑市。我们照抄了,测试里也钉住了。
+
+## 七、对那 8 条优化诉求的影响
 
 | # | 诉求 | 这份数据帮得上吗 |
 |---|---|---|
 | 4 | 原料盈亏平衡价 | **能,配方齐了,现在就能做** |
+| 6 | 数据陈旧 / 覆盖不够 | **能** —— 见第二节,购买页和买单页都是批量的,不用一个个点 |
 | 2 | 专精免手填 | 给了事件码 152/153,字段要自己抓 |
 | 5 | 制造费免手填 | 给了事件码 49,字段要自己抓 |
 | 1 | 点一下卡半天 | 无关 —— 是架构问题 |
 | 8 | 预计算而不是点击时算 | 无关 —— 是架构问题 |
 | 3 | 总利润 / 总利润率 | 无关 |
-| 6 | 数据陈旧 | 无关 |
 | 7 | 界面太密 | 无关 |
 
 **一句话:这份数据解决的是"算什么"(配方、码表),不解决"怎么算得快"
 (第 1、8 条)和"怎么显示"(第 3、7 条)。那两类是我们自己的架构和界面问题。**
 
-## 七、原始工作区
+## 八、原始工作区
 
 解压在 `/data/code/albion/albion-flipper/rea-test/`(2.5 GB,不进仓库)。
 入口:

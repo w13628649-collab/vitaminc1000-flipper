@@ -13,7 +13,9 @@
   ("这个黄色背景我也不喜欢,还是以前那种配色好看"),推翻了之前"深暗木底 + 金边 + 羊皮纸字色、
   跟着游戏走"的做法。不要加暗色模式分支,也别再引入 Cinzel 那种游戏风字体
 - 交易模型:四种执行方式、跨城套利、风险指标、吃深度、资金分配、实盘记账
-- 精炼/制造利润系统还没动工
+- 精炼/制造利润系统还没动工。但**配方数据已经齐了**
+  (`docs/client-data/recipes.jsonl.gz`,2,946 个可制造物品、12,437 条配方,
+  带输入物品数量、专注消耗、产出数量、制造线),原料盈亏平衡价现在就能算
 
 进度和接口清单见 `docs/progress.md`,口径和设计取舍见 `docs/flipper.md`。
 
@@ -173,6 +175,10 @@ def return_rate(base, city, focus):
 - 倒爷工具口径:`docs/flipper.md`
 - 完整讨论记录(需要时再读,不要默认加载):`docs/session-transcript.md`
 - 原始需求:`SPEC-flipper.md`
-- 物品/配方:https://github.com/ao-data/ao-bin-dumps(`items.json`、`world.txt`)
+- **物品/配方/地点:以游戏客户端解出来的数据为准**,见 `docs/client-data.md`。
+  物品目录已经内置(`guild/internal/catalog/data/items.jsonl.gz`,11,601 个,
+  客户端 1.32.030.345319);配方和 Photon 码表在 `docs/client-data/`。
+  ao-bin-dumps(https://github.com/ao-data/ao-bin-dumps)降级为退路——
+  它是社区按自己节奏导出的二手数据,和成员实际装的客户端不保证同版本
 - 抓包客户端:https://github.com/ao-data/albiondata-client
 - 物品图标:`https://render.albiononline.com/v1/item/{id}.png`
