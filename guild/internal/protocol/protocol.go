@@ -95,6 +95,8 @@ type Parser struct {
 	characterName string
 	// zoneReqs 是还在等响应的 op 197 请求(station.go)
 	zoneReqs []zoneRequest
+	// zoneDropped 是因为配不出区丢掉的 197 响应条数
+	zoneDropped int64
 	// sampled 是这次运行里每个 (方向, 码) 已经记了几条样本(sample.go)
 	sampled map[ruleKey]int
 
@@ -107,6 +109,9 @@ type Parser struct {
 	OnIdentity func(characterID, characterName, location string)
 	// OnMarketRequest 看到 81/82 请求时回调,给加密判定做门控(CryptoTracker.MarketRequest)。
 	OnMarketRequest func()
+	// OnMarketResponded 认出一条明文的 81/82 响应时回调,不管里面有没有挂单
+	// (CryptoTracker.MarketResponded)。空结果也要报:它说明这条响应不是密文
+	OnMarketResponded func()
 	// OnMarketDecoded 一条 81/82 响应处理完时回调,n 是 JSON 解开的挂单条数
 	// (CryptoTracker.MarketDecoded)。位置不明被丢掉的也算在 n 里
 	OnMarketDecoded func(n int)
@@ -141,8 +146,8 @@ func (p *Parser) Character() (id, name string) {
 
 // HandleResponse 处理 operation 的响应。
 //
-// photonOp 是 Photon 那一层的操作码,params[253] 是 Albion 真正的操作码。
-// **两个都要认**,因为市场挂单走的是一条没有参数表的路:
+// photonOp 是 Photon 那一层的操作码,不用:params[253] 才是 Albion 真正的操作码。
+// 但**没有 253 的那条路也要认**,因为市场挂单走的是一条没有参数表的路:
 //
 // 挂单数据以字符串数组的形式占在 debug message 的位置上(见
 // photon.dispatchResponse 的 []string 分支),photon 层把它包成
@@ -152,33 +157,38 @@ func (p *Parser) Character() (id, name string) {
 //
 // 认出码之后先过白名单(allowlist.go):不在表里的直接返回,在表里的只把
 // 表内的键交给下面的 handle*。
-func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
+func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 	code, hasCode := intParam(params, paramOperationCode)
 	if !hasCode {
 		// 没有参数表。params[0] 是字符串数组就一定是挂单,没有别的响应长这样。
 		// 方向靠 JSON 里的 AuctionType 判,本来就不需要操作码区分
-		// offers / requests,所以按卖单列表那一行过白名单
-		if _, isOrders := stringSlice(params[0]); isOrders {
-			code = p.Codes.AuctionGetOffers
-		} else {
-			code = int(photonOp) // 退回 Photon 层那个操作码
+		// offers / requests,所以按卖单列表那一行过白名单。
+		//
+		// 别的形状一律丢。以前退回用 Photon 层那个 byte 码查白名单,
+		// 等于开了一道侧门:Photon 层码恰好是 2 / 197 的包能进 Join / 区域地图的处理
+		if _, isOrders := stringSlice(params[0]); !isOrders {
+			return
 		}
+		code = p.Codes.AuctionGetOffers
 	}
 	rule, ok := p.allow.lookup(p.Codes, p.Events, KindResponse, code)
 	if !ok {
 		return
 	}
-	if rule.Sample {
-		p.recordSample(rule, params) // 全键原样,在剥键之前
-	}
 	params = rule.filter(params)
 	switch code {
 	case p.Codes.AuctionGetOffers, p.Codes.AuctionGetRequests:
+		// 先报"收到了一条能解析的明文市场响应",再看解出几条。空结果(筛选没货、
+		// 翻过最后一页)也是明文响应,要关掉加密判定的窗口,不然窗口里混进一条
+		// 无关密文,到期就把明文号判成加密
+		if p.OnMarketResponded != nil {
+			p.OnMarketResponded()
+		}
 		p.handleOrders(params)
 	case p.Codes.Join:
 		p.handleJoin(params)
 	case p.Codes.GetClusterMapInfo:
-		p.handleClusterMap(params)
+		p.handleClusterMap(params, rule) // 样本在里面区号校验过了才记
 	}
 }
 
@@ -227,7 +237,11 @@ func (p *Parser) HandleEvent(_ byte, params map[byte]any) {
 		return
 	}
 	if rule.Sample {
-		p.recordSample(rule, params)
+		if rule.SampleAllKeys {
+			p.recordSample(rule, params) // 只有用户批准的那三条专精事件
+		} else {
+			p.recordSample(rule, rule.filter(params))
+		}
 	}
 	// rule.Keys 对事件全是空的:业务层什么都不拿
 }
@@ -365,7 +379,8 @@ func stringSlice(v any) ([]string, bool) {
 				out = append(out, str)
 			}
 		}
-		return out, len(out) > 0
+		// 空数组也算(空结果页);非空但一个字符串都没有的不算
+		return out, len(out) > 0 || len(s) == 0
 	}
 	return nil, false
 }

@@ -43,10 +43,14 @@ type Rule struct {
 	Name string // 客户端码表里的名字,只给人看
 	// Keys 是允许进业务层的参数键。空 = 业务层只知道"这条消息发生了",一个参数都拿不到
 	Keys []byte
-	// Sample 为 true 时,原始样本记录器(sample.go)可以把这条消息的**全部键**原样
-	// 记下来,用来解还没解过的字段布局。只给明确批准的几条开,每个码每次运行最多 20 条
+	// Sample 为 true 时,原始样本记录器(sample.go)把这条消息带类型标签原样记下来,
+	// 用来核对字段布局。默认只记 Keys 里的键——样本不许比业务层多拿一个键。
+	// 每个码每次运行最多 20 条
 	Sample bool
-	Why    string
+	// SampleAllKeys 为 true 时样本记**全部键**。这是"全抓",只给用户明确批准过的
+	// 消息开(目前只有三条专精事件,批准记录见下面的注释和仓库 CLAUDE.md)
+	SampleAllKeys bool
+	Why           string
 }
 
 // Allowlist 是当前这套码下的完整白名单。码随游戏版本漂移,所以按名字从 OpCodes /
@@ -61,8 +65,12 @@ func Allowlist(op OpCodes, ev EventCodes) []Rule {
 		{Kind: KindResponse, Code: op.Join, Name: "Join", Keys: []byte{1, 2, 8},
 			Why: "自己的角色 id / 角色名 / 所在区。城市挂单的 LocationId 在包里是空的,靠所在区补"},
 		{Kind: KindResponse, Code: op.GetClusterMapInfo, Name: "GetClusterMapInfo",
-			Keys:   []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
-			Sample: true, // 92 个键只认了 10 个,全键样本用来找建筑 id、地皮挂牌价那几个
+			Keys: []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
+			// 样本只记上面这几个键,用来核对线上类型(比如 key18 float[][] 每行是不是 2 个)。
+			// 92 个键里其余 82 个没人看过,按 AddBuilding / AddRealEstate 的签名很可能有
+			// canUse / guildAccess / ownerCharacter Guid 这类"换个人看值就不同"的东西,
+			// 全键样本没有用户批准,不开。要找建筑 id、地皮价,先点名键再加进 Keys
+			Sample: true,
 			Why: "区域地图里的建筑:类型、坐标、耐久、营养、银、所有者、两档使用费(23/31 含义未知,原样存)。" +
 				"费率和所有者换个人看是同一个值;坐标只当「哪个建筑」的连接键,不建地图层"},
 
@@ -83,11 +91,14 @@ func Allowlist(op OpCodes, ev EventCodes) []Rule {
 		// 不是"服务端因为你站在那里才推给你的"东西。
 		// 范围:**只记原始样本**(Keys 为空,业务层一个键都拿不到),用来解字段布局;
 		// 解码器写好之前不进任何业务逻辑。码见 docs/client-data.md 第四节
-		{Kind: KindEvent, Code: ev.FullAchievementInfo, Name: "FullAchievementInfo", Sample: true,
+		//
+		// 拿不准的一条:这三条什么时候下发没验证过,很可能是登录或进区时推,
+		// 不一定是打开专精界面时推。样本里的 observed_at 能看出来
+		{Kind: KindEvent, Code: ev.FullAchievementInfo, Name: "FullAchievementInfo", Sample: true, SampleAllKeys: true,
 			Why: "专精全量。用户 2026-10-17 批准的例外,只记样本"},
-		{Kind: KindEvent, Code: ev.AchievementProgressInfo, Name: "AchievementProgressInfo", Sample: true,
+		{Kind: KindEvent, Code: ev.AchievementProgressInfo, Name: "AchievementProgressInfo", Sample: true, SampleAllKeys: true,
 			Why: "专精增量。用户 2026-10-17 批准的例外,只记样本"},
-		{Kind: KindEvent, Code: ev.FullAchievementProgressInfo, Name: "FullAchievementProgressInfo", Sample: true,
+		{Kind: KindEvent, Code: ev.FullAchievementProgressInfo, Name: "FullAchievementProgressInfo", Sample: true, SampleAllKeys: true,
 			Why: "专精等级。用户 2026-10-17 批准的例外,只记样本"},
 	}
 }
@@ -135,6 +146,32 @@ func (a *allowIndex) lookup(op OpCodes, ev EventCodes, kind Kind, code int) (Rul
 	}
 	r, ok := a.rules[ruleKey{kind, code}]
 	return r, ok
+}
+
+// SampleRule 按样本上的方向字符串(Kind.String())和码,查允许记样本的那一行。
+// 服务端收上传时用:「只收这几条」不能只靠客户端执行——老版本、开发版、
+// 改过的客户端都能往 /api/upload 里塞任意码的样本
+func SampleRule(op OpCodes, ev EventCodes, kind string, code int) (Rule, bool) {
+	for _, r := range Allowlist(op, ev) {
+		if r.Sample && r.Kind.String() == kind && r.Code == code {
+			return r, true
+		}
+	}
+	return Rule{}, false
+}
+
+// SampleKeyAllowed 判断样本里出现参数键 k 合不合规:全键样本什么键都行,
+// 否则只能是 Keys 里的
+func (r Rule) SampleKeyAllowed(k int) bool {
+	if r.SampleAllKeys {
+		return true
+	}
+	for _, x := range r.Keys {
+		if int(x) == k {
+			return true
+		}
+	}
+	return false
 }
 
 // filter 拷出只含白名单键的新 map。原 map 不再往业务层传:

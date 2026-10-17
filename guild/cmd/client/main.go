@@ -148,6 +148,7 @@ func main() {
 	parser := protocol.New()
 	parser.OnOrders = up.add
 	parser.OnMarketRequest = crypt.MarketRequest
+	parser.OnMarketResponded = crypt.MarketResponded
 	parser.OnMarketDecoded = crypt.MarketDecoded
 	parser.OnStations = up.addStations
 	// 原始样本:op 197 全键和三条专精事件,用来解字段布局(白名单见 protocol/allowlist.go)

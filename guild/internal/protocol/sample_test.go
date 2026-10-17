@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -72,19 +73,40 @@ func TestSample_每个码最多20条(t *testing.T) {
 	}
 }
 
-// 197 响应:样本记全部键(布局发现用),业务层照样只拿白名单里那几个
-func TestSample_197响应记全键业务层照样剥键(t *testing.T) {
+// 197 响应:样本只记白名单里那几个键(全键样本没有用户批准),
+// 而且只记配上了请求、是城区本体的那条
+func TestSample_197响应只记白名单键(t *testing.T) {
 	p, got := sampleParser(t)
 	var stations []model.StationObs
 	p.OnStations = func(o []model.StationObs) { stations = append(stations, o...) }
+	// 先来几条不该记的:没有请求、个人岛、野外区
+	p.HandleResponse(1, clusterMapResponse())
+	for _, zone := range []string{"ISLAND-PLAYER-xxx", "1234"} {
+		p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: zone})
+		p.HandleResponse(1, clusterMapResponse())
+	}
+	if len(*got) != 0 {
+		t.Fatalf("配不上请求 / 不是城区的 197 不该记样本,得到 %d 条", len(*got))
+	}
 	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "0000"})
 	p.HandleResponse(1, clusterMapResponse())
 
 	if len(*got) != 1 || (*got)[0].Kind != model.SampleOpResponse || (*got)[0].Code != 197 {
 		t.Fatalf("应记一条 197 样本,得到 %+v", *got)
 	}
-	if !strings.Contains(string((*got)[0].Params), `{"k":99,"t":"string","v":"白名单外的键"}`) {
-		t.Fatalf("样本要带全部键: %s", (*got)[0].Params)
+	var params []TaggedParam
+	if err := json.Unmarshal((*got)[0].Params, &params); err != nil {
+		t.Fatal(err)
+	}
+	var keys []int
+	for _, tp := range params {
+		keys = append(keys, tp.K)
+	}
+	if !slices.Equal(keys, []int{17, 18, 20, 22, 23, 24, 25, 31, 33, 34}) {
+		t.Fatalf("样本只能带白名单里的键,得到 %v", keys)
+	}
+	if strings.Contains(string((*got)[0].Params), "白名单外的键") {
+		t.Fatalf("白名单外的键进了样本: %s", (*got)[0].Params)
 	}
 	if len(stations) != 2 {
 		t.Fatalf("业务层照常解出建筑,得到 %d", len(stations))

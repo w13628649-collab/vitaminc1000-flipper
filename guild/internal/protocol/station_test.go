@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +87,6 @@ func TestClusterMap_费率标度(t *testing.T) {
 		{a.AssociateFeeRaw, a.AssociateFee, 500}, // 5,000,000 / 10000
 		{b.AssociateFeeRaw, b.AssociateFee, 300}, // 整银
 		{a.PublicFeeRaw, a.PublicFee, 1000},      // 正好 1000 当整银
-		{b.PublicFeeRaw, b.PublicFee, 0.1001},    // 1001 已经超过上限,只能是定点
 	}
 	for i, c := range cases {
 		if c.raw == nil || c.norm == nil || *c.norm != c.want {
@@ -95,24 +96,77 @@ func TestClusterMap_费率标度(t *testing.T) {
 	if *a.AssociateFeeRaw != 5_000_000 {
 		t.Error("原值要原样存")
 	}
+	// 1001 当整银超上限、当定点不到 1 银,两种读法都说不通:只存原值。
+	// 以前读成 0.1001,取最便宜那台时反而被选中
+	if b.PublicFeeRaw == nil || *b.PublicFeeRaw != 1001 || b.PublicFee != nil {
+		t.Errorf("1001 应只存原值: raw %v fee %v", b.PublicFeeRaw, b.PublicFee)
+	}
 }
 
-// 数组长度不一致时按最短对齐并告警,不硬对
-func TestDecodeStations_长度不一致按最短对齐(t *testing.T) {
+func TestNormalizeFee_说不通的区间判失败(t *testing.T) {
+	for raw, want := range map[int64]float64{0: 0, 1000: 1000, 10_000: 1, 5_000_000: 500} {
+		if got, ok := normalizeFee(raw); !ok || got != want {
+			t.Errorf("%d → %v %v,想要 %v", raw, got, ok, want)
+		}
+	}
+	for _, raw := range []int64{-1, 1001, 9_999} {
+		if got, ok := normalizeFee(raw); ok {
+			t.Errorf("%d 应判失败,得到 %v", raw, got)
+		}
+	}
+}
+
+// 数组长度和 key17 对不上:那个键当没收到并告警,别的键照常,建筑数不截。
+// 以前按最短对齐,owners 短一格就把全区截短,前缀也不保证对得齐
+func TestDecodeStations_长度对不上的键当没收到(t *testing.T) {
 	params := map[byte]any{
 		keyBuildingType: []int32{1, 2, 3},
-		keyPublicFee:    []any{int64(10), int32(20)}, // 少一个
-		keyOwners:       []string{"a", "b", "c", "d"},
+		keyPublicFee:    []any{int64(10), int32(20), int64(30)},
+		keyOwners:       []string{"a", "b"},                      // 少一个
+		keyNutrition:    []int64{1, 2, 3, 4},                     // 多一个
+		keyPosition:     []any{[]float32{1, 2}, []float32{3, 4}}, // 少一行
+		keyDurability:   int64(7),                                // 标量当长度 1
 	}
 	obs, warns := decodeStations("1000", params, time.Now())
-	if len(obs) != 2 {
-		t.Fatalf("应按最短的 2 个对齐,得到 %d", len(obs))
+	if len(obs) != 3 {
+		t.Fatalf("建筑数以 key17 为准不截短,得到 %d", len(obs))
 	}
-	if *obs[1].PublicFeeRaw != 20 || obs[1].Owner != "b" {
-		t.Fatalf("对齐错位: %+v", obs[1])
+	for i, o := range obs {
+		if o.PublicFeeRaw == nil || *o.PublicFeeRaw != int64(10*(i+1)) {
+			t.Fatalf("对得上的费率要照常按下标配: %+v", o)
+		}
+		if o.Owner != "" || o.Nutrition != nil || o.Pos != nil || o.Durability != nil {
+			t.Fatalf("对不上的键应当没收到: %+v", o)
+		}
 	}
-	if len(warns) < 2 || !strings.Contains(strings.Join(warns, ";"), "按最短对齐") {
-		t.Fatalf("要告警,得到 %v", warns)
+	if len(warns) != 4 || !strings.Contains(strings.Join(warns, ";"), "当作没收到") {
+		t.Fatalf("四个对不上的键各告警一次,得到 %v", warns)
+	}
+}
+
+// key18 里的 NaN/Inf 整组判失败:进了 Pos 的话,客户端 json.Marshal 整批上传会报错,
+// 同一批的挂单一起丢
+func TestDecodeStations_坐标NaN当没收到(t *testing.T) {
+	nan := float32(math.NaN())
+	for name, v := range map[string]any{
+		"NaN":  []any{[]float32{1, 2}, []float32{nan, 3}},
+		"+Inf": [][]float64{{1, 2}, {math.Inf(1), 3}},
+		"行内": []any{[]any{float32(1), float32(2)}, []any{float64(math.Inf(-1)), float32(3)}},
+	} {
+		obs, warns := decodeStations("1000", map[byte]any{
+			keyBuildingType: []int32{1, 2},
+			keyPosition:     v,
+			keyPublicFee:    []int64{100, 200},
+		}, time.Now())
+		if len(obs) != 2 || obs[0].Pos != nil || obs[1].Pos != nil || *obs[1].PublicFee != 200 {
+			t.Fatalf("%s:坐标应当没收到、其余照常,得到 %+v", name, obs)
+		}
+		if len(warns) != 1 {
+			t.Fatalf("%s:要告警一次,得到 %v", name, warns)
+		}
+		if _, err := json.Marshal(obs); err != nil {
+			t.Fatalf("%s:解出来的建筑必须能序列化: %v", name, err)
+		}
 	}
 }
 
@@ -173,6 +227,47 @@ func TestClusterMap_非数字的区跳过且不串到别的区(t *testing.T) {
 	p.HandleResponse(1, clusterMapResponse())
 	if len(*got) != 2 {
 		t.Fatalf("个人岛那条不该收,也不该配到 0000 上,得到 %d 条", len(*got))
+	}
+	// 野外区的 id 也是纯数字,但不是城区本体:不收(我们只要城里的制造站)
+	for _, zone := range []string{"1234", "0301"} {
+		p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: zone})
+		p.HandleResponse(1, clusterMapResponse())
+	}
+	if len(*got) != 2 {
+		t.Fatalf("野外区 / 传送门城不该收,得到 %d 条", len(*got))
+	}
+}
+
+// 同一个区的几条请求不算歧义:两张网卡各抓到同一个包,或者上一条响应没抓到、
+// 30 秒内同城又开了一次图。以前按条数数,一条都配不上
+func TestClusterMap_同区重复请求照样配(t *testing.T) {
+	p, got, now := newMapParser(t)
+	req := map[byte]any{paramOperationCode: int16(197), 0: "0000"}
+	// 双网卡:请求、响应各来两次
+	p.HandleRequest(1, req)
+	p.HandleRequest(1, req)
+	p.HandleResponse(1, clusterMapResponse())
+	p.HandleResponse(1, clusterMapResponse()) // 第二份没请求可配,丢,不重复收
+	if len(*got) != 2 || (*got)[0].ZoneID != "0000" {
+		t.Fatalf("双网卡重复抓包应配上一次,得到 %d 条", len(*got))
+	}
+	// 第一条响应没抓到,10 秒后同城再开一次
+	p.HandleRequest(1, req)
+	*now = now.Add(10 * time.Second)
+	p.HandleRequest(1, req)
+	p.HandleResponse(1, clusterMapResponse())
+	if len(*got) != 4 {
+		t.Fatalf("同城两次请求应配上,得到 %d 条", len(*got))
+	}
+	if p.ZoneMapDropped() != 0 {
+		t.Fatalf("同区不算配不出,丢弃计数 %d", p.ZoneMapDropped())
+	}
+	// 真出现两个区才算配不出,计数
+	p.HandleRequest(1, req)
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "1000"})
+	p.HandleResponse(1, clusterMapResponse())
+	if len(*got) != 4 || p.ZoneMapDropped() != 1 {
+		t.Fatalf("两个区应丢并计数,得到 %d 条、计数 %d", len(*got), p.ZoneMapDropped())
 	}
 }
 

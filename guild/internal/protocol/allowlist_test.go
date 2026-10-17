@@ -63,11 +63,60 @@ func TestAllowlist_事件只有专精三条例外且只记样本(t *testing.T) {
 	if !slices.Equal(events, []int{150, 152, 153}) {
 		t.Fatalf("事件例外应该只有 150/152/153,得到 %v", events)
 	}
-	// 记全键样本的只有 197 响应和这三条事件
+	// 记样本的只有 197 响应(只记 Keys 里的键)和这三条事件
 	want := map[ruleKey]bool{{KindResponse, 197}: true, {KindEvent, 150}: true,
 		{KindEvent, 152}: true, {KindEvent, 153}: true}
 	if !maps.Equal(sampled, want) {
 		t.Fatalf("样本范围变了: %v", sampled)
+	}
+	// 全键样本("全抓")只有用户批准过的三条专精事件。197 的全键样本没有批准
+	allKeys := map[ruleKey]bool{}
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
+		if r.SampleAllKeys {
+			allKeys[ruleKey{r.Kind, r.Code}] = true
+			if !r.Sample || r.Kind != KindEvent || !strings.Contains(r.Why, "批准") {
+				t.Errorf("(%v, %d) 开了全键样本但不是批准过的事件例外", r.Kind, r.Code)
+			}
+		}
+	}
+	if !maps.Equal(allKeys, map[ruleKey]bool{{KindEvent, 150}: true, {KindEvent, 152}: true, {KindEvent, 153}: true}) {
+		t.Fatalf("全键样本范围变了: %v", allKeys)
+	}
+}
+
+// 服务端校验上传样本用的查询:只认允许记样本的 (方向, 码),非全键的只认 Keys 里的键
+func TestSampleRule_服务端按白名单校验(t *testing.T) {
+	op, ev := DefaultOpCodes(), DefaultEventCodes()
+	r, ok := SampleRule(op, ev, "op_response", 197)
+	if !ok || !r.SampleKeyAllowed(34) || r.SampleKeyAllowed(99) || r.SampleKeyAllowed(253) {
+		t.Fatalf("197 样本只认白名单键: ok=%v", ok)
+	}
+	r, ok = SampleRule(op, ev, "event", 153)
+	if !ok || !r.SampleKeyAllowed(252) || !r.SampleKeyAllowed(7) {
+		t.Fatal("专精事件是全键样本")
+	}
+	for _, c := range []struct {
+		kind string
+		code int
+	}{{"event", 29}, {"event", 3}, {"op_response", 81}, {"op_request", 197}, {"随便写", 197}, {"event", 197}} {
+		if _, ok := SampleRule(op, ev, c.kind, c.code); ok {
+			t.Errorf("(%s, %d) 不该允许记样本", c.kind, c.code)
+		}
+	}
+}
+
+// 没有 253 的响应不能退回用 Photon 层那个码查白名单:那是进 Join / 197 的侧门
+func TestHandleResponse_没有253不走Photon层码(t *testing.T) {
+	p, got, _ := newMapParser(t)
+	var identity bool
+	p.OnIdentity = func(_, _, _ string) { identity = true }
+	p.HandleResponse(2, map[byte]any{1: "guid", 2: "名字", 8: "Martlock"})
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "0000"})
+	resp := clusterMapResponse()
+	delete(resp, paramOperationCode)
+	p.HandleResponse(197, resp)
+	if identity || p.Location() != "" || len(*got) != 0 {
+		t.Fatalf("侧门开着:身份 %v、位置 %q、建筑 %d", identity, p.Location(), len(*got))
 	}
 }
 

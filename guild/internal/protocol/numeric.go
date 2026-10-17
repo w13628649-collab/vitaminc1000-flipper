@@ -41,6 +41,13 @@ func int64Of(v any) (int64, bool) {
 	return 0, false
 }
 
+func finite(f float64) (float64, bool) {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0, false
+	}
+	return f, true
+}
+
 func floatToInt(f float64) (int64, bool) {
 	if math.IsNaN(f) || math.IsInf(f, 0) || f != math.Trunc(f) ||
 		f > math.MaxInt64 || f < math.MinInt64 {
@@ -49,13 +56,14 @@ func floatToInt(f float64) (int64, bool) {
 	return int64(f), true
 }
 
-// float64Of 把一个数值标量转成 float64。
+// float64Of 把一个数值标量转成 float64。NaN / ±Inf 算转换失败:
+// 它们多半是字节错位读出来的,而且一旦进了 StationObs,json.Marshal 整批上传就报错
 func float64Of(v any) (float64, bool) {
 	switch x := v.(type) {
 	case float32:
-		return float64(x), true
+		return finite(float64(x))
 	case float64:
-		return x, true
+		return finite(x)
 	}
 	if n, ok := int64Of(v); ok {
 		return float64(n), true
@@ -97,13 +105,9 @@ func float64s(v any) ([]float64, bool) {
 	case nil:
 		return nil, false
 	case []float32:
-		out := make([]float64, len(a))
-		for i, f := range a {
-			out[i] = float64(f)
-		}
-		return out, true
+		return mapAll(a, func(f float32) (float64, bool) { return finite(float64(f)) })
 	case []float64:
-		return append([]float64(nil), a...), true
+		return mapAll(a, finite)
 	case []any:
 		return mapAll(a, float64Of)
 	}

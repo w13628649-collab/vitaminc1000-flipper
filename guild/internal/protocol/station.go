@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"albion-guild/internal/model"
+	"albion-guild/internal/world"
 )
 
 // op 197 GetClusterMapInfo:区域地图(城里按 N 键那张)。一次响应覆盖整个区的建筑,
@@ -48,21 +49,39 @@ func (p *Parser) noteZoneRequest(zone string, now time.Time) {
 
 // takeZoneRequest 给一条 197 响应配请求。响应里不一定带区 id,只能靠请求关联。
 //
-// 只在**恰好一条**请求在等的时候配。同时有好几条在等就说不清哪条响应对哪个区,
+// 在等的请求**按区去重后只剩一个区**才配。真出现了不同的区就说不清哪条响应对哪个区,
 // 宁可整批丢掉也不猜:配错了,一个区的费率就挂到了另一个区上,而这块数据
 // 没有 AODP 兜底,错了没人能发现。
-func (p *Parser) takeZoneRequest(now time.Time) (zone string, why string) {
+//
+// 同一个区的几条不算歧义:两张网卡各抓到同一个包(Hyper-V 外部交换机、桥接网卡),
+// 或者上一条响应没抓到、30 秒内同城又开了一次图,点名的都是同一个区。
+// 以前按条数数,这两种情况一条都配不上
+//
+// firstDrop 是"这次运行里第一次因为歧义丢响应",调用方据此 Warn 一次
+func (p *Parser) takeZoneRequest(now time.Time) (zone, why string, firstDrop bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	reqs := pruneZoneRequests(p.zoneReqs, now)
 	p.zoneReqs = nil
-	switch len(reqs) {
-	case 0:
-		return "", "没有对应的 197 请求"
-	case 1:
-		return reqs[0].zone, ""
+	if len(reqs) == 0 {
+		return "", "没有对应的 197 请求", false
 	}
-	return "", fmt.Sprintf("同时有 %d 条 197 请求在等,配不出是哪个区", len(reqs))
+	zones := map[string]bool{}
+	for _, r := range reqs {
+		zones[r.zone] = true
+	}
+	if len(zones) == 1 {
+		return reqs[0].zone, "", false
+	}
+	p.zoneDropped++
+	return "", fmt.Sprintf("同时有 %d 个不同的区在等 197 响应,配不出是哪个区", len(zones)), p.zoneDropped == 1
+}
+
+// ZoneMapDropped 是这次运行里因为配不出区而丢掉的 197 响应条数。
+func (p *Parser) ZoneMapDropped() int64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.zoneDropped
 }
 
 func pruneZoneRequests(reqs []zoneRequest, now time.Time) []zoneRequest {
@@ -75,29 +94,34 @@ func pruneZoneRequests(reqs []zoneRequest, now time.Time) []zoneRequest {
 	return out
 }
 
-// numericZone 判断区 id 是不是纯数字。地下城、藏身处、个人岛的 id 带字母,
-// AODP 处理 197 时也是这么跳过的;我们只要城里的制造站。
-func numericZone(zone string) bool {
-	if zone == "" {
-		return false
-	}
-	for _, r := range zone {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
+// CityZone 判断一个 197 区 id 是不是城区本体(world.ClusterCity 认得的那几个)。
+//
+// 以前只判"纯数字":AODP 处理 197 时是这么跳过地下城/藏身处/个人岛的。但野外区的
+// id 也是纯数字,那样会把野外的建筑、所有者和坐标一起收进来,和"我们只要城里的
+// 制造站"不符。服务端收上传时用同一个判断(api.saveCaptureExtras)
+func CityZone(zone string) bool {
+	_, ok := world.ClusterCity(zone)
+	return ok
 }
 
-func (p *Parser) handleClusterMap(params map[byte]any) {
+func (p *Parser) handleClusterMap(params map[byte]any, rule Rule) {
 	now := p.now()
-	zone, why := p.takeZoneRequest(now)
+	zone, why, firstDrop := p.takeZoneRequest(now)
 	if zone == "" {
-		slog.Debug("区域地图响应丢弃", "reason", why)
+		// 配不出的那种只在第一次 Warn:成员看不到 Debug,一条站费都传不上去时得有迹可查
+		if firstDrop {
+			slog.Warn("区域地图响应丢弃(之后同类只记 Debug)", "reason", why)
+		} else {
+			slog.Debug("区域地图响应丢弃", "reason", why)
+		}
 		return
 	}
-	if !numericZone(zone) {
+	if !CityZone(zone) {
 		return
+	}
+	// 样本在区号校验之后才记,而且只记白名单里那几个键(rule.filter 过的 params)
+	if rule.Sample {
+		p.recordSample(rule, params)
 	}
 	obs, warns := decodeStations(zone, params, now)
 	for _, w := range warns {
@@ -111,8 +135,10 @@ func (p *Parser) handleClusterMap(params map[byte]any) {
 // decodeStations 把一条 197 响应按下标拆成一个建筑一行。
 //
 // 以 key17(建筑类型)为锚:没有它就认不出有几个建筑,整条不要。
-// 其余数组长度和它不一致时按最短的对齐并告警——多出来的那几格对不上是哪个建筑,
-// 硬对会把费率挂到别的建筑上。认不出形态的数组当作没收到,也告警。
+// 其余数组长度和它对不上时**这个键当作没收到**并告警,别的键照常——
+// 以前按最短的对齐,一个非关键键(比如 owners)短一格就把全区截短,前缀也不保证
+// 对得齐,注释里说要避免的「费率挂到别的建筑上」照样会发生。
+// 认不出形态的数组(含 NaN/Inf 坐标)也当作没收到,也告警。
 func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.StationObs, []string) {
 	var warns []string
 	types, ok := int64s(params[keyBuildingType])
@@ -123,7 +149,14 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 		return nil, warns
 	}
 	n := len(types)
-	lens := map[byte]int{}
+	// aligned 判长度,对不上就告警并当没收到
+	aligned := func(key byte, l int) bool {
+		if l == n {
+			return true
+		}
+		warns = append(warns, fmt.Sprintf("key%d 有 %d 项,key17 有 %d 项,对不上是哪个建筑,当作没收到", key, l, n))
+		return false
+	}
 
 	longs := func(key byte) []int64 {
 		v, present := params[key]
@@ -135,7 +168,9 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 			warns = append(warns, fmt.Sprintf("key%d 形态认不出(%T),当作没收到", key, v))
 			return nil
 		}
-		lens[key] = len(a)
+		if !aligned(key, len(a)) {
+			return nil
+		}
 		return a
 	}
 	durability := longs(keyDurability)
@@ -146,29 +181,31 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 
 	var owners []string
 	if v, present := params[keyOwners]; present {
-		if a, ok := strs(v); ok {
-			owners = a
-			lens[keyOwners] = len(a)
-		} else {
+		if a, ok := strs(v); !ok {
 			warns = append(warns, fmt.Sprintf("key25 形态认不出(%T),当作没收到", v))
+		} else if aligned(keyOwners, len(a)) {
+			owners = a
 		}
 	}
 
 	var pos [][]float64
 	if v, present := params[keyPosition]; present {
-		if m, ok := floatMatrix(v); ok {
-			pos = alignPositions(m, n)
-			lens[keyPosition] = len(pos)
-		} else {
-			warns = append(warns, fmt.Sprintf("key18 形态认不出(%T),当作没收到", v))
+		// floatMatrix 遇到 NaN/Inf 整组判失败:坐标进了 Pos,上传时 json.Marshal 整批报错
+		if m, ok := floatMatrix(v); !ok {
+			warns = append(warns, fmt.Sprintf("key18 形态认不出(%T,或含 NaN/Inf),当作没收到", v))
+		} else if m = alignPositions(m, n); aligned(keyPosition, len(m)) {
+			pos = m
 		}
 	}
 
-	for key, l := range lens {
-		if l != len(types) {
-			warns = append(warns, fmt.Sprintf("key%d 有 %d 项,key17 有 %d 项,按最短对齐", key, l, len(types)))
+	ambiguous := 0
+	fee := func(raw int64) *float64 {
+		f, ok := normalizeFee(raw)
+		if !ok {
+			ambiguous++
+			return nil
 		}
-		n = min(n, l)
+		return &f
 	}
 
 	out := make([]model.StationObs, n)
@@ -189,14 +226,17 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 			o.Owner = owners[i]
 		}
 		if r := at(assoc, i); r != nil {
-			o.AssociateFeeRaw, o.AssociateFee = r, ptr(normalizeFee(*r))
+			o.AssociateFeeRaw, o.AssociateFee = r, fee(*r)
 		}
 		if r := at(public, i); r != nil {
-			o.PublicFeeRaw, o.PublicFee = r, ptr(normalizeFee(*r))
+			o.PublicFeeRaw, o.PublicFee = r, fee(*r)
 		}
 		o.Key23 = rawElement(params, keyUnknown23, i, len(types))
 		o.Key31 = rawElement(params, keyUnknown31, i, len(types))
 		out[i] = o
+	}
+	if ambiguous > 0 {
+		warns = append(warns, fmt.Sprintf("%d 个使用费原值落在 (1000, 10000) 或为负,两种标度都说不通,只存原值", ambiguous))
 	}
 
 	// 量纲断言:归一化之后还超过上限,说明标度规则不对(或者那个键根本不是费率)
@@ -228,11 +268,20 @@ func alignPositions(m [][]float64, n int) [][]float64 {
 // normalizeFee 把线上的使用费换算成银币。客户端字段是 a7m(定点,比例 10000),
 // 但换算发生在没反汇编的代码里,线上到底是定点还是整银没定。
 // 规则(docs/client-data.md 第二点六节):原值 > maxuseagefee(1000)按 /10000,否则原值。
-func normalizeFee(raw int64) float64 {
-	if raw > maxUsageFee {
-		return float64(raw) / model.PriceScale
+//
+// 落在 (1000, 10000) 的两种读法都说不通:当整银超过上限,当定点不到 1 银。
+// 以前按定点读成零点几银,能过 [0, 1000] 的检查,取最便宜那台时反而被选中——
+// 现在判失败,只存原值。负数同样判失败
+func normalizeFee(raw int64) (float64, bool) {
+	switch {
+	case raw < 0:
+		return 0, false
+	case raw <= maxUsageFee:
+		return float64(raw), true
+	case raw < model.PriceScale:
+		return 0, false
 	}
-	return float64(raw)
+	return float64(raw) / model.PriceScale, true
 }
 
 // rawElement 把含义未知的键带类型标签原样留下:是数组且和建筑数对得上,

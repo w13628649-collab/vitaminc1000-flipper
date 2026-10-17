@@ -187,3 +187,53 @@ func TestParser_市场请求和解出条数接到加密判定(t *testing.T) {
 		t.Fatalf("请求 %d 次、解出 %d 条", reqs, decoded)
 	}
 }
+
+// 空结果页(筛选没货、翻过最后一页)也是明文响应:要结掉窗口,
+// 同窗口里那条无关密文不能把明文号判成加密
+func TestCrypto_空结果加无关密文不判加密(t *testing.T) {
+	cases := map[string]map[byte]any{
+		"带253没有params0": {paramOperationCode: int16(81)},
+		"带253空数组":       {paramOperationCode: int16(82), 0: []string{}},
+		"无253空数组":       {0: []any{}},
+	}
+	for name, resp := range cases {
+		c := &fakeClock{time.Unix(1000, 0)}
+		tr := newTracker(c)
+		p := New()
+		p.OnMarketRequest = tr.MarketRequest
+		p.OnMarketResponded = tr.MarketResponded
+		p.OnMarketDecoded = tr.MarketDecoded
+
+		p.HandleRequest(1, map[byte]any{paramOperationCode: int16(81)})
+		c.add(200 * time.Millisecond)
+		p.HandleResponse(1, resp)
+		c.add(100 * time.Millisecond)
+		tr.Encrypted(encResponse) // 无关的加密响应
+		tr.Encrypted(0)           // 整包加密也算可能是响应
+		c.add(DefaultCryptoWindow + time.Second)
+		st := tr.Snapshot()
+		if st.State != CryptoUnknown {
+			t.Errorf("%s:空结果是明文响应,不该判成 %s", name, st.State)
+		}
+		if st.OtherEncrypted != 2 {
+			t.Errorf("%s:那两条密文应该算「其他」,得到 %d", name, st.OtherEncrypted)
+		}
+	}
+}
+
+// 空结果只结窗口,不置明文:置明文仍然只看解出 ≥1 条
+func TestCrypto_空结果不置明文(t *testing.T) {
+	c := &fakeClock{time.Unix(1000, 0)}
+	tr := newTracker(c)
+	tr.MarketRequest()
+	tr.MarketResponded()
+	if tr.Snapshot().State != CryptoUnknown {
+		t.Fatal("空结果不是明文的正向证据")
+	}
+	// 结了窗口之后再来的密文是「其他」,不会把状态翻成加密
+	tr.Encrypted(encResponse)
+	c.add(DefaultCryptoWindow + time.Second)
+	if st := tr.Snapshot(); st.State != CryptoUnknown || st.OtherEncrypted != 1 {
+		t.Fatalf("得到 %+v", st)
+	}
+}
