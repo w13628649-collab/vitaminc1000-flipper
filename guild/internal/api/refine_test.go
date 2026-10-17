@@ -497,6 +497,29 @@ func TestRefine接口站费来源(t *testing.T) {
 	}
 }
 
+// after(WS 报价时刻)要是 RFC3339;写对了照常算,写错了 400。
+func TestRefine接口after参数(t *testing.T) {
+	srv := refineServer(fullSrc(time.Now()))
+	defer srv.Close()
+	body := `{"target":"T5_METALBAR_LEVEL1@1"}`
+	for _, c := range []struct {
+		q    string
+		want int
+	}{{"?after=" + time.Now().UTC().Format(time.RFC3339Nano), 200}, {"?after=昨天", 400}} {
+		resp, err := http.Post(srv.URL+"/api/refine/plan"+c.q, "application/json", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw := readBody(t, resp)
+		if resp.StatusCode != c.want {
+			t.Fatalf("%s: 状态 %d %s", c.q, resp.StatusCode, raw)
+		}
+	}
+	if resp, raw := get(t, srv, "/api/refine/matrix?line=ORE&after=x"); resp.StatusCode != 400 {
+		t.Fatalf("矩阵 after 写错: %d %s", resp.StatusCode, raw)
+	}
+}
+
 // ── JSON 形状快照 ───────────────────────────────────────────────────────
 
 // 界面照着这些字段写。形状 = 每个字段的路径和类型(数组元素合并成 []),不管具体数值,

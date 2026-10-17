@@ -26,8 +26,9 @@ import (
 //	GET  /api/refine/recipe   配方树和转化格子
 
 const (
-	// refineTimeout 是 handler 最多等多久。一次计算要读库、最多等 AODP 12 秒(lookupAODPWait)、
-	// 再算几十毫秒;矩阵是 25 次。到点先回 504,计算留在后台跑完进缓存,过两秒再点就有了
+	// refineTimeout 是 handler 最多等多久。数据快照热的时候只算引擎(几十毫秒,矩阵约 100 毫秒);
+	// 冷启动要读库、最多等 AODP 3 秒(refineSnapColdAODPWait)。到点先回 504,
+	// 快照和计算留在后台跑完进缓存,过两秒再点就有了
 	refineTimeout = 30 * time.Second
 	// refineMaxBody:请求体就是一份参数,几百字节;挡一下误传的大文件
 	refineMaxBody = 64 << 10
@@ -83,8 +84,13 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 		p.City = s.Flip.RefineDefaults(target, "").City
 	}
 	flip.SettleStationFee(&p, &fee, probe.Fees.StationPer100 != nil, probe.Fees.TransmuteStationPer100 != nil)
+	opts, err := refineOpts(r.URL.Query())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	res, err := s.Flip.Refine(ctx, p)
+	res, err := s.Flip.RefineWith(ctx, p, opts)
 	if err != nil {
 		writeRefineError(w, err)
 		return
@@ -139,7 +145,12 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	}
 	flip.SettleStationFee(&p, &fee, strings.TrimSpace(q.Get("station_per100")) != "",
 		strings.TrimSpace(q.Get("transmute_station_per100")) != "")
-	res, err := s.Flip.RefineMatrix(ctx, line.Key, p)
+	opts, err := refineOpts(q)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := s.Flip.RefineMatrixWith(ctx, line.Key, p, opts)
 	if err != nil {
 		writeRefineError(w, err)
 		return
@@ -147,6 +158,20 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	out := *res
 	out.StationFee = fee
 	writeJSON(w, &out)
+}
+
+// refineOpts:查询参数 after=<RFC3339> 是界面收到的 WS 报价时刻。服务端的数据快照比它旧就重建,
+// 推送触发的重算不会拿到推送之前读的那份(plan 和 matrix 都认)。
+func refineOpts(q url.Values) (flip.RefineOpts, error) {
+	var o flip.RefineOpts
+	if v := strings.TrimSpace(q.Get("after")); v != "" {
+		t, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			return o, fmt.Errorf("after=%q 不是 RFC3339 时刻", v)
+		}
+		o.After = t
+	}
+	return o, nil
 }
 
 // parseNum 是查询参数里的一个数。ParseFloat 认 "Inf"、"NaN",这里不认:

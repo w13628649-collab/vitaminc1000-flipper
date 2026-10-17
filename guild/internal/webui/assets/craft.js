@@ -499,7 +499,10 @@ async function craftLoad(opts = {}) {
   if (!opts.live) $("c-result").classList.add("dim");
   craftStatus(opts.live ? "live" : "loading");
   try {
-    const res = await getJSON("/api/refine/plan", {
+    // 推送触发的重算带上报价时刻:服务端的数据快照比它旧就重建,不回推送之前读的那份。
+    // 断线重连、丢过消息没有具体报价,按现在算
+    const after = opts.live ? (opts.quote?.t || new Date().toISOString()) : "";
+    const res = await getJSON("/api/refine/plan" + (after ? `?after=${encodeURIComponent(after)}` : ""), {
       method: "POST", headers: { "Content-Type": "application/json" }, body: sig,
     });
     if (seq !== craft.seq) return;   // 连着改参数时,先发的请求晚到不能盖掉后发的
@@ -630,7 +633,8 @@ function craftLiveAfter(res, opts) {
     : opts.why === "reconnect" ? `断线重连后已补拉(${hms(new Date())})`
     : opts.why === "resync" ? `推送丢过消息,已整份重算(${hms(new Date())})`
     : `已重算(${hms(new Date())})`;
-  // 服务端同样的参数 2 秒内回缓存:读簿时刻早于这条报价,说明拿到的是报价之前算的那份,过一会儿再要一次
+  // 读簿时刻早于这条报价:服务端的快照刚重建过不到 2 秒(抗翻页风暴)、或者重建没等到先回了旧的,
+  // 拿到的是报价之前读的那份,过一会儿再要一次
   const readAt = Date.parse(res.books?.read_at || ""), qt = Date.parse(q?.t || "");
   if (q && isFinite(readAt) && isFinite(qt) && readAt < qt && !opts.retried) {
     craft.liveNote = `收到 ${hms(q.t)} 的报价,服务端还是旧的一份,马上再算一次…`;
@@ -643,7 +647,7 @@ function craftStatus(state, opts = {}) {
   const d = craft.data;
   if (state === "loading") {
     el.className = "c-status busy";
-    el.innerHTML = `正在算 ${esc(cLabel(cTarget()))} @ ${esc(cCity())} × ${num(craft.p.qty)} …(读盘口、必要时等 AODP,慢的时候十几秒)`;
+    el.innerHTML = `正在算 ${esc(cLabel(cTarget()))} @ ${esc(cCity())} × ${num(craft.p.qty)} …(服务端有这条线的数据快照时一眨眼;第一次要读盘口、等 AODP,最多几秒)`;
     return;
   }
   if (state === "live") {
@@ -1384,12 +1388,24 @@ function craftHeadHTML(res) {
   </div>`;
 }
 
+// 耗时拆分(books.timing):卡在读簿、AODP 还是引擎一眼看得出来。命中快照时读簿和 AODP 是
+// 快照建的时候花的,这次没花
+const msText = v => (v == null ? "—" : v < 10 ? v.toFixed(1) : num(v)) + " ms";
+function timingText(t) {
+  const io = `读簿 ${msText(t.read_ms)} · AODP ${t.aodp_waited ? msText(t.aodp_ms) : "沿用"} · 成交量 ${msText(t.volume_ms)}`;
+  const how = t.cache === "hit" ? `数据快照现成(${fq(t.snapshot_age_s)} 秒前读的;建它时 ${io})`
+    : t.cache === "stale" ? `<span class="warnish" title="快照该重建了,等了 ${msText(t.wait_ms)} 没等到,先用了旧的;推送触发的重算会再要一次">用了旧快照(${fq(t.snapshot_age_s)} 秒前读的)</span>`
+    : `现读:${io}`;
+  return `${how} · 计算 ${msText(t.engine_ms)}`;
+}
+
 // 数据从哪来、有多旧:新鲜度是硬性要求,不能只给利润
 function craftDataHTML(res) {
   const b = res.books || {}, d = res.data || {};
   const parts = [];
   parts.push(`盘口 ${num(b.sides)} 边:抓包 ${num(b.capture)}、只有 AODP 价 ${num(b.aodp)}(深度未知)、两边都没有 ${num(b.empty)}`);
   parts.push(`读抓包窗口 ${num(b.window_hours)} 小时,数据最大年龄 ${num(res.params_used?.sources?.max_age_hours)} 小时`);
+  if (b.timing) parts.push(timingText(b.timing));
   parts.push(`用到的价里最旧的 ${ageTag(d.oldest_age_h)}`);
   if (res.station_fee) parts.push(`<span title="${esc(feeTitle(res.station_fee))}">站费来源:${feeSrcText(res.station_fee)}</span>`);
   const lists = [];

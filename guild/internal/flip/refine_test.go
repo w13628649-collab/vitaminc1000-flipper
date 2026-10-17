@@ -183,7 +183,9 @@ func TestRefine按配方图收集盘口并按精炼窗口读簿(t *testing.T) {
 	if want := rNow.Add(-72 * time.Hour); !src.since.Equal(want) {
 		t.Fatalf("读簿 since = %v,想要 %v", src.since, want)
 	}
+	// 读的是 (线, 城市) 快照:这条线全部物品在 Thetford 的两边,一次读出来,目标要的都在里面
 	items, _ := refine.ItemsFor(s.Recipes(), target)
+	all := s.snapItems(refine.Lines[0])
 	got := map[model.QuoteKey]bool{}
 	for _, k := range src.keys {
 		if k.Quality != 1 || k.LocationID != "Thetford" {
@@ -191,22 +193,28 @@ func TestRefine按配方图收集盘口并按精炼窗口读簿(t *testing.T) {
 		}
 		got[k] = true
 	}
-	for _, it := range items {
+	for _, it := range all {
 		for _, side := range []model.Side{model.SideOffer, model.SideRequest} {
 			if !got[model.QuoteKey{ItemID: it, LocationID: "Thetford", Quality: 1, Side: side}] {
 				t.Fatalf("没读 %s 的 %d 边", it, side)
 			}
 		}
 	}
-	if len(src.keys) != 2*len(items) || res.Books.Sides != len(src.keys) || res.Books.Empty != len(src.keys) {
-		t.Fatalf("盘口边 %d(物品 %d),books %+v", len(src.keys), len(items), res.Books)
+	for _, it := range items {
+		if !slices.Contains(all, it) {
+			t.Fatalf("快照没覆盖目标要的 %s", it)
+		}
 	}
-	// AODP 按整条线要一次价,成交量只要目标在出售城市的
-	if !slices.Equal(src.priceItems, refine.Lines[0].Items()) || !slices.Equal(src.priceCities, []string{"Thetford"}) {
+	// books 只数这个目标要的边
+	if len(src.keys) != 2*len(all) || res.Books.Sides != 2*len(items) || res.Books.Empty != res.Books.Sides {
+		t.Fatalf("盘口边 %d(快照物品 %d、目标要 %d),books %+v", len(src.keys), len(all), len(items), res.Books)
+	}
+	// AODP 按整条线要一次价,成交量要这条线 25 个目标在这座城的
+	if !slices.Equal(src.priceItems, all) || !slices.Equal(src.priceCities, []string{"Thetford"}) {
 		t.Fatalf("AODP 请求 %v @ %v", src.priceItems, src.priceCities)
 	}
 	first, last := rank.Window(rNow, 14)
-	if !slices.Equal(src.volItems, []string{target}) || src.volCity != "Thetford" ||
+	if !slices.Equal(src.volItems, refine.Lines[0].Targets()) || src.volCity != "Thetford" ||
 		!src.volFirst.Equal(first) || !src.volLast.Equal(last) {
 		t.Fatalf("成交量请求 %v @ %s [%v, %v]", src.volItems, src.volCity, src.volFirst, src.volLast)
 	}
@@ -215,29 +223,28 @@ func TestRefine按配方图收集盘口并按精炼窗口读簿(t *testing.T) {
 		t.Fatalf("应有缺卖价、没成交量的警告: %+v", res.Warnings)
 	}
 
-	// 出售城市另选:只多读目标在那里的两边,原料不去那里读
+	// 出售城市另选:Martlock 建一份快照,Thetford 那份照用、不重读
 	p := s.RefineDefaults(target, "")
 	p.Sell.City = "Martlock"
-	mustRefine(t, s, p)
-	var martlock []string
+	res = mustRefine(t, s, p)
 	for _, k := range src.keys {
-		if k.LocationID == "Martlock" {
-			martlock = append(martlock, k.ItemID)
+		if k.LocationID != "Martlock" {
+			t.Fatalf("Thetford 的快照还新,不该重读: %+v", k)
 		}
 	}
-	if !slices.Equal(martlock, []string{target, target}) || !slices.Equal(src.priceCities, []string{"Thetford", "Martlock"}) {
-		t.Fatalf("出售城市 Martlock 应只读目标: %v,AODP 城市 %v", martlock, src.priceCities)
+	if b, pr, v := src.calls(); b != 2 || pr != 2 || v != 2 || !slices.Equal(src.priceCities, []string{"Martlock"}) {
+		t.Fatalf("只为 Martlock 建一份:读簿 %d、AODP %d @ %v、成交量 %d", b, pr, src.priceCities, v)
 	}
-	// 允许外城买料:原料也去那里读
+	// 目标在 Martlock 只用两边:原料还是在生产城市买
+	if res.Books.Sides != 2*len(items)+2 {
+		t.Fatalf("出售城市 Martlock 应只多用目标两边: %d", res.Books.Sides)
+	}
+	// 允许外城买料:原料也用 Martlock 的,两份快照都还新,一次都不读
 	p = s.RefineDefaults(target, "")
 	p.Sources.Cities = []string{"Thetford", "Martlock"}
-	mustRefine(t, s, p)
-	found := false
-	for _, k := range src.keys {
-		found = found || (k.ItemID == "T8_ORE_LEVEL4@4" && k.LocationID == "Martlock")
-	}
-	if !found {
-		t.Fatal("买料城市有 Martlock,要读 Martlock 的原料")
+	res = mustRefine(t, s, p)
+	if b, _, _ := src.calls(); b != 2 || res.Books.Sides != 4*len(items) {
+		t.Fatalf("买料城市有 Martlock 要用 Martlock 的原料:读簿 %d、边 %d", b, res.Books.Sides)
 	}
 }
 
@@ -363,7 +370,7 @@ func TestRefine成交量按自然日平均(t *testing.T) {
 	}
 }
 
-func TestRefine同样参数两秒内只算一次且合并并发(t *testing.T) {
+func TestRefine同样参数一分钟内只算一次且合并并发(t *testing.T) {
 	src := barFixture()
 	src.gate = make(chan struct{})
 	s, clk := newRefineService(src)
@@ -405,26 +412,205 @@ func TestRefine同样参数两秒内只算一次且合并并发(t *testing.T) {
 		t.Fatal("合并的两个请求应拿到同一个结果")
 	}
 
-	// 2 秒内再来:直接回缓存
-	mustRefine(t, s, p)
-	if b, _, _ := src.calls(); b != 1 {
-		t.Fatalf("2 秒内应走缓存,读簿 %d 次", b)
+	// 再来:同一份快照、同样参数,直接回缓存
+	clk.Add(int64(3 * time.Second))
+	if again := mustRefine(t, s, p); again != out[0] {
+		t.Fatal("一分钟内同样参数、数据没变,应回同一个结果")
 	}
-	// 参数不同(哪怕只差一个件数)就是另一次计算
+	// 参数不同(哪怕只差一个件数)就是另一次计算,但数据还是那份快照:只重算引擎,不再读库
 	q := p
 	q.Qty = 11
-	mustRefine(t, s, q)
-	if b, _, _ := src.calls(); b != 2 {
-		t.Fatalf("不同参数应重算,读簿 %d 次", b)
+	if res := mustRefine(t, s, q); res == out[0] || res.Qty != 11 {
+		t.Fatal("不同参数应重算")
 	}
-	// 过了 2 秒重算;AODP 价还在 60 秒缓存里,不再打
-	clk.Add(int64(3 * time.Second))
+	if b, pr, v := src.calls(); b != 1 || pr != 1 || v != 1 {
+		t.Fatalf("参数变了只重算引擎:读簿 %d、AODP %d、成交量 %d", b, pr, v)
+	}
+	// 快照到 60 秒重读盘口;AODP 120 秒、成交量 10 分钟,没到期沿用
+	clk.Store(rNow.Add(61 * time.Second).UnixNano())
 	res := mustRefine(t, s, p)
-	if b, pr, _ := src.calls(); b != 3 || pr != 1 {
-		t.Fatalf("过期后应重算、AODP 走自己的缓存:读簿 %d、AODP %d", b, pr)
+	if b, pr, v := src.calls(); b != 2 || pr != 1 || v != 1 {
+		t.Fatalf("60 秒后重读盘口、AODP 和成交量沿用:读簿 %d、AODP %d、成交量 %d", b, pr, v)
 	}
-	if !res.ParamsUsed.Now.Equal(rNow.Add(3 * time.Second)) {
-		t.Fatalf("重算的 now 应是新的: %v", res.ParamsUsed.Now)
+	if !res.ParamsUsed.Now.Equal(rNow.Add(61*time.Second)) || res == out[0] || res.Books.Timing.Cache != "miss" {
+		t.Fatalf("快照换了要重算,now 是新的: %v %s", res.ParamsUsed.Now, res.Books.Timing.Cache)
+	}
+	clk.Store(rNow.Add(125 * time.Second).UnixNano())
+	mustRefine(t, s, p)
+	if b, pr, v := src.calls(); b != 3 || pr != 2 || v != 1 {
+		t.Fatalf("120 秒后 AODP 也重取:读簿 %d、AODP %d、成交量 %d", b, pr, v)
+	}
+}
+
+// 快照(诉求 #1/#8):读簿、AODP、成交量只取决于 (线, 城市),和个人参数无关。
+// 换专精、站费、件数只重算引擎;换目标(同一条线、同一座城)也不再读库。
+func TestRefine快照命中时不再读库_参数变了只重算引擎(t *testing.T) {
+	src := barFixture()
+	s, clk := newRefineService(src)
+	first := mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if first.Books.Timing.Cache != "miss" || first.Books.Timing.EngineMS <= 0 {
+		t.Fatalf("第一次要现建快照: %+v", first.Books.Timing)
+	}
+	clk.Add(int64(10 * time.Second))
+	p := s.RefineDefaults(tBar, "")
+	p.Focus.FCE = map[int]float64{4: 10000}
+	p.Fees.StationPer100 = 300
+	res := mustRefine(t, s, p)
+	other := mustRefine(t, s, s.RefineDefaults("T4_METALBAR_LEVEL2@2", ""))
+	if b, pr, v := src.calls(); b != 1 || pr != 1 || v != 1 {
+		t.Fatalf("快照命中不该再读:读簿 %d、AODP %d、成交量 %d", b, pr, v)
+	}
+	tm := res.Books.Timing
+	if tm.Cache != "hit" || tm.WaitMS != 0 || tm.SnapshotAgeS != 10 || other.Books.Timing.Cache != "hit" {
+		t.Fatalf("应命中快照、快照 10 秒前读的: %+v", tm)
+	}
+	if !res.Books.ReadAt.Equal(rNow) || res.ParamsUsed.Fees.StationPer100 != 300 {
+		t.Fatalf("read_at 是快照的读簿时刻: %v", res.Books.ReadAt)
+	}
+}
+
+// 入库标脏(ingest 的 DirtyMarker):这条线这座城的快照下次用时重建,读到新挂单;
+// 别的线、别的城、品质不是 1 的不受影响。距上次读簿不到 2 秒的不重建(抗翻页风暴)。
+func TestRefine入库标脏后重建快照(t *testing.T) {
+	src := barFixture()
+	s, clk := newRefineService(src)
+	res := mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if res.Sell.Post.BestAsk != 1000 {
+		t.Fatalf("卖一 %d", res.Sell.Post.BestAsk)
+	}
+	src.mu.Lock()
+	src.orders = append(src.orders, rOrders(tBar, "Thetford", model.SideOffer, rNow.Add(time.Second), 980, 4)...)
+	src.mu.Unlock()
+	s.MarkRefineDirty(model.QuoteKey{ItemID: tBar, LocationID: "Thetford", Quality: 2, Side: model.SideOffer})
+	s.MarkRefineDirty(model.QuoteKey{ItemID: "T4_LEATHER", LocationID: "Thetford", Quality: 1, Side: model.SideOffer})
+	s.MarkRefineDirty(model.QuoteKey{ItemID: tOre, LocationID: "Martlock", Quality: 1, Side: model.SideOffer})
+	clk.Add(int64(time.Second))
+	mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("标脏的不是这份快照,不该重读:%d", b)
+	}
+	// 快照才读了 1.5 秒:标脏也先不重建
+	s.MarkRefineDirty(model.QuoteKey{ItemID: tOre, LocationID: "Thetford", Quality: 1, Side: model.SideOffer})
+	clk.Add(int64(500 * time.Millisecond))
+	mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("2 秒内不重建:%d", b)
+	}
+	clk.Add(int64(time.Second))
+	res = mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if b, pr, _ := src.calls(); b != 2 || pr != 1 {
+		t.Fatalf("标脏后重读盘口、AODP 沿用:读簿 %d、AODP %d", b, pr)
+	}
+	if res.Sell.Post.BestAsk != 980 || res.Books.Timing.Cache != "miss" {
+		t.Fatalf("重建后应读到新挂单 980: %d %s", res.Sell.Post.BestAsk, res.Books.Timing.Cache)
+	}
+}
+
+// 客户端带来的 WS 报价时刻(RefineOpts.After)比快照新:重建,不回推送之前读的那份。
+func TestRefine客户端带报价时刻时快照比它旧就重建(t *testing.T) {
+	src := barFixture()
+	s, clk := newRefineService(src)
+	mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	clk.Add(int64(5 * time.Second))
+	p := s.RefineDefaults(tBar, "")
+	if _, err := s.RefineWith(context.Background(), p, RefineOpts{After: rNow.Add(-time.Second)}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("报价早于快照:不用重建,读簿 %d", b)
+	}
+	res, err := s.RefineWith(context.Background(), p, RefineOpts{After: rNow.Add(4 * time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _, _ := src.calls(); b != 2 || !res.Books.ReadAt.Equal(rNow.Add(5*time.Second)) {
+		t.Fatalf("报价晚于快照要重建:读簿 %d、read_at %v", b, res.Books.ReadAt)
+	}
+	// 矩阵也认
+	if _, err := s.RefineMatrixWith(context.Background(), "ORE", s.RefineDefaults("", "Thetford"),
+		RefineOpts{After: rNow.Add(4 * time.Second)}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _, _ := src.calls(); b != 2 {
+		t.Fatalf("快照已经比报价新,矩阵不用再读:%d", b)
+	}
+}
+
+// 快照到期、后台重建又慢(库卡住):最多等 refineSnapWait,先回旧快照算的结果,标 stale,
+// read_at 是旧的读簿时刻(界面的 craftLiveAfter 会再要一次);重建完了下一次就是新的。
+func TestRefine快照过期回旧值并标stale(t *testing.T) {
+	old := refineSnapWait
+	refineSnapWait = 50 * time.Millisecond
+	defer func() { refineSnapWait = old }()
+	src := barFixture()
+	s, clk := newRefineService(src)
+	mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	gate := make(chan struct{})
+	src.mu.Lock()
+	src.gate = gate
+	src.mu.Unlock()
+	clk.Store(rNow.Add(61 * time.Second).UnixNano())
+	res := mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if res.Books.Timing.Cache != "stale" || !res.Books.ReadAt.Equal(rNow) || res.Books.Timing.WaitMS < 40 {
+		t.Fatalf("没等到重建应先用旧的: %+v read_at %v", res.Books.Timing, res.Books.ReadAt)
+	}
+	close(gate)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		s.refine.snapMu.Lock()
+		sn, building := s.refine.snaps[snapKey{"ORE", "Thetford"}], len(s.refine.building) > 0
+		s.refine.snapMu.Unlock()
+		if !building && sn.at.Equal(rNow.Add(61*time.Second)) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("后台重建没完成")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	res = mustRefine(t, s, s.RefineDefaults(tBar, ""))
+	if res.Books.Timing.Cache != "hit" || !res.Books.ReadAt.Equal(rNow.Add(61*time.Second)) {
+		t.Fatalf("重建完应命中新快照: %+v", res.Books.Timing)
+	}
+	// 冷启动没有旧的可用:读库失败就是错误
+	src2 := barFixture()
+	src2.bookErr = errors.New("连接断了")
+	s2, _ := newRefineService(src2)
+	if _, err := s2.Refine(context.Background(), s2.RefineDefaults(tBar, "")); err == nil {
+		t.Fatal("冷启动读库失败应报错")
+	}
+}
+
+// 后台预热只管最近 15 分钟用过、又该重建的快照;同一条线的几座城合成一批读。
+func TestRefine预热只刷新最近用过的快照(t *testing.T) {
+	src := barFixture()
+	s, clk := newRefineService(src)
+	p := s.RefineDefaults(tBar, "")
+	p.Sell.City = "Martlock"
+	mustRefine(t, s, p)
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("两座城冷启动应合成一次读簿: %d", b)
+	}
+	s.warmOnce(context.Background())
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("快照还新,预热不读: %d", b)
+	}
+	clk.Store(rNow.Add(61 * time.Second).UnixNano())
+	s.warmOnce(context.Background())
+	if b, pr, _ := src.calls(); b != 2 || pr != 1 || len(src.keys) != 2*2*len(s.snapItems(refine.Lines[0])) {
+		t.Fatalf("到期的两座城合成一批重读:读簿 %d、AODP %d、边 %d", b, pr, len(src.keys))
+	}
+	// 之后再没人用:超过 15 分钟就不管了
+	clk.Store(rNow.Add(17 * time.Minute).UnixNano())
+	s.warmOnce(context.Background())
+	if b, _, _ := src.calls(); b != 2 {
+		t.Fatalf("15 分钟没人用不该预热: %d", b)
+	}
+	s.refine.snapMu.Lock()
+	n := len(s.refine.active)
+	s.refine.snapMu.Unlock()
+	if n != 0 {
+		t.Fatalf("闲置的应从 active 里清掉: %d", n)
 	}
 }
 
@@ -561,8 +747,9 @@ func TestRefineMatrix一条线25格共用一次读簿(t *testing.T) {
 		t.Fatalf("矩阵和单算不一致: %s %g vs %s %g", bar.Best.ID, bar.Best.UnitCost,
 			single.Candidates[0].ID, single.Candidates[0].UnitCost)
 	}
-	if b, pr, v := src.calls(); b != 2 || pr != 1 || v != 2 {
-		t.Fatalf("矩阵应一次读簿、一次 AODP、一次成交量(加上单算那次):%d %d %d", b, pr, v)
+	// 单算那一格命中矩阵建的快照,不再读
+	if b, pr, v := src.calls(); b != 1 || pr != 1 || v != 1 {
+		t.Fatalf("矩阵应一次读簿、一次 AODP、一次成交量,单算那次命中快照:%d %d %d", b, pr, v)
 	}
 	if len(m.Unverified) == 0 {
 		t.Fatal("矩阵要列未核实参数")

@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"albion-guild/internal/aodp"
@@ -35,7 +36,9 @@ import (
 //  4. 抓包没有的盘口边、或者抓包整边比 sources.max_age_hours 还旧的,用 AODP 兜底
 //     (scan.MergeSide,和扫描、查价页同一个择边函数),只有价格、没有件数,标「深度未知」
 //  5. 成交量取 refining.volume_days(默认 14)个自然日,按「总量 ÷ 自然日」平均
-//  6. 同样的参数 2 秒内只算一次,并发的同样请求合并成一次(ttlCache)
+//  6. 1~5 是 I/O,按 (线, 城市) 预先建成快照(refine_snap.go);点击时只读快照、
+//     按请求的 max_age_hours 合并成引擎的 Books,再跑引擎。同样的参数 + 同样的快照版本
+//     60 秒内只算一次,并发的同样请求合并成一次(ttlCache)
 //
 // 个人参数(FCE、今日专注、站费、k)由请求带上,服务端只放默认值(conf.Refining)。
 
@@ -64,9 +67,11 @@ func (e *ParamError) Unwrap() error { return e.Err }
 func paramErr(format string, a ...any) error { return &ParamError{Err: fmt.Errorf(format, a...)} }
 
 const (
-	// refineCacheTTL:同样的参数 2 秒内直接回上一次的结果(设计 §4.3 第 5 步)。
-	// 界面收到 WS 报价后防抖 1.5 秒重算,几个人同时开着精炼页也只算一次
-	refineCacheTTL = 2 * time.Second
+	// refinePlanTTL:计算结果缓存 60 秒。键是 json(参数) + 用到的快照版本(refine_snap.go):
+	// 数据没变时来回点同一批格子、切回看过的目标都秒回;数据一变版本就变,不会回旧的。
+	// Now 不进键,价格年龄最多偏 60 秒,6h / 24h 的标线不受影响。
+	// (以前是 2 秒、键里没有数据版本,每次点击几乎都未命中,读簿和 AODP 跟着重走一遍)
+	refinePlanTTL = 60 * time.Second
 	// refineComputeTimeout 是一次计算(读库 + 等 AODP + 算)在后台最多跑多久。
 	// 和发起它的 HTTP 请求脱钩:请求断了,算完的结果照样进缓存
 	refineComputeTimeout = time.Minute
@@ -92,14 +97,35 @@ type refineState struct {
 	fees *ttlCache[[]store.StationFee]
 	// clock 只给测试用:算价格年龄的「现在」和缓存过期都按它。nil = time.Now
 	clock func() time.Time
+
+	// 数据快照(refine_snap.go),都由 snapMu 管
+	snapMu sync.Mutex
+	snaps  map[snapKey]*refineSnap
+	// building 是正在重建的快照:关上就是建完了(成功与否看 snaps / buildErr)
+	building map[snapKey]chan struct{}
+	buildErr map[snapKey]error
+	// dirty 是入库标脏的时刻,比快照的读簿时刻新就要重建
+	dirty map[snapKey]time.Time
+	// active 是最近被请求用过的时刻,后台预热只管 refineWarmIdle 以内的
+	active map[snapKey]time.Time
+	// items 是快照覆盖的物品,按 配方表 × 线 缓存
+	items map[string][]string
+	ver   atomic.Uint64
+	// kick 叫醒后台预热(容量 1,塞不进就算了)
+	kick     chan struct{}
+	warm     atomic.Bool
+	warmLazy sync.Once
 }
 
 func (r *refineState) init() {
 	r.once.Do(func() {
-		r.plans = newTTLCache[*RefinePlan](refineCacheTTL, refineComputeTimeout)
-		r.matrix = newTTLCache[*RefineMatrix](refineCacheTTL, 2*refineComputeTimeout)
+		r.plans = newTTLCache[*RefinePlan](refinePlanTTL, refineComputeTimeout)
+		r.matrix = newTTLCache[*RefineMatrix](refinePlanTTL, 2*refineComputeTimeout)
 		r.prices = newTTLCache[[]aodp.PriceRecord](refinePricesTTL, 2*time.Minute)
 		r.fees = newTTLCache[[]store.StationFee](stationFeeCacheTTL, time.Minute)
+		r.snaps, r.building, r.buildErr = map[snapKey]*refineSnap{}, map[snapKey]chan struct{}{}, map[snapKey]error{}
+		r.dirty, r.active, r.items = map[snapKey]time.Time{}, map[snapKey]time.Time{}, map[string][]string{}
+		r.kick = make(chan struct{}, 1)
 		if r.clock != nil {
 			r.plans.now, r.matrix.now, r.prices.now, r.fees.now = r.clock, r.clock, r.clock, r.clock
 		}
@@ -184,6 +210,26 @@ type RefineBooks struct {
 	// AODPOK=false:这次没取到 AODP 当前价(只用了快照和查价页取过的),AODPError 说明原因
 	AODPOK    bool   `json:"aodp_ok"`
 	AODPError string `json:"aodp_error,omitempty"`
+	// Timing 是这份结果的耗时拆分(诉求 #1/#8 的埋点):卡在哪一段一眼看得出来
+	Timing RefineTiming `json:"timing"`
+}
+
+// RefineTiming 是一次精炼计算的耗时。读簿 / AODP / 成交量是用到的快照建的时候花的
+// (命中快照时那是之前花的,这次没花,看 Cache);引擎是这次算的。
+type RefineTiming struct {
+	// ReadMS 是 BookOrders + book.Build
+	ReadMS float64 `json:"read_ms"`
+	// AODPMS 是等 AODP 当前价;AODPWaited=false 表示没真去打(缓存命中、沿用上一份或已知连不上)
+	AODPMS     float64 `json:"aodp_ms"`
+	AODPWaited bool    `json:"aodp_waited"`
+	VolumeMS   float64 `json:"volume_ms"`
+	EngineMS   float64 `json:"engine_ms"`
+	// WaitMS 是这次请求在等快照上花的时间(命中时是 0)
+	WaitMS float64 `json:"wait_ms"`
+	// SnapshotAgeS 是用到的快照里最旧的那份读了多久
+	SnapshotAgeS float64 `json:"snapshot_age_s"`
+	// Cache:hit 快照现成 | miss 这次现建的 | stale 要重建没等到、先用了旧的
+	Cache string `json:"cache"`
 }
 
 // AODPNewer 是一个「AODP 比抓包新、价也不同」的盘口边。
@@ -215,17 +261,35 @@ func (s *Service) RefineDefaults(target, city string) refine.Params {
 // Refine 算一个目标的候选路线。参数不合法返回 *ParamError;读库失败返回别的错误;
 // 缺价、深度不够、AODP 没取到都不是错误,而是结果里的警告。
 func (s *Service) Refine(ctx context.Context, p refine.Params) (*RefinePlan, error) {
+	return s.RefineWith(ctx, p, RefineOpts{})
+}
+
+// RefineOpts 是计算之外的请求选项。
+type RefineOpts struct {
+	// After:客户端收到的 WS 报价时刻。用到的快照比它旧就重建(最多等 refineSnapWait),
+	// 免得推送触发的重算拿到推送之前读的那份
+	After time.Time
+}
+
+// RefineWith 同 Refine,带请求选项。
+func (s *Service) RefineWith(ctx context.Context, p refine.Params, o RefineOpts) (*RefinePlan, error) {
 	s.refine.init()
 	p = refine.Normalized(p)
 	if err := s.checkRefine(p); err != nil {
+		return nil, err
+	}
+	line, _ := refine.LineOfItem(p.Target)
+	cities := allCities(p)
+	snaps, use, err := s.ensureSnaps(ctx, line, cities, o.After)
+	if err != nil {
 		return nil, err
 	}
 	key, err := json.Marshal(p) // Now 是 json:"-",不进键
 	if err != nil {
 		return nil, err
 	}
-	v, _, err := s.refine.plans.get(ctx, string(key), func(c context.Context) (*RefinePlan, error) {
-		return s.computeRefine(c, p)
+	v, _, err := s.refine.plans.get(ctx, string(key)+"|"+snapVers(snaps, cities), func(c context.Context) (*RefinePlan, error) {
+		return s.computeRefine(c, p, snaps, use)
 	})
 	return v, err
 }
@@ -265,8 +329,11 @@ func (s *Service) checkRefine(p refine.Params) error {
 	return nil
 }
 
-// computeRefine 是一次真正的计算,在缓存的后台 goroutine 里跑。
-func (s *Service) computeRefine(ctx context.Context, p refine.Params) (*RefinePlan, error) {
+// computeRefine 是一次真正的计算,在缓存的后台 goroutine 里跑。不做 I/O:
+// 数据都在 snaps 里(ensureSnaps 备好的),这里只按请求合并、跑引擎。
+func (s *Service) computeRefine(_ context.Context, p refine.Params, snaps map[string]*refineSnap,
+	use snapUse) (*RefinePlan, error) {
+
 	now := s.refine.now().UTC()
 	p.Now = now
 	recipes := s.Recipes()
@@ -274,22 +341,26 @@ func (s *Service) computeRefine(ctx context.Context, p refine.Params) (*RefinePl
 	if err != nil {
 		return nil, &ParamError{Err: err}
 	}
-	line, _ := refine.LineOfItem(p.Target)
 	keys := refineKeys(items, buyCities(p), []string{p.Target}, p.Sell.City)
-	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(p), now, p.Sources.MaxAgeHours)
-	if err != nil {
-		return nil, err
-	}
-	vols, err := s.refineVolumes(ctx, []string{p.Target}, p.Sell.City, now)
-	if err != nil {
-		return nil, err
-	}
-	res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes, Volume: vols[p.Target]})
+	books, info, warns := s.mergeBooks(keys, snaps, now, p.Sources.MaxAgeHours)
+	t0 := time.Now()
+	res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes,
+		Volume: snaps[p.Sell.City].volume(p.Target, s.Cfg.Refining.VolumeDays)})
 	if err != nil {
 		return nil, err // 参数在 checkRefine 里校验过,到这里只能是内部问题(比如配方表是空的)
 	}
+	info.Timing = timingOf(snaps, use, now, time.Since(t0))
+	logRefine("精炼计算", p.Target, p.City, info)
 	res.Warnings = append(res.Warnings, warns...)
 	return &RefinePlan{Result: res, Books: info, ServerDefaults: s.serverDefaults()}, nil
+}
+
+// logRefine 把耗时拆分打进日志:改动前后的对照、线上卡在哪一段都靠它。
+func logRefine(what, target, city string, info RefineBooks) {
+	t := info.Timing
+	slog.Info(what, "target", target, "city", city, "cache", t.Cache, "wait_ms", t.WaitMS,
+		"read_ms", t.ReadMS, "aodp_ms", t.AODPMS, "aodp_waited", t.AODPWaited, "volume_ms", t.VolumeMS,
+		"engine_ms", t.EngineMS, "snapshot_age_s", t.SnapshotAgeS, "sides", info.Sides)
 }
 
 // buyCities 是买料的城市:生产城市(挂买单收料只在这里)加上可以买料的城市。
@@ -395,7 +466,8 @@ func (o ordersOnly) CapturedItems(context.Context, []string, []int, time.Time) (
 	return nil, nil
 }
 
-// refineBooks 读盘口、融合 AODP,转成引擎的输入。
+// mergeBooks 把快照里的盘口和 AODP 按这次请求合并成引擎的输入。纯内存,不做 I/O:
+// 读簿、取 AODP 在建快照时做(refine_snap.go)。max_age_hours 是请求参数,所以合并放在请求时。
 //
 // 每个盘口边按 scan.MergeSide 择边(扫描、查价页同一个函数),但有一处不同:
 // **抓包有阶梯时一律用抓包**,哪怕 MergeSide 因为 AODP 更新、价不同而选了 AODP。
@@ -406,47 +478,45 @@ func (o ordersOnly) CapturedItems(context.Context, []string, []int, time.Time) (
 // 反过来,抓包这一边整个比 maxAgeHours(请求的 sources.max_age_hours)还旧、而 AODP 的价
 // 在这个年龄以内时,用 AODP(深度未知):引擎会把太旧的抓包当缺价丢掉,留着它等于把
 // 新的 AODP 价也挡在外面(审查 finding 8)。这种边列进 books.aodp_over_stale。
-func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line refine.Line,
-	cities []string, now time.Time, maxAgeHours float64) (refine.Books, RefineBooks, []refine.Warning, error) {
+func (s *Service) mergeBooks(keys []model.QuoteKey, snaps map[string]*refineSnap, now time.Time,
+	maxAgeHours float64) (refine.Books, RefineBooks, []refine.Warning) {
 
-	src := s.refineSource()
 	window := s.Cfg.Refining.Window()
-	since := now.Add(-window)
 	info := RefineBooks{WindowHours: window.Hours(), ReadAt: now, Sides: len(keys),
-		Conflicted: []string{}, AODPNewer: []AODPNewer{}, AODPOverStale: []string{}}
+		Conflicted: []string{}, AODPNewer: []AODPNewer{}, AODPOverStale: []string{}, AODPOK: true}
 	if cc, ok := s.Conflicts.(conflictCoverage); ok {
 		t := cc.ConflictCoverageSince(now).UTC()
 		info.ConflictsSince = &t
 	}
-
-	// 串城的盘口边把 slack 放到整个读单窗口(见 rounds):窗口是 72h,不是扫描的 6h。
-	// 续页只认隔得够近的(refinePageGap)
-	sb := &storeBooks{st: ordersOnly{src}, conflicts: s.Conflicts, slack: s.Cfg.SnapshotSlack(), window: window,
-		pageGap: refinePageGap}
-	sides, flagged, err := sb.readSides(ctx, keys, since, since)
-	if err != nil {
-		return nil, info, nil, fmt.Errorf("读抓包挂单: %w", err)
+	// 读簿时刻按用到的快照里最旧的那份报:界面拿它和 WS 报价时刻比,早于报价就再要一次
+	cities := make([]string, 0, len(snaps))
+	for c := range snaps {
+		cities = append(cities, c)
 	}
-
-	prices, aerr := s.refinePrices(ctx, src, line.Items(), cities, now)
-	info.AODPOK = aerr == nil
+	sort.Strings(cities)
+	for _, c := range cities {
+		sn := snaps[c]
+		if sn.at.Before(info.ReadAt) {
+			info.ReadAt = sn.at
+		}
+		if sn.aodpErr != nil && info.AODPOK {
+			info.AODPOK, info.AODPError = false, aodpErrText(sn.aodpErr)
+		}
+	}
 	var warns []refine.Warning
-	if aerr != nil {
-		info.AODPError = aodpErrText(aerr)
+	if !info.AODPOK {
 		warns = append(warns, refine.Warning{Code: WarnAODPUnavailable,
 			Msg: "这次没取到 AODP 当前价(" + info.AODPError + "),抓包没有的盘口只能用之前取过的 AODP,没有的按缺价算"})
-	}
-	type cellKey struct{ item, city string }
-	idx := map[cellKey]aodp.PriceRecord{}
-	for _, p := range prices {
-		if p.Quality == refineQuality {
-			idx[cellKey{p.ItemID, p.City}] = p
-		}
 	}
 
 	books := refine.Books{}
 	for _, k := range keys {
-		pr := idx[cellKey{k.ItemID, k.LocationID}]
+		sn := snaps[k.LocationID]
+		if sn == nil {
+			info.Empty++ // 不该发生:快照按请求的城市建
+			continue
+		}
+		pr := sn.prices[refineCell{k.ItemID, k.LocationID}]
 		px, at := pr.SellPriceMin, pr.SellPriceMinDate
 		if k.Side == model.SideRequest {
 			px, at = pr.BuyPriceMax, pr.BuyPriceMaxDate
@@ -454,7 +524,7 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 		if !at.Valid() {
 			px = 0 // 没时间戳的价查不了新鲜度,不用
 		}
-		side, has := sides[k]
+		side, has := sn.sides[k]
 		var cs scan.CapturedSide
 		if has {
 			cs = scan.CapturedFrom(side, 0)
@@ -471,7 +541,7 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 		case has && !useAODP:
 			l = ladderOf(side)
 			info.Capture++
-			if flagged[k] {
+			if sn.flagged[k] {
 				info.Conflicted = append(info.Conflicted, sideName(k))
 			}
 			if m.Superseded {
@@ -522,7 +592,7 @@ func (s *Service) refineBooks(ctx context.Context, keys []model.QuoteKey, line r
 		warns = append(warns, refine.Warning{Code: WarnConflicted,
 			Msg: fmt.Sprintf("%d 个盘口边最近卷进过多开串城,读簿时没剔幽灵单,可能多算了已经成交的挂单", n)})
 	}
-	return books, info, warns, nil
+	return books, info, warns
 }
 
 // ladderOf 把 book.Build 整理好的一边转成引擎的阶梯。stale 的档不进来:那些单多半已经没了。
@@ -567,29 +637,8 @@ func newerSample(xs []AODPNewer) string {
 
 func round3(v float64) float64 { return float64(int64(v*1000+0.5)) / 1000 }
 
-// refinePrices 是这条线在 cities 的 AODP 当前价:这次取回的 ∪ 快照里的 ∪ 查价页取过的,
-// 逐字段新的胜(和查价格子、机会页重算同一个并法,见 aodp_fresh.go)。按 线 × 城市 缓存 60 秒:
-// 同一条线的几个目标、矩阵的 25 个格子共用一次请求。最多等 lookupAODPWait,到点就先用手里有的,
-// 请求留在后台跑完进缓存。
-func (s *Service) refinePrices(ctx context.Context, src RefineSource, items, cities []string,
-	now time.Time) ([]aodp.PriceRecord, error) {
-
-	key := strings.Join(items, ",") + "|" + strings.Join(cities, ",")
-	// AODP 已知连不上时只等一小会儿(见 aodp_wait.go),不然精炼页每次重算都卡 12 秒
-	wait, down := s.aodpWait(now)
-	waitCtx, cancel := context.WithTimeout(ctx, wait)
-	defer cancel()
-	fetched, _, err := s.refine.prices.get(waitCtx, key, func(c context.Context) ([]aodp.PriceRecord, error) {
-		return src.AODPPrices(c, items, cities)
-	})
-	err = asDown(err, down)
-	if err != nil {
-		slog.Warn("精炼页 AODP 当前价没取到", "items", len(items), "cities", cities, "err", err)
-	}
-	return s.mergePrices(items, fetched, now), err
-}
-
-// mergePrices 是 gridPrices 的多物品版本。
+// mergePrices 是 gridPrices 的多物品版本:这次取回的 ∪ 扫描快照里的 ∪ 查价页取过的,
+// 逐字段新的胜(和查价格子、机会页重算同一个并法,见 aodp_fresh.go)。
 func (s *Service) mergePrices(items []string, fetched []aodp.PriceRecord, now time.Time) []aodp.PriceRecord {
 	s.fresh.note(fetched, now)
 	want := map[string]bool{}
@@ -746,6 +795,11 @@ type MatrixBest struct {
 // RefineMatrix 算一条线 25 个档位。base 是共用的参数(Target 不看);专注模式不能是 custom:
 // 自定义的 tier 集合对低 tier 的目标没有意义。
 func (s *Service) RefineMatrix(ctx context.Context, lineKey string, base refine.Params) (*RefineMatrix, error) {
+	return s.RefineMatrixWith(ctx, lineKey, base, RefineOpts{})
+}
+
+// RefineMatrixWith 同 RefineMatrix,带请求选项。
+func (s *Service) RefineMatrixWith(ctx context.Context, lineKey string, base refine.Params, o RefineOpts) (*RefineMatrix, error) {
 	s.refine.init()
 	line, ok := refine.LineByKey(lineKey)
 	if !ok {
@@ -761,6 +815,11 @@ func (s *Service) RefineMatrix(ctx context.Context, lineKey string, base refine.
 	if err := s.checkRefine(probe); err != nil {
 		return nil, err
 	}
+	cities := allCities(base)
+	snaps, use, err := s.ensureSnaps(ctx, line, cities, o.After)
+	if err != nil {
+		return nil, err
+	}
 	key, err := json.Marshal(struct {
 		Line string
 		P    refine.Params
@@ -768,13 +827,15 @@ func (s *Service) RefineMatrix(ctx context.Context, lineKey string, base refine.
 	if err != nil {
 		return nil, err
 	}
-	v, _, err := s.refine.matrix.get(ctx, string(key), func(c context.Context) (*RefineMatrix, error) {
-		return s.computeMatrix(c, line, base)
+	v, _, err := s.refine.matrix.get(ctx, string(key)+"|"+snapVers(snaps, cities), func(c context.Context) (*RefineMatrix, error) {
+		return s.computeMatrix(c, line, base, snaps, use)
 	})
 	return v, err
 }
 
-func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refine.Params) (*RefineMatrix, error) {
+func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refine.Params,
+	snaps map[string]*refineSnap, use snapUse) (*RefineMatrix, error) {
+
 	now := s.refine.now().UTC()
 	base.Now = now
 	recipes := s.Recipes()
@@ -790,14 +851,9 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 	items = uniqStrings(items)
 	sort.Strings(items)
 	keys := refineKeys(items, buyCities(base), targets, base.Sell.City)
-	books, info, warns, err := s.refineBooks(ctx, keys, line, allCities(base), now, base.Sources.MaxAgeHours)
-	if err != nil {
-		return nil, err
-	}
-	vols, err := s.refineVolumes(ctx, targets, base.Sell.City, now)
-	if err != nil {
-		return nil, err
-	}
+	books, info, warns := s.mergeBooks(keys, snaps, now, base.Sources.MaxAgeHours)
+	sellSnap := snaps[base.Sell.City]
+	t0 := time.Now()
 
 	cells := make([]MatrixCell, len(targets))
 	results := make([]*refine.Result, len(targets))
@@ -812,7 +868,8 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 			for i := range next {
 				p := base
 				p.Target = targets[i]
-				res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes, Volume: vols[targets[i]]})
+				res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes,
+					Volume: sellSnap.volume(targets[i], s.Cfg.Refining.VolumeDays)})
 				cells[i] = matrixCell(targets[i], res, err)
 				results[i] = res
 			}
@@ -829,6 +886,8 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 	}
 	close(next)
 	wg.Wait()
+	info.Timing = timingOf(snaps, use, now, time.Since(t0))
+	logRefine("精炼矩阵", line.Key, base.City, info)
 
 	out := &RefineMatrix{
 		Line: line.Key, City: base.City, Qty: base.Qty, ParamsUsed: base, Now: now,
