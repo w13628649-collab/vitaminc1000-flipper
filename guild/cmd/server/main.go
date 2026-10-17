@@ -99,7 +99,10 @@ func main() {
 	// 推送的最优价走 flip:和扫描读簿同一套幽灵剔除、串城处理(/api/quotes 也是它),
 	// 实时页和机会页对同一个盘口报的才是同一个价
 	conflator := hub.NewConflator(flipper, bc, *fresh)
-	ing, err := ingest.New(st, conflator, *cacheSz)
+	// 入库标脏同时发给精炼快照:以前只接了 conflator,精炼快照的失效只剩 60 秒 TTL 和
+	// 界面带来的报价时刻,观测早于快照、入库晚于快照的单进不了快照。
+	// 精炼排在前面:conflator 推出去的时候快照这边已经标过脏了
+	ing, err := ingest.New(st, ingest.DirtyFanout{ingest.DirtyFunc(flipper.MarkRefineDirty), conflator}, *cacheSz)
 	if err != nil {
 		slog.Error("初始化摄取器失败", "err", err)
 		os.Exit(1)
@@ -128,6 +131,8 @@ func main() {
 	// 两次全量之间用缓存的 AODP 快照配最新抓包重算(capture.reeval_seconds),
 	// 不打 AODP。开关关着时立刻返回
 	go flipper.RunReeval(ctx)
+	// 精炼快照的后台预热:先建四条线的专精城,之后被标脏叫醒(或每 20 秒)重建最近用过的
+	go flipper.RunRefineWarm(ctx)
 
 	apiSrv := api.New(st, ing, h, *fresh, flipper)
 	apiSrv.ReleaseDir = *relDir

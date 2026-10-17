@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -62,6 +63,33 @@ func TestConflator_同一盘口一个tick内只算一次(t *testing.T) {
 	}
 	if got := len(src.calls[0]); got != 2 {
 		t.Fatalf("51 次标记应合并成 2 个盘口,得到 %d", got)
+	}
+}
+
+// 推出去的每条都带服务端推送时刻(精炼页拿它当 after,它晚于入库提交);
+// 观测时刻 At 原样不动,数据源的切片也不改
+func TestConflator_推送带服务端推送时刻(t *testing.T) {
+	obs := time.Now().Add(-5 * time.Second)
+	src := &fakeSource{out: []model.Quote{{Key: "x", Price: 100, At: obs}}}
+	bc := &fakeBroadcaster{}
+	c := NewConflator(src, bc, time.Minute)
+	c.MarkDirty(key("T5_METALBAR", model.SideOffer))
+	before := time.Now()
+	c.tick(context.Background())
+	if len(bc.batch) != 1 || len(bc.batch[0]) != 1 {
+		t.Fatalf("应推一批一条,得到 %v", bc.batch)
+	}
+	q := bc.batch[0][0]
+	if q.Pushed.Before(before) || !q.At.Equal(obs) {
+		t.Fatalf("推送时刻 %v 应不早于 tick、观测时刻 %v 原样", q.Pushed, q.At)
+	}
+	if !src.out[0].Pushed.IsZero() {
+		t.Fatal("不该改数据源的切片")
+	}
+	// 快照(/api/quotes)不带推送时刻:序列化时省掉
+	raw, _ := json.Marshal(src.out[0])
+	if strings.Contains(string(raw), `"s"`) {
+		t.Fatalf("没推过的不该带 s: %s", raw)
 	}
 }
 

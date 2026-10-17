@@ -501,9 +501,10 @@ async function craftLoad(opts = {}) {
   if (!opts.live) $("c-result").classList.add("dim");
   craftStatus(opts.live ? "live" : "loading");
   try {
-    // 推送触发的重算带上报价时刻:服务端的数据快照比它旧就重建,不回推送之前读的那份。
-    // 断线重连、丢过消息没有具体报价,按现在算
-    const after = opts.live ? (opts.quote?.t || new Date().toISOString()) : "";
+    // 推送触发的重算带上服务端的推送时刻 q.s:服务端的数据快照比它旧就重建,不回推送之前读的那份。
+    // 不能用 q.t:那是挂单的观测时刻,比入库早几秒,「观测早于快照、入库晚于快照」的单会漏掉。
+    // 断线重连、丢过消息没有具体推送,写 now 让服务端按它自己的钟(浏览器的钟可能慢)
+    const after = opts.live ? (craftPushedAt(opts.quote) || "now") : "";
     const res = await getJSON("/api/refine/plan" + (after ? `?after=${encodeURIComponent(after)}` : ""), {
       method: "POST", headers: { "Content-Type": "application/json" }, body: sig,
     });
@@ -627,6 +628,8 @@ const cKeyText = k => {
   const [item, city, , side] = String(k).split("|");
   return `${cLabel(item) || item} @ ${city} ${side === "0" ? "卖单" : "买单"}`;
 };
+// 一条推送的服务端推送时刻(model.Quote.Pushed,晚于那批单入库);老服务端没有,退回观测时刻
+function craftPushedAt(q) { return q?.s || q?.t || ""; }
 // 拿到计划之后:实时的说明文字、防止拿到服务端 2 秒缓存里的旧计划
 function craftLiveAfter(res, opts) {
   if (!opts.live) { craft.liveNote = ""; return; }
@@ -635,9 +638,10 @@ function craftLiveAfter(res, opts) {
     : opts.why === "reconnect" ? `断线重连后已补拉(${hms(new Date())})`
     : opts.why === "resync" ? `推送丢过消息,已整份重算(${hms(new Date())})`
     : `已重算(${hms(new Date())})`;
-  // 读簿时刻早于这条报价:服务端的快照刚重建过不到 2 秒(抗翻页风暴)、或者重建没等到先回了旧的,
-  // 拿到的是报价之前读的那份,过一会儿再要一次
-  const readAt = Date.parse(res.books?.read_at || ""), qt = Date.parse(q?.t || "");
+  // 读簿时刻早于这条推送:服务端的快照刚重建过不到 2 秒(抗翻页风暴)、或者重建没等到先回了旧的,
+  // 拿到的是推送之前读的那份,过一会儿再要一次。两个时刻都在服务端钟上;
+  // 老服务端的推送没有 s,退回观测时刻 t
+  const readAt = Date.parse(res.books?.read_at || ""), qt = Date.parse(craftPushedAt(q) || "");
   if (q && isFinite(readAt) && isFinite(qt) && readAt < qt && !opts.retried) {
     craft.liveNote = `收到 ${hms(q.t)} 的报价,服务端还是旧的一份,马上再算一次…`;
     setTimeout(() => { if (!craft.pending) craftLoad({ ...opts, retried: true }); }, 2200);

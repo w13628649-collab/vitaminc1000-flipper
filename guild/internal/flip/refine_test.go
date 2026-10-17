@@ -506,6 +506,34 @@ func TestRefine入库标脏后重建快照(t *testing.T) {
 	}
 }
 
+// 观测早于快照、入库晚于快照:客户端每 3 秒上传、ingest 每 2 秒落库,入库比观测晚最多约 5 秒。
+// 只拿观测时刻(以前界面发的 after = quote.t)和读簿时刻比,这张单永远进不了快照,要等 60 秒 TTL。
+// 入库标脏(服务端 main 现在把 MarkRefineDirty 和 conflator 一起接在 ingest 上)记的是提交之后的
+// 服务端时刻,带着旧式的 after 来也要重建、读到它
+func TestRefine观测早于快照入库晚于快照的单要读到(t *testing.T) {
+	src := barFixture()
+	s, clk := newRefineService(src)
+	if res := mustRefine(t, s, s.RefineDefaults(tBar, "")); res.Sell.Post.BestAsk != 1000 {
+		t.Fatalf("前提:卖一 %d", res.Sell.Post.BestAsk)
+	}
+	// 3 秒后入库一张 rNow-1s 观测到的单,ingest 提交之后标脏
+	clk.Add(int64(3 * time.Second))
+	src.mu.Lock()
+	src.orders = append(src.orders, rOrders(tBar, "Thetford", model.SideOffer, rNow.Add(-time.Second), 980, 4)...)
+	src.mu.Unlock()
+	s.MarkRefineDirty(model.QuoteKey{ItemID: tBar, LocationID: "Thetford", Quality: 1, Side: model.SideOffer})
+
+	clk.Add(int64(2 * time.Second))
+	res, err := s.RefineWith(context.Background(), s.RefineDefaults(tBar, ""),
+		RefineOpts{After: rNow.Add(-time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Sell.Post.BestAsk != 980 || !res.Books.ReadAt.Equal(rNow.Add(5*time.Second)) {
+		t.Fatalf("入库标脏后要重建并读到 980:卖一 %d、read_at %v", res.Sell.Post.BestAsk, res.Books.ReadAt)
+	}
+}
+
 // 客户端带来的 WS 报价时刻(RefineOpts.After)比快照新:重建,不回推送之前读的那份。
 func TestRefine客户端带报价时刻时快照比它旧就重建(t *testing.T) {
 	src := barFixture()

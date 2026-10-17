@@ -21,6 +21,23 @@ type DirtyMarker interface {
 	MarkDirty(model.QuoteKey)
 }
 
+// DirtyFunc 让一个函数当 DirtyMarker 用(比如 flip.Service.MarkRefineDirty)。
+type DirtyFunc func(model.QuoteKey)
+
+func (f DirtyFunc) MarkDirty(k model.QuoteKey) { f(k) }
+
+// DirtyFanout 把一次标脏依次发给几个下游:行情推送(conflator)和精炼快照。
+// 都是在提交之后同步调的,所以排在后面的 conflator 推出去的时候,前面的已经标过了
+type DirtyFanout []DirtyMarker
+
+func (f DirtyFanout) MarkDirty(k model.QuoteKey) {
+	for _, d := range f {
+		if d != nil {
+			d.MarkDirty(k)
+		}
+	}
+}
+
 // sink 是 flush 落库那一步,线上就是 *store.Store。抽成接口是为了测试能断言
 // "一轮 flush 只提交一次",以及写失败之后 LRU 的善后
 type sink interface {

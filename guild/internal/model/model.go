@@ -174,7 +174,11 @@ type Quote struct {
 	Price  int64     `json:"p"` // 该盘口的最优价:卖单取最低,买单取最高
 	Depth  int64     `json:"d"` // 该价位上的挂单量合计
 	Orders int32     `json:"n"` // 该价位上有几张单
-	At     time.Time `json:"t"`
+	At     time.Time `json:"t"` // 这个价位最近一次被观测到的时刻(挂单的观测时刻,已平移到服务端钟)
+	// Pushed 是服务端推出这条的时刻(conflator 的 tick),只有推送带,/api/quotes 快照不带。
+	// 精炼页拿它当 after:它一定晚于这批单入库提交(提交之后才标脏、下一个 tick 才推),
+	// 而 At 是观测时刻,比入库早几秒,拿 At 比快照读簿时刻会漏掉"观测早于快照、入库晚于快照"的单
+	Pushed time.Time `json:"s,omitzero"`
 }
 
 func itoa(n int) string {

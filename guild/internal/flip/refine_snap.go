@@ -462,7 +462,11 @@ func (s *Service) snapItems(line refine.Line) []string {
 
 // MarkRefineDirty 是 ingest 的 DirtyMarker 那一路:这个盘口有新单入库了(ingest 在 flush 提交之后
 // 才标,所以重建时库里已经有)。只认品质 1、四条线里的物品;把 (线, 城市) 标脏、叫醒预热。
-// 服务端 main 里要和 conflator 一起接上(ingest.New 的 DirtyMarker 换成两者的 fanout)。
+// 服务端 main 里和 conflator 一起接在 ingest 上(ingest.DirtyFanout)。
+//
+// 这条是快照失效的主力:界面带来的 after 是服务端推送时刻,推送又在标脏之后,
+// 所以 dirty 比读簿时刻新就说明库里有快照没读到的单。只靠 after 的话,观测早于快照、
+// 入库晚于快照的单在 60 秒 TTL 之前进不了快照。
 func (s *Service) MarkRefineDirty(k model.QuoteKey) {
 	if k.Quality != refineQuality {
 		return

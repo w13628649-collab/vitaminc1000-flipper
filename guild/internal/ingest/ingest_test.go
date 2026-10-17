@@ -613,3 +613,16 @@ func TestSubmit_多人上传各归各的(t *testing.T) {
 		t.Fatalf("乙应该有 1 条,得到 %d", n)
 	}
 }
+
+// 入库标脏要同时发给行情推送和精炼快照:服务端 main 用 DirtyFanout 把两者接在一起。
+// 以前只接了 conflator,精炼快照只能等 60 秒 TTL
+func TestDirtyFanout_依次发给每个下游(t *testing.T) {
+	a, b := &fakeDirty{}, &fakeDirty{}
+	var fn []model.QuoteKey
+	f := DirtyFanout{a, DirtyFunc(func(k model.QuoteKey) { fn = append(fn, k) }), nil, b}
+	k := model.QuoteKey{ItemID: "T4_METALBAR", LocationID: "Thetford", Quality: 1}
+	f.MarkDirty(k)
+	if len(a.keys) != 1 || len(b.keys) != 1 || len(fn) != 1 || fn[0] != k {
+		t.Fatalf("每个下游都要收到一次: %v %v %v", a.keys, b.keys, fn)
+	}
+}

@@ -278,6 +278,13 @@ func (c *Conflator) tick(ctx context.Context) {
 	if len(quotes) == 0 {
 		return
 	}
+	// 推送时刻在服务端钟上、晚于这批单入库(见 model.Quote.Pushed)
+	// 拷一份再改:切片是数据源给的,不在这里改它的东西
+	pushed := time.Now()
+	quotes = append([]model.Quote(nil), quotes...)
+	for i := range quotes {
+		quotes[i].Pushed = pushed
+	}
 	if err := c.bc.Publish(ctx, quotes); err != nil {
 		slog.Error("广播失败", "quotes", len(quotes), "err", err)
 	}

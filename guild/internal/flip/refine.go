@@ -266,8 +266,8 @@ func (s *Service) Refine(ctx context.Context, p refine.Params) (*RefinePlan, err
 
 // RefineOpts 是计算之外的请求选项。
 type RefineOpts struct {
-	// After:客户端收到的 WS 报价时刻。用到的快照比它旧就重建(最多等 refineSnapWait),
-	// 免得推送触发的重算拿到推送之前读的那份
+	// After:客户端收到的那条 WS 推送的服务端推送时刻(model.Quote.Pushed)。用到的快照比它旧
+	// 就重建(最多等 refineSnapWait),免得推送触发的重算拿到推送之前读的那份
 	After time.Time
 }
 

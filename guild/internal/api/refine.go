@@ -160,11 +160,17 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, &out)
 }
 
-// refineOpts:查询参数 after=<RFC3339> 是界面收到的 WS 报价时刻。服务端的数据快照比它旧就重建,
-// 推送触发的重算不会拿到推送之前读的那份(plan 和 matrix 都认)。
+// refineOpts:查询参数 after=<RFC3339> 是界面收到的 WS 推送里的服务端推送时刻(Quote.Pushed,
+// 晚于那批单入库)。服务端的数据快照比它旧就重建,推送触发的重算不会拿到推送之前读的那份
+// (plan 和 matrix 都认)。
+//
+// after=now 按服务端的现在:断线重连、resync 没有具体推送,以前界面填浏览器本地时钟,
+// 成员机器的钟比服务端慢时「快照比它旧」这个判断就失效了
 func refineOpts(q url.Values) (flip.RefineOpts, error) {
 	var o flip.RefineOpts
-	if v := strings.TrimSpace(q.Get("after")); v != "" {
+	if v := strings.TrimSpace(q.Get("after")); v == "now" {
+		o.After = time.Now()
+	} else if v != "" {
 		t, err := time.Parse(time.RFC3339Nano, v)
 		if err != nil {
 			return o, fmt.Errorf("after=%q 不是 RFC3339 时刻", v)

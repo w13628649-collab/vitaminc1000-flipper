@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -497,7 +498,8 @@ func TestRefine接口站费来源(t *testing.T) {
 	}
 }
 
-// after(WS 报价时刻)要是 RFC3339;写对了照常算,写错了 400。
+// after(WS 推送时刻)要是 RFC3339,或者 now(按服务端的现在,断线重连用);
+// 写对了照常算,写错了 400。
 func TestRefine接口after参数(t *testing.T) {
 	srv := refineServer(fullSrc(time.Now()))
 	defer srv.Close()
@@ -505,7 +507,7 @@ func TestRefine接口after参数(t *testing.T) {
 	for _, c := range []struct {
 		q    string
 		want int
-	}{{"?after=" + time.Now().UTC().Format(time.RFC3339Nano), 200}, {"?after=昨天", 400}} {
+	}{{"?after=" + time.Now().UTC().Format(time.RFC3339Nano), 200}, {"?after=now", 200}, {"?after=昨天", 400}} {
 		resp, err := http.Post(srv.URL+"/api/refine/plan"+c.q, "application/json", strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
@@ -517,6 +519,10 @@ func TestRefine接口after参数(t *testing.T) {
 	}
 	if resp, raw := get(t, srv, "/api/refine/matrix?line=ORE&after=x"); resp.StatusCode != 400 {
 		t.Fatalf("矩阵 after 写错: %d %s", resp.StatusCode, raw)
+	}
+	o, err := refineOpts(url.Values{"after": {"now"}})
+	if err != nil || time.Since(o.After) > time.Second {
+		t.Fatalf("after=now 应是服务端的现在: %v %v", o.After, err)
 	}
 }
 
