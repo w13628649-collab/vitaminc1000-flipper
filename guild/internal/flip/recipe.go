@@ -71,7 +71,8 @@ func (s *Service) loadRecipes(ctx context.Context) {
 		slog.Info("库里还没有配方,先用内置快照,后台同步一次", "snapshot", refine.SnapshotName)
 	}
 	go func() {
-		if err := s.SyncCatalog(ctx); err != nil {
+		// 只补配方。走 SyncCatalog 会把内置目录一起覆盖成 ao-bin-dumps(见 SyncRecipes)
+		if err := s.SyncRecipes(ctx); err != nil {
 			slog.Warn("后台同步配方失败,继续用内置快照", "err", err)
 		}
 	}()

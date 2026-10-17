@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -96,7 +97,7 @@ func (s *Service) Catalog() *catalog.Catalog { return s.cat.Load() }
 // LastScan 是最近一次扫描结果,没扫过是 nil。
 func (s *Service) LastScan() *scan.Result { return s.last.Load() }
 
-// LoadCatalog 从库里读目录和配方。目录是空的就去上游同步一次。
+// LoadCatalog 从库里读目录和配方。目录是空的、或者库里那份不该再用,就装内置目录。
 func (s *Service) LoadCatalog(ctx context.Context) error {
 	items, cats, syncedAt, err := s.Store.LoadCatalog(ctx)
 	if err != nil {
@@ -109,10 +110,58 @@ func (s *Service) LoadCatalog(ctx context.Context) error {
 		slog.Info("物品目录是空的,装载内置目录", "client_version", catalog.ClientVersion)
 		return s.LoadBuiltinCatalog(ctx)
 	}
+	// 只在库是空的时候装内置,已经同步过的库就永远换不过来:
+	// 9 月同步过 ao-bin-dumps 的生产库,升级到带内置目录的版本后照样读老的那份
+	source, err := s.Store.CatalogSource(ctx)
+	if err != nil {
+		slog.Warn("读目录来源失败,按来历不明的老库处理", "err", err)
+		source = ""
+	}
+	replace, why := preferBuiltin(source, syncedAt)
+	if replace {
+		slog.Info("库里的物品目录换成内置那份", "why", why, "stored_source", source,
+			"stored_items", len(items), "stored_synced_at", syncedAt, "client_version", catalog.ClientVersion)
+		if err := s.LoadBuiltinCatalog(ctx); err != nil {
+			return err
+		}
+		s.loadRecipes(ctx) // 配方不跟着目录换,库里那份照常读
+		return nil
+	}
 	s.cat.Store(catalog.New(items, cats, syncedAt))
-	slog.Info("物品目录已载入", "items", len(items), "synced_at", syncedAt)
+	slog.Info("物品目录已载入", "items", len(items), "synced_at", syncedAt, "source", source, "why", why)
 	s.loadRecipes(ctx)
 	return nil
+}
+
+// preferBuiltin 判断库里那份目录要不要换成内置的,第二个返回值是给日志看的理由。
+//
+// 内置目录是默认来源(从成员实际装的客户端解出来);ao-bin-dumps 是「内置过期、
+// 又来不及重新解客户端」时手动打的临时补丁(POST /api/catalog/sync)。所以:
+//
+//   - 库里就是当前这版内置 → 不换
+//   - 库里是别的客户端版本解的 → 换:二进制里带的就是这个版本该用的那份
+//   - 库里是 ao-bin-dumps,同步时刻在内置解出之后 → 不换:那是有人有意打的补丁
+//   - 库里是 ao-bin-dumps 但更早,或者没记来源 → 换:那是内置出现之前的老同步,
+//     不是谁的选择(source 这一行是 client-data 合并后才开始写的,老库都没有)
+func preferBuiltin(source, syncedAt string) (bool, string) {
+	builtin := "client/" + catalog.ClientVersion
+	switch {
+	case source == builtin:
+		return false, "库里就是当前内置目录"
+	case strings.HasPrefix(source, "client/"):
+		return true, "库里是另一个客户端版本解的目录"
+	case source == "ao-bin-dumps":
+		extracted, err := time.Parse("2006-01-02", catalog.ClientExtractedAt)
+		synced, serr := time.Parse(time.RFC3339, syncedAt)
+		if err == nil && serr == nil && !synced.Before(extracted) {
+			return false, "库里是内置解出之后手动同步的 ao-bin-dumps,当作有意打的补丁保留"
+		}
+		return true, "库里是内置出现之前同步的 ao-bin-dumps"
+	case source == "":
+		return true, "库里的目录没记来源,是内置出现之前的老同步"
+	default:
+		return true, "库里的目录来源不认识"
+	}
 }
 
 // LoadBuiltinCatalog 把编进二进制的那份目录写库再换进内存。
@@ -151,6 +200,22 @@ func (s *Service) SyncCatalog(ctx context.Context) error {
 	}
 	s.cat.Store(catalog.New(dump.Items, dump.Categories, time.Now().UTC().Format(time.RFC3339)))
 	slog.Info("物品目录已同步", "items", len(dump.Items))
+	s.saveRecipes(ctx, dump.Recipes)
+	return nil
+}
+
+// SyncRecipes 只从 ao-bin-dumps 同步配方,**不动物品目录**。
+//
+// 后台补配方(loadRecipes)要走这条,不能走 SyncCatalog:那条会把目录一起覆盖成
+// ao-bin-dumps、还记上新的同步时刻,下次启动 preferBuiltin 就把它当成有意打的补丁,
+// 内置目录从此再也换不回来。
+func (s *Service) SyncRecipes(ctx context.Context) error {
+	s.syncMu.Lock()
+	defer s.syncMu.Unlock()
+	dump, err := catalog.Fetch(ctx)
+	if err != nil {
+		return err
+	}
 	s.saveRecipes(ctx, dump.Recipes)
 	return nil
 }

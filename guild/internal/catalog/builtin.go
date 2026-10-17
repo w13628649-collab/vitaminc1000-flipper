@@ -14,6 +14,13 @@ import (
 // 游戏大版本更新之后这个数就旧了,界面和日志上要显示出来。
 const ClientVersion = "1.32.030.345319"
 
+// ClientExtractedAt 是内置目录从客户端解出来的日期(调查工作区 rea-test,见 docs/client-data.md)。
+//
+// 启动时拿它区分库里那份 ao-bin-dumps 是「内置出现之前的老同步」(该换掉)
+// 还是「内置出现之后有人手动打的补丁」(要保留),见 flip.preferBuiltin。
+// 重新解客户端、换掉 items.jsonl.gz 时这个日期跟着改。
+const ClientExtractedAt = "2026-10-13"
+
 // builtinItems 是从**游戏客户端自己**的 items.xml + localization.xml 解出来的
 // 物品目录,11,601 条,127 KB。
 //

@@ -62,6 +62,20 @@ func (s *Store) LoadCatalog(ctx context.Context) ([]catalog.Item, []catalog.Cate
 	return items, cats, syncedAt, nil
 }
 
+// CatalogSource 是库里这份目录的来源,即 SaveCatalog 写进去的 source。
+//
+// 这一行是 client-data 合并之后才开始写的,更早存的库没有,返回 ""——
+// 调用方要把 "" 当成「来历不明的老同步」,而不是错误。
+func (s *Store) CatalogSource(ctx context.Context) (string, error) {
+	var v string
+	err := s.pool.QueryRow(ctx,
+		`SELECT value FROM catalog_meta WHERE key = 'source'`).Scan(&v)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
 // SaveCatalog 整份替换。目录是上游 dump 的镜像,增量合并没有意义,
 // 反而会把上游删掉的条目永久留在库里。
 func (s *Store) SaveCatalog(ctx context.Context, items []catalog.Item, cats []catalog.Category, source string) error {
