@@ -171,6 +171,12 @@ type Candidate struct {
 	// AgeLevel:ok | yellow(超过 6 小时)| red(超过 24 小时)
 	AgeLevel string `json:"age_level"`
 
+	// Breakeven 是每种买进的投入物的盈亏平衡价(路线固定、别的价不变,见 Breakeven),
+	// 花钱多的在前;料不满或算不出主方式利润时是 []
+	Breakeven []Breakeven `json:"breakeven"`
+	// BreakevenAllPct:所有买的料(买价和运费,不含转化实付)一起涨这么多,这一批利润归零
+	BreakevenAllPct *float64 `json:"breakeven_all_pct"`
+
 	Steps    []Step     `json:"steps"`
 	Leftover []Leftover `json:"leftover"`
 	Warnings []Warning  `json:"warnings"`
@@ -233,6 +239,8 @@ type Result struct {
 	Line       string               `json:"line"`
 	City       string               `json:"city"`
 	Qty        int                  `json:"qty"`
+	// MainRaw 是顶层配方的原料(主原料),界面和矩阵靠它从 breakeven 里挑主原料那一项
+	MainRaw    string               `json:"main_raw"`
 	ParamsUsed ParamsUsed           `json:"params_used"`
 	Data       DataInfo             `json:"data"`
 	Sell       SellInfo             `json:"sell"`
@@ -270,7 +278,7 @@ func Plan(in Input) (*Result, error) {
 	tiers := e.focusTiers()
 
 	res := &Result{
-		Target: p.Target, Line: line.Key, City: p.City, Qty: p.Qty,
+		Target: p.Target, Line: line.Key, City: p.City, Qty: p.Qty, MainRaw: e.topRaw(),
 		ParamsUsed:   ParamsUsed{Params: p, Now: p.Now.UTC(), Unverified: p.unverifiedUsed(tiers)},
 		Sell:         e.sellInfo(),
 		Volume:       in.Volume,
@@ -347,6 +355,7 @@ func Plan(in Input) (*Result, error) {
 			res.RawSources[u.target] = rs
 		}
 	}
+	e.fillRawBreakevens(res)
 	res.Data = e.dataInfo(res.Candidates, kept)
 	return res, nil
 }
@@ -627,6 +636,7 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 	if hasProfit {
 		c.Daily = e.daily(c, ev, primary)
 	}
+	c.Breakeven, c.BreakevenAllPct = e.breakevens(&c, ev)
 
 	c.Steps = e.steps(ev, si)
 	c.sig = signature(c.Steps)

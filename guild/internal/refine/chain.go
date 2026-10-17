@@ -308,6 +308,8 @@ type buyRec struct {
 	qty       float64
 	cost      float64 // 成交价 × 买方系数 × 件数
 	transport float64
+	// route 是这批货从 item 转化到 forItem 的实付合计;直接买为 0。盈亏平衡价要它算到手均价
+	route float64
 	levels    map[int64]float64
 	// seen 是吃到的各档里最旧的观测时刻
 	seen   time.Time
@@ -732,6 +734,7 @@ func (st *state) record(takes []take) {
 		br.qty += t.qty
 		br.cost += t.qty * o.buyUnit()
 		br.transport += t.qty * o.transport
+		br.route += t.qty * o.route
 		br.levels[int64(math.Round(o.price))] += t.qty
 		if o.lastVisible {
 			br.hitLast = true

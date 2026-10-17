@@ -722,6 +722,9 @@ type MatrixBest struct {
 	OldestAgeH     *float64         `json:"oldest_age_h"`
 	AgeLevel       string           `json:"age_level"`
 	Warnings       []refine.Warning `json:"warnings"`
+	// MainRawBreakeven 是主原料(refine.Result.MainRaw)的盈亏平衡价:照这条路线、别的价不变,
+	// 主原料到手均价涨到这里利润归零。料不满、没有主方式利润时为 nil
+	MainRawBreakeven *refine.Breakeven `json:"main_raw_breakeven"`
 }
 
 // RefineMatrix 算一条线 25 个档位。base 是共用的参数(Target 不看);专注模式不能是 custom:
@@ -846,6 +849,13 @@ func matrixCell(target string, res *refine.Result, err error) MatrixCell {
 				UnitCost: cand.UnitCost, TotalCost: cand.TotalCost, UpfrontCapital: cand.UpfrontCapital,
 				Profit: cand.Profit, Focus: cand.Focus, SilverPerFocus: cand.SilverPerFocus, Daily: cand.Daily,
 				OldestAgeH: cand.OldestAgeH, AgeLevel: cand.AgeLevel, Warnings: cand.Warnings,
+			}
+			for i := range cand.Breakeven {
+				if cand.Breakeven[i].Item == res.MainRaw {
+					be := cand.Breakeven[i]
+					c.Best.MainRawBreakeven = &be
+					break
+				}
 			}
 		}
 	}

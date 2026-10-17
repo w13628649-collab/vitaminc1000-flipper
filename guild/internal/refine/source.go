@@ -235,6 +235,11 @@ type PureRoute struct {
 	// Available 是这个起点在可买城市的可见件数合计;深度未知时为 nil
 	Available *float64 `json:"available"`
 	Filled    bool     `json:"filled"`
+	// Route 是每件从这个起点转化到目标的实付;直接买为 0
+	Route float64 `json:"route"`
+	// MaxPrice 是在生产城吃卖单的买价上限 = (推荐路线的到手均价上限 − Route) ÷ 买方系数:
+	// 起点买价涨过它,照推荐路线做这一批就不赚钱。没算盈亏平衡价时为 nil
+	MaxPrice *float64 `json:"max_price"`
 }
 
 // MixedSplit 是混合最优里的一段:从某城某起点买多少件、价位区间、走哪条路。
@@ -262,6 +267,8 @@ type RawSource struct {
 	Need  float64     `json:"need"`
 	Pure  []PureRoute `json:"pure"`
 	Mixed MixedSource `json:"mixed"`
+	// Breakeven 是推荐路线里这种原料的到手均价上限(见 Breakeven);推荐路线没算出来时为 nil
+	Breakeven *Breakeven `json:"breakeven"`
 }
 
 // pureRoutes 按需求量 need 算每个起点的纯路线,从便宜到贵;深度不够的排在最后。
@@ -279,7 +286,7 @@ func (e *engine) pureRoutes(target string, need float64) []PureRoute {
 		if len(os) == 0 {
 			continue
 		}
-		pr := PureRoute{Start: v, Path: pathOf(routes, v)}
+		pr := PureRoute{Start: v, Path: pathOf(routes, v), Route: routes[v].cost}
 		avail, unknown := 0.0, false
 		for _, o := range os {
 			if math.IsInf(o.qty, 1) {

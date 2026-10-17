@@ -728,6 +728,7 @@ function rawBlock(id, src, res, main) {
       <td>${p.unit == null ? `<span class="neg">凑不齐</span>` : num(p.unit)}</td>
       <td class="${p.unit != null && directU != null && p.unit < directU ? "pos" : ""}">${isDirect ? "—" : vs(p.unit)}</td>
       <td title="${p.available == null ? "只有 AODP 价、不知道挂了多少件,按不限量算" : "可买城市里这个起点的可见件数合计"}">${p.available == null ? "深度未知" : num(p.available)}</td>
+      <td title="${esc(BE_TIP)}">${p.max_price == null ? "—" : num(p.max_price)}</td>
       <td>${p.available == null
         // 深度未知时服务端按不限量算,filled 一定是 true —— 不能跟着写「够」
         ? `<span class="warnish" title="只有 AODP 价、不知道挂了几件:按不限量算的,实际可能只有 1 件">不知道</span>`
@@ -736,16 +737,21 @@ function rawBlock(id, src, res, main) {
   }).join("");
   const more = pure.length > shown.length || all
     ? `<button class="act ghost mini-act" data-raw-all="${esc(id)}">${all ? "只看常用的几个起点" : `显示全部 ${pure.length} 个起点`}</button>` : "";
+  // 到手均价上限(推荐路线的盈亏平衡价):混合最优那一行直接比它;各起点那一列是换算到起点的买价上限
+  const be = src.breakeven, beUnit = be ? (be.never ? `<span class="neg">白送也亏</span>` : num(be.unit)) : "";
   return `<div class="c-rawblk${main ? " main" : ""}">
-    <h4>${cItem(id)} <em>按推荐路线要 <b>${fq(src.need)}</b> 个</em></h4>
+    <h4>${cItem(id)} <em>按推荐路线要 <b>${fq(src.need)}</b> 个${be ? ` · <span title="${esc(BE_TIP)}">到手均价上限 <b>${beUnit}</b></span>` : ""}</em></h4>
     <p class="c-verdict">${rawVerdict(id, src, res, main)}</p>
     <div class="tablewrap"><table class="tight c-rawt">
       <thead><tr><th class="l">起点</th><th class="l">怎么走</th><th title="每个 ${esc(cTier(id))} 的均价:买价沿阶梯吃深度 + 转化实付 + 运费">等效单价</th>
-        <th title="和「全部直接买」比">比直接买</th><th>可用件数</th><th>够不够 ${fq(src.need)} 个</th></tr></thead>
+        <th title="和「全部直接买」比">比直接买</th><th>可用件数</th>
+        <th title="在生产城吃卖单,这个起点的买价涨过它,照推荐路线做这一批就不赚钱 =(到手均价上限 − 转化实付)÷ 买方系数;外城还要再扣运费">买价上限</th>
+        <th>够不够 ${fq(src.need)} 个</th></tr></thead>
       <tbody>
         <tr class="mixed"><td class="l"><b>混合最优</b> <span class="wtag good">推荐</span></td><td class="l">${mixedDesc || "—"}</td>
           <td><b>${src.mixed?.unit == null ? "—" : num(src.mixed.unit)}</b></td><td class="${src.mixed?.unit != null && directU != null && src.mixed.unit < directU ? "pos" : ""}">${vs(src.mixed?.unit)}</td>
           <td title="混合最优实际拿到的件数(不是盘口深度)">拿到 ${fq(src.mixed?.got)}</td>
+          <td title="${esc(BE_TIP)}">${be ? beUnit : "—"}</td>
           <td>${!src.mixed?.filled ? `<span class="neg">不够</span>`
             : splits.some(s => !s.bid && pure.find(p => p.start === s.start)?.available == null)
               ? `<span class="warnish" title="用到了只有 AODP 价的起点,按不限量算的">不知道</span>` : "够"}</td></tr>
@@ -896,6 +902,7 @@ function craftCardHTML(res) {
     </div>
     ${unfilledLn}${loseLn}
     ${craftBuyLine(res)}
+    ${craftBreakevenLine(res, c)}
     <div class="kpis c-kpis${dimmed ? " dimmed" : ""}">
       <div><b>${dimmed ? "≥ " : ""}${num(c.unit_cost)}</b><i>单根成本</i><em>${dimmed ? "只按拿得到的料算,是下界" : `这一批 ${num(res.qty)} 件共 ${num(c.total_cost)}`}</em></div>
       <div>${net}</div>
@@ -934,6 +941,27 @@ function craftBuyLine(res) {
     : `${esc(cLabel(id))} 要 ${fq(src.need)} 个:${parts.join(" + ")},均价 ${num(src.mixed?.unit)}${
       src.mixed?.filled ? "" : `,<span class="neg">凑不齐</span>`}${unknown ? `;<span class="warnish">有只有 AODP 价的,件数不知道</span>` : ""}`;
   return `<p class="c-buyln"><b>买料:</b>${text} <button class="act ghost mini-act" data-goto-raw>看原料来路 ↓</button></p>`;
+}
+
+// 盈亏平衡价(诉求 #4):照推荐这条路线、别的价不变,某种料的到手均价涨到多少,这一批利润归零。
+// 主原料常显,其余投入物收进 details。数来自 candidate.breakeven(refine/breakeven.go)
+const BE_TIP = "路线固定(买 / 做的拆分、专注开法、转化路线都不变)、别的价不变,只让这种料的到手均价"
+  + "(买价 × 买方系数 + 运费 + 转化实付)整体上移,按主出售方式算这一批利润归零的那个价。"
+  + "价真涨了引擎会换路线(换起点、改买现成),所以真实的上限只会更高,这是保守值。"
+  + "余料结转时不算余料,砸买单 / 按 0 估值时余料也跟着涨价算进去";
+const beText = b => b.never ? `<span class="neg">白送也亏</span>`
+  : `≤ <b>${num(b.unit)}</b>(现在 ${num(b.now)},${b.headroom >= 0 ? `还能涨 ${pct(b.headroom)}` : `<span class="neg">已经高出 ${pct(-b.headroom)}</span>`})`;
+const cMainBE = (res, c) => (c?.breakeven || []).find(b => b.item === res.main_raw) || null;
+function craftBreakevenLine(res, c) {
+  const bes = c?.breakeven || [];
+  if (!c?.filled || !bes.length) return "";
+  const main = cMainBE(res, c) || bes[0];
+  const rest = bes.filter(b => b !== main);
+  const all = c.breakeven_all_pct;
+  return `<p class="c-beln" title="${esc(BE_TIP)}"><b>盈亏平衡:</b>${esc(cLabel(main.item))} 到手均价 ${beText(main)}${
+    all != null ? `;所有买的料一起涨 ${all >= 0 ? pct(all) : `<span class="neg">${spct(all)}</span>`} 归零` : ""}</p>${
+    rest.length ? `<details class="c-howto c-befold"><summary>其余 ${rest.length} 种料的到手均价上限</summary><ul>${rest.map(b =>
+      `<li>${cItem(b.item, { noTag: true })} ${beText(b)} <span class="sub">这一批 ${fq(b.qty)} 个</span></li>`).join("")}</ul></details>` : ""}`;
 }
 
 // 专注这一行:开了哪几级、这一批要多少;超过今日可用时说清楚要攒几天,日化已经按每天的专注封顶
@@ -1542,6 +1570,7 @@ const MX_COLS = [
   { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数(总量 ÷ 自然日)" },
   { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的" },
   { k: "binding", label: "卡在", l: true, str: true },
+  { k: "be", label: "主原料上限", tip: "照这条路线、别的价不变,主原料到手均价涨到这里利润归零(保守值:价真涨了会换路线)。下面一行是还能涨几成" },
   { k: "age", label: "数据", tip: "用到的价里最旧的" },
 ];
 function mxRows(res) {
@@ -1556,6 +1585,7 @@ function mxRows(res) {
       unit_cost: b?.unit_cost ?? null, profit: lb ? null : pl?.unit ?? null, pct: lb ? null : pl?.pct ?? null,
       spf: lb ? null : b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
       daily: lb ? null : b?.daily?.profit ?? null, binding: b?.daily && !lb ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
+      be: lb ? null : b?.main_raw_breakeven?.unit ?? null, beH: lb ? null : b?.main_raw_breakeven?.headroom ?? null,
       age: b?.oldest_age_h ?? c.data?.oldest_age_h ?? null,
     };
   });
@@ -1611,6 +1641,7 @@ function craftMatrixRender() {
           <td>${r.volume == null ? `<span class="sub" title="没有成交量数据">—</span>` : fq(r.volume)}</td>
           <td class="${r.daily == null ? "" : r.daily >= 0 ? "pos" : "neg"}"><b>${sgn(r.daily)}</b></td>
           <td class="l">${esc(r.binding || "—")}</td>
+          <td>${r.be == null ? "—" : num(r.be)}${r.beH == null ? "" : `<span class="subln${r.beH < 0 ? " neg" : ""}">${spct(r.beH)}</span>`}</td>
           <td>${ageTag(r.age)}</td>
           <td class="l wcell">${[...ws.values()].map(warnTag).join("")}</td>
         </tr>`;

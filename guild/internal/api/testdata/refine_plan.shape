@@ -24,6 +24,15 @@ $.books.window_hours: number
 $.candidates: array
 $.candidates[]: object
 $.candidates[].age_level: string
+$.candidates[].breakeven: array
+$.candidates[].breakeven[]: object
+$.candidates[].breakeven[].headroom: number
+$.candidates[].breakeven[].item: string
+$.candidates[].breakeven[].never: bool
+$.candidates[].breakeven[].now: number
+$.candidates[].breakeven[].qty: number
+$.candidates[].breakeven[].unit: number
+$.candidates[].breakeven_all_pct: null|number
 $.candidates[].daily: null|object
 $.candidates[].daily.binding: string
 $.candidates[].daily.limits: object
@@ -150,6 +159,7 @@ $.focus.pareto[].within_budget: bool
 $.focus.tiers: array
 $.focus.tiers[]: number
 $.line: string
+$.main_raw: string
 $.params_used: object
 $.params_used.city: string
 $.params_used.confirmed: array
@@ -209,6 +219,12 @@ $.params_used.unverified[].value.*: number
 $.qty: number
 $.raw_sources: object
 $.raw_sources.*: object
+$.raw_sources.*.breakeven: null|object
+$.raw_sources.*.breakeven.headroom: number
+$.raw_sources.*.breakeven.item: string
+$.raw_sources.*.breakeven.now: number
+$.raw_sources.*.breakeven.qty: number
+$.raw_sources.*.breakeven.unit: number
 $.raw_sources.*.mixed: object
 $.raw_sources.*.mixed.filled: bool
 $.raw_sources.*.mixed.got: number
@@ -228,8 +244,10 @@ $.raw_sources.*.pure: array
 $.raw_sources.*.pure[]: object
 $.raw_sources.*.pure[].available: null|number
 $.raw_sources.*.pure[].filled: bool
+$.raw_sources.*.pure[].max_price: null|number
 $.raw_sources.*.pure[].path: array
 $.raw_sources.*.pure[].path[]: string
+$.raw_sources.*.pure[].route: number
 $.raw_sources.*.pure[].start: string
 $.raw_sources.*.pure[].unit: null|number
 $.recipe_source: string
