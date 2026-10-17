@@ -133,6 +133,11 @@ func SettleStationFee(p *refine.Params, info *StationFeeInfo, reqStation, reqTra
 	}
 	if reqStation {
 		info.Source, info.Fee = FeeSourceRequest, p.Fees.StationPer100
+		// 只写了站费、没写主人费率:主人费率还是抓包那台的(打底时填的),照样补「核对过」,
+		// 来源靠 info.Transmute 区分。以前不补,界面把抓到的数标成「服务端默认值,没核实」
+		if info.Transmute {
+			p.Confirmed = append(p.Confirmed, "fees.transmute_station_per100")
+		}
 		return
 	}
 	if info.Source != FeeSourceCapture {

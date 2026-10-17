@@ -59,6 +59,15 @@
   的东西"整类排除在外。判准:**这条数据换个人换个时间看是不是同一个值?**
   是→可以收(费率/税率/所有者/建筑布局);否→不能收(资源节点/怪/人物位置)。
   理由见 `docs/client-data.md` 第二点十节
+  - **唯一的例外**:专精三条事件 150/152/153(`FullAchievementInfo` /
+    `AchievementProgressInfo` / `FullAchievementProgressInfo`)。**用户 2026-10-17 批准**,
+    只记原始样本(全键,每码每次运行最多 20 条),业务层一个键都不给,解码器写好之前不进
+    任何业务逻辑。什么时候下发**没验证过**(可能是登录/进区时推,不一定是开界面时)
+  - **op 197 的样本只记白名单里那 10 个键**,不是全键:其余 82 个键没人看过,按
+    AddBuilding/AddRealEstate 的签名可能有 canUse/guildAccess/ownerCharacter 这类
+    "换个人看值就不同"的东西。全键样本没有批准,要开得先问用户
+  - 白名单在 `guild/internal/protocol/allowlist.go`,**服务端收上传时也按它再判一次**
+    (`api.saveCaptureExtras`),建筑只收城区本体(`world.ClusterCity`)
 - 必须输出**数据新鲜度**,不能只给价差
 - 排序主键是**日化绝对收益**,不是单笔利润率
 - 抓包数据优先,AODP 兜底。两边的成交历史是同一份,不能取平均

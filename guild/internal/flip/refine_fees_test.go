@@ -169,3 +169,19 @@ func TestRefine请求带了站费时以请求为准(t *testing.T) {
 		t.Fatalf("请求写了主人费率,不该替它标核对过: %v", p.Confirmed)
 	}
 }
+
+// 只写了站费、没写主人费率:主人费率还是抓到的那台的,要标核对过、Transmute 留着,
+// 界面据此写「抓包」。以前不标,抓到的 420 被标成「服务端默认值,没核实」
+func TestRefine只写了站费时主人费率仍按抓包标(t *testing.T) {
+	s, _ := newFeeService(station("Thetford", "0000", 501, 1, 420, "甲", rNow.Add(-time.Hour)))
+	s.Cfg.Refining.StationBuildingTypes = map[string][]int32{"ORE": {501}}
+	p, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	p.Fees.StationPer100 = 250
+	SettleStationFee(&p, &info, true, false)
+	if info.Source != FeeSourceRequest || !info.Transmute || p.Fees.TransmuteStationPer100 != 420 {
+		t.Fatalf("主人费率仍是抓包的 420: %+v fees=%+v", info, p.Fees)
+	}
+	if !slices.Contains(p.Confirmed, "fees.transmute_station_per100") || slices.Contains(p.Confirmed, "fees.station_per100") {
+		t.Fatalf("只替抓包的主人费率标核对过,站费是你填的(由请求自己的 confirmed 管): %v", p.Confirmed)
+	}
+}

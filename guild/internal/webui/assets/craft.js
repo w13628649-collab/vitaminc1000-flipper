@@ -422,8 +422,14 @@ function craftBadges() {
         : "服务端默认的站费是表格作者用的数,没核实。进城按 N 看地图,悬停在精炼站上(打开地图时抓包会自动记下)");
   }
   const ts = p.tstation[city];
-  badge("c-tstation-badge", ts != null, ts != null ? filled("fees.transmute_station_per100") : "未核实",
-    ts != null ? `${city} 的转化主人费率按你填的 ${ts} 算` : "服务端默认值,没核实。校准里填主人费用可以反推");
+  if (ts == null && sf?.transmute) {
+    // 主人费率按抓到的那台算(站费哪怕是你填的,主人费率没填就还是抓包的)
+    badge("c-tstation-badge", true, `抓包 · ${ageWord(sf.station?.age_h)}`,
+      `转化主人费率按抓到的站费算(假设转化和精炼在同一个站,没核实)。${feeTitle(sf)}`);
+  } else {
+    badge("c-tstation-badge", ts != null, ts != null ? filled("fees.transmute_station_per100") : "未核实",
+      ts != null ? `${city} 的转化主人费率按你填的 ${ts} 算` : "服务端默认值,没核实。校准里填主人费用可以反推");
+  }
   const b = cBonus(), stale = craft.p.bonus[craft.p.line] && b == null;
   badge("c-bonus-badge", b != null, b != null ? `今天 · ${cToday()}` : stale ? "昨天填的,已作废" : "未核实",
     "每日生产加成每天换品类,只能看游戏里的「活动」窗口手填;只对填的那一天有效");
@@ -917,8 +923,9 @@ function craftUnvHTML(res, c) {
   const unused = unv.filter(u => !used.includes(u));
   const open = used.filter(u => !u.confirmed);
   // 站费(和开关打开时的主人费率)是服务端按抓包补的「核对过」,不是你填的:标签照实写
-  const sf = res.station_fee, capKeys = new Set(sf?.source === "capture"
-    ? ["fees.station_per100", ...(sf.transmute ? ["fees.transmute_station_per100"] : [])] : []);
+  // 主人费率只看 transmute:站费是你填的、主人费率没填时,主人费率仍是抓包的
+  const sf = res.station_fee, capKeys = new Set([...(sf?.source === "capture" ? ["fees.station_per100"] : []),
+    ...(sf?.transmute ? ["fees.transmute_station_per100"] : [])]);
   const items = used.map(u => {
     const when = cConfDate(u.key);
     const tag = capKeys.has(u.key) ? `抓包 · ${ageWord(sf.station?.age_h)}`
