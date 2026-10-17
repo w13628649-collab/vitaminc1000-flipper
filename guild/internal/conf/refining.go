@@ -57,6 +57,17 @@ type Refining struct {
 	TransportPct float64 `yaml:"transport_pct"`
 	// BidOrders:把「挂买单收料」列进候选。默认只当参照行,不进推荐(收不收得到不知道)
 	BidOrders bool `yaml:"bid_orders"`
+
+	// StationBuildingTypes:精炼线(ORE/HIDE/FIBER/WOOD)→ 抓包报的建筑类型 id(op 197 的 key17)。
+	// 哪个类型是冶炼厂、哪个是制革厂要等实测样本对着游戏里的 N 地图认,所以默认空:
+	// 空着时抓到的费率不进计算,只在精炼页列出来「抓到 N 台站,建筑类型还没映射」。
+	// 填上以后,这座城这条线有新鲜观测就用最便宜那台的费率,优先于 station_fee_by_city
+	StationBuildingTypes map[string][]int32 `yaml:"station_building_types"`
+	// StationFeeMaxAgeHours:抓包费率多旧以内才用。房主设的费率不常变,默认 168(一周)
+	StationFeeMaxAgeHours float64 `yaml:"station_fee_max_age_hours"`
+	// StationFeeTransmute:抓到的精炼站费率也当转化主人费率用。依据只是 UnverifiedParams 里
+	// 「转化和精炼在同一个站」这一句,没在游戏里核对过,所以做成开关,默认 true
+	StationFeeTransmute bool `yaml:"station_fee_transmute"`
 }
 
 // RefiningLines 是 daily_bonus 认的精炼线,和 refine.Lines 的 Key 一致(refine 的测试断言)。
@@ -71,6 +82,8 @@ const (
 	refiningMaxK          = 3.0
 	refiningMaxWindowDays = 30 // 挂单最长挂 30 天(F6),读得再久也没有意义
 	refiningMaxVolumeDays = 90
+	// refiningMaxStationAgeHours:抓包费率最多认 30 天前的(和读簿窗口上限同一个数)
+	refiningMaxStationAgeHours = 24 * 30.0
 )
 
 // DefaultRefining 是精炼页的默认值,见各字段注释。
@@ -91,7 +104,25 @@ func DefaultRefining() Refining {
 		VolumeShare:               0.3,
 		TransportPct:              0,
 		BidOrders:                 false,
+		StationBuildingTypes:      map[string][]int32{},
+		StationFeeMaxAgeHours:     168,
+		StationFeeTransmute:       true,
 	}
+}
+
+// StationTypesFor 是这条精炼线映射到的建筑类型;没映射时为 nil。
+func (r Refining) StationTypesFor(line string) []int32 { return r.StationBuildingTypes[line] }
+
+// StationLineOf 是建筑类型映射到的精炼线(同一类型映射到几条线时取第一条,按线名排序)。
+func (r Refining) StationLineOf(buildingType int32) (string, bool) {
+	for _, l := range RefiningLines {
+		for _, t := range r.StationBuildingTypes[l] {
+			if t == buildingType {
+				return l, true
+			}
+		}
+	}
+	return "", false
 }
 
 // Window 是精炼页读抓包的窗口。
@@ -173,6 +204,29 @@ func (r Refining) Validate() error {
 	}
 	if !(r.TransportPct >= 0 && r.TransportPct < 10) {
 		return fmt.Errorf("refining.transport_pct 要在 [0, 10) 内,得到 %g", r.TransportPct)
+	}
+	types := make([]string, 0, len(r.StationBuildingTypes))
+	for l := range r.StationBuildingTypes {
+		types = append(types, l)
+	}
+	sort.Strings(types)
+	for _, l := range types {
+		ids := r.StationBuildingTypes[l]
+		if !known[l] {
+			return fmt.Errorf("refining.station_building_types 的键 %q 不认识,只有 %v", l, RefiningLines)
+		}
+		if len(ids) == 0 {
+			return fmt.Errorf("refining.station_building_types.%s 是空列表:不知道就整行删掉", l)
+		}
+		for _, id := range ids {
+			if id <= 0 {
+				return fmt.Errorf("refining.station_building_types.%s 里的 %d 不是建筑类型 id(要是正整数)", l, id)
+			}
+		}
+	}
+	if !(r.StationFeeMaxAgeHours > 0 && r.StationFeeMaxAgeHours <= refiningMaxStationAgeHours) {
+		return fmt.Errorf("refining.station_fee_max_age_hours 要在 (0, %g] 内,得到 %g",
+			refiningMaxStationAgeHours, r.StationFeeMaxAgeHours)
 	}
 	return nil
 }

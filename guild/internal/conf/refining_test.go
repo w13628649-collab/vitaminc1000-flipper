@@ -17,6 +17,8 @@ func TestRefining默认值(t *testing.T) {
 		TransmuteFactor: 1.154, TransmuteStationFeePer100: 500,
 		HeartReturns: true, Leftover: "carry", IncludeTail: true,
 		FocusPerDay: 10000, FocusCap: 30000, VolumeShare: 0.3,
+		// 建筑类型 → 精炼线要等实测样本才知道:默认空,空着时抓到的费率不进计算
+		StationBuildingTypes: map[string][]int32{}, StationFeeMaxAgeHours: 168, StationFeeTransmute: true,
 	}
 	if !reflect.DeepEqual(r, want) {
 		t.Fatalf("精炼默认值不对\n得到 %+v\n应为 %+v", r, want)
@@ -75,12 +77,47 @@ func TestRefining校验点名写错的键(t *testing.T) {
 		{"focus_per_day", func(r *Refining) { r.FocusPerDay = 40000 }},
 		{"volume_share", func(r *Refining) { r.VolumeShare = 0 }},
 		{"transport_pct", func(r *Refining) { r.TransportPct = -0.1 }},
+		{"station_building_types", func(r *Refining) { r.StationBuildingTypes = map[string][]int32{"ore": {501}} }},
+		{"station_building_types", func(r *Refining) { r.StationBuildingTypes = map[string][]int32{"ROCK": {501}} }},
+		{"station_building_types.ORE", func(r *Refining) { r.StationBuildingTypes = map[string][]int32{"ORE": {}} }},
+		{"station_building_types.HIDE", func(r *Refining) { r.StationBuildingTypes = map[string][]int32{"HIDE": {0}} }},
+		{"station_fee_max_age_hours", func(r *Refining) { r.StationFeeMaxAgeHours = 0 }},
+		{"station_fee_max_age_hours", func(r *Refining) { r.StationFeeMaxAgeHours = 24*30 + 1 }},
 	} {
 		c := Default()
 		tc.mut(&c.Refining)
 		if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "refining."+tc.key) {
 			t.Errorf("%s 写错应报错并点名,得到 %v", tc.key, err)
 		}
+	}
+}
+
+// 建筑类型映射按 YAML 写进来;线 → 类型、类型 → 线两个方向都查得到。
+func TestRefining工作站建筑类型映射(t *testing.T) {
+	c, err := Load(writeYAML(t, `
+refining:
+  station_building_types: {ORE: [501, 502], HIDE: [601]}
+  station_fee_max_age_hours: 24
+  station_fee_transmute: false
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := c.Refining
+	if got := r.StationTypesFor("ORE"); !reflect.DeepEqual(got, []int32{501, 502}) {
+		t.Fatalf("ORE 映射 %v", got)
+	}
+	if r.StationTypesFor("WOOD") != nil {
+		t.Fatal("没映射的线应当是 nil")
+	}
+	if l, ok := r.StationLineOf(601); !ok || l != "HIDE" {
+		t.Fatalf("601 → %q %v", l, ok)
+	}
+	if _, ok := r.StationLineOf(999); ok {
+		t.Fatal("没映射的类型不该查到")
+	}
+	if r.StationFeeMaxAgeHours != 24 || r.StationFeeTransmute {
+		t.Fatalf("写了的没生效: %+v", r)
 	}
 }
 

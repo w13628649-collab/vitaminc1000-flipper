@@ -295,7 +295,10 @@ function craftSyncForm() {
   $("c-heart").options[0].textContent = `服务端默认${heartDef == null ? "" : heartDef ? "(返还)" : "(不返还)"}`;
   $("c-heart").value = p.heart || "";
   setVal("c-station", p.station[city]);
-  setPh("c-station", sd.station_fee_by_city?.[city] ?? sd.station_fee_per100);
+  // 占位符是「不填时按什么算」:这座城抓到了映射上的站就是抓包那台的费率,否则是配置
+  const sf = cFee(city);
+  setPh("c-station", sf && sf.source !== "request" ? sf.fee : sd.station_fee_by_city?.[city] ?? sd.station_fee_per100);
+  craftFeeSeen();
   setVal("c-k", p.k);
   setPh("c-k", sd.transmute_factor);
   setVal("c-tstation", p.tstation[city]);
@@ -328,6 +331,60 @@ function craftSyncForm() {
   craftBadges();
 }
 
+// ── 抓到的工作站费率(响应里的 station_fee,flip/refine_fees.go) ──
+// 优先级:你填的 > 抓包(这座城这条线映射上的站里最便宜那台)> 配置按城市 > 配置默认。
+// 建筑类型 → 精炼线的映射在服务端配置 refining.station_building_types,默认空
+const cFee = city => { const sf = craft.data?.station_fee; return sf && sf.city === city ? sf : null; };
+const ageWord = h => (h == null || !isFinite(h) ? "时间不明" : h < 1 ? `${Math.max(1, Math.round(h * 60))} 分钟前`
+  : h < 48 ? `${Math.round(h)} 小时前` : `${Math.round(h / 24)} 天前`);
+const LINE_STATION = { ORE: "冶炼厂", HIDE: "制革厂" };
+const stationWord = line => LINE_STATION[line] || "这条线的精炼站";
+function feeTitle(sf) {
+  const s = sf.station;
+  if (!s) return "";
+  return `${sf.city} 抓到 ${sf.stations} 台${stationWord(sf.line)},最便宜 ${num(sf.min)}(${s.owner || "无主"} 的站,${ageWord(s.age_h)},${s.reporter || "成员"} 抓的)`
+    + `${sf.max != null && sf.max !== sf.min ? `、最贵 ${num(sf.max)}` : ""}。按最便宜那台算;站有没有营养、耐久够不够要进游戏看`
+    + `${sf.unusable ? `(观测到营养或耐久为 0 的 ${sf.unusable} 台已排除)` : ""}`
+    + `${sf.transmute ? "。转化主人费率也按它算(假设转化和精炼在同一个站,没核实)" : ""}`;
+}
+// 一句话说站费从哪来:「抓包 · 甲的站 · 3 小时前」/「配置默认 500」
+function feeSrcText(sf) {
+  if (!sf) return "";
+  switch (sf.source) {
+    case "capture": return `抓包 · ${sf.station?.owner ? esc(sf.station.owner) + " 的站" : "无主站"} · ${ageWord(sf.station?.age_h)}(${num(sf.fee)})`;
+    case "request": return `你填的 ${num(sf.fee)}`;
+    case "config": return `配置按城市 ${num(sf.fee)}`;
+  }
+  const seen = sf.unmapped?.length ? `;抓到 ${num(sf.seen)} 台站,建筑类型还没映射` : "";
+  return `配置默认 ${num(sf.fee)}${seen}`;
+}
+// 站费框下面:这座城抓到了、但还不知道是哪种站的费率。点「用这个」等于手填
+function craftFeeSeen() {
+  const input = $("c-station");
+  let el = $("c-feeseen");
+  const sf = cFee(cCity()), un = sf?.unmapped || [];
+  if (!un.length || sf.source === "capture") { el?.remove(); return; }
+  if (!el) {
+    el = document.createElement("p");
+    el.id = "c-feeseen";
+    el.className = "sub c-feeseen";
+    input.parentElement.append(el);
+  }
+  el.innerHTML = `抓到 ${esc(sf.city)} 的建筑费率:${un.map(k => `类型 ${k.building_type} ${num(k.fee_min)}${
+    k.fee_max !== k.fee_min ? `~${num(k.fee_max)}` : ""}(${k.stations} 台,${ageWord(k.age_h)})
+    <button class="act ghost mini-act" data-use-fee="${k.fee_min}" title="把 ${num(k.fee_min)} 填进站费,等于手填">用这个</button>`).join(";")}。
+    还不知道哪种是${stationWord(sf.line)};在服务端配置 refining.station_building_types 里填上就自动用。`;
+}
+$("v-craft").addEventListener("click", e => {
+  const b = e.target.closest("[data-use-fee]");
+  if (!b) return;
+  const v = Number(b.dataset.useFee), city = cCity();
+  if (!(isFinite(v) && v >= 0 && v <= 1000)) return;
+  craft.p.station[city] = v;
+  cMark(`station:${city}`, true);
+  craftChanged();
+});
+
 // 金价:只用来画「为专注养 premium 小号」的门槛线(D6)。服务端配置里记了量 k 那天的金价就用它,
 // 没有就用 2026-09-26 AODP 的金价;用户可以自己改
 const CRAFT_GOLD_FALLBACK = 13554;
@@ -354,9 +411,14 @@ function craftBadges() {
   }
   // 填了就是「你填的 · 日期」:填的值正好等于默认值也一样(那正是核对过的意思)
   const filled = key => `你填的 · ${cConfDate(key) || "日期不明"}`;
-  const st = p.station[city];
-  badge("c-station-badge", st != null, st != null ? filled("fees.station_per100") : "未核实",
-    st != null ? `${city} 的精炼站费按你填的 ${st} 算` : "服务端默认的站费是表格作者用的数,没核实。进城按 N 看地图,悬停在精炼站上");
+  const st = p.station[city], sf = cFee(city);
+  if (st == null && sf?.source === "capture") {
+    badge("c-station-badge", true, `抓包 · ${ageWord(sf.station?.age_h)}`, feeTitle(sf));
+  } else {
+    badge("c-station-badge", st != null, st != null ? filled("fees.station_per100") : "未核实",
+      st != null ? `${city} 的精炼站费按你填的 ${st} 算${sf?.station ? `。${feeTitle(sf)}` : ""}`
+        : "服务端默认的站费是表格作者用的数,没核实。进城按 N 看地图,悬停在精炼站上(打开地图时抓包会自动记下)");
+  }
   const ts = p.tstation[city];
   badge("c-tstation-badge", ts != null, ts != null ? filled("fees.transmute_station_per100") : "未核实",
     ts != null ? `${city} 的转化主人费率按你填的 ${ts} 算` : "服务端默认值,没核实。校准里填主人费用可以反推");
@@ -835,9 +897,13 @@ function craftUnvHTML(res, c) {
   const used = unv.filter(u => (UNV_APPLIES[u.key] || (() => true))(c));
   const unused = unv.filter(u => !used.includes(u));
   const open = used.filter(u => !u.confirmed);
+  // 站费(和开关打开时的主人费率)是服务端按抓包补的「核对过」,不是你填的:标签照实写
+  const sf = res.station_fee, capKeys = new Set(sf?.source === "capture"
+    ? ["fees.station_per100", ...(sf.transmute ? ["fees.transmute_station_per100"] : [])] : []);
   const items = used.map(u => {
     const when = cConfDate(u.key);
-    const tag = u.confirmed ? `你填的${when ? " · " + when : ""}` : u.is_default ? "默认值,没核实" : "服务端配置的值,没核实";
+    const tag = capKeys.has(u.key) ? `抓包 · ${ageWord(sf.station?.age_h)}`
+      : u.confirmed ? `你填的${when ? " · " + when : ""}` : u.is_default ? "默认值,没核实" : "服务端配置的值,没核实";
     return `<li class="${u.confirmed ? "mine" : "def"}" title="${esc(`规则表 ${u.rule}。怎么核对:${u.check}`)}">
       <b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b> ${esc(unvValue(u))} <em>${esc(tag)}</em></li>`;
   }).join("");
@@ -1325,6 +1391,7 @@ function craftDataHTML(res) {
   parts.push(`盘口 ${num(b.sides)} 边:抓包 ${num(b.capture)}、只有 AODP 价 ${num(b.aodp)}(深度未知)、两边都没有 ${num(b.empty)}`);
   parts.push(`读抓包窗口 ${num(b.window_hours)} 小时,数据最大年龄 ${num(res.params_used?.sources?.max_age_hours)} 小时`);
   parts.push(`用到的价里最旧的 ${ageTag(d.oldest_age_h)}`);
+  if (res.station_fee) parts.push(`<span title="${esc(feeTitle(res.station_fee))}">站费来源:${feeSrcText(res.station_fee)}</span>`);
   const lists = [];
   const line = (label, xs, fmt = x => esc(x)) => { if (xs?.length) lists.push(`<li><b>${label}</b> ${xs.map(fmt).join("、")}</li>`); };
   const side = x => { const [item, city, s] = String(x).split("|"); return `${esc(cLabel(item) || item)} @ ${esc(city || "")}${s ? " " + esc(s) : ""}`; };

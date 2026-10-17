@@ -51,9 +51,14 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "请求体读取失败: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// 站费两项只看「请求里写没写」:写了就以请求为准,没写才轮到抓包 / 配置(见 flip.SettleStationFee)
 	var probe struct {
 		Target string `json:"target"`
 		City   string `json:"city"`
+		Fees   struct {
+			StationPer100          *float64 `json:"station_per100"`
+			TransmuteStationPer100 *float64 `json:"transmute_station_per100"`
+		} `json:"fees"`
 	}
 	if err := json.Unmarshal(body, &probe); err != nil {
 		http.Error(w, "请求体不是合法的 JSON: "+err.Error(), http.StatusBadRequest)
@@ -64,7 +69,9 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "缺少 target(要做的半成品,例如 T8_METALBAR_LEVEL4@4)", http.StatusBadRequest)
 		return
 	}
-	p := s.Flip.RefineDefaults(target, strings.TrimSpace(probe.City))
+	ctx, cancel := contextWithTimeout(r, refineTimeout)
+	defer cancel()
+	p, fee := s.Flip.RefineDefaultsLive(ctx, target, strings.TrimSpace(probe.City))
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&p); err != nil {
@@ -75,15 +82,17 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 	if p.City == "" {
 		p.City = s.Flip.RefineDefaults(target, "").City
 	}
+	flip.SettleStationFee(&p, &fee, probe.Fees.StationPer100 != nil, probe.Fees.TransmuteStationPer100 != nil)
 
-	ctx, cancel := contextWithTimeout(r, refineTimeout)
-	defer cancel()
 	res, err := s.Flip.Refine(ctx, p)
 	if err != nil {
 		writeRefineError(w, err)
 		return
 	}
-	writeJSON(w, res)
+	// 结果是共享缓存:站费来源按这次请求填进副本
+	out := *res
+	out.StationFee = fee
+	writeJSON(w, &out)
 }
 
 // handleRefineMatrix:GET /api/refine/matrix?line=ORE&city=Thetford&qty=10
@@ -121,19 +130,23 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 	if city == "" {
 		city = line.City
 	}
-	p := s.Flip.RefineDefaults(line.RefinedID(refine.MaxTier, refine.MaxEnchant), city)
+	ctx, cancel := contextWithTimeout(r, refineTimeout)
+	defer cancel()
+	p, fee := s.Flip.RefineDefaultsLive(ctx, line.RefinedID(refine.MaxTier, refine.MaxEnchant), city)
 	if err := matrixParams(q, &p); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := contextWithTimeout(r, refineTimeout)
-	defer cancel()
+	flip.SettleStationFee(&p, &fee, strings.TrimSpace(q.Get("station_per100")) != "",
+		strings.TrimSpace(q.Get("transmute_station_per100")) != "")
 	res, err := s.Flip.RefineMatrix(ctx, line.Key, p)
 	if err != nil {
 		writeRefineError(w, err)
 		return
 	}
-	writeJSON(w, res)
+	out := *res
+	out.StationFee = fee
+	writeJSON(w, &out)
 }
 
 // parseNum 是查询参数里的一个数。ParseFloat 认 "Inf"、"NaN",这里不认:

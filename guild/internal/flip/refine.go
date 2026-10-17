@@ -88,6 +88,8 @@ type refineState struct {
 	plans  *ttlCache[*RefinePlan]
 	matrix *ttlCache[*RefineMatrix]
 	prices *ttlCache[[]aodp.PriceRecord]
+	// fees 是抓到的工作站费率(refine_fees.go),按认多旧的窗口缓存 60 秒
+	fees *ttlCache[[]store.StationFee]
 	// clock 只给测试用:算价格年龄的「现在」和缓存过期都按它。nil = time.Now
 	clock func() time.Time
 }
@@ -97,8 +99,9 @@ func (r *refineState) init() {
 		r.plans = newTTLCache[*RefinePlan](refineCacheTTL, refineComputeTimeout)
 		r.matrix = newTTLCache[*RefineMatrix](refineCacheTTL, 2*refineComputeTimeout)
 		r.prices = newTTLCache[[]aodp.PriceRecord](refinePricesTTL, 2*time.Minute)
+		r.fees = newTTLCache[[]store.StationFee](stationFeeCacheTTL, time.Minute)
 		if r.clock != nil {
-			r.plans.now, r.matrix.now, r.prices.now = r.clock, r.clock, r.clock
+			r.plans.now, r.matrix.now, r.prices.now, r.fees.now = r.clock, r.clock, r.clock, r.clock
 		}
 	})
 }
@@ -117,6 +120,9 @@ type RefinePlan struct {
 	*refine.Result
 	Books          RefineBooks    `json:"books"`
 	ServerDefaults ServerDefaults `json:"server_defaults"`
+	// StationFee 说明精炼站费从哪来(你填的 / 抓包 / 配置)。计算结果是共享缓存,
+	// 这一项由 API 层按这次请求填进副本(见 SettleStationFee)
+	StationFee StationFeeInfo `json:"station_fee"`
 }
 
 // ServerDefaults 是服务端配置里的精炼默认值(conf.Refining),原样回给界面:
@@ -367,6 +373,14 @@ func (r serviceRefineSource) DailyVolume(ctx context.Context, items []string, ci
 		return nil, errors.New("没有库,读不了成交历史")
 	}
 	return r.s.Store.DailyVolume(ctx, items, city, quality, first, last)
+}
+
+// StationFees:线上从库里读抓到的工作站费率(StationFeeSource,见 refine_fees.go)。
+func (r serviceRefineSource) StationFees(ctx context.Context, since time.Time) ([]store.StationFee, error) {
+	if r.s.Store == nil {
+		return nil, nil // 没有库就是没抓到,按配置算;不当错误,免得每次请求都告警
+	}
+	return r.s.Store.StationFees(ctx, since)
 }
 
 // ordersOnly 把 RefineSource 的读簿包成 storeBooks 要的 captureReader。
@@ -687,6 +701,8 @@ type RefineMatrix struct {
 	Warnings       []refine.Warning        `json:"warnings"`
 	RecipeSource   string                  `json:"recipe_source"`
 	ServerDefaults ServerDefaults          `json:"server_defaults"`
+	// StationFee 同 RefinePlan.StationFee
+	StationFee StationFeeInfo `json:"station_fee"`
 }
 
 // MatrixCell 是矩阵的一格。

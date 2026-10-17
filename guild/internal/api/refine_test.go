@@ -37,6 +37,34 @@ type refineSrc struct {
 	prices []aodp.PriceRecord
 	days   []store.ItemDay
 	calls  int
+	// stations 是抓到的工作站(flip.StationFeeSource)。读它不计进 calls:
+	// 打底参数要先查站费,「参数不合法不读数据」说的是盘口、AODP、成交量
+	stations []store.StationFee
+}
+
+func (f *refineSrc) StationFees(_ context.Context, since time.Time) ([]store.StationFee, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []store.StationFee
+	for _, s := range f.stations {
+		if s.ObservedAt.After(since) {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
+// withStations 给 Thetford 造两台冶炼厂(类型 501)、一台没映射的(610),并把 501 映射到矿线。
+func withStations(src *refineSrc, now time.Time) func(*flip.Service) {
+	mk := func(btype int32, x, fee float64, owner string, age time.Duration) store.StationFee {
+		o := model.StationObs{ZoneID: "0000", BuildingType: btype, Pos: []float64{x, 1}, PublicFee: &fee,
+			Owner: owner, ObservedAt: now.Add(-age)}
+		return store.StationFee{StationObs: o, City: "Thetford", BuildingKey: o.BuildingKey(), Reporter: "乙"}
+	}
+	src.stations = []store.StationFee{
+		mk(501, 1, 420, "甲", 3*time.Hour), mk(501, 2, 300, "乙", 5*time.Hour), mk(610, 3, 80, "丙", time.Hour),
+	}
+	return func(fl *flip.Service) { fl.Cfg.Refining.StationBuildingTypes = map[string][]int32{"ORE": {501}} }
 }
 
 func (f *refineSrc) BookOrders(_ context.Context, keys []model.QuoteKey, since time.Time) ([]store.LiveOrder, error) {
@@ -405,6 +433,70 @@ func TestRefine矩阵带出售城市和核对过的参数(t *testing.T) {
 	}
 }
 
+// 站费来源:请求没写 → 抓包最便宜那台(并算核对过);请求写了 → 以请求为准;矩阵按查询参数判断。
+func TestRefine接口站费来源(t *testing.T) {
+	now := time.Now()
+	src := fullSrc(now)
+	srv := refineServer(src, withStations(src, now))
+	defer srv.Close()
+	type resp struct {
+		ParamsUsed refine.ParamsUsed   `json:"params_used"`
+		StationFee flip.StationFeeInfo `json:"station_fee"`
+	}
+	plan := func(body string) resp {
+		t.Helper()
+		r, raw := postPlan(t, srv, body)
+		if r.StatusCode != http.StatusOK {
+			t.Fatalf("%s: 状态 %d %s", body, r.StatusCode, raw)
+		}
+		var out resp
+		if err := json.Unmarshal(raw, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	// confirmed 写了别的键:抓包的站费键照样补上
+	got := plan(`{"target":"T5_METALBAR_LEVEL1@1","confirmed":["focus.fce"]}`)
+	sf := got.StationFee
+	if sf.Source != flip.FeeSourceCapture || sf.Fee != 300 || sf.Station == nil || sf.Station.Owner != "乙" ||
+		got.ParamsUsed.Fees.StationPer100 != 300 || got.ParamsUsed.Fees.TransmuteStationPer100 != 300 {
+		t.Fatalf("抓包: %+v fees=%+v", sf, got.ParamsUsed.Fees)
+	}
+	if !slices.Contains(got.ParamsUsed.Confirmed, "fees.station_per100") || !slices.Contains(got.ParamsUsed.Confirmed, "focus.fce") {
+		t.Fatalf("confirmed %v", got.ParamsUsed.Confirmed)
+	}
+	if len(sf.Unmapped) != 1 || sf.Unmapped[0].BuildingType != 610 {
+		t.Fatalf("没映射的 %+v", sf.Unmapped)
+	}
+	got = plan(`{"target":"T5_METALBAR_LEVEL1@1","fees":{"station_per100":250}}`)
+	if got.StationFee.Source != flip.FeeSourceRequest || got.ParamsUsed.Fees.StationPer100 != 250 ||
+		got.ParamsUsed.Fees.TransmuteStationPer100 != 300 {
+		t.Fatalf("请求写了站费: %+v fees=%+v", got.StationFee, got.ParamsUsed.Fees)
+	}
+	// 别的城:没抓到,按配置
+	if got = plan(`{"target":"T5_METALBAR_LEVEL1@1","city":"Martlock"}`); got.StationFee.Source != flip.FeeSourceDefault ||
+		got.ParamsUsed.Fees.StationPer100 != 500 {
+		t.Fatalf("Martlock: %+v", got.StationFee)
+	}
+
+	r, raw := get(t, srv, "/api/refine/matrix?line=ORE&city=Thetford")
+	var m flip.RefineMatrix
+	if r.StatusCode != http.StatusOK || json.Unmarshal(raw, &m) != nil {
+		t.Fatalf("matrix: %d %s", r.StatusCode, raw)
+	}
+	if m.StationFee.Source != flip.FeeSourceCapture || m.ParamsUsed.Fees.StationPer100 != 300 {
+		t.Fatalf("矩阵抓包: %+v", m.StationFee)
+	}
+	r, raw = get(t, srv, "/api/refine/matrix?line=ORE&city=Thetford&station_per100=600")
+	m = flip.RefineMatrix{}
+	if r.StatusCode != http.StatusOK || json.Unmarshal(raw, &m) != nil {
+		t.Fatalf("matrix: %d %s", r.StatusCode, raw)
+	}
+	if m.StationFee.Source != flip.FeeSourceRequest || m.ParamsUsed.Fees.StationPer100 != 600 {
+		t.Fatalf("矩阵请求写了站费: %+v", m.StationFee)
+	}
+}
+
 // ── JSON 形状快照 ───────────────────────────────────────────────────────
 
 // 界面照着这些字段写。形状 = 每个字段的路径和类型(数组元素合并成 []),不管具体数值,
@@ -415,9 +507,10 @@ func TestRefine矩阵带出售城市和核对过的参数(t *testing.T) {
 // 重写快照,并同步告诉界面线。
 func TestRefine接口JSON形状(t *testing.T) {
 	now := time.Now()
-	srv := refineServer(fullSrc(now), func(fl *flip.Service) {
+	src := fullSrc(now)
+	srv := refineServer(src, func(fl *flip.Service) {
 		fl.Conflicts = someConflicts{{ItemID: "T5_METALBAR_LEVEL1@1", LocationID: "Thetford", Quality: 1, Side: model.SideOffer}: true}
-	})
+	}, withStations(src, now))
 	defer srv.Close()
 
 	// plan 的形状取几种请求的并集:数据齐全(挂买单收料、串城、AODP 更新)、吃买单出货撞断崖、
