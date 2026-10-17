@@ -26,11 +26,16 @@ const (
 )
 
 // OpCodes 是当前版本的操作码。发现对不上时改这里,不用动解析逻辑。
+//
+// **是 int 不是 byte。** 客户端码表里操作码排到 555、事件码排到 711,
+// 线上 params[253] 是 int16。以前按 byte 存、取参数时也截成 byte,
+// 258(LaborerTakeJobLoot)截完是 2,被当成 Join,拿它的垃圾参数改写了
+// 角色名和所在地——之后翻到的挂单全记到错的城市上
 type OpCodes struct {
-	AuctionGetOffers       byte // 卖单列表
-	AuctionGetRequests     byte // 买单列表
-	Join                   byte // 登录/切区,带角色和位置
-	GetGameServerByCluster byte // 切区
+	AuctionGetOffers       int // 卖单列表
+	AuctionGetRequests     int // 买单列表
+	Join                   int // 登录/切区,带角色和位置
+	GetGameServerByCluster int // 切区
 }
 
 // DefaultOpCodes 对应 albiondata-client 12ff34e(2026-09-16)那一版的枚举。
@@ -103,7 +108,6 @@ func (p *Parser) Character() (id, name string) {
 }
 
 // HandleResponse 处理 operation 的响应。
-// HandleResponse 处理 operation 的响应。
 //
 // photonOp 是 Photon 那一层的操作码,params[253] 是 Albion 真正的操作码。
 // **两个都要认**,因为市场挂单走的是一条没有参数表的路:
@@ -114,7 +118,7 @@ func (p *Parser) Character() (id, name string) {
 // —— 而 handleOrders 读的恰恰就是 params[0],也就是说唯一能拿到挂单的
 // 那条路被堵住了。症状是"日志一切正常、库里一条挂单都没有"。
 func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
-	code, hasCode := byteParam(params, paramOperationCode)
+	code, hasCode := intParam(params, paramOperationCode)
 	if !hasCode {
 		// 没有参数表。params[0] 是字符串数组就一定是挂单,没有别的响应长这样。
 		// 方向靠 JSON 里的 AuctionType 判,本来就不需要操作码区分
@@ -123,7 +127,7 @@ func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 			p.handleOrders(params)
 			return
 		}
-		code = photonOp // 退回 Photon 层那个操作码
+		code = int(photonOp) // 退回 Photon 层那个操作码
 	}
 	switch code {
 	case p.Codes.AuctionGetOffers, p.Codes.AuctionGetRequests:
@@ -136,7 +140,7 @@ func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 // HandleRequest 处理 operation 的请求(我们主动发出去的)。
 // 切区是从请求里看出来的,响应里没有。
 func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
-	code, ok := byteParam(params, paramOperationCode)
+	code, ok := intParam(params, paramOperationCode)
 	if !ok || code != p.Codes.GetGameServerByCluster {
 		return
 	}
@@ -233,20 +237,27 @@ func toSilver(raw int64) int64 {
 	return (raw + PriceDivisor/2) / PriceDivisor
 }
 
-// byteParam 取一个数值参数。Photon 反序列化出来的整数类型不固定
-// (byte/int16/int32 都可能),挨个试。
-func byteParam(params map[byte]any, key byte) (byte, bool) {
+// intParam 取一个整数参数(操作码 / 事件码)。Photon 反序列化出来的整数类型
+// 不固定(byte/int16/int32/int64 都可能,看数值大小和发送方声明),挨个试。
+//
+// **一律按 int 返回,不许截窄。** 码表里操作码到 555、事件码到 711,
+// 截成 byte 的话 258 就成了 2(Join),整类误路由都从这里来
+func intParam(params map[byte]any, key byte) (int, bool) {
 	switch v := params[key].(type) {
 	case byte:
-		return v, true
+		return int(v), true
+	case int8:
+		return int(v), true
 	case int16:
-		return byte(v), true
+		return int(v), true
+	case uint16:
+		return int(v), true
 	case int32:
-		return byte(v), true
+		return int(v), true
 	case int64:
-		return byte(v), true
+		return int(v), true
 	case int:
-		return byte(v), true
+		return v, true
 	}
 	return 0, false
 }

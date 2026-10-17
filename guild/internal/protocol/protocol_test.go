@@ -116,16 +116,57 @@ func TestHandleRequest_切区更新位置(t *testing.T) {
 	}
 }
 
-func TestByteParam_兼容多种整数类型(t *testing.T) {
+func TestIntParam_兼容多种整数类型(t *testing.T) {
 	// Photon 反序列化出来的整数宽度不固定,取决于实际数值大小
 	for _, v := range []any{byte(81), int16(81), int32(81), int64(81), int(81)} {
-		got, ok := byteParam(map[byte]any{paramOperationCode: v}, paramOperationCode)
+		got, ok := intParam(map[byte]any{paramOperationCode: v}, paramOperationCode)
 		if !ok || got != 81 {
 			t.Fatalf("%T 没认出来", v)
 		}
 	}
-	if _, ok := byteParam(map[byte]any{}, paramOperationCode); ok {
+	// 超过 255 的码原样返回,不能被截窄
+	for _, v := range []any{int16(555), int32(555), int64(555), int(555)} {
+		if got, ok := intParam(map[byte]any{paramOperationCode: v}, paramOperationCode); !ok || got != 555 {
+			t.Fatalf("%T(555) 得到 %d", v, got)
+		}
+	}
+	if _, ok := intParam(map[byte]any{}, paramOperationCode); ok {
 		t.Fatal("缺失的参数应该返回 false")
+	}
+}
+
+// 以前操作码截成 byte:258(LaborerTakeJobLoot)& 0xFF = 2 = Join,
+// 它的参数被当成角色 id / 角色名 / 所在地,把位置改写成垃圾,
+// 之后翻到的城市挂单全记到错的地方
+func TestHandleResponse_操作码258不能被截成Join(t *testing.T) {
+	p := New()
+	var called bool
+	p.OnIdentity = func(_, _, _ string) { called = true }
+	p.HandleResponse(1, map[byte]any{paramOperationCode: int16(258),
+		1: "垃圾", 2: "垃圾", 8: "垃圾"})
+	if called || p.Location() != "" {
+		t.Fatalf("258 被当成了 Join:位置 %q", p.Location())
+	}
+}
+
+// 337 & 0xFF = 81 = AuctionGetOffers。截窄的话它的 params[0] 会被当挂单 JSON 解
+func TestHandleResponse_操作码337不能被当成挂单(t *testing.T) {
+	p := New()
+	got := collect(t, p)
+	p.HandleResponse(1, map[byte]any{paramOperationCode: byte(p.Codes.Join), 8: "Martlock"})
+	p.HandleResponse(1, map[byte]any{paramOperationCode: int16(337),
+		0: []string{offerJSON}})
+	if len(*got) != 0 {
+		t.Fatalf("337 被当成了挂单,产出 %d 条", len(*got))
+	}
+}
+
+// 请求那条路一样:17 + 256 = 273 不能被当成切区
+func TestHandleRequest_大于255的码不能被截成切区(t *testing.T) {
+	p := New()
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(273), 0: "Thetford"})
+	if p.Location() != "" {
+		t.Fatalf("273 被当成了切区,位置变成 %q", p.Location())
 	}
 }
 
@@ -157,7 +198,7 @@ func TestHandleResponse_没有参数表时也要认挂单(t *testing.T) {
 	p.OnOrders = func(o []model.MarketOrder) { got = append(got, o...) }
 
 	// photon 层的 []string 分支产出的就是这个形状:只有 params[0]
-	p.HandleResponse(p.Codes.AuctionGetOffers, map[byte]any{
+	p.HandleResponse(byte(p.Codes.AuctionGetOffers), map[byte]any{
 		0: []string{
 			`{"Id":11,"ItemTypeId":"T5_CLOTH","QualityLevel":1,"EnchantmentLevel":0,` +
 				`"UnitPriceSilver":12340000,"Amount":7,"AuctionType":"offer","LocationId":""}`,
