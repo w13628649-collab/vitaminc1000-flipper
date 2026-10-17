@@ -691,19 +691,40 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 /* 拿不满料 / 所有路线都亏:卡片头不再写「推荐」,顶边和标签换成警示色 */
 .c-kicker.bad{background:var(--warn)}
 .c-card.unfilled,.c-card.losing{border-top-color:var(--warn)}
-/* 拿不满料时数字是下界:整排换成次要墨色,不和正常结果一样醒目 */
-.c-kpis.dimmed b{color:var(--ink-mid)}
 .c-buyln{margin:8px 0 0; font-size:13px; color:var(--ink); line-height:1.55}
 .c-buyln > b:first-child{color:var(--bronze-ink)}
-.c-beln{margin:4px 0 0; font-size:13px; color:var(--ink); line-height:1.55; cursor:help}
-.c-beln > b:first-child{color:var(--bronze-ink)}
-.c-befold{margin-top:2px}
 .c-feeseen{margin:4px 0 0; font-size:11.5px; line-height:1.5; max-width:60ch}
 .c-feeseen .mini-act{margin-left:4px}
-/* 卡片 KPI 下面那一行小字:单根成本、到手、每点专注、价格、站费,公式都在悬停里 */
-.c-kv{display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0; font-size:12px; color:var(--ink-mid)}
-.c-kv b{color:var(--ink); font-weight:600}
-.c-kv > span[title]{cursor:help}
+/* 推荐卡片的数:三张「项目 | 值」表并排,一行一个指标,左边是什么、右边是数;口径在悬停里 */
+/* align-items:start:三张表行数不同,默认 stretch 会把短表的行撑高,三张表行高就对不齐 */
+.c-tables{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px 22px; margin:12px 0 6px; align-items:start}
+table.c-kvt{width:100%; margin:0; font-size:13px}
+table.c-kvt caption,table.c-bet caption{caption-side:top; text-align:left; font-size:12px; font-weight:700;
+  color:var(--bronze-ink); padding:0 0 5px; border-bottom:2px solid var(--ink)}
+table.c-kvt th{text-align:left; font-size:13px; font-weight:400; color:var(--ink-mid);
+  padding:6px 10px 6px 0; border-bottom:1px solid var(--rule-soft)}
+table.c-kvt td{padding:6px 0; font-weight:600; color:var(--ink)}
+/* 行高写死:加粗放大的那几行(strong)不会比别的行高,三张表逐行对得齐 */
+table.c-kvt th,table.c-kvt td{line-height:20px}
+table.c-kvt td.pos{color:var(--gain)}
+table.c-kvt td.neg{color:var(--warn)}
+table.c-kvt td.warnish{color:var(--warn)}
+table.c-kvt tr.strong td{font-size:16px; font-weight:700}
+table.c-kvt tr[title]{cursor:help}
+table.c-kvt tbody tr:hover{background:transparent}
+table.c-kvt .agetag{font-size:inherit}
+/* 拿不满料时数字是下界:整排换成次要墨色,不和正常结果一样醒目 */
+.c-tables.dimmed table.c-kvt td{color:var(--ink-mid)}
+table.c-bet{margin:10px 0 4px; font-size:13px}
+table.c-bet td.l{white-space:normal}
+table.c-bet tfoot td{border-top:1px solid var(--ink); border-bottom:0}
+/* 标题右边的出售城市行情:卖一 / 买一 / 日均成交三行,价、到手、盘口、数据四列 */
+.c-mkt-wrap{margin-left:auto; min-width:0; overflow-x:auto}
+table.c-mkt{width:auto; margin:0; font-size:12.5px}
+table.c-mkt th,table.c-mkt td{padding:4px 10px}
+table.c-mkt tbody th{font-size:12.5px; font-weight:400; color:var(--ink-mid); border-bottom:1px solid var(--rule-soft)}
+table.c-mkt td b{font-size:14px}
+table.c-mkt tbody tr:hover{background:transparent}
 .c-spf{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; margin:6px 0 2px; font-size:12px; color:var(--ink-mid)}
 .c-spf .pfbar{flex:0 1 220px}
 .c-unv-ok{margin:6px 0 0; font-size:11.5px}
@@ -713,7 +734,6 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .c-why{margin:-4px 0 8px}
 .c-why p{margin:4px 0 0; max-width:120ch; line-height:1.55}
 .wtag.more{color:var(--ink-mid)}
-.c-head .verdict em{font-style:normal; font-size:11px; color:var(--ink-mid)}
 /* 专注开法对比(focus.pareto) */
 .c-focusfold{margin:6px 0 0; font-size:12.5px}
 .c-focusfold > summary{cursor:pointer; font-weight:600; color:var(--ink)}
@@ -723,19 +743,10 @@ table.c-focust{margin:6px 0 2px}
 table.c-focust td.l{white-space:normal}
 table.c-focust tr.pick > td{background:color-mix(in oklab,var(--gain),var(--surface) 92%)}
 .c-route{font-weight:600}
-.c-kpis{margin:10px 0 6px}
-.c-kpis div{background:var(--surface)}
-.c-kpis b{font-size:19px}
-.c-kpis em b{font-size:inherit; display:inline; font-weight:600}
-.c-kpis .agetag{font-size:15px}
-.c-kpis .c-over{background:color-mix(in oklab,var(--warn),var(--surface) 88%); box-shadow:inset 0 3px 0 var(--warn)}
-.c-kpis .pfbar{margin-top:6px}
 .pfbar{position:relative; height:8px; background:var(--surface-2); border-radius:var(--r); max-width:220px}
 .pfbar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--ink-soft); border-radius:var(--r)}
 .pfbar .fill.over{background:var(--gain)}
 .pfbar .mark{position:absolute; top:-3px; bottom:-3px; width:2px; margin-left:-1px; background:var(--bronze)}
-.c-kpis .pfbar + .sub{display:block; margin-top:3px; font-size:11px}
-.c-focusln{margin:6px 0 0; font-size:12.5px; color:var(--ink-mid)}
 .c-unfilled{margin:6px 0 0; padding:7px 10px; font-size:12.5px; color:var(--ink-mid);
   background:color-mix(in oklab,var(--warn),var(--surface) 90%); border-left:3px solid var(--warn)}
 .c-unfilled b{color:var(--warn)}
