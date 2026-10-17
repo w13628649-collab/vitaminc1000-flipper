@@ -69,7 +69,9 @@ func deserializeParameterTable(data []byte) map[byte]interface{} {
 
 func readParameterTable(buf *bytes.Buffer) map[byte]interface{} {
 	count := int(readCount(buf))
-	params := make(map[byte]interface{}, count)
+	// 每项至少 key + 类型两个字节。长度前缀是线上读来的,错位时可能是几十亿,
+	// 不夹住的话 make 的容量提示就能把内存撑爆
+	params := make(map[byte]interface{}, min(count, buf.Len()/2))
 	for i := 0; i < count && buf.Len() > 0; i++ {
 		key, err := buf.ReadByte()
 		if err != nil {
@@ -174,10 +176,16 @@ func deserialize(buf *bytes.Buffer, tc byte) interface{} {
 // Wire: compressed-count | element*
 func deserializeTypedArray(buf *bytes.Buffer, elemType byte) interface{} {
 	size := int(readCount(buf))
+	if !fits(buf, size, minElemBytes(elemType)) {
+		return nil
+	}
 	switch elemType {
 	case typeBoolean:
-		result := make([]bool, size)
 		packedBytes := (size + 7) / 8
+		if packedBytes > buf.Len() {
+			return nil
+		}
+		result := make([]bool, size)
 		packed := make([]byte, packedBytes)
 		buf.Read(packed)
 		for i := 0; i < size; i++ {
@@ -253,25 +261,27 @@ func deserializeTypedArray(buf *bytes.Buffer, elemType byte) interface{} {
 	}
 }
 
-// deserializeNestedArray decodes a bare array (0x40) whose elements share one type.
-// Wire: compressed-count | typeCode | element*
+// deserializeNestedArray 解裸数组 0x40(数组的数组,比如 float[][])。
+//
+// 线格式:compressed-count | (typeCode | element)*——**每个元素各带一个类型字节**。
+// 上游这里写的是"开头一个类型字节、后面元素共用",对一行的数组两种读法结果一样,
+// 从第二行起就错位:第二行的类型字节 0x45 被当成长度 69,后面的键全变垃圾
+// (op 197 的 key18 坐标正是 float[][],它之后的 20/22/24/25/33/34 跟着丢)。
+// 依据是 Photon Protocol18 的 WriteArrayInArray / ReadArrayInArray:写每个元素时带
+// 类型(Write(stream, elem, writeType=true)),读时逐个 Read(stream) 先读类型。
+// 这是凭对 Photon 源码的记忆,没有拿线上 197 的原始字节核对过;
+// 核对办法:开一次 N 地图,看 /api/samples?code=197 的 key18 每行长度是不是都是 2
 func deserializeNestedArray(buf *bytes.Buffer) interface{} {
-	size := int(readCount(buf))
-	tc, err := buf.ReadByte()
-	if err != nil {
-		return nil
-	}
-	result := make([]interface{}, size)
-	for i := range result {
-		result[i] = deserialize(buf, tc)
-	}
-	return result
+	return deserializeObjectArray(buf)
 }
 
 // deserializeObjectArray decodes an array where each element carries its own type byte.
 // Wire: compressed-count | (typeCode | value)*
 func deserializeObjectArray(buf *bytes.Buffer) interface{} {
 	size := int(readCount(buf))
+	if !fits(buf, size, 1) { // 每个元素至少一个类型字节
+		return nil
+	}
 	result := make([]interface{}, size)
 	for i := range result {
 		tc, err := buf.ReadByte()
@@ -290,7 +300,7 @@ func deserializeDictionary(buf *bytes.Buffer) map[interface{}]interface{} {
 	keyTC, _ := buf.ReadByte()
 	valTC, _ := buf.ReadByte()
 	count := int(readCount(buf))
-	out := make(map[interface{}]interface{}, count)
+	out := make(map[interface{}]interface{}, min(count, buf.Len()))
 	for i := 0; i < count && buf.Len() > 0; i++ {
 		var kt byte
 		if keyTC == 0 {
@@ -417,6 +427,40 @@ func readString(buf *bytes.Buffer) string {
 	b := make([]byte, length)
 	buf.Read(b)
 	return string(b)
+}
+
+// fits 判断线上读来的元素个数在剩下的字节里放不放得下(每个元素至少 per 字节)。
+// 长度前缀错位时可能是几十亿,先比再 make,放不下的整个数组当作坏数据。
+// 零宽元素(per=0)没法按字节比,给个固定上限
+func fits(buf *bytes.Buffer, size, per int) bool {
+	if size < 0 {
+		return false
+	}
+	if per <= 0 {
+		return size <= maxZeroWidthElems
+	}
+	return size <= buf.Len()/per
+}
+
+const maxZeroWidthElems = 1 << 16
+
+// minElemBytes 是 typed array 里一个元素最少占几个字节。bool 按位打包,
+// 8 个一字节;零宽的类型(xxxZero 之类)返回 0,不设上限
+func minElemBytes(elemType byte) int {
+	switch elemType {
+	case typeBoolean:
+		return 0 // 下面单独比打包后的字节数
+	case typeShort:
+		return 2
+	case typeFloat:
+		return 4
+	case typeDouble:
+		return 8
+	case typeBoolFalse, typeBoolTrue, typeShortZero, typeIntZero, typeLongZero,
+		typeFloatZero, typeDoubleZero, typeByteZero, typeNull, typeUnknown:
+		return 0
+	}
+	return 1
 }
 
 // readCount reads the collection/array length prefix (compressed varint).
