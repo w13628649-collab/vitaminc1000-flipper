@@ -60,6 +60,27 @@ func TestCity_传送门城并进主城(t *testing.T) {
 	}
 }
 
+// docs/client-data.md 第二点九节第 3 条:客户端的 marketplacegroup 说 Thetford Portal、
+// Antiquarian's Den、Thetford Market 是**同一个订单簿**。三个入口必须收敛成同一个 key:
+// 收不拢的话同一张单(同一个 order_id)从两个入口看到,ingest 会把它当成串城
+// (身份指纹里有地点),一边计冲突一边暂停那两个盘口的幽灵剔除。
+//
+// 能钉住的:市场本体(0007 / 7)、传送门(0301 / 301)、AODP 表里并进 Thetford 市场的
+// 0000-HellDen。**Antiquarian's Den 在包里报的是哪个原始 id 本地核不了**
+// (cache 里没有 world.txt,location.rb 的冻结副本不在这台机器上),要一条实抓:
+// 站在那里时 Join 的 params[8]。如果它不在上面这几个里,City 会原样放行——
+// 不会错并,但会和 Thetford 市场的同一批单互相算成串城,到时候在这里补一行
+func TestCity_Thetford同一订单簿的入口收敛成一个key(t *testing.T) {
+	for _, raw := range []string{"0007", "7", "0301", "301", "0000-HellDen"} {
+		if got := City(raw); got != "Thetford" {
+			t.Errorf("City(%q) = %q,同一个订单簿要收敛成 Thetford", raw, got)
+		}
+		if !Tradeable(raw) {
+			t.Errorf("Tradeable(%q) = false", raw)
+		}
+	}
+}
+
 // 走私贩网络 AODP 当成**一个**共享盘口:请求其中任何一个据点,
 // 它会把整个清单展开返回。所以分开记没有意义。
 func TestCity_走私贩据点收敛成一个网络(t *testing.T) {
