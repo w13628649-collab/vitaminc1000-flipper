@@ -71,6 +71,8 @@ type Status struct {
 
 	OrdersSeen     int64  `json:"orders_seen"`
 	OrdersUploaded int64  `json:"orders_uploaded"`
+	// StationsUploaded 是传上去的建筑观测条数(op 197 区域地图)
+	StationsUploaded int64 `json:"stations_uploaded"`
 	Pending        int    `json:"pending"`
 	LastUploadAt   string `json:"last_upload_at"`
 	LastError      string `json:"last_error"`

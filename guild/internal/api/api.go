@@ -48,6 +48,9 @@ type Server struct {
 	// WSBuffer 是每条 WS 连接的发送积压上限,0 用 wsSendBuffer。留这个口子是为了测试
 	// 能把它调小、稳定地造出"丢过消息"
 	WSBuffer int
+	// Capture 存抓包里挂单以外的东西(工作站费率),见 capture.go。New 里设成 Store;
+	// 为 nil 时上传里的这部分丢掉、查询返回 503
+	Capture captureStore
 
 	releases releaseCache
 	upgrader websocket.Upgrader
@@ -68,6 +71,9 @@ func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub,
 	if fl != nil { // 不能把 nil 的 *flip.Service 塞进接口:那是非 nil 接口
 		s.Quotes = fl
 	}
+	if st != nil { // 同上
+		s.Capture = st
+	}
 	return s
 }
 
@@ -82,12 +88,18 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /ws", s.handleWS)
 	s.registerFlip(mux)
 	s.registerRelease(mux)
+	s.registerCapture(mux)
 	// 界面主要由客户端本地伺服(资源编在客户端里)。服务端这份是给
 	// 开发和排查用的:浏览器直接打开就能看,不用起客户端
 	mux.Handle("GET /", http.FileServerFS(webui.FS()))
 	return mux
 }
 
+// handleUpload 收客户端的一批抓包。
+//
+// **解码不开 DisallowUnknownFields,也不能开**:新客户端连老服务端时会多带
+// stations 之类的字段,老服务端靠"不认识就忽略"才不坏;老客户端连新服务端时
+// 新字段解出来是 nil。两个方向的兼容都靠这一点。
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	var batch model.UploadBatch
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<20)).Decode(&batch); err != nil {
@@ -95,9 +107,14 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 观测时间的补零、纠偏、钳位都在 ingest.Normalize 里做,
-	// 这里不再各自补一套,免得两处口径漂移
-	changed, touched := s.Ingestor.Submit(batch)
-	writeJSON(w, map[string]int{"changed": changed, "touched": touched})
+	// 这里不再各自补一套,免得两处口径漂移。
+	// 只带建筑的批次(开了地图没翻市场)不进 ingest
+	var changed, touched int
+	if len(batch.Orders) > 0 {
+		changed, touched = s.Ingestor.Submit(batch)
+	}
+	stations := s.saveCaptureExtras(r.Context(), batch)
+	writeJSON(w, map[string]int{"changed": changed, "touched": touched, "stations": stations})
 }
 
 // handleDiagUpload 收客户端报上来的警告和错误。

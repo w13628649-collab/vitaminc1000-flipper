@@ -151,6 +151,30 @@ func TestDisplayName_认不出的原样返回(t *testing.T) {
 	}
 }
 
+// op 197 点名的是城区本体(0000),不是市场 id(0007);黑市那个 cluster 的工作站归 Caerleon
+func TestClusterCity_城区本体翻成城市(t *testing.T) {
+	for zone, want := range map[string]string{
+		"0000": "Thetford", "1000": "Lymhurst", "2000": "Bridgewatch", "3004": "Martlock",
+		"4000": "Fort Sterling", "3003": "Caerleon", "5000": "Brecilien",
+	} {
+		if got, ok := ClusterCity(zone); !ok || got != want {
+			t.Errorf("ClusterCity(%q) = %q, %v,想要 %q", zone, got, ok, want)
+		}
+	}
+	// 传送门城是另一座镇子、另一批建筑,不并;野外原样
+	for _, zone := range []string{"0301", "0007", "1205", ""} {
+		if got, ok := ClusterCity(zone); ok || got != zone {
+			t.Errorf("ClusterCity(%q) = %q, %v,应原样返回", zone, got, ok)
+		}
+	}
+	// 和显示名口径一致:城区本体的显示名就是城市名(Caerleon 那格带了黑市注释,以它开头)
+	for zone, city := range cityClusters {
+		if got := DisplayName(zone); !strings.HasPrefix(got, city) {
+			t.Errorf("DisplayName(%q) = %q,应以 %q 开头", zone, got, city)
+		}
+	}
+}
+
 // DisplayName 收了城市本体 id,City 不能因此跟着变。
 // 两者对 0000 的回答故意不同:一个是给人看的,一个是做 key 的。
 func TestDisplayName_不影响City(t *testing.T) {

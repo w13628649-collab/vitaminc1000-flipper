@@ -3139,6 +3139,10 @@ async function pollLocal() {
     $("capture-sub").textContent = s.orders_uploaded
       ? `已传 ${s.orders_uploaded.toLocaleString("zh-CN")} 条`
       : (s.devices ? `${s.devices} 张网卡` : "本机");
+    // 开 N 键地图抓到的工作站费率另算,不混进挂单条数
+    $("capture-sub").title = s.stations_uploaded
+      ? `另传工作站观测 ${s.stations_uploaded.toLocaleString("zh-CN")} 条`
+      : "";
     // 市场挂单是明文还是密文。文案由客户端给(protocol.MarketCrypto.Text),这里不改字。
     // 和市场请求无关的加密消息不说明挂单被加密,只在副标题里给个数
     const crypt = s.market_crypto || "unknown";

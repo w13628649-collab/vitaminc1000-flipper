@@ -90,6 +90,11 @@ type Parser struct {
 	location      string
 	characterID   string
 	characterName string
+	// zoneReqs 是还在等响应的 op 197 请求(station.go)
+	zoneReqs []zoneRequest
+
+	// clock 为 nil 时用 time.Now。留给测试钉时间
+	clock func() time.Time
 
 	// OnOrders 收到一批挂单时回调。
 	OnOrders func(orders []model.MarketOrder)
@@ -100,6 +105,15 @@ type Parser struct {
 	// OnMarketDecoded 一条 81/82 响应处理完时回调,n 是 JSON 解开的挂单条数
 	// (CryptoTracker.MarketDecoded)。位置不明被丢掉的也算在 n 里
 	OnMarketDecoded func(n int)
+	// OnStations 解出一次区域地图(op 197)里的建筑时回调。
+	OnStations func(obs []model.StationObs)
+}
+
+func (p *Parser) now() time.Time {
+	if p.clock != nil {
+		return p.clock()
+	}
+	return time.Now()
 }
 
 func New() *Parser {
@@ -153,6 +167,8 @@ func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 		p.handleOrders(params)
 	case p.Codes.Join:
 		p.handleJoin(params)
+	case p.Codes.GetClusterMapInfo:
+		p.handleClusterMap(params)
 	}
 }
 
@@ -177,6 +193,9 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 		if p.OnMarketRequest != nil {
 			p.OnMarketRequest()
 		}
+	case p.Codes.GetClusterMapInfo:
+		zone, _ := params[0].(string)
+		p.noteZoneRequest(zone, p.now())
 	}
 }
 

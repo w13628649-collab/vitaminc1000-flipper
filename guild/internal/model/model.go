@@ -4,7 +4,13 @@
 // 同一份 struct 直接消灭这个问题。客户端解析完 Photon 包后发的就是这些。
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"math"
+	"strconv"
+	"strings"
+	"time"
+)
 
 // Side 挂单方向。用 int8 而不是字符串,库里省空间、比较也快。
 type Side int8
@@ -66,6 +72,67 @@ type UploadBatch struct {
 	SentAt time.Time `json:"sent_at,omitzero"`
 	// ClientVersion 是上传方的版本号,老客户端为空
 	ClientVersion string `json:"client_version,omitempty"`
+
+	// Stations 是 op 197(区域地图)里的建筑和制造站费率。
+	// omitempty:老服务端的 handleUpload 不开 DisallowUnknownFields,多一个字段它
+	// 照样解;老客户端不带这个字段,新服务端解出来是 nil。两个方向都不坏
+	Stations []StationObs `json:"stations,omitempty"`
+}
+
+// StationObs 是一次区域地图响应(op 197)里一个建筑的观测。
+//
+// 数组按下标对齐成一个建筑一行;Index 就是那个下标,只在本次响应里有意义。
+// 跨次观测认"是不是同一台站"用 BuildingKey(类型 + 坐标)。
+//
+// 字段类型按客户端声明(docs/client-data.md 第二点六节),**不照抄 AODP**:
+// 它把 long[] 写成 []int,银币类会溢出;坐标写成 [][]int,丢精度。
+// 没收到的数组对应字段留 nil,不补 0——"没观测到"和"观测到 0"意思不同
+// (营养 0 的站不能用)。
+type StationObs struct {
+	// ZoneID 是这次 197 请求点名的区 id(key0),只收纯数字的
+	ZoneID string `json:"zone_id"`
+	Index  int    `json:"index"`
+	// BuildingType 来自 key17(int[])
+	BuildingType int32 `json:"building_type"`
+	// Pos 来自 key18(float[][]),**只当"哪个建筑"的连接键**,不建地图层
+	Pos []float64 `json:"pos,omitempty"`
+	// Durability / Nutrition / Silver 来自 key20 / 22 / 24(long[]),只存原值。
+	// 客户端里它们也是 a7m 定点类型,但比例没定,不归一化
+	Durability *int64 `json:"durability,omitempty"`
+	Nutrition  *int64 `json:"nutrition,omitempty"`
+	Silver     *int64 `json:"silver,omitempty"`
+	// Owner 来自 key25(string[])
+	Owner string `json:"owner,omitempty"`
+
+	// 两档使用费(每 100 营养)。key33 = Associate、key34 = Public **只有社区一个来源**,
+	// 客户端侧区分不了,待一张游戏内截图钉死——所以两个都存。
+	// 标度线上没定(a7m 定点比例 10000,还是整银):Raw 是原值,不带 Raw 的是归一化后的
+	// 银币(Raw > 1000 按 /10000,否则原值;1000 是 buildings.xml 的 maxuseagefee)
+	AssociateFeeRaw *int64   `json:"associate_fee_raw,omitempty"`
+	AssociateFee    *float64 `json:"associate_fee,omitempty"`
+	PublicFeeRaw    *int64   `json:"public_fee_raw,omitempty"`
+	PublicFee       *float64 `json:"public_fee,omitempty"`
+
+	// Key23 / Key31 含义未知,带类型标签原样存({"t":"[]int64","v":…}):
+	// 数组和建筑数对得上就存这个建筑那一格,对不上存整个值
+	Key23 json.RawMessage `json:"key23,omitempty"`
+	Key31 json.RawMessage `json:"key31,omitempty"`
+
+	ObservedAt time.Time `json:"observed_at"`
+}
+
+// BuildingKey 是"哪台站"的连接键:建筑类型 + 坐标(保留两位小数)。
+// 没有坐标时退回响应里的下标——那只在同一次响应里可靠,有总比没有强。
+func (s StationObs) BuildingKey() string {
+	t := strconv.Itoa(int(s.BuildingType))
+	if len(s.Pos) == 0 {
+		return t + "#" + strconv.Itoa(s.Index)
+	}
+	parts := make([]string, len(s.Pos))
+	for i, p := range s.Pos {
+		parts[i] = strconv.FormatFloat(math.Round(p*100)/100, 'f', -1, 64)
+	}
+	return t + "@" + strings.Join(parts, ",")
 }
 
 // QuoteKey 唯一标识一个盘口。

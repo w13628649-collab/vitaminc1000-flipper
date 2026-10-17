@@ -169,6 +169,30 @@ var places = map[string]string{
 	"3002": "高地十字路口", "4006": "山地十字路口",
 }
 
+// cityClusters 是城区本体的 cluster id → 城市名,给 op 197(区域地图、制造站)用。
+//
+// 197 请求点名的是"哪个区",城里的建筑挂在城区本体上(0000),不是市场那个
+// 地点 id(0007)——所以不能拿 City 收敛:City("0000") 故意原样放行。
+// 对照取自 places(客户端 market-locations.json / world.xml)。
+//
+// 3003 在这里是 Caerleon,不是黑市:黑市只是那座城里的一个 NPC,城里的工作站
+// 归 Caerleon。传送门城(0301…)刻意不并进主城:那是另一座镇子、另一批建筑,
+// 费率挂错城就是错的数据
+var cityClusters = map[string]string{
+	"0000": "Thetford", "1000": "Lymhurst", "2000": "Bridgewatch",
+	"3004": "Martlock", "4000": "Fort Sterling", "3003": "Caerleon",
+	"5000": "Brecilien", "5001": "Brecilien",
+}
+
+// ClusterCity 把 op 197 的区 id 翻成城市名。不是城区本体的原样返回、ok=false
+// (野外、传送门城、还没收录的地方),调用方按原始 id 存,不丢数据也不错并。
+func ClusterCity(zone string) (string, bool) {
+	if c, ok := cityClusters[strings.TrimSpace(zone)]; ok {
+		return c, true
+	}
+	return zone, false
+}
+
 // DisplayName 把包里的原始地点 id 翻成给人看的地名:市场 id、城市本体 id、
 // 走私贩据点都认,认不出的(个人岛、野外地图……)原样返回。
 //

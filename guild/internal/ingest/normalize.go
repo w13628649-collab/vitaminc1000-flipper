@@ -45,6 +45,23 @@ func Normalize(b *model.UploadBatch, now time.Time) (skew time.Duration, clamped
 	return skew, clamped
 }
 
+// ShiftObserved 把同一批上传里非挂单观测(建筑、样本)的时间按 Normalize 同一套口径
+// 挪到服务端时钟:平移 now−SentAt、零值补 now、超前的钳到 now。
+// 单独给一个函数而不是塞进 Normalize:那几类不进 ingest 的 LRU 和落库流程,
+// 由 api 直接存,但"观测时间"的口径不能和挂单两样
+func ShiftObserved(at, sentAt, now time.Time) time.Time {
+	if at.IsZero() {
+		return now
+	}
+	if !sentAt.IsZero() {
+		at = at.Add(now.Sub(sentAt))
+	}
+	if at.After(now) {
+		return now
+	}
+	return at
+}
+
 // canonicalItemID 在附魔等级大于 0、而 id 里没有 @ 时补上 @N。
 //
 // AODP 和扫描器都用 T5_2H_FIRESTAFF@2 这种带后缀的写法做 key。实抓样本

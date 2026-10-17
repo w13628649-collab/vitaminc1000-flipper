@@ -102,3 +102,24 @@ func TestIdentOf_只看盘口四要素(t *testing.T) {
 		}
 	}
 }
+
+// 建筑、样本这些不进 ingest 的观测,时间口径要和挂单一样:平移、补零、钳未来
+func TestShiftObserved_和Normalize同一套口径(t *testing.T) {
+	sent := t0.Add(5 * time.Minute) // 客户端钟快 5 分钟
+	obs := t0.Add(5*time.Minute - 2*time.Second)
+	if got := ShiftObserved(obs, sent, t0); !got.Equal(t0.Add(-2 * time.Second)) {
+		t.Fatalf("平移后应是 now-2s,得到 %v", got)
+	}
+	b := batchAt(sent, obs)
+	Normalize(&b, t0)
+	if !b.Orders[0].ObservedAt.Equal(ShiftObserved(obs, sent, t0)) {
+		t.Fatal("和 Normalize 对挂单的结果不一致")
+	}
+	if got := ShiftObserved(time.Time{}, sent, t0); !got.Equal(t0) {
+		t.Fatalf("零值补 now,得到 %v", got)
+	}
+	// 老客户端不带 SentAt:不平移,但超前的钳到 now
+	if got := ShiftObserved(t0.Add(time.Hour), time.Time{}, t0); !got.Equal(t0) {
+		t.Fatalf("超前的钳到 now,得到 %v", got)
+	}
+}

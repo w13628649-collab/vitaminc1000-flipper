@@ -31,6 +31,33 @@ func TestUploadBatch_新字段对老客户端兼容(t *testing.T) {
 	}
 }
 
+// 老客户端不带 stations,新服务端解出来是 nil;新客户端没抓到建筑时也不序列化出来,
+// 老服务端看到的包和以前一模一样
+func TestUploadBatch_建筑字段两个方向都兼容(t *testing.T) {
+	var b UploadBatch
+	if err := json.Unmarshal([]byte(`{"reporter":"甲","orders":[]}`), &b); err != nil || b.Stations != nil {
+		t.Fatalf("老格式: %+v, %v", b, err)
+	}
+	raw, _ := json.Marshal(UploadBatch{Reporter: "甲"})
+	if strings.Contains(string(raw), "stations") {
+		t.Fatalf("没有建筑时不该带这个字段: %s", raw)
+	}
+	fee := int64(0)
+	raw, _ = json.Marshal(StationObs{ZoneID: "0000", PublicFeeRaw: &fee})
+	if !strings.Contains(string(raw), `"public_fee_raw":0`) || strings.Contains(string(raw), "associate_fee") {
+		t.Fatalf("观测到的 0 要带上,没观测到的不带: %s", raw)
+	}
+}
+
+func TestStationObs_BuildingKey(t *testing.T) {
+	if k := (StationObs{BuildingType: 501, Pos: []float64{10.504, -3}}).BuildingKey(); k != "501@10.5,-3" {
+		t.Fatalf("得到 %s", k)
+	}
+	if k := (StationObs{BuildingType: 7, Index: 4}).BuildingKey(); k != "7#4" {
+		t.Fatalf("没坐标退回下标,得到 %s", k)
+	}
+}
+
 func TestQuoteKey_String(t *testing.T) {
 	k := QuoteKey{ItemID: "T5_METALBAR", LocationID: "Martlock", Quality: 1, Side: SideRequest}
 	if got := k.String(); got != "T5_METALBAR|Martlock|1|1" {
