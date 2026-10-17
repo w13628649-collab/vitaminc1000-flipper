@@ -6,11 +6,9 @@
 #
 #   wsl -d Ubuntu -u root -- bash guild/dev-up.sh
 #
-# 只想把服务拉起来、不想拿工作区里没写完的代码编译时:
+# **每次都从工作区编译**,没有「沿用上次二进制」的开关(NOBUILD 按用户要求在 2026-10-17 去掉)。
 #
-#   wsl -d Ubuntu -u root -- env NOBUILD=1 bash guild/dev-up.sh
-#
-# 日常用仓库根的 dev-up.cmd(或 dev-up.cmd nobuild)更好:它跑完会在 Windows
+# 日常用仓库根的 dev-up.cmd 更好:它跑完会在 Windows
 # 后台挂一个隐藏的 `wsl ... sleep infinity`。不挂的话,最后一个 wsl.exe 会话
 # 退出后 WSL 会把整个发行版关掉,dockerd、数据库、服务端一起被杀,
 # 日志里连"正在关闭"都没有(实测:拉起来十几分钟后就停了)
@@ -52,13 +50,6 @@ done
 docker exec flipper-pg pg_isready -U postgres -d flipper
 
 mkdir -p "$DEPLOY/release" ../dist
-if [ "${NOBUILD:-}" = "1" ]; then
-  # WSL 重启后只想把服务拉起来、工作区里又有没写完的代码时用:
-  # 不编译,直接用上次部署的二进制(/opt 在 WSL 自己的盘上,重启不丢)
-  [ -x "$DEPLOY/guild-server" ] || { echo "✗ $DEPLOY/guild-server 不存在,去掉 NOBUILD 编一次" >&2; exit 1; }
-  VERSION="$(cat "$DEPLOY/VERSION" 2>/dev/null || echo "$VERSION")"
-  echo "→ 不编译,沿用上次部署的服务端(版本 $VERSION)"
-else
 echo "→ 编服务端和客户端(版本 $VERSION)"
 CGO_ENABLED=0 go build -ldflags "-X main.version=$VERSION" -o "$DEPLOY/guild-server.new" ./cmd/server
 # 客户端交叉编译:gopacket 在 Windows 上运行时加载 wpcap.dll,go-webview2 是纯 Go,
@@ -82,7 +73,6 @@ fi
 mv -f ../dist/flipper-client.exe.new ../dist/flipper-client.exe
 cp ../dist/flipper-client.exe "$DEPLOY/release/flipper-client.exe"
 echo "$VERSION" > "$DEPLOY/VERSION"
-fi
 
 echo "→ 重启服务端 :$PORT"
 pkill -x guild-server 2>/dev/null || true
