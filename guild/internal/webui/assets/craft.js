@@ -39,12 +39,14 @@ const craft = {
     // 填了就算核对过(请求里带 confirmed),哪怕填的正好是默认值 —— 专精真是 0、站费真是 500 的人,
     // 以前「未核实」的标永远去不掉。k 和生产加成自己带日期(kAt、bonus[线].d)
     confAt: {},
+    fold: { raw: true, cands: true },   // 「原料来路」「候选路线」两节展开着没有
   },
   sd: null,          // 服务端默认值(响应里的 server_defaults)
   data: null,        // 最近一次 plan 响应
   sig: "",           // 最近一次请求体:同样的参数短时间内不重复请求
   loadedAt: 0, seq: 0, pending: false, timer: 0, retry: 0, err: null,
   open: new Set(),   // 候选表里展开着的行(按候选 id)
+  candsAll: false,   // 候选表显示全部(默认只列前 CRAFT_CANDS_SHOWN 条普通候选加参照行)
   rawAll: new Set(), // 原料来路里「显示全部起点」的那几种原料
   rawOpen: false,    // 「下级链自炼用到的原料」展开着没有(重算、实时刷新后照旧)
   keys: new Set(),   // 实时订阅的盘口 key(配方树上的全部物品,见 craftKeysOf)
@@ -342,7 +344,7 @@ const stationWord = line => LINE_STATION[line] || "这条线的精炼站";
 function feeTitle(sf) {
   const s = sf.station;
   if (!s) return "";
-  return `${sf.city} 抓到 ${sf.stations} 台${stationWord(sf.line)},最便宜 ${num(sf.min)}(${s.owner || "无主"} 的站,${ageWord(s.age_h)},${s.reporter || "成员"} 抓的)`
+  return `${sf.city} 抓到 ${sf.stations} 台${stationWord(sf.line)},最便宜 ${num(sf.min)}(${s.owner || "无主"}的站,${ageWord(s.age_h)},${s.reporter || "成员"}抓的)`
     + `${sf.max != null && sf.max !== sf.min ? `、最贵 ${num(sf.max)}` : ""}。按最便宜那台算;站有没有营养、耐久够不够要进游戏看`
     + `${sf.unusable ? `(观测到营养或耐久为 0 的 ${sf.unusable} 台已排除)` : ""}`
     + `${sf.transmute ? "。转化主人费率也按它算(假设转化和精炼在同一个站,没核实)" : ""}`;
@@ -351,7 +353,7 @@ function feeTitle(sf) {
 function feeSrcText(sf) {
   if (!sf) return "";
   switch (sf.source) {
-    case "capture": return `抓包 · ${sf.station?.owner ? esc(sf.station.owner) + " 的站" : "无主站"} · ${ageWord(sf.station?.age_h)}(${num(sf.fee)})`;
+    case "capture": return `抓包 · ${sf.station?.owner ? esc(sf.station.owner) + "的站" : "无主站"} · ${ageWord(sf.station?.age_h)}(${num(sf.fee)})`;
     case "request": return `你填的 ${num(sf.fee)}`;
     case "config": return `配置按城市 ${num(sf.fee)}`;
   }
@@ -684,7 +686,7 @@ function craftRender(res) {
 // ── 原料来路:直接回答「买 8.4 矿,还是 8.3/8.2/8.1/8.0,还是从低级转上来」(设计 §4.5) ──
 // 按推荐那条路线的需求量,列每个起点「全部从这里买、再转化上来」的等效单价和可用件数,
 // 再给混合最优的拆分(便宜的那几档直接买、其余从最便宜的起点转)。数来自 raw_sources
-const RAW_ROWS = 8;   // 起点多(T8.4 矿有二十几个),默认列 8 行左右:直接买、同阶、低一阶必列(见 rawShown)
+const RAW_ROWS = 5;   // 起点多(T8.4 矿有二十几个),默认列 5 行左右:直接买、同阶、低一阶必列(见 rawShown),其余点「显示全部」
 const levelOf = id => { const m = REFINE_ID_RE.exec(id); return m ? Number(m[1]) + Number(m[3] || 0) : -1; };
 const pathText = path => (path || []).map(cTier).join(" → ");
 const priceRange = s => (s.price_from === s.price_to || !s.price_to ? num(s.price_from) : `${num(s.price_from)} ~ ${num(s.price_to)}`);
@@ -700,9 +702,11 @@ function rawVerdict(id, src, res, main) {
   const ask = mk?.steps?.find(s => s.op === "buy" && s.item === id && !s.for)?.price_from;
   const directWhy = direct ? (direct.filled ? "" : `直接买的盘口只有 ${fq(direct.available)} 个,不够 ${fq(need)} 个${
     ask ? `(卖一 ${num(ask)} 起${mixedU != null && ask > mixedU ? ",本身就比转化上来贵" : ""})` : ""}`) : `${T} 在可买城市没有卖单`;
-  let v;
+  // 结论分两层(减密):head 一句加粗结论加均价常显;why 是拆分明细、和直接买的对比、k 的提示,
+  // 收进「为什么」;warn 是「数不能全信」的提醒(凑不齐、只有 AODP 价、挂买单收不收得到),常显
+  let head = "", why = "", warn = "";
   if (!splits.length) {
-    return `<b>缺价</b>:${esc(cLabel(id))} 和能转化到它的起点,在可买城市都没有挂单(或者超过了数据最大年龄)。`;
+    return { head: `<b>缺价</b>:${esc(cLabel(id))} 和能转化到它的起点,在可买城市都没有挂单(或者超过了数据最大年龄)。`, why: "", warn: "" };
   }
   const fees = res.params_used?.fees || {};
   const at = s => (s.city && s.city !== res.city ? `在 ${esc(s.city)} ` : "");
@@ -722,30 +726,33 @@ function rawVerdict(id, src, res, main) {
   let mentionsTrans = transS.length > 0;
   if (bidS.length) {
     const setup = fees.buy_order_setup === false ? 0 : fees.setup;
-    v = `<b>${directS.length || transS.length ? "一部分挂买单收" : `挂买单收 ${esc(T)}`}</b>(纸面价):${ordered.map(split).join(" + ")};`
-      + `纸面均价 ${num(mixedU)}(买一 + ${num(fees.outbid)} 银挂,含 ${pct(setup)} 创建费)。`
-      + `<span class="neg">收不收得到、要等多久都不知道,挂上去没人卖也照扣创建费</span>`
-      + (directU != null ? `;全部直接买(吃卖一)均价 ${num(directU)},这个纸面价${mixedU < directU ? `低 ${pct(1 - mixedU / directU)}` : `高 ${pct(mixedU / directU - 1)}`}。`
-        : `;${directWhy}。`) + both;
+    head = `<b>${directS.length || transS.length ? "一部分挂买单收" : `挂买单收 ${esc(T)}`}</b>(纸面价):纸面均价 ${num(mixedU)}。`;
+    warn += ` <span class="neg">收不收得到、要等多久都不知道,挂上去没人卖也照扣创建费。</span>`;
+    why = `${ordered.map(split).join(" + ")};买一 + ${num(fees.outbid)} 银挂,含 ${pct(setup)} 创建费。`
+      + (directU != null ? `全部直接买(吃卖一)均价 ${num(directU)},这个纸面价${mixedU < directU ? `低 ${pct(1 - mixedU / directU)}` : `高 ${pct(mixedU / directU - 1)}`}。`
+        : `${directWhy}。`) + both;
   } else if (!transS.length) {
     // 只有直接买(可能分在几个城市买)
-    v = `<b>直接买 ${esc(T)} 最划算</b>:${directS.length > 1 ? ordered.map(split).join(" + ") + ";" : ""}${fq(src.mixed?.got ?? need)} 个均价 ${num(mixedU)}。` + (bestTrans
+    head = `<b>直接买 ${esc(T)} 最划算</b>:${fq(src.mixed?.got ?? need)} 个均价 ${num(mixedU)}。`;
+    why = (directS.length > 1 ? ordered.map(split).join(" + ") + "。" : "") + (bestTrans
       ? `转化上来最便宜的是从 ${esc(cTier(bestTrans.start))} 走(均价 ${num(bestTrans.unit)}),贵 ${pct(bestTrans.unit / mixedU - 1)}。`
       : "没有别的起点凑得齐这个量。");
     mentionsTrans = !!bestTrans;
   } else if (!directS.length) {
-    v = `<b>别直接买 ${esc(T)}</b>:${ordered.map(split).join(" + ")},均价 ${num(mixedU)}` + (directU != null
-      ? `,比全部直接买(均价 ${num(directU)})便宜 ${pct(1 - mixedU / directU)}。` : `;${directWhy}。`);
+    head = `<b>别直接买 ${esc(T)}</b>:均价 ${num(mixedU)}${directU != null ? `,比全部直接买便宜 ${pct(1 - mixedU / directU)}` : ""}。`;
+    why = `${ordered.map(split).join(" + ")}。` + (directU != null
+      ? `全部直接买均价 ${num(directU)}。` : `${directWhy}。`);
   } else {
-    v = `<b>混着买最省</b>:${ordered.map(split).join(" + ")};均价 ${num(mixedU)}` + (directU != null
-      ? `,比全部直接买(均价 ${num(directU)})每个省 ${num(directU - mixedU)}(${pct(1 - mixedU / directU)})。`
-      : `;${directWhy}。`) + both;
+    head = `<b>混着买最省</b>:均价 ${num(mixedU)}${directU != null ? `,比全部直接买每个省 ${num(directU - mixedU)}` : ""}。`;
+    why = `${ordered.map(split).join(" + ")}。` + (directU != null
+      ? `全部直接买均价 ${num(directU)},省 ${pct(1 - mixedU / directU)}。`
+      : `${directWhy}。`) + both;
   }
-  if (src.mixed && !src.mixed.filled) v += ` <span class="neg">所有起点加起来也只凑到 ${fq(src.mixed.got)} 个,不够 ${fq(need)} 个。</span>`;
+  if (src.mixed && !src.mixed.filled) warn += ` <span class="neg">所有起点加起来也只凑到 ${fq(src.mixed.got)} 个,不够 ${fq(need)} 个。</span>`;
   // 只有 AODP 价的起点按不限量算(不知道挂了几件):AODP 的最低卖价可能只对应 1 件,结论得打个问号
   const unknown = cUniq(splits.filter(s => !s.bid && pure.find(p => p.start === s.start)?.available == null).map(s => s.start));
   if (unknown.length) {
-    v += ` <span class="warnish"><b>${unknown.map(x => esc(cTier(x))).join("、")} 的价只有 AODP,不知道挂了几件</b>:按不限量算的,实际可能只有 1 件。`
+    warn += ` <span class="warnish"><b>${unknown.map(x => esc(cTier(x))).join("、")} 的价只有 AODP,不知道挂了几件</b>:按不限量算的,实际可能只有 1 件。`
       + `下单前进游戏看一眼,或者让成员去翻一下这个市场(翻过就有抓包件数)。</span>`;
   }
   // k 的提示只在结论里真的比了转化时给(直接买最划算却没有别的起点、纯挂买单,都和 k 无关)
@@ -753,10 +760,10 @@ function rawVerdict(id, src, res, main) {
   const ku = (res.params_used?.unverified || []).find(u => u.key === "fees.transmute_factor");
   const kOpen = ku && !ku.confirmed;
   if (main && mentionsTrans) {
-    v += ` <span class="sub">这个结论取决于转化系数 k(现在按 ${esc(k)}${kOpen ? (ku.is_default ? ",服务端默认、没核实" : ",服务端配置的、没核实") : ",你填的"}):k 一变,直接买和转化谁便宜可能反过来。</span>`
+    why += ` <span class="sub">这个结论取决于转化系数 k(现在按 ${esc(k)}${kOpen ? (ku.is_default ? ",服务端默认、没核实" : ",服务端配置的、没核实") : ",你填的"}):k 一变,直接买和转化谁便宜可能反过来。</span>`
       + (kOpen ? ` <button class="act ghost mini-act" data-open-cal>去量 k</button>` : "");
   }
-  return v;
+  return { head, why, warn };
 }
 
 // 原料来路表默认列哪些起点:用户问的就是「直接买 8.4,还是 8.3/8.2/8.1/8.0 升上来,还是 7.4 跨阶」,
@@ -805,9 +812,11 @@ function rawBlock(id, src, res, main) {
     ? `<button class="act ghost mini-act" data-raw-all="${esc(id)}">${all ? "只看常用的几个起点" : `显示全部 ${pure.length} 个起点`}</button>` : "";
   // 到手均价上限(推荐路线的盈亏平衡价):混合最优那一行直接比它;各起点那一列是换算到起点的买价上限
   const be = src.breakeven, beUnit = be ? (be.never ? `<span class="neg">白送也亏</span>` : num(be.unit)) : "";
+  const v = rawVerdict(id, src, res, main);
   return `<div class="c-rawblk${main ? " main" : ""}">
     <h4>${cItem(id)} <em>按推荐路线要 <b>${fq(src.need)}</b> 个${be ? ` · <span title="${esc(BE_TIP)}">到手均价上限 <b>${beUnit}</b></span>` : ""}</em></h4>
-    <p class="c-verdict">${rawVerdict(id, src, res, main)}</p>
+    <p class="c-verdict">${v.head}${v.warn}</p>
+    ${v.why ? `<details class="c-howto c-why"><summary>为什么</summary><p>${v.why}</p></details>` : ""}
     <div class="tablewrap"><table class="tight c-rawt">
       <thead><tr><th class="l">起点</th><th class="l">怎么走</th><th title="每个 ${esc(cTier(id))} 的均价:买价沿阶梯吃深度 + 转化实付 + 运费">等效单价</th>
         <th title="和「全部直接买」比">比直接买</th><th>可用件数</th>
@@ -835,13 +844,15 @@ function craftRawHTML(res) {
   const top = r && rs[r.rawID] ? r.rawID : ids.sort((a, b) => levelOf(b) - levelOf(a))[0];
   const others = ids.filter(x => x !== top).sort((a, b) => levelOf(b) - levelOf(a));
   const openOthers = craft.rawOpen;
-  return `<section class="c-sec c-raw">
-    <h3>原料来路 <span class="sub">买现成的 ${esc(cTier(top))},还是从低一级、低一阶转上来?按推荐路线的需求量,逐个起点算</span></h3>
+  return `<details class="c-fold c-sec c-raw" data-fold="raw"${cFold("raw") ? " open" : ""}>
+    <summary>原料来路 <em>买现成的 ${esc(cTier(top))},还是从低一级、低一阶转上来?按推荐路线的需求量,逐个起点算</em></summary>
     ${rawBlock(top, rs[top], res, true)}
     ${others.length ? `<details class="c-fold c-rawmore"${openOthers ? " open" : ""}><summary>下级链自炼用到的原料 <em>${others.map(cTier).join("、")}</em></summary>
       ${others.map(id => rawBlock(id, rs[id], res, false)).join("")}</details>` : ""}
-  </section>`;
+  </details>`;
 }
+// 「原料来路」「候选路线」两节的开合(craft.p.fold,和别的个人参数一样存本机)。默认展开
+const cFold = k => craft.p.fold?.[k] !== false;
 
 const BIND_WORD = { focus: "今日专注", volume: "成交量", capital: "本金", qty: "这一批的件数", take: "吃买单卖得掉的件数" };
 const MODE_WORD = { post: "挂卖单", take: "吃买单" };
@@ -911,13 +922,18 @@ function craftUnvHTML(res, c) {
     return `<li class="${u.confirmed ? "mine" : "def"}" title="${esc(`规则表 ${u.rule}。怎么核对:${u.check}`)}">
       <b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b> ${esc(unvValue(u))} <em>${esc(tag)}</em></li>`;
   }).join("");
-  const how = open.length ? `<details class="c-howto"><summary>怎么核对这 ${open.length} 项</summary><ul>${open.map(u =>
+  // 减密:收成一个 details,summary 一句话点名没核实的几项;芯片、用不到的、怎么核对都在里面
+  if (!open.length) {
+    return `<p class="c-unv-ok sub">这条路线用到的待核实参数都核对过了(${used.map(u => esc(UNVERIFIED_WORD[u.key] || u.key)).join("、")})</p>`;
+  }
+  const how = `<ul>${open.map(u =>
     `<li><b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b>:${esc(u.check)} <span class="sub">(规则表 ${esc(u.rule)})</span></li>`).join("")}</ul>
-    <p class="sub">核对完把数填进「高级参数」(填的正好是默认值也要填上),这里就变成「你填的」。</p></details>` : "";
-  return `<div class="c-unv"><span>${open.length ? `这条路线用到 <b>${open.length} 项没核实的参数</b>:` : "这条路线用到的待核实参数<b>都是你填的</b>:"}</span>
-      <ul>${items}</ul>${open.length ? `<button class="act ghost mini-act" data-open-cal>去校准</button>` : ""}</div>
+    <p class="sub">核对完把数填进「高级参数」(填的正好是默认值也要填上),这里就变成「你填的」。</p>`;
+  return `<details class="c-howto c-unvfold"><summary>这条路线用到 ${open.length} 项没核实的参数:${
+    open.map(u => esc(UNVERIFIED_WORD[u.key] || u.key)).join("、")}</summary>
+    <div class="c-unv"><ul>${items}</ul><button class="act ghost mini-act" data-open-cal>去校准</button></div>
     ${unused.length ? `<p class="c-unv-skip sub">这条路线用不到:${unused.map(u => esc(UNVERIFIED_WORD[u.key] || u.key)).join("、")}</p>` : ""}
-    ${how}`;
+    <p class="sub">怎么核对:</p>${how}</details>`;
 }
 
 function craftCardHTML(res) {
@@ -933,18 +949,16 @@ function craftCardHTML(res) {
   // 税、创建费、压价都从这次实际用的参数取(服务端 economics 配置,税率可能被装备减过),不写死
   const fees = res.params_used?.fees || {};
   const tax = fees.tax ?? 0, setup = fees.setup ?? 0;
-  const net = m0 === "take"
-    ? (s.take ? `<b>${num(s.take.fill?.net_avg)}</b><i>吃买单均价 ${num(s.take.fill?.vwap)} × ${ratio(1 - tax)}(扣 ${ppct(tax)} 税)</i>
-        <em>这一批吃得掉 ${fq(s.take.fill?.got)} 件${s.take.max_qty != null ? `(断崖前最多 ${fq(s.take.max_qty)} 件)` : "(只有 AODP 价,按全卖得掉算)"}</em>`
-      : `<b>—</b><i>没有买单</i>`)
-    : (s.post ? `<b>${num(s.post.net)}</b><i>挂 ${num(s.post.price)}(卖一 ${num(s.post.best_ask)} 压 ${num(fees.undercut)} 银)× ${ratio(1 - tax - setup)}</i>
-        <em>扣 ${ppct(tax)} 税 + ${ppct(setup)} 创建费</em>` : `<b>—</b><i>没有卖单</i>`);
+  // 到手一项:公式放进悬停(减密前是 KPI 格里的两行小字)
+  const netV = m0 === "take" ? (s.take?.fill?.got > 0 ? s.take.fill.net_avg : null) : s.post?.net ?? null;
+  const netTip = m0 === "take"
+    ? (s.take ? `吃买单均价 ${num(s.take.fill?.vwap)} × ${ratio(1 - tax)}(扣 ${ppct(tax)} 税);这一批吃得掉 ${fq(s.take.fill?.got)} 件${
+      s.take.max_qty != null ? `(断崖前最多 ${fq(s.take.max_qty)} 件)` : "(只有 AODP 价,按全卖得掉算)"}` : "没有买单")
+    : (s.post ? `挂 ${num(s.post.price)}(卖一 ${num(s.post.best_ask)} 压 ${num(fees.undercut)} 银)× ${ratio(1 - tax - setup)}:扣 ${ppct(tax)} 税 + ${ppct(setup)} 创建费` : "没有卖单");
   const profitLine = (pl, mode) => !pl ? `${MODE_WORD[mode]} —`
     : `${MODE_WORD[mode]} <span class="${pl.unit >= 0 ? "pos" : "neg"}">${sgn(pl.unit)}(${spct(pl.pct)})</span>${
       pl.sold != null && pl.sold < res.qty - 0.005 ? `,只出得掉 ${fq(pl.sold)} 件` : ""}`;
   const d = c.daily;
-  const unvHTML = craftUnvHTML(res, c);
-  const f = c.focus || {};
   // 「推荐」不是无条件的:拿不满料、或者按所选卖法所有路线都亏,卡片头就直说,
   // 不能让扫一眼的人把一条亏钱 / 凑不齐料的路线当成推荐
   const normal = (res.candidates || []).filter(x => !x.reference && x.filled);
@@ -962,10 +976,27 @@ function craftCardHTML(res) {
   // 默认 10 件对高 tier 常常备不齐,光说「超过几倍」不够,给个能直接点的件数
   const lc = d?.limits?.capital, turn = res.params_used?.daily?.turnover_days || 1;
   const fit = c.filled && lc != null ? Math.floor(lc * turn + 1e-9) : null;
-  const fitLn = fit == null ? "" : fit < 1
-    ? `<br><b class="neg">本金连 1 件都备不齐</b>(批末余料就要占一块)`
-    : `<br>本金最多撑 ≈${num(fit)} 件/批${over && fit < res.qty ? ` <button class="act ghost mini-act" data-set-qty="${fit}">按本金设成 ${num(fit)} 件</button>` : ""}`;
+  const capLn = !c.filled ? "" : cap <= 0 ? "" : over
+    ? `;<b class="neg">超过本金 ${num(cap)}(${(c.upfront_capital / cap).toFixed(1)} 倍)</b>${fit == null ? ""
+      : fit < 1 ? `,本金连 1 件都备不齐` : `,本金最多撑 ≈${num(fit)} 件/批${fit < res.qty ? ` <button class="act ghost mini-act" data-set-qty="${fit}">设成 ${num(fit)} 件</button>` : ""}`}`
+    : "";
   const dimmed = !c.filled;
+  const NA = `<em>拿不满料,算不准</em>`;
+  // 主原料的盈亏平衡价(诉求 #4)
+  const be = cMainBE(res, c);
+  const beKPI = dimmed || !be ? `<div title="${esc(BE_TIP)}"><b>—</b><i>主原料到手均价上限</i>${dimmed ? NA : `<em>算不出(没有主方式的利润)</em>`}</div>`
+    : `<div title="${esc(BE_TIP)}"><b class="${be.never || be.headroom < 0 ? "neg" : ""}">${be.never ? "白送也亏" : num(be.unit)}</b>
+      <i>${esc(cTier(be.item))} 到手均价上限(盈亏平衡)</i>
+      <em>现在 ${num(be.now)},${be.headroom >= 0 ? `还能涨 ${pct(be.headroom)}` : `<span class="neg">已经高出 ${pct(-be.headroom)}</span>`}</em></div>`;
+  // 降成一行小字的几项:单根成本、到手、每点专注、价格新鲜度、站费来源。公式都在悬停里
+  const sf = res.station_fee;
+  const kv = [
+    `<span title="${esc(dimmed ? "只按拿得到的料算,是下界" : "稳态:买料 + 转化 + 站费,批末余料按所选方式估值")}">单根成本 <b>${dimmed ? "≥ " : ""}${num(c.unit_cost)}</b>(这一批 ${num(c.total_cost)})</span>`,
+    `<span title="${esc(netTip)}">到手 <b>${num(netV)}</b>(${MODE_WORD[m0]})</span>`,
+    `<span title="${esc(`(开专注的利润 − max(0, 不开专注的最好利润))÷ 每根专注;premium 门槛 ${num(craftPremiumSPF())} 银/点`)}">每点专注 <b>${dimmed || c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</b></span>`,
+    `<span>价格 ${ageTag(c.oldest_age_h, c.oldest_age_h == null ? "没有用到带观测时间的价" : c.age_level === "red" ? "用到的价里最旧的超过 24 小时,先进游戏看一眼" : c.age_level === "yellow" ? "用到的价里最旧的超过 6 小时,下单前核一下" : "用到的价都在 6 小时以内")}</span>`,
+    sf ? `<span title="${esc(feeTitle(sf) || "精炼站费按什么算")}">站费 ${feeSrcText(sf)}</span>` : "",
+  ].filter(Boolean);
   return `<section class="c-card${dimmed ? " unfilled" : losing ? " losing" : ""}">
     <div class="c-card-head">
       <div>${kicker} <b class="c-route">${esc(c.label)}</b></div>
@@ -973,38 +1004,39 @@ function craftCardHTML(res) {
     </div>
     ${unfilledLn}${loseLn}
     ${craftBuyLine(res)}
-    ${craftBreakevenLine(res, c)}
     <div class="kpis c-kpis${dimmed ? " dimmed" : ""}">
-      <div><b>${dimmed ? "≥ " : ""}${num(c.unit_cost)}</b><i>单根成本</i><em>${dimmed ? "只按拿得到的料算,是下界" : `这一批 ${num(res.qty)} 件共 ${num(c.total_cost)}`}</em></div>
-      <div>${net}</div>
-      ${dimmed ? `<div><b>—</b><i>单根利润(${MODE_WORD[m0]})</i><em>拿不满料,算不准</em></div>`
+      ${dimmed ? `<div><b>—</b><i>单根利润(${MODE_WORD[m0]})</i>${NA}</div>`
         : `<div><b class="${p0 && p0.unit >= 0 ? "pos" : "neg"}">${p0 ? sgn(p0.unit) : "—"}</b><i>单根利润(${MODE_WORD[m0]})· 利润率 ${p0 ? spct(p0.pct) : "—"}</i>
         <em>${m1 ? profitLine(p1, m1) : ""}</em></div>`}
-      ${craftTotalKPI(res, c, p0, m0, dimmed, over)}
-      <div><b>${dimmed || c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</b><i>每点专注值(银)</i>${dimmed ? `<em>拿不满料,算不准</em>` : spfBar(c.silver_per_focus)}</div>
+      ${craftTotalKPI(res, c, p0, m0, dimmed, over, capLn)}
       <div title="${esc(limitsText(d))}"><b class="${dimmed ? "" : d && d.profit >= 0 ? "pos" : "neg"}">${d && !dimmed ? sgn(d.profit) : "—"}</b><i>每天总利润(日化)</i>
-        <em>${dimmed ? "拿不满料,算不准" : d ? `每天 ${fq(d.units)} 件 · 卡在<b>${esc(BIND_WORD[d.binding] || d.binding)}</b>` : "算不出(没有卖价)"}</em></div>
-      <div class="${over && !dimmed ? "c-over" : ""}"><b>${dimmed ? "≥ " : ""}${num(c.upfront_capital)}</b><i>开工本金(含批末余料)</i>
-        <em>${dimmed ? "只按拿得到的料算,是下界" : cap > 0 ? (over ? `<b class="neg">超过本金 ${num(cap)}(${(c.upfront_capital / cap).toFixed(1)} 倍)</b>:一次备不齐,把件数调小或分批` : `本金 ${num(cap)} 以内`) : "不按本金封顶"}${dimmed ? "" : fitLn}</em></div>
-      <div><b>${ageTag(c.oldest_age_h)}</b><i>用到的价里最旧的</i><em>${c.oldest_age_h == null ? "没有用到带观测时间的价"
-        : c.age_level === "red" ? "超过 24 小时,先进游戏看一眼" : c.age_level === "yellow" ? "超过 6 小时,下单前核一下" : "6 小时以内"}</em></div>
+        ${dimmed ? NA : `<em>${d ? `每天 ${fq(d.units)} 件 · 卡在<b>${esc(BIND_WORD[d.binding] || d.binding)}</b>` : "算不出(没有卖价)"}</em>`}</div>
+      ${beKPI}
     </div>
-    ${craftFocusLine(res, c)}
+    <p class="c-kv">${kv.join("")}</p>
+    ${craftBreakevenLine(res, c)}
     ${craftFocusHTML(res, c)}
-    ${unvHTML}
-    ${warnList(c.warnings)}
+    ${craftUnvHTML(res, c)}
+    ${warnCompact(c.warnings)}
   </section>`;
+}
+// 卡片上的警告:「数不能全信」的(CRAFT_WARN_BAD)逐条铺开;其余收成一行芯片,全文在悬停和 details 里
+function warnCompact(ws) {
+  if (!ws?.length) return "";
+  const bad = ws.filter(w => CRAFT_WARN_BAD.has(w.code)), rest = ws.filter(w => !CRAFT_WARN_BAD.has(w.code));
+  return warnList(bad) + (rest.length ? `<details class="c-howto c-warnfold"><summary>${rest.map(warnTag).join("")}
+    <span class="sub">${rest.length} 条提醒,点开看全文</span></summary>${warnList(rest)}</details>` : "");
 }
 // 「这一批总利润」(诉求 #3):主出售方式下这一批(params.qty 件)的利润,吃买单卖不完的不算;
 // 总利润率的分母是开工本金(含批末余料),不是稳态成本 —— 后者全卖掉时就等于利润率,没有新信息
 const TOTAL_TIP = "这一批的利润 = 卖得掉的件数 × 单根利润;吃买单撞上断崖卖不完的,按成本留在手里、不算进来。"
   + "总利润率 = 总利润 ÷ 开工本金(稳态消耗 + 批末余料):开工前真要掏的钱,回本快不快看它";
-function craftTotalKPI(res, c, p0, m0, dimmed, over) {
-  if (dimmed) return `<div><b>—</b><i>这一批总利润</i><em>拿不满料,算不准</em></div>`;
+function craftTotalKPI(res, c, p0, m0, dimmed, over, capLn = "") {
+  if (dimmed) return `<div><b>—</b><i>这一批总利润</i><em>拿不满料,算不准;开工本金 ≥ ${num(c.upfront_capital)}</em></div>`;
   const unsold = p0 && p0.sold != null && p0.sold < res.qty - 0.005;
   return `<div class="${over ? "c-over" : ""}" title="${esc(TOTAL_TIP)}"><b class="${p0 && p0.total >= 0 ? "pos" : "neg"}">${p0 ? sgn(p0.total) : "—"}</b>
-    <i>总利润(${num(res.qty)} 件,${MODE_WORD[m0]})· 总利润率 ${p0 ? spct(p0.total_pct) : "—"}</i>
-    <em>开工本金 ${num(c.upfront_capital)}${unsold ? `;只出得掉 ${fq(p0.sold)} 件,其余按成本留着` : ""}</em></div>`;
+    <i>这一批总利润(${num(res.qty)} 件,${MODE_WORD[m0]})· 总利润率 ${p0 ? spct(p0.total_pct) : "—"}</i>
+    <em>开工本金 ${num(c.upfront_capital)}(含批末余料)${unsold ? `;只出得掉 ${fq(p0.sold)} 件,其余按成本留着` : ""}${capLn}</em></div>`;
 }
 const ratio = x => (x == null || !isFinite(x) ? "—" : String(Math.round(x * 1000) / 1000));
 const ppct = x => (x == null || !isFinite(x) ? "—" : `${Math.round(x * 10000) / 100}%`);
@@ -1035,32 +1067,29 @@ const BE_TIP = "路线固定(买 / 做的拆分、专注开法、转化路线都
 const beText = b => b.never ? `<span class="neg">白送也亏</span>`
   : `≤ <b>${num(b.unit)}</b>(现在 ${num(b.now)},${b.headroom >= 0 ? `还能涨 ${pct(b.headroom)}` : `<span class="neg">已经高出 ${pct(-b.headroom)}</span>`})`;
 const cMainBE = (res, c) => (c?.breakeven || []).find(b => b.item === res.main_raw) || null;
+// 主原料的上限在卡片的 KPI 格里;这一行给「所有料一起涨多少归零」,其余投入物收进 details
 function craftBreakevenLine(res, c) {
   const bes = c?.breakeven || [];
   if (!c?.filled || !bes.length) return "";
-  const main = cMainBE(res, c) || bes[0];
+  const main = cMainBE(res, c);
   const rest = bes.filter(b => b !== main);
   const all = c.breakeven_all_pct;
-  return `<p class="c-beln" title="${esc(BE_TIP)}"><b>盈亏平衡:</b>${esc(cLabel(main.item))} 到手均价 ${beText(main)}${
-    all != null ? `;所有买的料一起涨 ${all >= 0 ? pct(all) : `<span class="neg">${spct(all)}</span>`} 归零` : ""}</p>${
-    rest.length ? `<details class="c-howto c-befold"><summary>其余 ${rest.length} 种料的到手均价上限</summary><ul>${rest.map(b =>
+  if (all == null && !rest.length) return "";
+  return `${all != null ? `<p class="c-beln" title="${esc(BE_TIP)}"><b>盈亏平衡:</b>所有买的料(买价和运费)一起涨 ${
+    all >= 0 ? `<b>${pct(all)}</b>` : `<span class="neg">${spct(all)}</span>`},这一批利润归零</p>` : ""}${
+    rest.length ? `<details class="c-howto c-befold"><summary>${main ? "其余" : ""} ${rest.length} 种料的到手均价上限</summary><ul>${rest.map(b =>
       `<li>${cItem(b.item, { noTag: true })} ${beText(b)} <span class="sub">这一批 ${fq(b.qty)} 个</span></li>`).join("")}</ul></details>` : ""}`;
 }
 
-// 专注这一行:开了哪几级、这一批要多少;超过今日可用时说清楚要攒几天,日化已经按每天的专注封顶
+// 专注一句话(专注开法对比的 summary):开了哪几级、每根、这一批 / 今日可用;超过今日可用的标出来,
+// 要攒几天放进悬停(日化已经按每天的专注封顶)
 function craftFocusLine(res, c) {
   const f = c.focus || {}, budget = res.focus?.budget;
   const perDay = craft.sd?.focus_per_day || 10000;
-  let over = "";
-  if (f.over_budget) {
-    over = ` <span class="wtag bad">这一批要的专注超过今日可用</span> 按每天恢复 ${num(perDay)} 算,这一批要攒约 ${
-      (f.effective / perDay).toFixed(1)} 天;日化已经按每天的专注封顶算过(见「日化」格悬停)。`;
-  }
-  const pick = res.focus?.budget_pick;
-  const pickLn = pick && !sameTiers(pick.tiers, f.tiers)
-    ? ` · 今日专注以内成本最低的开法是「${esc(tiersText(pick.tiers))}」(单根成本 ${num(pick.unit_cost)},见下面「专注开法」)` : "";
-  return `<p class="c-focusln">专注:${f.tiers?.length ? `${esc(tiersText(f.tiers))} 开,每根 ${num(f.per_unit)}(没有专精时 ${num(f.base_per_unit)})· 这一批 ${num(f.effective)}` : "不开"}
-    · 今日可用 ${num(budget)}${over}${pickLn}</p>`;
+  const over = f.over_budget ? ` <span class="wtag bad" title="${esc(`按每天恢复 ${num(perDay)} 算,这一批要攒约 ${
+    (f.effective / perDay).toFixed(1)} 天;日化已经按每天的专注封顶算过(见「日化」格悬停)`)}">超过今日可用</span>` : "";
+  return `专注:${f.tiers?.length ? `<span title="没有专精时每根 ${num(f.base_per_unit)}">${esc(tiersText(f.tiers))} 开,每根 ${num(f.per_unit)}</span> · 这一批 ${num(f.effective)}` : "不开"}
+    / 今日 ${num(budget)}${over}`;
 }
 const sameTiers = (a, b) => (a || []).length === (b || []).length && (a || []).every(t => (b || []).includes(t));
 
@@ -1069,7 +1098,8 @@ const sameTiers = (a, b) => (a || []).length === (b || []).length && (a || []).e
 // 不开专注是亏是赚、每多开一级多赚多少、今日专注够不够。以前这些字段一个都没显示
 function craftFocusHTML(res, c) {
   const pts = res.focus?.pareto || [];
-  if (!pts.length) return "";
+  const line = craftFocusLine(res, c);
+  if (!pts.length) return `<p class="c-focusln">${line}</p>`;
   const m0 = cModes(res)[0], s = res.sell || {};
   const net = m0 === "take" ? (s.take?.fill?.got > 0 ? s.take.fill.net_avg : null) : s.post?.net ?? null;
   const none = pts.find(p => !p.tiers?.length);
@@ -1093,7 +1123,13 @@ function craftFocusHTML(res, c) {
   const sum = none && net != null
     ? `不开专注每根 ${sgn(net - none.unit_cost)}${pick ? ` · 今日预算内最好:${esc(tiersText(pick.tiers))}(每根 ${sgn(net - pick.unit_cost)})` : ""}`
     : "没有卖价或不开专注凑不齐料,只能比成本";
-  return `<details class="c-focusfold"${craft.focusOpen ? " open" : ""}><summary>专注开法对比(${pts.length} 种)<em>${sum}</em></summary>
+  const f = c.focus || {};
+  const pickLn = pick && !sameTiers(pick.tiers, f.tiers)
+    ? `今日专注以内成本最低的开法是「${esc(tiersText(pick.tiers))}」(单根成本 ${num(pick.unit_cost)})。` : "";
+  const spf = c.filled ? c.silver_per_focus : null;
+  return `<details class="c-focusfold"${craft.focusOpen ? " open" : ""}><summary>${line} <em>· 专注开法对比 ${pts.length} 种:${sum}</em></summary>
+    <div class="c-spf"><span>每点专注值 <b>${spf == null ? "—" : snum(spf)}</b> 银</span>${spfBar(spf)}</div>
+    ${pickLn ? `<p class="sub">${pickLn}</p>` : ""}
     <div class="tablewrap"><table class="tight c-focust">
       <thead><tr><th class="l">开专注的级</th><th>每根专注</th><th>单根成本</th><th>单根利润(${MODE_WORD[m0]})</th>
         <th title="(这种开法的利润 − max(0, 不开专注的利润))÷ 每根专注;绿色 = 超过 premium 门槛 ${num(th)}">每点专注值</th>
@@ -1109,62 +1145,83 @@ const REF_NOTE = {
   market: "参照:全部吃卖一、不转化、下级料买现成 —— 什么都不优化时的成本,拿来比",
   bid: "参照:原料挂买单收 —— 纸面上便宜,但收不收得到、要等多久都不知道,创建费下单就扣",
 };
+// 减密:9 列。挂卖 / 吃买单两列利润并成「利润」一列(主出售方式,另一种卖法在悬停里),
+// 「专注/根」并进「银/专注点」的悬停;警告列最多两个芯片、数不能全信的优先,其余写「+N」。
+// 默认只列前 CRAFT_CANDS_SHOWN 条普通候选和参照行,「显示全部」展开(craft.candsAll)
+const CRAFT_CANDS_SHOWN = 5;
+const CANDS_COLS = 9;
 function craftCandsHTML(res) {
   const cands = res.candidates || [];
   if (!cands.length) return "";
   const cap = cCapital(res), th = craftPremiumSPF();
-  const modes = cModes(res);
+  const modes = cModes(res), m0 = modes[0], m1 = modes.find(m => m !== m0);
   const row = (c, i) => {
-    const pp = c.profit?.post, pt = c.profit?.take, d = c.daily, f = c.focus || {};
+    const d = c.daily, f = c.focus || {};
+    const p0 = c.profit?.[m0], p1 = m1 ? c.profit?.[m1] : null;
     const open = craft.open.has(c.id);
     // 拿不满料:成本只是拿到的那一部分除以整批件数,是下界;照常按正数、绿色显示的话,
     // 「全部吃卖一」这种参照行看起来比推荐那条便宜得多、利润高得多 —— 正好反着读
     const lb = !c.filled;
     const LB_TIP = "拿不满料:成本只按拿得到的那部分算,是下界,利润、每点专注值、日化都不能当真";
-    const profitCell = (pl, mode) => !pl ? `<td class="sub">—</td>`
-      : lb ? `<td class="sub${mode === modes[0] ? " primary" : ""}" title="${LB_TIP}">—</td>`
-      : `<td class="${pl.unit >= 0 ? "pos" : "neg"}${mode === modes[0] ? " primary" : ""}">${sgn(pl.unit)}<span class="subln">${spct(pl.pct)}${
-        pl.sold != null && pl.sold < res.qty - 0.005 ? ` · 出 ${fq(pl.sold)} 件` : ""}</span></td>`;
+    const NA = `<td class="sub" title="${LB_TIP}">—</td>`;
+    const altTip = p1 ? `${MODE_WORD[m1]}:每根 ${sgn(p1.unit)}(${spct(p1.pct)})${
+      p1.sold != null && p1.sold < res.qty - 0.005 ? `,只出得掉 ${fq(p1.sold)} 件` : ""};这一批 ${sgn(p1.total)}` : `${m1 ? MODE_WORD[m1] + "算不出" : ""}`;
+    const profitCell = !p0 ? `<td class="sub" title="${esc(altTip)}">—</td>` : lb ? NA
+      : `<td class="primary ${p0.unit >= 0 ? "pos" : "neg"}" title="${esc(altTip)}">${sgn(p0.unit)}<span class="subln">${spct(p0.pct)}${
+        p0.sold != null && p0.sold < res.qty - 0.005 ? ` · 出 ${fq(p0.sold)} 件` : ""}</span></td>`;
     // 这一批(主出售方式):总利润,下一行总利润率(÷ 开工本金)
-    const totalCell = pl => !pl ? `<td class="sub">—</td>`
-      : lb ? `<td class="sub" title="${LB_TIP}">—</td>`
-      : `<td class="${pl.total >= 0 ? "pos" : "neg"}" title="${esc(TOTAL_TIP)}">${sgn(pl.total)}<span class="subln">${spct(pl.total_pct)}</span></td>`;
+    const totalCell = !p0 ? `<td class="sub">—</td>` : lb ? NA
+      : `<td class="${p0.total >= 0 ? "pos" : "neg"}" title="${esc(TOTAL_TIP)}">${sgn(p0.total)}<span class="subln">${spct(p0.total_pct)}</span></td>`;
+    const focusTip = f.tiers?.length ? `专注 ${num(f.per_unit)}/根(没有专精时 ${num(f.base_per_unit)});开专注的级:T${f.tiers.join("、T")}${
+      f.over_budget ? ";这一批超过今日可用专注" : ""}` : "不开专注";
+    // 警告:去重,数不能全信的在前,最多两个,其余收成「+N」(悬停列全)
     const codes = new Map();
+    if (!c.filled) codes.set("unfilled", { code: "depth_short", msg: "拿不满料", label: "拿不满料" });
     for (const w of c.warnings || []) if (!codes.has(w.code)) codes.set(w.code, w);
+    const ws = [...codes.values()].sort((a, b) => CRAFT_WARN_BAD.has(b.code) - CRAFT_WARN_BAD.has(a.code));
+    const tag = w => w.label ? `<span class="wtag bad">${esc(w.label)}</span>` : warnTag(w);
+    const more = ws.length > 2 ? ` <span class="wtag more" title="${esc(ws.slice(2).map(w => warnText(w.msg || w.code)).join("\n"))}">+${ws.length - 2}</span>` : "";
     return `<tr class="main${c.reference ? " refrow" : ""}${c.filled ? "" : " unfilled"}${open ? " open" : ""}" data-cid="${esc(c.id)}">
       <td class="l">${c.reference ? `<span class="kind flip">参照</span> ` : `<span class="rank">${i + 1}</span> `}<span class="c-route">${esc(c.label)}</span>
         ${c.reference ? `<span class="subln">${esc(REF_NOTE[c.reference] || "参照行")}</span>` : ""}</td>
       <td${lb ? ` title="${LB_TIP}"` : ""}>${lb ? `≥ ${num(c.unit_cost)}<span class="subln">只拿到一部分料</span>` : num(c.unit_cost)}</td>
-      ${profitCell(pp, "post")}${profitCell(pt, "take")}
-      ${totalCell(c.profit?.[modes[0]])}
-      <td class="${f.over_budget ? "neg" : ""}" title="${esc(f.tiers?.length ? `开专注的级:T${f.tiers.join("、T")};没有专精时每根 ${num(f.base_per_unit)}${f.over_budget ? ";这一批超过今日可用专注" : ""}` : "不开专注")}">${f.per_unit ? num(f.per_unit) : "0"}</td>
-      ${lb ? `<td class="sub" title="${LB_TIP}">—</td>`
-        : `<td class="${c.silver_per_focus != null && c.silver_per_focus >= th ? "pos" : c.silver_per_focus < 0 ? "neg" : ""}">${c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</td>`}
-      ${lb ? `<td class="sub" title="${LB_TIP}">—</td>`
-        : `<td title="${esc(limitsText(d))}">${d ? sgn(d.profit) : "—"}<span class="subln">${d ? `${fq(d.units)} 件/天 · ${esc(BIND_WORD[d.binding] || d.binding)}` : ""}</span></td>`}
+      ${profitCell}${totalCell}
+      ${lb ? NA : `<td title="${esc(limitsText(d))}">${d ? sgn(d.profit) : "—"}<span class="subln">${d ? `${fq(d.units)} 件/天 · ${esc(BIND_WORD[d.binding] || d.binding)}` : ""}</span></td>`}
+      ${lb ? NA : `<td class="${c.silver_per_focus != null && c.silver_per_focus >= th ? "pos" : c.silver_per_focus < 0 ? "neg" : ""}" title="${esc(focusTip)}">${
+        c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}${f.over_budget ? `<span class="subln neg">专注不够</span>` : ""}</td>`}
       <td class="${!lb && cap > 0 && c.upfront_capital > cap ? "neg" : ""}">${lb ? "≥ " : ""}${silver(c.upfront_capital)}</td>
       <td>${ageTag(c.oldest_age_h)}</td>
-      <td class="l wcell">${c.filled ? "" : `<span class="wtag bad">拿不满料</span>`}${[...codes.values()].map(warnTag).join("")}</td>
-    </tr>${open ? `<tr class="detail"><td colspan="11">${craftStepsHTML(c, res)}</td></tr>` : ""}`;
+      <td class="l wcell">${ws.slice(0, 2).map(tag).join("")}${more}</td>
+    </tr>${open ? `<tr class="detail"><td colspan="${CANDS_COLS}">${craftStepsHTML(c, res)}</td></tr>` : ""}`;
   };
   const normal = cands.filter(c => !c.reference), refs = cands.filter(c => c.reference);
-  return `<section class="c-sec">
-    <h3>候选路线 <span class="sub">前 ${normal.length} 条,按${esc({ daily: "日化收益", unit: "单根利润", per_focus: "每点专注值", pct: "利润率" }[res.params_used?.sort] || "日化收益")}排;
-      点一行看步骤清单。利润主列是${MODE_WORD[modes[0]]}</span></h3>
+  // 展开着的行即使排在后面也要显示(点了「看步骤清单」的那条一定是第一条)
+  const shown = craft.candsAll ? normal : normal.filter((c, i) => i < CRAFT_CANDS_SHOWN || craft.open.has(c.id));
+  const hidden = normal.length - shown.length;
+  return `<details class="c-fold c-sec c-candsec" data-fold="cands"${cFold("cands") ? " open" : ""}>
+    <summary>候选路线 <em>前 ${normal.length} 条,按${esc({ daily: "日化收益", unit: "单根利润", per_focus: "每点专注值", pct: "利润率" }[res.params_used?.sort] || "日化收益")}排;
+      点一行看步骤清单。利润按${MODE_WORD[m0]}${m1 ? `,${MODE_WORD[m1]}的在悬停里` : ""}</em></summary>
     <div class="tablewrap"><table class="tight c-cands">
       <thead><tr><th class="l">路线</th><th title="每件的稳态成本(买料 + 转化 + 站费,批末余料按所选方式估值)">单根成本</th>
-        <th title="挂卖单:卖一压 1 银挂上去,到手 ×(1 − 税 − 创建费)">挂卖利</th>
-        <th title="吃买单:沿买单阶梯卖,到手 ×(1 − 税),断崖之后不卖">吃买单利</th>
+        <th title="${esc(m0 === "take" ? "吃买单:沿买单阶梯卖,到手 ×(1 − 税),断崖之后不卖" : "挂卖单:卖一压 1 银挂上去,到手 ×(1 − 税 − 创建费)")}。下一行是利润率;另一种卖法在悬停里">利润(${MODE_WORD[m0]})</th>
         <th title="${esc(TOTAL_TIP)}">这一批</th>
-        <th title="按你的专精 FCE 折算后,每件多少专注">专注/根</th>
-        <th title="(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准。绿色 = 超过 premium 门槛">银/专注点</th>
         <th title="每天件数(专注、成交量、本金、批量里最小的)× 单根利润">日化</th>
+        <th title="(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准。绿色 = 超过 premium 门槛;每根专注在悬停里">银/专注点</th>
         <th title="开工前要备齐的钱:稳态消耗 + 批末余料">本金</th>
         <th title="用到的价里最旧的:超过 6 小时黄、超过 24 小时红">数据</th><th class="l">警告</th></tr></thead>
-      <tbody>${normal.map(row).join("")}
-        ${refs.length ? `<tr class="sep"><td colspan="11">参照行(不参与推荐)</td></tr>${refs.map(row).join("")}` : ""}</tbody>
+      <tbody>${shown.map(c => row(c, normal.indexOf(c))).join("")}
+        ${hidden > 0 || craft.candsAll && normal.length > CRAFT_CANDS_SHOWN ? `<tr class="sep"><td colspan="${CANDS_COLS}">
+          <button class="act ghost mini-act" data-cands-all>${craft.candsAll ? `只看前 ${CRAFT_CANDS_SHOWN} 条` : `显示全部 ${normal.length} 条`}</button></td></tr>` : ""}
+        ${refs.length ? `<tr class="sep"><td colspan="${CANDS_COLS}">参照行(不参与推荐)</td></tr>${refs.map(row).join("")}` : ""}</tbody>
     </table></div>
-  </section>`;
+  </details>`;
+}
+// 只重画候选路线这一节:展开一行、显示全部时不用整块重写结果区(原料来路、卡片不动,滚动位置也不跳)
+function craftRenderCands() {
+  const sec = $("c-result").querySelector(".c-candsec");
+  if (!craft.data) return;
+  if (!sec) { craftRender(craft.data); return; }
+  sec.outerHTML = craftCandsHTML(craft.data);
 }
 
 // 步骤清单:买什么、在哪城、多少件、价位、金额、观测时间和来源;转化几次、从哪到哪;
@@ -1311,6 +1368,12 @@ $("c-result").addEventListener("toggle", e => {
   if (e.target.classList?.contains("c-focusfold")) craft.focusOpen = e.target.open;
   // 「数据」那一块:重画时带着 open 属性建出来也会触发 toggle,只记用户点 summary 的那一次
   if (e.target.classList?.contains("c-data") && craft.dataToggleArmed) craft.dataOpen = e.target.open;
+  // 「原料来路」「候选路线」的开合存本机(craft.p.fold):重画、下次打开都照旧
+  const fk = e.target.dataset?.fold;
+  if (fk && e.target.tagName === "DETAILS" && cFold(fk) !== e.target.open) {
+    craft.p.fold = { ...craft.p.fold, [fk]: e.target.open };
+    craftSave();
+  }
 }, true);
 // toggle 事件分不出是用户点的还是重画时带着 open 属性建出来的:只在点 summary 之后认一次
 $("c-result").addEventListener("click", e => {
@@ -1333,7 +1396,14 @@ $("c-result").addEventListener("click", e => {
     return;
   }
   if (e.target.closest("[data-goto-raw]")) {
-    $("c-result").querySelector(".c-raw")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    const raw = $("c-result").querySelector(".c-raw");
+    if (raw) raw.open = true;
+    raw?.scrollIntoView({ block: "start", behavior: "smooth" });
+    return;
+  }
+  if (e.target.closest("[data-cands-all]")) {
+    craft.candsAll = !craft.candsAll;
+    craftRenderCands();
     return;
   }
   const ra = e.target.closest("[data-raw-all]");
@@ -1346,7 +1416,11 @@ $("c-result").addEventListener("click", e => {
   const st = e.target.closest("[data-open-steps]");
   if (st) {
     craft.open.add(st.dataset.openSteps);
-    craftRender(craft.data);
+    craft.p.fold = { ...craft.p.fold, cands: true };
+    craftSave();
+    craftRenderCands();
+    const sec = $("c-result").querySelector(".c-candsec");
+    if (sec) sec.open = true;
     $("c-result").querySelector(`tr.main[data-cid="${CSS.escape(st.dataset.openSteps)}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
     return;
   }
@@ -1355,7 +1429,7 @@ $("c-result").addEventListener("click", e => {
   if (!tr) return;
   const id = tr.dataset.cid;
   if (craft.open.has(id)) craft.open.delete(id); else craft.open.add(id);
-  craftRender(craft.data);
+  craftRenderCands();
 });
 
 function craftHeadHTML(res) {
@@ -1662,35 +1736,45 @@ async function craftMatrixLoad(opts = {}) {
   mx.pending = false;
   craftMatrixRender();
 }
+// 减密:利润率并进单根利润的下一行、卡在并进日化的下一行、警告改成计数芯片(悬停列全);
+// 路线名只留和默认开法不一样的片段(全文在悬停里)。表头点了排序,排的都是主数
 const MX_COLS = [
   { k: "level", label: "档位", l: true },
-  { k: "label", label: "最好的路线", l: true, str: true },
+  { k: "label", label: "最好的路线", l: true, str: true, tip: "只写和默认开法(原料混合最优 · 下级料自动比价)不一样的部分,悬停看全名" },
   { k: "unit_cost", label: "单根成本" },
-  { k: "profit", label: "单根利润", tip: "主出售方式下每件的利润" },
-  { k: "pct", label: "利润率" },
+  { k: "profit", label: "单根利润", tip: "主出售方式下每件的利润;下一行是利润率" },
   { k: "spf", label: "银/专注点", tip: "(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准" },
   { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数(总量 ÷ 自然日)" },
   { k: "total", label: "这一批利润", tip: "每档 N 件、主出售方式;吃买单卖不完的不算。下一行是总利润率(÷ 开工本金,含批末余料)" },
-  { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的" },
-  { k: "binding", label: "卡在", l: true, str: true },
-  { k: "be", label: "主原料上限", tip: "照这条路线、别的价不变,主原料到手均价涨到这里利润归零(保守值:价真涨了会换路线)。下面一行是还能涨几成" },
+  { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的。下一行是卡在哪一项" },
+  { k: "be", label: "主原料上限", tip: "照这条路线、别的价不变,主原料到手均价涨到这里利润归零(保守值:价真涨了会换路线)。下一行是还能涨几成" },
   { k: "age", label: "数据", tip: "用到的价里最旧的" },
+  { k: "warns", label: "警告", tip: "条数;悬停看全文" },
 ];
+// 路线名压缩:去掉默认的两个片段,一个不剩就写「默认开法」
+const MX_DEFAULT_PARTS = new Set(["原料混合最优", "下级料自动比价"]);
+const mxLabel = label => {
+  const parts = String(label || "").split(" · ").filter(x => x && !MX_DEFAULT_PARTS.has(x));
+  return parts.length ? parts.join(" · ") : "默认开法";
+};
 function mxRows(res) {
   const m0 = res.params_used?.sell?.modes?.[0] || "post";
   return (res.cells || []).map(c => {
     const b = c.best, pl = b?.profit?.[m0];
     // 拿不满料的格子:成本是下界,利润、每点专注值、日化都不能当真,按「算不出」处理(排序时排最后)
     const lb = !!b && !b.filled;
+    const ws = new Map();
+    for (const w of [...(c.warnings || []), ...(b?.warnings || [])]) if (!ws.has(w.code)) ws.set(w.code, w);
     return {
       c, b, lb, target: c.target, level: c.tier * 10 + c.enchant,
-      label: b?.label || c.error || "",
+      label: b?.label ? mxLabel(b.label) : c.error || "", fullLabel: b?.label || c.error || "",
       unit_cost: b?.unit_cost ?? null, profit: lb ? null : pl?.unit ?? null, pct: lb ? null : pl?.pct ?? null,
       spf: lb ? null : b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
       daily: lb ? null : b?.daily?.profit ?? null, binding: b?.daily && !lb ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
       total: lb ? null : pl?.total ?? null, total_pct: lb ? null : pl?.total_pct ?? null,
       be: lb ? null : b?.main_raw_breakeven?.unit ?? null, beH: lb ? null : b?.main_raw_breakeven?.headroom ?? null,
       age: b?.oldest_age_h ?? c.data?.oldest_age_h ?? null,
+      ws: [...ws.values()], warns: ws.size, bad: [...ws.values()].some(w => CRAFT_WARN_BAD.has(w.code)),
     };
   });
 }
@@ -1698,7 +1782,7 @@ function craftMatrixRender() {
   const box = $("c-mx-body");
   const res = mx.data, L = cLine();
   const sellAt = res?.params_used?.sell?.city;
-  $("c-mx-sum").textContent = mx.pending ? "正在算 25 档…(每档一次完整计算,第一次要几秒)"
+  $("c-mx-sum").textContent = mx.pending ? "正在算 25 档…(服务端有数据快照时一下就好,第一次要几秒)"
     : res ? `${res.line === L.line ? "" : "(还是上一条线的)"}${res.city} 生产${sellAt && sellAt !== res.city ? ` · 在 ${sellAt} 卖` : ""} · 每档 ${num(res.qty)} 件 · 算于 ${hms(res.now)} · 点一行切到那个目标`
     : "点开算这条线全部 25 档";
   if (mx.err) {
@@ -1724,33 +1808,28 @@ function craftMatrixRender() {
       <div class="ctrl"><label for="c-mx-qty">每档按几件算</label>
         <input type="number" id="c-mx-qty" min="1" max="10000" step="1" value="${esc(mx.qty || "")}" placeholder="${esc(craft.p.qty)}"></div>
       <button class="act ghost" data-mx-reload>重算这张表</button>
-      <span class="sub">利润按${MODE_WORD[m0]}算${sellAt && sellAt !== res.city ? `,在 ${esc(sellAt)} 卖` : ""};专注${craft.p.focusMode === "custom" ? "按「自动」(矩阵不支持自选哪几级)" : "照参数条"};
-        跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 这几项改过的话,当前目标这一格和上面的卡片会对不上。
-        ${qtyBound ? `有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。` : ""}
-        ${rows.some(r => r.lb) ? "浅红底的格子拿不满料:成本是下界,利润和日化算不准,排在最后。" : ""}
-        推送命中当前目标的配方树时,这张表也跟着重算。</span>
+      <details class="c-howto"><summary>口径:矩阵和上面卡片可能对不上的几种情况</summary><ul>
+        <li>利润按${MODE_WORD[m0]}算${sellAt && sellAt !== res.city ? `,在 ${esc(sellAt)} 卖` : ""};专注${craft.p.focusMode === "custom" ? "按「自动」(矩阵不支持自选哪几级)" : "照参数条"}。</li>
+        <li>跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 这几项改过的话,当前目标这一格和上面的卡片会对不上。</li>
+        ${qtyBound ? `<li>有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。</li>` : ""}
+        ${rows.some(r => r.lb) ? "<li>浅红底的格子拿不满料:成本是下界,利润和日化算不准,排在最后。</li>" : ""}
+        <li>推送命中当前目标的配方树时,这张表也跟着重算。</li></ul></details>
     </div>
     <div class="tablewrap"><table class="tight c-mxt">
-      <thead><tr>${MX_COLS.map(c => `<th data-mxk="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}<th class="l">警告</th></tr></thead>
-      <tbody>${rows.map(r => {
-        const ws = new Map();
-        for (const w of [...(r.c.warnings || []), ...(r.b?.warnings || [])]) if (!ws.has(w.code)) ws.set(w.code, w);
-        return `<tr class="main${r.target === cur ? " cur" : ""}${r.b && !r.b.filled ? " unfilled" : ""}" data-mxt="${esc(r.target)}">
+      <thead><tr>${MX_COLS.map(c => `<th data-mxk="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(r => `<tr class="main${r.target === cur ? " cur" : ""}${r.b && !r.b.filled ? " unfilled" : ""}" data-mxt="${esc(r.target)}">
           <td class="l"><b>${esc(cTier(r.target))}</b> <span class="sub">${esc(cName(r.target))}</span></td>
-          <td class="l">${esc(r.label || "—")}${r.lb ? ` <span class="wtag bad">拿不满料</span>` : ""}</td>
+          <td class="l" title="${esc(r.fullLabel)}">${esc(r.label || "—")}${r.lb ? ` <span class="wtag bad">拿不满料</span>` : ""}</td>
           <td${r.lb ? ` title="拿不满料:只按拿得到的料算,是下界"` : ""}>${r.lb ? "≥ " : ""}${num(r.unit_cost)}</td>
-          <td class="${r.profit == null ? "" : r.profit >= 0 ? "pos" : "neg"}">${sgn(r.profit)}</td>
-          <td>${spct(r.pct)}</td>
+          <td class="${r.profit == null ? "" : r.profit >= 0 ? "pos" : "neg"}">${sgn(r.profit)}${r.pct == null ? "" : `<span class="subln">${spct(r.pct)}</span>`}</td>
           <td class="${r.spf != null && r.spf >= th ? "pos" : ""}">${snum(r.spf)}</td>
           <td>${r.volume == null ? `<span class="sub" title="没有成交量数据">—</span>` : fq(r.volume)}</td>
           <td class="${r.total == null ? "" : r.total >= 0 ? "pos" : "neg"}">${sgn(r.total)}${r.total_pct == null ? "" : `<span class="subln">${spct(r.total_pct)}</span>`}</td>
-          <td class="${r.daily == null ? "" : r.daily >= 0 ? "pos" : "neg"}"><b>${sgn(r.daily)}</b></td>
-          <td class="l">${esc(r.binding || "—")}</td>
+          <td class="${r.daily == null ? "" : r.daily >= 0 ? "pos" : "neg"}"><b>${sgn(r.daily)}</b>${r.binding ? `<span class="subln">卡在${esc(r.binding)}</span>` : ""}</td>
           <td>${r.be == null ? "—" : num(r.be)}${r.beH == null ? "" : `<span class="subln${r.beH < 0 ? " neg" : ""}">${spct(r.beH)}</span>`}</td>
           <td>${ageTag(r.age)}</td>
-          <td class="l wcell">${[...ws.values()].map(warnTag).join("")}</td>
-        </tr>`;
-      }).join("")}</tbody>
+          <td>${r.warns ? `<span class="wtag${r.bad ? " bad" : ""}" title="${esc(r.ws.map(w => `${CRAFT_WARN[w.code] || w.code}:${warnText(w.msg || "")}`).join("\n"))}">${r.warns} 条</span>` : ""}</td>
+        </tr>`).join("")}</tbody>
     </table></div>`;
   if (typing) $("c-mx-qty").focus();
 }

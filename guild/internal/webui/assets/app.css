@@ -619,7 +619,8 @@ a.mini:hover{background:var(--ink); color:var(--paper)}
 .checks label{display:flex; gap:4px; align-items:center; font-size:12.5px !important; color:var(--ink-mid) !important}
 /* 目标网格:T4~T8 × .0~.4,格子里写半成品名。档位和名字排成一行:两行的格子让参数条高出
    五六十像素,推荐卡片和「买料」那句就被挤到第一屏以下 */
-.tgrid{display:grid; grid-template-columns:auto repeat(5,minmax(76px,124px)); gap:3px; align-items:stretch}
+/* 减密:格子里只写档位,名字在 title 和 #c-target-name 里;网格窄一半,参数字段能并到同一行 */
+.tgrid{display:grid; grid-template-columns:auto repeat(5,minmax(40px,56px)); gap:3px; align-items:stretch}
 .tgrid .th{font-size:10.5px; font-weight:600; color:var(--ink-soft); align-self:center; text-align:center; padding:0 4px}
 .tgrid button{font:inherit; cursor:pointer; border:1px solid var(--rule-soft); border-radius:var(--r);
   background:var(--surface); color:var(--ink); padding:2px 5px; text-align:left; min-width:0;
@@ -629,6 +630,8 @@ a.mini:hover{background:var(--ink); color:var(--paper)}
 .tgrid button:hover{border-color:var(--ink)}
 .tgrid button.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 .tgrid button.on i{color:var(--paper); opacity:.75}
+.tgrid button i{display:none}
+.tgrid button{justify-content:center}
 #c-target-name{margin-left:6px; color:var(--ink); font-weight:600}
 
 /* 折叠区:高级参数、校准、数据说明、矩阵 */
@@ -680,7 +683,7 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
   color:var(--bronze-ink); box-shadow:inset 0 0 0 1px var(--rule); white-space:nowrap; cursor:help}
 .wtag.bad{color:var(--warn); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--warn),transparent 50%)}
 /* 推荐卡片:数字格复用总览的 .kpis,下面几行是专注、未核实参数、警告 */
-.c-card{margin:6px 0 4px; padding:12px 14px 12px; background:var(--surface); border:1px solid var(--rule);
+.c-card{margin:6px 0 4px; padding:14px 16px; background:var(--surface); border:1px solid var(--rule);
   border-top:3px solid var(--ink); border-radius:var(--r)}
 .c-card.empty{border-top-color:var(--warn)}
 .c-card-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
@@ -697,6 +700,19 @@ a.citem:hover{color:var(--bronze); border-bottom-color:var(--bronze)}
 .c-befold{margin-top:2px}
 .c-feeseen{margin:4px 0 0; font-size:11.5px; line-height:1.5; max-width:60ch}
 .c-feeseen .mini-act{margin-left:4px}
+/* 卡片 KPI 下面那一行小字:单根成本、到手、每点专注、价格、站费,公式都在悬停里 */
+.c-kv{display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0; font-size:12px; color:var(--ink-mid)}
+.c-kv b{color:var(--ink); font-weight:600}
+.c-kv > span[title]{cursor:help}
+.c-spf{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; margin:6px 0 2px; font-size:12px; color:var(--ink-mid)}
+.c-spf .pfbar{flex:0 1 220px}
+.c-unv-ok{margin:6px 0 0; font-size:11.5px}
+.c-unvfold .c-unv{margin-top:6px}
+.c-warnfold{margin-top:6px}
+.c-warnfold > summary .wtag{cursor:pointer}
+.c-why{margin:-4px 0 8px}
+.c-why p{margin:4px 0 0; max-width:120ch; line-height:1.55}
+.wtag.more{color:var(--ink-mid)}
 .c-head .verdict em{font-style:normal; font-size:11px; color:var(--ink-mid)}
 /* 专注开法对比(focus.pareto) */
 .c-focusfold{margin:6px 0 0; font-size:12.5px}
@@ -757,7 +773,7 @@ table.c-rawt tr.direct > td{font-weight:600; box-shadow:inset 0 1px 0 var(--rule
 .c-rawmore{margin-top:4px}
 /* 整条线矩阵 */
 .c-mxbar{padding:8px 0 2px}
-.c-mxbar .sub{flex:1 1 380px; max-width:90ch}
+.c-mxbar .c-howto{flex:1 1 380px; max-width:90ch; align-self:center}
 table.c-mxt tr.main{cursor:pointer}
 table.c-mxt td.l{white-space:normal}
 table.c-mxt td.wcell{white-space:normal; min-width:120px; max-width:240px}
@@ -765,8 +781,10 @@ table.c-mxt tr.cur > td{background:var(--surface-2); box-shadow:inset 0 1px 0 va
 table.c-mxt tr.cur > td:first-child{box-shadow:inset 3px 0 0 var(--bronze), inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)}
 table.c-mxt tr.unfilled > td{background:color-mix(in oklab,var(--warn),var(--surface) 94%)}
 table.c-mxt tr.unfilled > td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
-.c-sec{margin-top:6px}
+.c-sec{margin-top:18px}
+.c-sec h3{margin:0 0 6px}
 .c-sec h3 .sub{font-weight:400; margin-left:6px}
+table.c-cands td,table.c-mxt td{padding-block:6px}
 table.c-cands td .subln{font-weight:400}
 table.c-cands tr.main{cursor:pointer}
 table.c-cands tr.main.open > td{background:var(--surface-2)}
