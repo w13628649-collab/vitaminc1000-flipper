@@ -101,6 +101,11 @@ type ProfitLine struct {
 	// Total 是这一批的利润 = Sold × Unit。吃买单卖不完的那几件不在里面:
 	// 它们按成本留在手里(和批末余料 carry 一个口径),不能拿断崖之前的均价去外推
 	Total float64 `json:"total"`
+	// TotalPct 是这一批的总利润率 = Total ÷ 开工本金(Candidate.UpfrontCapital,含批末余料)。
+	// 和 Pct 的区别:Pct 的分母是稳态单根成本;这里是开工前真要掏的钱 ——
+	// 批末余料、吃买单卖不完压着的料都在分母里。分母用 TotalCost 的话,全卖掉、余料结转时
+	// 它就等于 Pct,没有新信息;这个数回答的是「回本快不快」
+	TotalPct float64 `json:"total_pct"`
 	// MaxQty 只有吃买单有:断崖之前最多卖几件
 	MaxQty *float64 `json:"max_qty,omitempty"`
 }
@@ -143,6 +148,8 @@ type Daily struct {
 	Binding string      `json:"binding"`
 	Profit  float64     `json:"profit"`
 	Limits  DailyLimits `json:"limits"`
+	// ROC 是本金日回报率 = Profit ÷ 本金(daily.capital);没设本金时为 nil
+	ROC *float64 `json:"roc"`
 }
 
 // Candidate 是一条候选路线。
@@ -235,10 +242,10 @@ type ParamsUsed struct {
 
 // Result 是 Plan 的输出,形状对着 POST /api/refine/plan 的响应(设计 §4.4)。
 type Result struct {
-	Target     string               `json:"target"`
-	Line       string               `json:"line"`
-	City       string               `json:"city"`
-	Qty        int                  `json:"qty"`
+	Target string `json:"target"`
+	Line   string `json:"line"`
+	City   string `json:"city"`
+	Qty    int    `json:"qty"`
 	// MainRaw 是顶层配方的原料(主原料),界面和矩阵靠它从 breakeven 里挑主原料那一项
 	MainRaw    string               `json:"main_raw"`
 	ParamsUsed ParamsUsed           `json:"params_used"`
@@ -595,6 +602,7 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 		c.Profit.Post = &ProfitLine{Net: si.Post.Net, Unit: si.Post.Net - c.UnitCost, Sold: N}
 		c.Profit.Post.Pct = pct(c.Profit.Post.Unit, c.UnitCost)
 		c.Profit.Post.Total = c.Profit.Post.Sold * c.Profit.Post.Unit
+		c.Profit.Post.TotalPct = pct(c.Profit.Post.Total, c.UpfrontCapital)
 	}
 	if si.Take != nil && si.Take.Fill.Got > 0 {
 		// 每件利润按卖掉的那几件的均价算;断崖之后的不外推(见 ProfitLine.Total)
@@ -602,6 +610,7 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 			Sold: si.Take.Fill.Got, MaxQty: si.Take.MaxQty}
 		c.Profit.Take.Pct = pct(c.Profit.Take.Unit, c.UnitCost)
 		c.Profit.Take.Total = c.Profit.Take.Sold * c.Profit.Take.Unit
+		c.Profit.Take.TotalPct = pct(c.Profit.Take.Total, c.UpfrontCapital)
 	}
 	if p.Sell.Modes[0] == SellTake {
 		c.primary = c.Profit.Take
@@ -692,6 +701,10 @@ func (e *engine) daily(c Candidate, ev *evalResult, profit float64) *Daily {
 	}
 	d.Units = units
 	d.Profit = units * profit
+	if p.Daily.Capital > 0 {
+		roc := d.Profit / p.Daily.Capital
+		d.ROC = &roc
+	}
 	return d
 }
 

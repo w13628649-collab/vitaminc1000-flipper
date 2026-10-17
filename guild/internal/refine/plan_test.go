@@ -507,6 +507,59 @@ func Test步骤清单的账对得上(t *testing.T) {
 	}
 }
 
+// 总利润率(诉求 #3)的分母是开工本金,不是稳态成本:吃买单撞上断崖、只卖得掉 3 件时,
+// 另外 7 件的料钱和批末余料都压在本金里,总利润率要明显低于单根利润率。
+func TestPlan总利润率按开工本金算_吃买单卖不完的料钱在分母里(t *testing.T) {
+	b := Books{}
+	setAsks(b, "T5_ORE_LEVEL4@4", "Thetford", 1000, 500)
+	setAsks(b, "T4_METALBAR_LEVEL4@4", "Thetford", 5000, 100)
+	setAsks(b, "T5_METALBAR_LEVEL4@4", "Thetford", 30000, 5)
+	// 买一 40000 只有 3 件,下一档掉到 5000:断崖(落差 87.5% > 30%)
+	setBids(b, "T5_METALBAR_LEVEL4@4", "Thetford", 40000, 3, 5000, 100)
+	p := params("T5_METALBAR_LEVEL4@4")
+	p.Focus.Mode = FocusOff
+	p.Sell.Modes = []string{SellTake, SellPost}
+	p.Daily.Capital = 1_000_000
+	res, err := Plan(Input{Params: p, Books: b, Recipes: EmbeddedRecipes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := res.Candidates[0]
+	tk, po := c.Profit.Take, c.Profit.Post
+	if tk == nil || po == nil || !c.Filled {
+		t.Fatalf("两种卖法都要有: %+v", c.Profit)
+	}
+	N := float64(p.Qty)
+	assertNear(t, "吃买单卖得掉", tk.Sold, 3, 1e-9)
+	assertNear(t, "吃买单总利润", tk.Total, 3*tk.Unit, 1e-6)
+	assertNear(t, "吃买单总利润率", tk.TotalPct, tk.Total/c.UpfrontCapital, 1e-12)
+	assertNear(t, "挂卖总利润率", po.TotalPct, N*po.Unit/c.UpfrontCapital, 1e-12)
+	// 开工本金里有卖不掉那 7 件的料钱,还有批末余料:比卖掉那 3 件的成本大得多
+	if c.UpfrontCapital <= c.TotalCost || c.UpfrontCapital <= 2*tk.Sold*c.UnitCost {
+		t.Fatalf("开工本金 %.0f 应当含全批料钱和余料(稳态 %.0f)", c.UpfrontCapital, c.TotalCost)
+	}
+	if !(tk.TotalPct > 0 && tk.TotalPct < tk.Pct*tk.Sold/N) {
+		t.Fatalf("吃买单总利润率 %.4f 应当低于 利润率 × 卖出比例 %.4f", tk.TotalPct, tk.Pct*tk.Sold/N)
+	}
+	// 挂卖全卖得掉,但余料也在分母里:总利润率比利润率低
+	if !(po.TotalPct < po.Pct) {
+		t.Fatalf("挂卖总利润率 %.4f 应当低于利润率 %.4f(分母多了批末余料)", po.TotalPct, po.Pct)
+	}
+	// 本金日回报率 = 日化 ÷ 本金
+	if c.Daily == nil || c.Daily.ROC == nil {
+		t.Fatal("设了本金应当有 daily.roc")
+	}
+	assertNear(t, "本金日回报率", *c.Daily.ROC, c.Daily.Profit/p.Daily.Capital, 1e-12)
+	p.Daily.Capital = 0
+	res, err = Plan(Input{Params: p, Books: b, Recipes: EmbeddedRecipes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := res.Candidates[0].Daily; d == nil || d.ROC != nil {
+		t.Fatalf("不按本金封顶时 roc 应当是 null: %+v", d)
+	}
+}
+
 // PremiumSilverPerFocus:金价 13,554 时约 169 银/点(D6)。
 func TestPremium门槛(t *testing.T) {
 	assertNear(t, "premium 门槛", PremiumSilverPerFocus(13_554), 169.425, 1e-9)

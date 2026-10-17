@@ -793,7 +793,8 @@ function limitsText(d) {
   const L = d.limits, parts = [];
   const add = (k, v) => { if (v != null) parts.push(`${BIND_WORD[k]} ${fq(v)} 件/天`); };
   add("focus", L.focus); add("volume", L.volume); add("capital", L.capital); add("qty", L.qty); add("take", L.take);
-  return `每天能做几件取这几个上限里最小的:\n${parts.join("\n")}\n现在卡在「${BIND_WORD[d.binding] || d.binding}」`;
+  return `每天能做几件取这几个上限里最小的:\n${parts.join("\n")}\n现在卡在「${BIND_WORD[d.binding] || d.binding}」${
+    d.roc != null ? `\n本金日回报率 ${spct(d.roc, 2)}(每天总利润 ÷ 本金)` : ""}`;
 }
 
 // 每点专注值和 premium 门槛(D6):养一个 premium 小号换来的专注,每点值这么多银才回本
@@ -908,9 +909,10 @@ function craftCardHTML(res) {
       <div>${net}</div>
       ${dimmed ? `<div><b>—</b><i>单根利润(${MODE_WORD[m0]})</i><em>拿不满料,算不准</em></div>`
         : `<div><b class="${p0 && p0.unit >= 0 ? "pos" : "neg"}">${p0 ? sgn(p0.unit) : "—"}</b><i>单根利润(${MODE_WORD[m0]})· 利润率 ${p0 ? spct(p0.pct) : "—"}</i>
-        <em>这一批 ${p0 ? sgn(p0.total) : "—"} · ${m1 ? profitLine(p1, m1) : ""}</em></div>`}
+        <em>${m1 ? profitLine(p1, m1) : ""}</em></div>`}
+      ${craftTotalKPI(res, c, p0, m0, dimmed, over)}
       <div><b>${dimmed || c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</b><i>每点专注值(银)</i>${dimmed ? `<em>拿不满料,算不准</em>` : spfBar(c.silver_per_focus)}</div>
-      <div title="${esc(limitsText(d))}"><b class="${dimmed ? "" : d && d.profit >= 0 ? "pos" : "neg"}">${d && !dimmed ? sgn(d.profit) : "—"}</b><i>日化收益 / 天</i>
+      <div title="${esc(limitsText(d))}"><b class="${dimmed ? "" : d && d.profit >= 0 ? "pos" : "neg"}">${d && !dimmed ? sgn(d.profit) : "—"}</b><i>每天总利润(日化)</i>
         <em>${dimmed ? "拿不满料,算不准" : d ? `每天 ${fq(d.units)} 件 · 卡在<b>${esc(BIND_WORD[d.binding] || d.binding)}</b>` : "算不出(没有卖价)"}</em></div>
       <div class="${over && !dimmed ? "c-over" : ""}"><b>${dimmed ? "≥ " : ""}${num(c.upfront_capital)}</b><i>开工本金(含批末余料)</i>
         <em>${dimmed ? "只按拿得到的料算,是下界" : cap > 0 ? (over ? `<b class="neg">超过本金 ${num(cap)}(${(c.upfront_capital / cap).toFixed(1)} 倍)</b>:一次备不齐,把件数调小或分批` : `本金 ${num(cap)} 以内`) : "不按本金封顶"}${dimmed ? "" : fitLn}</em></div>
@@ -922,6 +924,17 @@ function craftCardHTML(res) {
     ${unvHTML}
     ${warnList(c.warnings)}
   </section>`;
+}
+// 「这一批总利润」(诉求 #3):主出售方式下这一批(params.qty 件)的利润,吃买单卖不完的不算;
+// 总利润率的分母是开工本金(含批末余料),不是稳态成本 —— 后者全卖掉时就等于利润率,没有新信息
+const TOTAL_TIP = "这一批的利润 = 卖得掉的件数 × 单根利润;吃买单撞上断崖卖不完的,按成本留在手里、不算进来。"
+  + "总利润率 = 总利润 ÷ 开工本金(稳态消耗 + 批末余料):开工前真要掏的钱,回本快不快看它";
+function craftTotalKPI(res, c, p0, m0, dimmed, over) {
+  if (dimmed) return `<div><b>—</b><i>这一批总利润</i><em>拿不满料,算不准</em></div>`;
+  const unsold = p0 && p0.sold != null && p0.sold < res.qty - 0.005;
+  return `<div class="${over ? "c-over" : ""}" title="${esc(TOTAL_TIP)}"><b class="${p0 && p0.total >= 0 ? "pos" : "neg"}">${p0 ? sgn(p0.total) : "—"}</b>
+    <i>总利润(${num(res.qty)} 件,${MODE_WORD[m0]})· 总利润率 ${p0 ? spct(p0.total_pct) : "—"}</i>
+    <em>开工本金 ${num(c.upfront_capital)}${unsold ? `;只出得掉 ${fq(p0.sold)} 件,其余按成本留着` : ""}</em></div>`;
 }
 const ratio = x => (x == null || !isFinite(x) ? "—" : String(Math.round(x * 1000) / 1000));
 const ppct = x => (x == null || !isFinite(x) ? "—" : `${Math.round(x * 10000) / 100}%`);
@@ -1042,6 +1055,10 @@ function craftCandsHTML(res) {
       : lb ? `<td class="sub${mode === modes[0] ? " primary" : ""}" title="${LB_TIP}">—</td>`
       : `<td class="${pl.unit >= 0 ? "pos" : "neg"}${mode === modes[0] ? " primary" : ""}">${sgn(pl.unit)}<span class="subln">${spct(pl.pct)}${
         pl.sold != null && pl.sold < res.qty - 0.005 ? ` · 出 ${fq(pl.sold)} 件` : ""}</span></td>`;
+    // 这一批(主出售方式):总利润,下一行总利润率(÷ 开工本金)
+    const totalCell = pl => !pl ? `<td class="sub">—</td>`
+      : lb ? `<td class="sub" title="${LB_TIP}">—</td>`
+      : `<td class="${pl.total >= 0 ? "pos" : "neg"}" title="${esc(TOTAL_TIP)}">${sgn(pl.total)}<span class="subln">${spct(pl.total_pct)}</span></td>`;
     const codes = new Map();
     for (const w of c.warnings || []) if (!codes.has(w.code)) codes.set(w.code, w);
     return `<tr class="main${c.reference ? " refrow" : ""}${c.filled ? "" : " unfilled"}${open ? " open" : ""}" data-cid="${esc(c.id)}">
@@ -1049,6 +1066,7 @@ function craftCandsHTML(res) {
         ${c.reference ? `<span class="subln">${esc(REF_NOTE[c.reference] || "参照行")}</span>` : ""}</td>
       <td${lb ? ` title="${LB_TIP}"` : ""}>${lb ? `≥ ${num(c.unit_cost)}<span class="subln">只拿到一部分料</span>` : num(c.unit_cost)}</td>
       ${profitCell(pp, "post")}${profitCell(pt, "take")}
+      ${totalCell(c.profit?.[modes[0]])}
       <td class="${f.over_budget ? "neg" : ""}" title="${esc(f.tiers?.length ? `开专注的级:T${f.tiers.join("、T")};没有专精时每根 ${num(f.base_per_unit)}${f.over_budget ? ";这一批超过今日可用专注" : ""}` : "不开专注")}">${f.per_unit ? num(f.per_unit) : "0"}</td>
       ${lb ? `<td class="sub" title="${LB_TIP}">—</td>`
         : `<td class="${c.silver_per_focus != null && c.silver_per_focus >= th ? "pos" : c.silver_per_focus < 0 ? "neg" : ""}">${c.silver_per_focus == null ? "—" : snum(c.silver_per_focus)}</td>`}
@@ -1057,7 +1075,7 @@ function craftCandsHTML(res) {
       <td class="${!lb && cap > 0 && c.upfront_capital > cap ? "neg" : ""}">${lb ? "≥ " : ""}${silver(c.upfront_capital)}</td>
       <td>${ageTag(c.oldest_age_h)}</td>
       <td class="l wcell">${c.filled ? "" : `<span class="wtag bad">拿不满料</span>`}${[...codes.values()].map(warnTag).join("")}</td>
-    </tr>${open ? `<tr class="detail"><td colspan="10">${craftStepsHTML(c, res)}</td></tr>` : ""}`;
+    </tr>${open ? `<tr class="detail"><td colspan="11">${craftStepsHTML(c, res)}</td></tr>` : ""}`;
   };
   const normal = cands.filter(c => !c.reference), refs = cands.filter(c => c.reference);
   return `<section class="c-sec">
@@ -1067,13 +1085,14 @@ function craftCandsHTML(res) {
       <thead><tr><th class="l">路线</th><th title="每件的稳态成本(买料 + 转化 + 站费,批末余料按所选方式估值)">单根成本</th>
         <th title="挂卖单:卖一压 1 银挂上去,到手 ×(1 − 税 − 创建费)">挂卖利</th>
         <th title="吃买单:沿买单阶梯卖,到手 ×(1 − 税),断崖之后不卖">吃买单利</th>
+        <th title="${esc(TOTAL_TIP)}">这一批</th>
         <th title="按你的专精 FCE 折算后,每件多少专注">专注/根</th>
         <th title="(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准。绿色 = 超过 premium 门槛">银/专注点</th>
         <th title="每天件数(专注、成交量、本金、批量里最小的)× 单根利润">日化</th>
         <th title="开工前要备齐的钱:稳态消耗 + 批末余料">本金</th>
         <th title="用到的价里最旧的:超过 6 小时黄、超过 24 小时红">数据</th><th class="l">警告</th></tr></thead>
       <tbody>${normal.map(row).join("")}
-        ${refs.length ? `<tr class="sep"><td colspan="10">参照行(不参与推荐)</td></tr>${refs.map(row).join("")}` : ""}</tbody>
+        ${refs.length ? `<tr class="sep"><td colspan="11">参照行(不参与推荐)</td></tr>${refs.map(row).join("")}` : ""}</tbody>
     </table></div>
   </section>`;
 }
@@ -1568,6 +1587,7 @@ const MX_COLS = [
   { k: "pct", label: "利润率" },
   { k: "spf", label: "银/专注点", tip: "(开专注的利润 − max(0, 不开专注的最好利润))÷ 每件专注:不开专注本来就亏的话,按什么都不做(0)当基准" },
   { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数(总量 ÷ 自然日)" },
+  { k: "total", label: "这一批利润", tip: "每档 N 件、主出售方式;吃买单卖不完的不算。下一行是总利润率(÷ 开工本金,含批末余料)" },
   { k: "daily", label: "日化", tip: "每天件数 × 单根利润;每天件数取专注、成交量、本金、这一批件数里最小的" },
   { k: "binding", label: "卡在", l: true, str: true },
   { k: "be", label: "主原料上限", tip: "照这条路线、别的价不变,主原料到手均价涨到这里利润归零(保守值:价真涨了会换路线)。下面一行是还能涨几成" },
@@ -1585,6 +1605,7 @@ function mxRows(res) {
       unit_cost: b?.unit_cost ?? null, profit: lb ? null : pl?.unit ?? null, pct: lb ? null : pl?.pct ?? null,
       spf: lb ? null : b?.silver_per_focus ?? null, volume: c.volume?.known ? c.volume.per_day : null,
       daily: lb ? null : b?.daily?.profit ?? null, binding: b?.daily && !lb ? (BIND_WORD[b.daily.binding] || b.daily.binding) : "",
+      total: lb ? null : pl?.total ?? null, total_pct: lb ? null : pl?.total_pct ?? null,
       be: lb ? null : b?.main_raw_breakeven?.unit ?? null, beH: lb ? null : b?.main_raw_breakeven?.headroom ?? null,
       age: b?.oldest_age_h ?? c.data?.oldest_age_h ?? null,
     };
@@ -1639,6 +1660,7 @@ function craftMatrixRender() {
           <td>${spct(r.pct)}</td>
           <td class="${r.spf != null && r.spf >= th ? "pos" : ""}">${snum(r.spf)}</td>
           <td>${r.volume == null ? `<span class="sub" title="没有成交量数据">—</span>` : fq(r.volume)}</td>
+          <td class="${r.total == null ? "" : r.total >= 0 ? "pos" : "neg"}">${sgn(r.total)}${r.total_pct == null ? "" : `<span class="subln">${spct(r.total_pct)}</span>`}</td>
           <td class="${r.daily == null ? "" : r.daily >= 0 ? "pos" : "neg"}"><b>${sgn(r.daily)}</b></td>
           <td class="l">${esc(r.binding || "—")}</td>
           <td>${r.be == null ? "—" : num(r.be)}${r.beH == null ? "" : `<span class="subln${r.beH < 0 ? " neg" : ""}">${spct(r.beH)}</span>`}</td>
