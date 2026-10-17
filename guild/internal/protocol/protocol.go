@@ -36,15 +36,18 @@ type OpCodes struct {
 	AuctionGetRequests     int // 买单列表
 	Join                   int // 登录/切区,带角色和位置
 	GetGameServerByCluster int // 切区
+	GetClusterMapInfo      int // 区域地图(N 键):全区建筑和制造站费率
 }
 
-// DefaultOpCodes 对应 albiondata-client 12ff34e(2026-09-16)那一版的枚举。
+// DefaultOpCodes 对应 albiondata-client 12ff34e(2026-09-16)那一版的枚举,
+// 197 取自客户端 1.32.030.345319 的码表(docs/client-data/photon-codes.json)。
 func DefaultOpCodes() OpCodes {
 	return OpCodes{
 		AuctionGetOffers:       81,
 		AuctionGetRequests:     82,
 		Join:                   2,
 		GetGameServerByCluster: 17,
+		GetClusterMapInfo:      197,
 	}
 }
 
@@ -76,6 +79,9 @@ type rawOrder struct {
 // Parser 有状态:城市挂单的 LocationId 在包里是空的,得靠当前所在地补。
 type Parser struct {
 	Codes OpCodes
+
+	// allow 是白名单索引(allowlist.go)。不在里面的消息读完码就丢
+	allow allowIndex
 
 	// 客户端给每张网卡起一个抓包 goroutine,但只有一个 Parser——
 	// 这几个字段是被并发读写的。加锁不是为了性能,是为了正确:
@@ -117,18 +123,26 @@ func (p *Parser) Character() (id, name string) {
 // params[0] 就直接回调了,里面不可能有 253。只认 253 的话这条路是死的
 // —— 而 handleOrders 读的恰恰就是 params[0],也就是说唯一能拿到挂单的
 // 那条路被堵住了。症状是"日志一切正常、库里一条挂单都没有"。
+//
+// 认出码之后先过白名单(allowlist.go):不在表里的直接返回,在表里的只把
+// 表内的键交给下面的 handle*。
 func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 	code, hasCode := intParam(params, paramOperationCode)
 	if !hasCode {
 		// 没有参数表。params[0] 是字符串数组就一定是挂单,没有别的响应长这样。
 		// 方向靠 JSON 里的 AuctionType 判,本来就不需要操作码区分
-		// offers / requests
+		// offers / requests,所以按卖单列表那一行过白名单
 		if _, isOrders := stringSlice(params[0]); isOrders {
-			p.handleOrders(params)
-			return
+			code = p.Codes.AuctionGetOffers
+		} else {
+			code = int(photonOp) // 退回 Photon 层那个操作码
 		}
-		code = int(photonOp) // 退回 Photon 层那个操作码
 	}
+	rule, ok := p.allow.lookup(p.Codes, KindResponse, code)
+	if !ok {
+		return
+	}
+	params = rule.filter(params)
 	switch code {
 	case p.Codes.AuctionGetOffers, p.Codes.AuctionGetRequests:
 		p.handleOrders(params)
@@ -141,11 +155,19 @@ func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 // 切区是从请求里看出来的,响应里没有。
 func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 	code, ok := intParam(params, paramOperationCode)
-	if !ok || code != p.Codes.GetGameServerByCluster {
+	if !ok {
 		return
 	}
-	if zone, ok := params[0].(string); ok && zone != "" {
-		p.setLocation(zone)
+	rule, ok := p.allow.lookup(p.Codes, KindRequest, code)
+	if !ok {
+		return
+	}
+	params = rule.filter(params)
+	switch code {
+	case p.Codes.GetGameServerByCluster:
+		if zone, ok := params[0].(string); ok && zone != "" {
+			p.setLocation(zone)
+		}
 	}
 }
 
