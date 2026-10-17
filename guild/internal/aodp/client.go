@@ -17,8 +17,9 @@ import (
 	"albion-guild/internal/conf"
 )
 
-// limiter 是双窗口令牌桶。AODP 有两条线——180/分钟 和 300/5 分钟,
-// 后者等效 60/分钟,才是真正的约束。两条都满足才放行。
+// limiter 是双窗口令牌桶。AODP 有两条线——实测 100/分钟(文档写 180,不对,
+// 见 conf.API.RatePerMinute)和 300/5 分钟,后者等效 60/分钟,才是持续速率的真约束。
+// 两条都满足才放行。
 type limiter struct {
 	mu      sync.Mutex
 	windows []window

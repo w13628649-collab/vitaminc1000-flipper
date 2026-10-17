@@ -109,15 +109,17 @@ SETUP_FEE  = 0.025       # 创建费,买单卖单都收,下单当场扣、不成
 
 这是 troll 过滤必须存在的根本原因。
 
-**但"抓包优于纯 API"这句要打折。** AODP 服务端源码里有一个**带深度**的端点:
-`/api/v2/stats/orderbook/:id`,`MarketOrderbookService` 按
-item/location/quality/auction_type/price 分组,返回每个价位的 `SUM(amount)`,
-卖单升序买单降序排好。只验到了服务端源码,**没验 east 主机上是否部署、
-亚服数据厚度如何**——这条要单独测一次。如果可用,抓包的不可替代性要重新评估。
+AODP 服务端源码里有一个**带深度**的端点 `/api/v2/stats/orderbook/:id`
+(`MarketOrderbookService` 按价位返回 `SUM(amount)`),但**实测没部署**:
+2026-10-17 east / west / europe 四种写法全部 404,同一时刻 prices 正常 200。
+所以挂单深度**仍然只有抓包拿得到**,"抓包优于纯 API"不用打折。
 
 其他限制:
 
-- 限流 180 次/分钟、300 次/5 分钟;URL 上限 4096 字符 → **批量塞 item id**
+- 限流**实测 100 次/60 秒** + 300 次/300 秒(文档写的 180/分钟不对;2026-09-20 打到边界时
+  429 原文 "limits requests to 100 per 60 seconds"),固定窗口、200 响应不带限流头。
+  `conf.API.RatePerMinute` 默认已改成 95。URL 文档写 4096,实测 nginx 请求行 8192 才 414
+  → **批量塞 item id**
 - 每条价格带 `_date` 时间戳,**必须检查新鲜度**
 - history 端点的 `item_count` 是成交量,但**只统计卖单**
 - history 时间戳是 C# ticks:`(ticks - 621355968000000000) / 10000000`
@@ -129,7 +131,7 @@ Base: https://east.albion-online-data.com
 /api/v2/stats/prices/{items}.json?locations=&qualities=
 /api/v2/stats/history/{items}.json?date=&end_date=&locations=&time-scale=
 /api/v2/stats/gold.json?count=
-/api/v2/stats/orderbook/{id}          ← 带深度,但未验证 east 是否部署
+/api/v2/stats/orderbook/{id}          ← 源码里有,三个区都没部署(404)
 ```
 
 ## 游戏机制常量(已核实)
@@ -260,6 +262,10 @@ is acceptable" —— 两个被动动词,且 "this way" 特指抓包。
 - **物品/配方/地点:以游戏客户端解出来的数据为准**,见 `docs/client-data.md`。
   物品目录已经内置(`guild/internal/catalog/data/items.jsonl.gz`,11,601 个,
   客户端 1.32.030.345319);配方和 Photon 码表在 `docs/client-data/`。
+  **已经同步过的老库启动时也会换成内置目录**(`flip.preferBuiltin`):只有内置解出
+  (`catalog.ClientExtractedAt`)之后手动 `POST /api/catalog/sync` 打的 ao-bin-dumps 补丁才保留。
+  后台补配方走 `SyncRecipes`,不碰目录。**配方还是 ao-bin-dumps 那份**——客户端解出来的
+  `recipes.jsonl.gz` 没有 `maxreturnamount`,换上去会丢掉「哪些投入物不返还」,还没接
   ao-bin-dumps(https://github.com/ao-data/ao-bin-dumps)降级为退路——
   它是社区按自己节奏导出的二手数据,和成员实际装的客户端不保证同版本
 - 抓包客户端:https://github.com/ao-data/albiondata-client

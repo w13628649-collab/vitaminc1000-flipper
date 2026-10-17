@@ -257,11 +257,15 @@ func (s Sizing) TravelHoursBetween(a, b string) float64 {
 
 // API 是 AODP 的调用约束。
 type API struct {
-	// MaxURLLength AODP 上限 4096,留余量。超长自动分批。
+	// MaxURLLength 文档写 4096;实测 east 是 nginx 请求行 8192 才回 414。保守值没坏处,
+	// 只是多分几批。超长自动分批。
 	MaxURLLength int `yaml:"max_url_length"`
-	// RatePerMinute 官方 180/分钟,留余量。
+	// RatePerMinute **实测 100/60 秒**,不是文档的 180。2026-09-20 打到边界时 429 原文:
+	// "You exceeded the throttle apiv2/1m that limits requests to 100 per 60 seconds"。
+	// 固定窗口、对齐墙上时钟,200 响应不带任何 RateLimit 头,只能自己记账。
+	// 按 180 留余量的老默认(170)在冷启动一分钟内突发超过 100 次时会吃 429
 	RatePerMinute int `yaml:"rate_per_minute"`
-	// RatePer5Min 官方 300/5 分钟。这条比每分钟那条更紧(等效 56/分钟)。
+	// RatePer5Min 实测 300/300 秒。这条比每分钟那条更紧(等效 56/分钟),是持续速率的真约束。
 	RatePer5Min int `yaml:"rate_per_5min"`
 
 	TimeoutSeconds float64 `yaml:"timeout_seconds"`
@@ -377,7 +381,7 @@ func Default() Config {
 		Items: Items{Patterns: append([]string(nil), DefaultPatterns...)},
 		API: API{
 			MaxURLLength:   3500,
-			RatePerMinute:  170,
+			RatePerMinute:  95,
 			RatePer5Min:    280,
 			TimeoutSeconds: 30,
 			MaxRetries:     4,

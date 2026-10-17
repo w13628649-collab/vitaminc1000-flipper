@@ -72,9 +72,9 @@ sizing:
   brecilien_travel_hours: 1.0   # 一端是 Brecilien 的路线单程时间:经迷雾,估的、没实测。0 = 同 travel_hours
 
 api:
-  max_url_length: 3500    # 官方 4096,留余量
-  rate_per_minute: 170    # 官方 180
-  rate_per_5min: 280      # 官方 300 —— 这条才是真约束(等效 56/分钟)
+  max_url_length: 3500    # 文档写 4096;实测 east 是 nginx 请求行 8192 才 414。留着保守值
+  rate_per_minute: 95     # 实测 100/60s(2026-09-20 的 429 原文:apiv2/1m limits requests to 100 per 60 seconds),不是文档的 180
+  rate_per_5min: 280      # 实测 300/300s —— 这条才是持续速率的真约束(等效 56/分钟)
   timeout_seconds: 30.0
   max_retries: 4
 
