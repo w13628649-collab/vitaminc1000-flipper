@@ -21,6 +21,7 @@ import (
 	"albion-guild/internal/refine"
 	"albion-guild/internal/scan"
 	"albion-guild/internal/store"
+	"albion-guild/internal/world"
 )
 
 // 精炼页的服务层(设计 §4.3)。引擎 refine.Plan 是纯函数,这里负责把数据喂给它:
@@ -233,7 +234,10 @@ func (s *Service) checkRefine(p refine.Params) error {
 	if err := refine.CheckTarget(s.Recipes(), p.Target); err != nil {
 		return &ParamError{Err: err}
 	}
-	known := func(c string) bool { return slices.Contains(s.Cfg.Cities, c) }
+	// 黑市在服务端城市列表里(倒爷那边要它当装备的销地),但精炼三个角色它一个都当不了:
+	// 没有精炼站、只收装备、只有 NPC 买单没有卖单。界面那边 craftCities 早就把它滤掉了,
+	// 这里补上服务端这一道,免得直接调 API 时算出一份空盘口的结果
+	known := func(c string) bool { return c != world.BlackMarket && slices.Contains(s.Cfg.Cities, c) }
 	if !known(p.City) {
 		return paramErr("生产城市 %q 不在服务端的城市列表 %v 里", p.City, s.Cfg.Cities)
 	}

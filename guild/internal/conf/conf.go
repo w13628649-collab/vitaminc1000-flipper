@@ -213,16 +213,46 @@ type Sizing struct {
 // world.City 收敛成这个名字,AODP 的 locations 参数也认它。
 const Brecilien = "Brecilien"
 
+// BlackMarket 是黑市在 AODP 和扫描器里的名字。抓包的 3003 已经在
+// world.City 收敛成它。
+//
+// 它和 Caerleon 市场(3005)是**两个地方**,客户端里 3003 绑的 marketplace
+// 实体类型就是 BLACKMARKET。两条硬特性决定了怎么用它:
+//
+//   - **只有 NPC 买单,没有卖单。** 游戏里那个标签页就叫「需求」。
+//     所以往黑市去的路线成立(卖给它),从黑市出来的不成立(买不到货)。
+//     不用特判——arb 的 playable 发现缺卖价自然就不出那条路线
+//   - **只收装备。** 建筑描述原话:"出售装备 - 它会成为阿尔比恩战利品的一部分"。
+//     精炼材料挂不进去,扫到也是空的
+//
+// 价格逻辑也和玩家市场不同:野怪掉落来自黑市自己的库存,某件货库存紧张时
+// 它出价更高。所以黑市的"买单价"是需求信号,不是玩家报价。
+const BlackMarket = "Black Market"
+
 // ViaMists 说明这两座城之间要不要穿过迷雾:任何一端是 Brecilien 都要。
 // 迷雾里能被劫,工具不把被劫概率建模成数字,只打风险标记、限置信度。
 func ViaMists(a, b string) bool { return a == Brecilien || b == Brecilien }
 
+// sameCluster 判断两个地点是不是同一张图里走几步就到。
+// 目前只有一组:黑市 NPC 就站在 Caerleon 城里,和 Caerleon 市场隔一条街。
+func sameCluster(a, b string) bool {
+	return (a == BlackMarket && b == "Caerleon") || (a == "Caerleon" && b == BlackMarket)
+}
+
 // TravelHoursBetween 是 a、b 两城之间单程路上的时间。
 func (s Sizing) TravelHoursBetween(a, b string) float64 {
-	if ViaMists(a, b) && s.BrecilienTravelHours > 0 {
+	switch {
+	case a == b:
+		return 0
+	case sameCluster(a, b):
+		// 走过一条街,不该按跨城收时间。不给 0 是因为挂单、取货、
+		// 背包往返还是要花几分钟,按 0.05 小时(3 分钟)算
+		return 0.05
+	case ViaMists(a, b) && s.BrecilienTravelHours > 0:
 		return s.BrecilienTravelHours
+	default:
+		return s.TravelHours
 	}
-	return s.TravelHours
 }
 
 // API 是 AODP 的调用约束。
@@ -262,14 +292,19 @@ type Config struct {
 	Refining Refining `yaml:"refining"`
 }
 
-// DefaultCities 是五个皇家城市、凯尔利恩和 Brecilien。黑区市场不进来——
-// 那里的价格好看,但货运不出来。
+// DefaultCities 是五个皇家城市、凯尔利恩、Brecilien 和黑市。
+// 黑区的野外市场不进来——那里的价格好看,但货运不出来。
 //
 // Brecilien 同城机会照常算;跨城路线也出,但一端是它的路线要穿迷雾:
 // 运输时间用 sizing.brecilien_travel_hours,路线带 risk_tags=["mists"]、
-// 置信度最高 medium(见 arb)
+// 置信度最高 medium(见 arb)。
+//
+// 黑市只有 NPC 买单、只收装备(见 BlackMarket),所以它只会作为**销地**
+// 出现在路线里,同城机会永远是空的——两件事都不用特判,缺一侧价格时
+// screen 和 arb 自己就过不去。
 var DefaultCities = []string{
-	"Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch", "Caerleon", Brecilien,
+	"Thetford", "Fort Sterling", "Lymhurst", "Martlock", "Bridgewatch",
+	"Caerleon", Brecilien, BlackMarket,
 }
 
 // DefaultPatterns 是起步的物品清单:只碰高流动性、低单价的品类。

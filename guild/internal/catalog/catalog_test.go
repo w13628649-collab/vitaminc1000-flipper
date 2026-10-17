@@ -235,3 +235,93 @@ func TestMaxQualityDiffersBetweenMaterialsAndGear(t *testing.T) {
 		t.Fatalf("装备品质档 = %d", item.MaxQuality)
 	}
 }
+
+// 内置目录是从游戏客户端自己解出来的,比 GitHub 那份二手 dump 可信。
+// 它要能直接用:服务端第一次起来、没网也不该没有目录。
+func TestBuiltin_能直接用(t *testing.T) {
+	items, cats, err := Builtin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) < 10_000 {
+		t.Fatalf("只有 %d 个物品,内置目录应该有一万多", len(items))
+	}
+	if len(cats) == 0 {
+		t.Fatal("分类树是空的")
+	}
+
+	c := New(items, cats, "")
+	// 抽几个各品类的代表,它们必须有中文名、分类和正确的等级
+	for _, tc := range []struct {
+		id, zh, sub string
+		tier, maxQ  int
+	}{
+		{"T5_CLOTH", "精布", "refinedresources", 5, 1},
+		{"T4_METALBAR", "钢条", "refinedresources", 4, 1},
+		{"T6_PLANKS", "血橡木板条", "refinedresources", 6, 1},
+	} {
+		it, ok := c.Get(tc.id)
+		if !ok {
+			t.Errorf("%s 不在内置目录里", tc.id)
+			continue
+		}
+		if it.NameZH != tc.zh {
+			t.Errorf("%s 中文名 = %q,想要 %q", tc.id, it.NameZH, tc.zh)
+		}
+		if it.Subcategory != tc.sub {
+			t.Errorf("%s 子类 = %q,想要 %q", tc.id, it.Subcategory, tc.sub)
+		}
+		if it.Tier != tc.tier {
+			t.Errorf("%s 等级 = %d,想要 %d", tc.id, it.Tier, tc.tier)
+		}
+		if it.MaxQuality != tc.maxQ {
+			t.Errorf("%s 品质档 = %d,想要 %d", tc.id, it.MaxQuality, tc.maxQ)
+		}
+	}
+}
+
+// 装备有多档品质、材料只有一档。界面据此禁用品质筛选,
+// 搞错了会让成员在材料上翻找根本不存在的"杰出"档。
+func TestBuiltin_品质档数分得开(t *testing.T) {
+	items, cats, _ := Builtin()
+	c := New(items, cats, "")
+	gear, ok := c.Get("T4_2H_FIRESTAFF")
+	if !ok {
+		t.Skip("内置目录里没有这件武器,换一件再说")
+	}
+	if gear.MaxQuality <= 1 {
+		t.Errorf("武器品质档 = %d,应该多于 1 档", gear.MaxQuality)
+	}
+	mat, _ := c.Get("T5_CLOTH")
+	if mat.MaxQuality != 1 {
+		t.Errorf("材料品质档 = %d,应该只有 1 档", mat.MaxQuality)
+	}
+}
+
+// 附魔变体要带得出附魔等级,且和本体归到同一族。
+func TestBuiltin_附魔变体(t *testing.T) {
+	items, cats, _ := Builtin()
+	c := New(items, cats, "")
+	base, ok1 := c.Get("T5_CLOTH")
+	ench, ok2 := c.Get("T5_CLOTH_LEVEL1@1")
+	if !ok1 || !ok2 {
+		t.Skip("内置目录里没有这组,换一组再说")
+	}
+	if ench.Enchantment != 1 {
+		t.Errorf("附魔等级 = %d,想要 1", ench.Enchantment)
+	}
+	if ench.Family != base.Family {
+		t.Errorf("族不一致:%q vs %q", ench.Family, base.Family)
+	}
+}
+
+// 没有中英文名的占位条目不收。它们没有交易价值,
+// 收进来只会让搜索和菜单里多出一堆看不懂的 id。
+func TestBuiltin_不收没有名字的占位条目(t *testing.T) {
+	items, _, _ := Builtin()
+	for _, it := range items {
+		if it.NameZH == "" && it.NameEN == "" {
+			t.Fatalf("%s 中英文名都没有,不该收进来", it.ItemID)
+		}
+	}
+}

@@ -25,16 +25,17 @@ func TestLookupCities(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v want %v", got, want)
 	}
-	// 默认城市里有没有 Brecilien 都要成立(后端线把它加进了 conf.DefaultCities):
-	// 每座城只出现一次,黑市固定在最后。先拷一份再 append,别改到 DefaultCities 的底层数组
+	// 不管 DefaultCities 里有没有 Brecilien / 黑市,结果都要成立:
+	// 每座城只出现一次,黑市固定在最后。
+	// 先拷一份再 append,别改到 DefaultCities 的底层数组
 	in := append(append([]string(nil), conf.DefaultCities...), "Brecilien")
 	distinct := map[string]bool{}
-	for _, c := range in {
+	for _, c := range append(append([]string(nil), in...), Brecilien, BlackMarket) {
 		distinct[c] = true
 	}
 	got = lookupCities(in)
-	if got[len(got)-1] != BlackMarket || len(got) != len(distinct)+1 {
-		t.Fatalf("黑市应在最后一行、每座城只出现一次: %v", got)
+	if got[len(got)-1] != BlackMarket || len(got) != len(distinct) {
+		t.Fatalf("黑市应在最后一行、每座城只出现一次: %v(应有 %d 行)", got, len(distinct))
 	}
 }
 

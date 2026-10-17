@@ -439,7 +439,11 @@ func TestRefine参数不合法是ParamError且不碰数据源(t *testing.T) {
 		{"线外物品", func(p *refine.Params) { p.Target = "T8_MAIN_FIRESTAFF" }},
 		{"石头线", func(p *refine.Params) { p.Target = "T6_STONEBLOCK" }},
 		{"不认识的城市", func(p *refine.Params) { p.City = "Atlantis" }},
-		{"不认识的出售城市", func(p *refine.Params) { p.Sell.City = "Black Market" }},
+		{"不认识的出售城市", func(p *refine.Params) { p.Sell.City = "Atlantis" }},
+		// 黑市在服务端城市列表里,但只收装备、没有精炼站、没有卖单
+		{"黑市不能当出售城市", func(p *refine.Params) { p.Sell.City = "Black Market" }},
+		{"黑市不能当生产城市", func(p *refine.Params) { p.City = "Black Market" }},
+		{"黑市不能当买料城市", func(p *refine.Params) { p.Sources.Cities = []string{"Thetford", "Black Market"} }},
 		{"不认识的买料城市", func(p *refine.Params) { p.Sources.Cities = []string{"Thetford", "Atlantis"} }},
 		{"数据年龄超过窗口", func(p *refine.Params) { p.Sources.MaxAgeHours = 100 }},
 		{"专注超过上限", func(p *refine.Params) { p.Focus.Budget = 40000 }},

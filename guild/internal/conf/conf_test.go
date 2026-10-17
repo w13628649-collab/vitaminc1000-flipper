@@ -176,8 +176,8 @@ func TestLoad_未知键只告警不失败(t *testing.T) {
 // Brecilien 同城跨城都要参与:默认城市里有它,经迷雾的单程时间单列、比皇家城市之间久
 func TestDefault_Brecilien参与扫描且路上时间单列(t *testing.T) {
 	c := Default()
-	if !slices.Contains(c.Cities, Brecilien) || len(c.Cities) != 7 {
-		t.Fatalf("默认城市应是五个皇家城市 + Caerleon + Brecilien,得到 %v", c.Cities)
+	if !slices.Contains(c.Cities, Brecilien) || len(c.Cities) != 8 {
+		t.Fatalf("默认城市应是五个皇家城市 + Caerleon + Brecilien + 黑市,得到 %v", c.Cities)
 	}
 	s := c.Sizing
 	if s.TravelHours != 0.5 || s.BrecilienTravelHours != 1.0 {
@@ -247,5 +247,50 @@ func TestLoad_仓库自带配置(t *testing.T) {
 	if !slices.Equal(c.Cities, d.Cities) || c.Sizing != d.Sizing {
 		t.Fatalf("自带配置的城市和路上时间应和内置默认一致\n得到 %v %+v\n应为 %v %+v",
 			c.Cities, c.Sizing, d.Cities, d.Sizing)
+	}
+}
+
+// 黑市 NPC 就站在 Caerleon 城里,和 Caerleon 市场隔一条街。
+// 按跨城收路上时间的话,"在 Caerleon 买装备、走过去卖给黑市"这条
+// 最实在的路子会被算得比实际差一截。
+func TestTravelHoursBetween_黑市和Caerleon是一条街(t *testing.T) {
+	s := Default().Sizing
+	near := s.TravelHoursBetween(BlackMarket, "Caerleon")
+	cross := s.TravelHoursBetween("Thetford", "Caerleon")
+	if !(near < cross) {
+		t.Fatalf("黑市↔Caerleon %v 应该明显短于跨城 %v", near, cross)
+	}
+	if near <= 0 {
+		t.Fatalf("还是要花几分钟挂单取货,不该是 %v", near)
+	}
+	// 方向无关
+	if s.TravelHoursBetween("Caerleon", BlackMarket) != near {
+		t.Error("两个方向应该一样")
+	}
+	// 黑市到别的城还是正常跨城
+	if got := s.TravelHoursBetween(BlackMarket, "Martlock"); got != cross {
+		t.Errorf("黑市→Martlock = %v,应该按正常跨城 %v", got, cross)
+	}
+}
+
+func TestTravelHoursBetween_同地为零(t *testing.T) {
+	s := Default().Sizing
+	for _, c := range DefaultCities {
+		if got := s.TravelHoursBetween(c, c); got != 0 {
+			t.Errorf("%s 到自己 = %v,应该是 0", c, got)
+		}
+	}
+}
+
+// 黑市要在默认清单里,否则它的 NPC 需求一条都扫不到。
+func TestDefaultCities_含黑市和Brecilien(t *testing.T) {
+	has := map[string]bool{}
+	for _, c := range DefaultCities {
+		has[c] = true
+	}
+	for _, want := range []string{BlackMarket, Brecilien, "Caerleon"} {
+		if !has[want] {
+			t.Errorf("默认城市清单里少了 %s", want)
+		}
 	}
 }
