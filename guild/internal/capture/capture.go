@@ -13,9 +13,9 @@ package capture
 // event 的真码在 params[252],operation 的在 params[253]。
 // 这里原样透传,由上层去认。
 type Handler struct {
-	OnRequest   func(code byte, params map[byte]any)
-	OnResponse  func(code byte, returnCode int16, debug string, params map[byte]any)
-	OnEvent     func(code byte, params map[byte]any)
+	OnRequest  func(code byte, params map[byte]any)
+	OnResponse func(code byte, returnCode int16, debug string, params map[byte]any)
+	OnEvent    func(code byte, params map[byte]any)
 	// OnEncrypted 收到密文时回调,msgType 是 0x80|kind;整包加密时是
 	// photon.EncryptedPacket。加密按消息粒度,判断市场是否被加密要看类型和时机,
 	// 不能见一条就下结论(见 protocol.CryptoTracker)

@@ -318,4 +318,3 @@ func waitOrTimeout(wg *sync.WaitGroup, d time.Duration) {
 		slog.Warn("抓包线程没能按时退出,直接收尾")
 	}
 }
-

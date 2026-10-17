@@ -69,14 +69,14 @@ type Status struct {
 	MarketCryptoSince string `json:"market_crypto_since,omitempty"`
 	OtherEncrypted    int64  `json:"other_encrypted"`
 
-	OrdersSeen     int64  `json:"orders_seen"`
-	OrdersUploaded int64  `json:"orders_uploaded"`
+	OrdersSeen     int64 `json:"orders_seen"`
+	OrdersUploaded int64 `json:"orders_uploaded"`
 	// StationsUploaded 是传上去的建筑观测条数(op 197 区域地图)
-	StationsUploaded int64 `json:"stations_uploaded"`
-	Pending        int    `json:"pending"`
-	LastUploadAt   string `json:"last_upload_at"`
-	LastError      string `json:"last_error"`
-	ServerOK       bool   `json:"server_ok"`
+	StationsUploaded int64  `json:"stations_uploaded"`
+	Pending          int    `json:"pending"`
+	LastUploadAt     string `json:"last_upload_at"`
+	LastError        string `json:"last_error"`
+	ServerOK         bool   `json:"server_ok"`
 }
 
 // StatusFunc 由客户端主程序提供,每次请求时取当前状态。
