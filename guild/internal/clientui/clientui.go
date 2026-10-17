@@ -31,6 +31,7 @@ import (
 	"sync"
 	"time"
 
+	"albion-guild/internal/protocol"
 	"albion-guild/internal/webui"
 	"albion-guild/internal/world"
 )
@@ -57,6 +58,16 @@ type Status struct {
 	// Fallback 为 true 表示界面跑在浏览器里,没有程序窗口。
 	// 界面据此显示"退出"按钮
 	Fallback bool `json:"fallback"`
+
+	// MarketCrypto 是这个号的市场挂单是不是明文:unknown / clear / encrypted
+	// (protocol.CryptoTracker)。MarketCryptoText 是顶栏原样显示的那句话,
+	// 文案只在 protocol.MarketCrypto.Text 里改。MarketCryptoSince 是最后一次变化
+	// 的时间,从没变过时为空。OtherEncrypted 是和市场请求无关的加密消息条数——
+	// 它们不说明挂单被加密,单独列出来免得误读
+	MarketCrypto      string `json:"market_crypto"`
+	MarketCryptoText  string `json:"market_crypto_text"`
+	MarketCryptoSince string `json:"market_crypto_since,omitempty"`
+	OtherEncrypted    int64  `json:"other_encrypted"`
 
 	OrdersSeen     int64  `json:"orders_seen"`
 	OrdersUploaded int64  `json:"orders_uploaded"`
@@ -185,6 +196,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	// 地名在这里统一翻,主程序只管报原始 id。翻不出的原样给,界面照样能显示
 	if st.City == "" {
 		st.City = world.DisplayName(st.Location)
+	}
+	// 主程序没接加密判定(老的调用方、测试)时也给一句准确的话,不留空白
+	if st.MarketCrypto == "" {
+		st.MarketCrypto = string(protocol.CryptoUnknown)
+	}
+	if st.MarketCryptoText == "" {
+		st.MarketCryptoText = protocol.MarketCrypto(st.MarketCrypto).Text()
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

@@ -47,6 +47,18 @@ func TestStatus_认不出的地点原样给出(t *testing.T) {
 	}
 }
 
+// 主程序没报加密判定时,顶栏也要给一句准确的"未确认",不能是空白或"明文"
+func TestStatus_没报加密判定时是未确认(t *testing.T) {
+	got := statusOf(t, Status{})
+	if got.MarketCrypto != "unknown" || got.MarketCryptoText != "市场数据:未确认(去市场刷一次)" {
+		t.Fatalf("得到 %q / %q", got.MarketCrypto, got.MarketCryptoText)
+	}
+	got = statusOf(t, Status{MarketCrypto: "encrypted"})
+	if got.MarketCryptoText != "市场数据:被加密,这个号的挂单传不出来" {
+		t.Fatalf("文案按状态补,得到 %q", got.MarketCryptoText)
+	}
+}
+
 func TestStatus_主程序给了地名就不覆盖(t *testing.T) {
 	if got := statusOf(t, Status{Location: "3008", City: "自定义"}); got.City != "自定义" {
 		t.Errorf("city = %q,主程序填过的不该被覆盖", got.City)

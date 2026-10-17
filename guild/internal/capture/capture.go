@@ -16,7 +16,10 @@ type Handler struct {
 	OnRequest   func(code byte, params map[byte]any)
 	OnResponse  func(code byte, returnCode int16, debug string, params map[byte]any)
 	OnEvent     func(code byte, params map[byte]any)
-	OnEncrypted func()
+	// OnEncrypted 收到密文时回调,msgType 是 0x80|kind;整包加密时是
+	// photon.EncryptedPacket。加密按消息粒度,判断市场是否被加密要看类型和时机,
+	// 不能见一条就下结论(见 protocol.CryptoTracker)
+	OnEncrypted func(msgType byte)
 }
 
 // Options 控制一次抓包。

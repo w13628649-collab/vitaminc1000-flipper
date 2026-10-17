@@ -66,6 +66,84 @@ func TestPendingSegments_RejectsOversizedTotalLength(t *testing.T) {
 	}
 }
 
+// reliablePacket 拼一个只含一条 SendReliable 命令的 Photon 包:
+// 12 字节包头 + 12 字节命令头 + signal 字节 + msgType + body。
+func reliablePacket(msgType byte, body []byte) []byte {
+	hdr := []byte{0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0} // peerId=1, flags=0, 1 条命令
+	cmd := make([]byte, commandHeaderLength)
+	cmd[0] = cmdSendReliable
+	payload := append([]byte{0xF3, msgType}, body...)
+	binary.BigEndian.PutUint32(cmd[4:], uint32(commandHeaderLength+len(payload)))
+	pkt := append(append(hdr, cmd...), payload...)
+	return pkt
+}
+
+// 131 = 0x80|3 是加密的操作响应,要带着类型报上去
+func TestEncrypted_131带类型回调(t *testing.T) {
+	var got []byte
+	p := NewPhotonParser(nil, nil, nil)
+	p.OnEncrypted = func(mt byte) { got = append(got, mt) }
+	if !p.ReceivePacket(reliablePacket(131, []byte{1, 2, 3, 4})) {
+		t.Fatal("加密命令本身是合法的包,应该返回 true")
+	}
+	if len(got) != 1 || got[0] != 131 {
+		t.Fatalf("应回调一次 131,得到 %v", got)
+	}
+}
+
+// 以前只认 131,132(加密事件)之类既不触发 OnEncrypted、switch 又没有
+// default,静默消失。现在高位置位的一律当密文
+func TestEncrypted_别的0x80类型也要报(t *testing.T) {
+	var got []byte
+	p := NewPhotonParser(nil, nil, nil)
+	p.OnEncrypted = func(mt byte) { got = append(got, mt) }
+	for _, mt := range []byte{0x80 | MsgEvent, 0x80 | MsgRequest, 0x80 | msgResponseAlt} {
+		p.ReceivePacket(reliablePacket(mt, []byte{9, 9}))
+	}
+	if string(got) != string([]byte{0x84, 0x82, 0x87}) {
+		t.Fatalf("得到 %x", got)
+	}
+	// 密文不能被当成明文消息派发出去
+	p.OnEvent = func(byte, map[byte]any) { t.Fatal("密文事件被当明文派发了") }
+	p.ReceivePacket(reliablePacket(0x80|MsgEvent, []byte{1, 0}))
+}
+
+// 整包加密(包头 flags=1)没有消息类型可报,用 EncryptedPacket 占位
+func TestEncrypted_整包加密报EncryptedPacket(t *testing.T) {
+	var got []byte
+	p := NewPhotonParser(nil, nil, nil)
+	p.OnEncrypted = func(mt byte) { got = append(got, mt) }
+	pkt := reliablePacket(MsgEvent, []byte{1, 0})
+	pkt[2] = flagEncrypted
+	p.ReceivePacket(pkt)
+	if len(got) != 1 || got[0] != EncryptedPacket {
+		t.Fatalf("得到 %v", got)
+	}
+}
+
+// 没处理的明文消息类型要数得出来,不能静默消失
+func TestUnknownMsgType_计数(t *testing.T) {
+	p := NewPhotonParser(nil, nil, nil)
+	p.OnEncrypted = func(byte) { t.Fatal("明文的未知类型不是密文") }
+	p.ReceivePacket(reliablePacket(8, []byte{1}))
+	p.ReceivePacket(reliablePacket(8, []byte{1}))
+	p.ReceivePacket(reliablePacket(6, []byte{1}))
+	got := p.UnknownMsgTypes()
+	if got[8] != 2 || got[6] != 1 || len(got) != 2 {
+		t.Fatalf("得到 %v", got)
+	}
+}
+
+// 明文事件照常派发:加了 default 不能把正常路径改坏
+func TestReliable_明文事件照常派发(t *testing.T) {
+	var code byte = 0xFF
+	p := NewPhotonParser(nil, nil, func(c byte, _ map[byte]any) { code = c })
+	p.ReceivePacket(reliablePacket(MsgEvent, []byte{3, 0})) // 事件码 3,空参数表
+	if code != 3 {
+		t.Fatalf("事件没派发,code=%d", code)
+	}
+}
+
 // frag 拼一条分片命令:20 字节头 + 载荷。
 // 头是 startSeq / fragmentCount / fragmentNumber / totalLength / fragmentOffset。
 func frag(startSeq, count, number, totalLen, fragOffset uint32, body []byte) []byte {

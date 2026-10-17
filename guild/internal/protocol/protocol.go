@@ -95,6 +95,11 @@ type Parser struct {
 	OnOrders func(orders []model.MarketOrder)
 	// OnIdentity 角色或位置变化时回调。
 	OnIdentity func(characterID, characterName, location string)
+	// OnMarketRequest 看到 81/82 请求时回调,给加密判定做门控(CryptoTracker.MarketRequest)。
+	OnMarketRequest func()
+	// OnMarketDecoded 一条 81/82 响应处理完时回调,n 是 JSON 解开的挂单条数
+	// (CryptoTracker.MarketDecoded)。位置不明被丢掉的也算在 n 里
+	OnMarketDecoded func(n int)
 }
 
 func New() *Parser {
@@ -168,6 +173,10 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 		if zone, ok := params[0].(string); ok && zone != "" {
 			p.setLocation(zone)
 		}
+	case p.Codes.AuctionGetOffers, p.Codes.AuctionGetRequests:
+		if p.OnMarketRequest != nil {
+			p.OnMarketRequest()
+		}
 	}
 }
 
@@ -178,12 +187,20 @@ func (p *Parser) handleOrders(params map[byte]any) {
 	}
 	now := time.Now()
 	orders := make([]model.MarketOrder, 0, len(raws))
+	decoded := 0
+	// 解开了几条就报几条,位置不明丢掉的也算:能解开 JSON 就说明是明文
+	defer func() {
+		if p.OnMarketDecoded != nil {
+			p.OnMarketDecoded(decoded)
+		}
+	}()
 	for _, s := range raws {
 		var r rawOrder
 		if err := json.Unmarshal([]byte(s), &r); err != nil {
 			slog.Debug("挂单 JSON 解析失败", "err", err)
 			continue
 		}
+		decoded++
 		side := model.SideOffer
 		if r.AuctionType == "request" {
 			side = model.SideRequest

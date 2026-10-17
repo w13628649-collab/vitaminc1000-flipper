@@ -111,6 +111,18 @@ func main() {
 		client: &http.Client{Timeout: 15 * time.Second},
 	}
 
+	// 市场挂单是明文还是密文。以前对任何加密包都喊"市场数据被加密",会误诊:
+	// 加密按消息粒度,只有市场请求之后没等到明文挂单才算(见 protocol.CryptoTracker)
+	crypt := protocol.NewCryptoTracker()
+	crypt.OnChange = func(from, to protocol.MarketCrypto) {
+		// warn 只在翻到加密时打一次:它会顺着诊断通道报到服务端,刷屏没意义
+		if to == protocol.CryptoEncrypted {
+			slog.Warn("市场数据被加密:这个号的挂单传不出来(历史价和金价不受影响)", "from", string(from))
+			return
+		}
+		slog.Info("市场数据状态变化", "from", string(from), "to", string(to))
+	}
+
 	// 窗口顶部那排状态由这里喂。服务端不知道这些——
 	// 它只看得到"有个客户端在传数据",看不到抓包到底转没转
 	local := &clientui.Server{
@@ -125,12 +137,21 @@ func main() {
 			st.Devices = int(live.Load())
 			st.Capturing = live.Load() > 0
 			st.DriverWarning = driverMsg
+			cs := crypt.Snapshot()
+			st.MarketCrypto = string(cs.State)
+			st.MarketCryptoText = cs.State.Text()
+			if !cs.Since.IsZero() {
+				st.MarketCryptoSince = cs.Since.Format(time.RFC3339)
+			}
+			st.OtherEncrypted = cs.OtherEncrypted
 			return st
 		},
 	}
 
 	parser := protocol.New()
 	parser.OnOrders = up.add
+	parser.OnMarketRequest = crypt.MarketRequest
+	parser.OnMarketDecoded = crypt.MarketDecoded
 	parser.OnIdentity = func(_, name, loc string) {
 		up.setIdentity(name, loc)
 		reporter.SetCharacter(name) // 诊断记录带上角色名,便于对人
@@ -143,12 +164,23 @@ func main() {
 		OnResponse: func(code byte, _ int16, _ string, params map[byte]any) {
 			parser.HandleResponse(code, params)
 		},
-		OnEncrypted: func() {
-			// 市场数据被加密时会走到这:新号的挂单传不了,
-			// 这是账号层面的策略,换个老号就好了
-			slog.Warn("收到加密包,这个账号的市场数据可能传不出来")
-		},
+		// 密文只交给加密判定,由它决定是不是市场被加密;这里不再自己下结论
+		OnEncrypted: crypt.Encrypted,
 	}
+
+	// 窗口到期的判定要有人推:发完市场请求就不动的话,状态永远翻不过去
+	go func() {
+		t := time.NewTicker(time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				crypt.Tick()
+			}
+		}
+	}()
 
 	var wg sync.WaitGroup
 	for _, d := range devices {

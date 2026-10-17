@@ -6,6 +6,7 @@ package photon
 import (
 	"bytes"
 	"encoding/binary"
+	"log/slog"
 )
 
 const (
@@ -42,9 +43,18 @@ const (
 	MsgEvent    = byte(4)
 	// Some Albion builds send OperationResponse as type 7
 	msgResponseAlt = byte(7)
-	// Encrypted command (e.g. market data in some builds)
-	msgEncrypted = byte(131)
+
+	// msgEncryptedBit 置位表示这条消息是密文:Photon 的惯例是 0x80|kind,
+	// 131 = 0x80|3 是加密的操作响应,132 就是加密的事件。
+	//
+	// 以前只认 msgType==131、后面的 switch 又没有 default,别的加密类型连
+	// OnEncrypted 都不触发,静默消失——"有没有被加密"这个问题因此答不全
+	msgEncryptedBit = byte(0x80)
 )
+
+// EncryptedPacket 是 OnEncrypted 收到的"整包加密"(包头 flags=1)。
+// 那种情况下连命令都解不开,没有消息类型可报,用 0 占位(真实消息类型不会是 0)。
+const EncryptedPacket = byte(0)
 
 // Photon packet header flag values.
 const (
@@ -106,8 +116,23 @@ type PhotonParser struct {
 	// OnEvent is called for every decoded EventData.
 	OnEvent func(code byte, params map[byte]interface{})
 
-	// OnEncrypted is called when an encrypted message is encountered.
-	OnEncrypted func()
+	// OnEncrypted 遇到密文时回调。msgType 是那条消息的类型字节(0x80|kind),
+	// 整包加密时是 EncryptedPacket。**带上类型是为了不误诊**:加密是按消息粒度的,
+	// 一条加密事件不说明市场挂单被加密了(docs/client-data.md 第二点七节)
+	OnEncrypted func(msgType byte)
+
+	// unknown 按消息类型数没认出来的明文消息。一个 PhotonParser 只在一个抓包
+	// goroutine 里用,不用加锁
+	unknown map[byte]int64
+}
+
+// UnknownMsgTypes 返回到目前为止见过、但没有处理的消息类型及条数。
+func (p *PhotonParser) UnknownMsgTypes() map[byte]int64 {
+	out := make(map[byte]int64, len(p.unknown))
+	for k, v := range p.unknown {
+		out[k] = v
+	}
+	return out
 }
 
 // NewPhotonParser creates a PhotonParser wired to the given callbacks.
@@ -196,7 +221,7 @@ func (p *PhotonParser) receiveSinglePacket(payload []byte) bool {
 
 	if flags == flagEncrypted {
 		if p.OnEncrypted != nil {
-			p.OnEncrypted()
+			p.OnEncrypted(EncryptedPacket)
 		}
 		return false
 	}
@@ -367,9 +392,9 @@ func (p *PhotonParser) handleSendReliable(src []byte, offset, cmdLen int) (int, 
 		return offset + cmdLen, false
 	}
 
-	if msgType == msgEncrypted {
+	if msgType&msgEncryptedBit != 0 {
 		if p.OnEncrypted != nil {
-			p.OnEncrypted()
+			p.OnEncrypted(msgType)
 		}
 		return offset + cmdLen, true
 	}
@@ -384,6 +409,16 @@ func (p *PhotonParser) handleSendReliable(src []byte, offset, cmdLen int) (int, 
 		p.dispatchResponse(data)
 	case MsgEvent:
 		p.dispatchEvent(data)
+	default:
+		// 内部操作(6)、纯消息(8/9)之类。不处理,但要数得出来:
+		// 哪天市场数据换了个消息类型,这里是唯一能看出来的地方
+		if p.unknown == nil {
+			p.unknown = map[byte]int64{}
+		}
+		if p.unknown[msgType] == 0 {
+			slog.Debug("没处理的 Photon 消息类型", "msg_type", msgType, "len", len(data))
+		}
+		p.unknown[msgType]++
 	}
 
 	return offset, true

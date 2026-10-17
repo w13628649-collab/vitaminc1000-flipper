@@ -3139,6 +3139,18 @@ async function pollLocal() {
     $("capture-sub").textContent = s.orders_uploaded
       ? `已传 ${s.orders_uploaded.toLocaleString("zh-CN")} 条`
       : (s.devices ? `${s.devices} 张网卡` : "本机");
+    // 市场挂单是明文还是密文。文案由客户端给(protocol.MarketCrypto.Text),这里不改字。
+    // 和市场请求无关的加密消息不说明挂单被加密,只在副标题里给个数
+    const crypt = s.market_crypto || "unknown";
+    const dot = crypt === "clear" ? "live" : crypt === "encrypted" ? "dead" : "unk";
+    $("crypt").innerHTML = `<span class="dot ${dot}"></span>${esc(s.market_crypto_text || "市场数据:未确认(去市场刷一次)")}`;
+    $("crypt").title = s.market_crypto_since ? `最后变化:${new Date(s.market_crypto_since).toLocaleString("zh-CN")}` : "";
+    $("crypt-sub").textContent = s.other_encrypted
+      ? `其他加密消息 ${s.other_encrypted.toLocaleString("zh-CN")} 条`
+      : "挂单明文检测";
+    $("crypt-sub").title = s.other_encrypted
+      ? "地图、事件之类和市场请求无关的加密消息。加密按消息粒度,它们不说明挂单被加密"
+      : "";
     $("who").textContent = s.character || "—";
     // 地名由客户端本地服务翻好(world.DisplayName),认不出的原样给。以前直接显示原始 id,
     // 成员看到的是 "0007" 而不是 Thetford
@@ -3173,7 +3185,7 @@ async function pollLocal() {
     // 就再也看不到"为什么收不到数据"
     if (e.status === 404) {
       localOK = false;
-      for (const id of ["capture", "who"]) $(id).closest(".fact").hidden = true;
+      for (const id of ["capture", "crypt", "who"]) $(id).closest(".fact").hidden = true;
     }
   }
 }
