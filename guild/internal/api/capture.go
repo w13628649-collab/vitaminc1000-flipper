@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -10,6 +13,7 @@ import (
 
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
+	"albion-guild/internal/protocol"
 	"albion-guild/internal/store"
 )
 
@@ -42,25 +46,54 @@ func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch)
 	}
 	now := time.Now()
 	if len(batch.Stations) > 0 {
-		obs := make([]model.StationObs, len(batch.Stations))
-		for i, o := range batch.Stations {
+		obs := make([]model.StationObs, 0, len(batch.Stations))
+		rejected := 0
+		for _, o := range batch.Stations {
+			// 「只收城区本体」在服务端再判一次:/api/upload 不鉴权,老版本、开发版、
+			// 改过的客户端都能往这里塞野外区、个人岛的建筑和坐标
+			if !protocol.CityZone(o.ZoneID) {
+				rejected++
+				continue
+			}
 			o.ObservedAt = ingest.ShiftObserved(o.ObservedAt, batch.SentAt, now)
-			obs[i] = o
+			o.Owner = stripNUL(o.Owner)
+			o.Key23, o.Key31 = jsonNoNUL(o.Key23), jsonNoNUL(o.Key31)
+			obs = append(obs, o)
 		}
-		if err := s.Capture.SaveStations(ctx, batch.Reporter, obs); err != nil {
-			slog.Error("写入工作站观测失败", "err", err, "count", len(obs), "reporter", batch.Reporter)
-		} else {
-			stations = len(obs)
+		if rejected > 0 {
+			slog.Warn("上传的建筑不在城区本体,丢弃", "count", rejected, "reporter", batch.Reporter,
+				"client_version", batch.ClientVersion)
+		}
+		if len(obs) > 0 {
+			if err := s.Capture.SaveStations(ctx, batch.Reporter, obs); err != nil {
+				slog.Error("写入工作站观测失败", "err", err, "count", len(obs), "reporter", batch.Reporter)
+			} else {
+				stations = len(obs)
+			}
 		}
 	}
 	if len(batch.Samples) > 0 {
-		sm := make([]model.CaptureSample, len(batch.Samples))
-		for i, x := range batch.Samples {
+		sm := make([]model.CaptureSample, 0, len(batch.Samples))
+		rejected := 0
+		for _, x := range batch.Samples {
+			if why := sampleRejected(x); why != "" {
+				rejected++
+				slog.Debug("上传的样本不在白名单,丢弃", "kind", x.Kind, "code", x.Code, "why", why)
+				continue
+			}
 			x.ObservedAt = ingest.ShiftObserved(x.ObservedAt, batch.SentAt, now)
 			if x.ClientVersion == "" {
 				x.ClientVersion = batch.ClientVersion
 			}
-			sm[i] = x
+			x.Params = jsonNoNUL(x.Params)
+			sm = append(sm, x)
+		}
+		if rejected > 0 {
+			slog.Warn("上传的样本不在白名单,丢弃", "count", rejected, "reporter", batch.Reporter,
+				"client_version", batch.ClientVersion)
+		}
+		if len(sm) == 0 {
+			return stations, 0
 		}
 		if err := s.Capture.SaveSamples(ctx, batch.Reporter, sm); err != nil {
 			slog.Error("写入原始样本失败", "err", err, "count", len(sm), "reporter", batch.Reporter)
@@ -69,6 +102,41 @@ func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch)
 		}
 	}
 	return stations, samples
+}
+
+// sampleRejected 按抓包白名单校验一条上传的样本,不合规返回原因。
+//
+// 「只收这几条」以前只在客户端执行,服务端任意 kind/code 都照存;SaveSamples
+// 只按出现过的 (kind, code) 修剪,换着码传表就无限增长。现在 (方向, 码) 必须是
+// 白名单里允许记样本的那几行,非全键样本的每个参数键必须在 Keys 里
+func sampleRejected(x model.CaptureSample) string {
+	rule, ok := protocol.SampleRule(protocol.DefaultOpCodes(), protocol.DefaultEventCodes(), x.Kind, x.Code)
+	if !ok {
+		return "这个 (方向, 码) 不允许记样本"
+	}
+	var params []struct {
+		K int `json:"k"`
+	}
+	if err := json.Unmarshal(x.Params, &params); err != nil {
+		return "params 不是参数表数组"
+	}
+	for _, p := range params {
+		if !rule.SampleKeyAllowed(p.K) {
+			return fmt.Sprintf("参数键 %d 不在白名单", p.K)
+		}
+	}
+	return ""
+}
+
+// Postgres 的 TEXT 不收 NUL 字节、jsonb 不收 \u0000:一个 NUL 就让整批 CopyFrom 失败,
+// 这一批的建筑或样本全丢(只记日志)。换成 U+FFFD,看得出这里原来有东西
+func stripNUL(s string) string { return strings.ReplaceAll(s, "\x00", "�") }
+
+func jsonNoNUL(raw json.RawMessage) json.RawMessage {
+	if raw == nil || !bytes.Contains(raw, []byte(`\u0000`)) {
+		return raw
+	}
+	return bytes.ReplaceAll(raw, []byte(`\u0000`), []byte(`�`))
 }
 
 // handleSamples:GET /api/samples?code=&kind=&limit=
