@@ -39,7 +39,7 @@ func TestUploadBatch_建筑字段两个方向都兼容(t *testing.T) {
 		t.Fatalf("老格式: %+v, %v", b, err)
 	}
 	raw, _ := json.Marshal(UploadBatch{Reporter: "甲"})
-	if strings.Contains(string(raw), "stations") {
+	if strings.Contains(string(raw), "stations") || strings.Contains(string(raw), "samples") {
 		t.Fatalf("没有建筑时不该带这个字段: %s", raw)
 	}
 	fee := int64(0)

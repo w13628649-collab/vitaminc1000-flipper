@@ -3,6 +3,7 @@ package protocol
 import (
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -18,9 +19,12 @@ func TestAllowlist_默认码下的完整内容(t *testing.T) {
 		{KindRequest, 197}:  {0},
 		{KindRequest, 81}:   nil,
 		{KindRequest, 82}:   nil,
+		{KindEvent, 150}:    nil,
+		{KindEvent, 152}:    nil,
+		{KindEvent, 153}:    nil,
 	}
 	got := map[ruleKey][]byte{}
-	for _, r := range Allowlist(DefaultOpCodes()) {
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
 		k := ruleKey{r.Kind, r.Code}
 		if _, dup := got[k]; dup {
 			t.Fatalf("(%v, %d) 在表里出现了两次", r.Kind, r.Code)
@@ -35,19 +39,42 @@ func TestAllowlist_默认码下的完整内容(t *testing.T) {
 	}
 }
 
-// 抓包只解操作响应,一条事件都不解
-func TestAllowlist_没有一条事件(t *testing.T) {
-	for _, r := range Allowlist(DefaultOpCodes()) {
-		if r.Kind == KindEvent {
-			t.Fatalf("事件 %d 进了白名单", r.Code)
+// 抓包只解操作响应,一条事件都不解。唯一的例外是用户 2026-10-17 批准的三条专精事件,
+// 而且只记样本:业务层一个键都拿不到
+func TestAllowlist_事件只有专精三条例外且只记样本(t *testing.T) {
+	var events []int
+	sampled := map[ruleKey]bool{}
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
+		if r.Sample {
+			sampled[ruleKey{r.Kind, r.Code}] = true
 		}
+		if r.Kind != KindEvent {
+			continue
+		}
+		events = append(events, r.Code)
+		if len(r.Keys) != 0 {
+			t.Errorf("事件 %d 给了业务层键 %v", r.Code, r.Keys)
+		}
+		if !r.Sample || !strings.Contains(r.Why, "2026-10-17") {
+			t.Errorf("事件 %d 只能作为批准过的样本例外存在", r.Code)
+		}
+	}
+	slices.Sort(events)
+	if !slices.Equal(events, []int{150, 152, 153}) {
+		t.Fatalf("事件例外应该只有 150/152/153,得到 %v", events)
+	}
+	// 记全键样本的只有 197 响应和这三条事件
+	want := map[ruleKey]bool{{KindResponse, 197}: true, {KindEvent, 150}: true,
+		{KindEvent, 152}: true, {KindEvent, 153}: true}
+	if !maps.Equal(sampled, want) {
+		t.Fatalf("样本范围变了: %v", sampled)
 	}
 }
 
 // 在表里的码,表外的键在进业务层之前剥掉
 func TestRuleFilter_表外的键剥掉(t *testing.T) {
 	var join Rule
-	for _, r := range Allowlist(DefaultOpCodes()) {
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
 		if r.Kind == KindResponse && r.Code == 2 {
 			join = r
 		}

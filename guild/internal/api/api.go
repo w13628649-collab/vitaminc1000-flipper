@@ -113,8 +113,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if len(batch.Orders) > 0 {
 		changed, touched = s.Ingestor.Submit(batch)
 	}
-	stations := s.saveCaptureExtras(r.Context(), batch)
-	writeJSON(w, map[string]int{"changed": changed, "touched": touched, "stations": stations})
+	stations, samples := s.saveCaptureExtras(r.Context(), batch)
+	writeJSON(w, map[string]int{"changed": changed, "touched": touched,
+		"stations": stations, "samples": samples})
 }
 
 // handleDiagUpload 收客户端报上来的警告和错误。

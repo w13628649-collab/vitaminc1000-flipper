@@ -20,6 +20,8 @@ import (
 type captureStore interface {
 	SaveStations(ctx context.Context, reporter string, obs []model.StationObs) error
 	StationFees(ctx context.Context, since time.Time) ([]store.StationFee, error)
+	SaveSamples(ctx context.Context, reporter string, samples []model.CaptureSample) error
+	Samples(ctx context.Context, kind string, code, limit int) ([]store.SampleRow, error)
 }
 
 const (
@@ -29,25 +31,80 @@ const (
 
 func (s *Server) registerCapture(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/stations", s.handleStations)
+	mux.HandleFunc("GET /api/samples", s.handleSamples)
 }
 
-// saveCaptureExtras 存一批上传里挂单以外的部分。时间先按挂单同一套口径纠偏。
-// 返回存下的建筑条数;失败只记日志——挂单那部分已经进去了,不能因为这部分让整批报错重传
-func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch) (stations int) {
-	if len(batch.Stations) == 0 || s.Capture == nil {
-		return 0
+// saveCaptureExtras 存一批上传里挂单以外的部分(建筑、原始样本)。时间先按挂单同一套口径纠偏。
+// 返回各存下几条;失败只记日志——挂单那部分已经进去了,不能因为这部分让整批报错重传
+func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch) (stations, samples int) {
+	if s.Capture == nil {
+		return 0, 0
 	}
 	now := time.Now()
-	obs := make([]model.StationObs, len(batch.Stations))
-	for i, o := range batch.Stations {
-		o.ObservedAt = ingest.ShiftObserved(o.ObservedAt, batch.SentAt, now)
-		obs[i] = o
+	if len(batch.Stations) > 0 {
+		obs := make([]model.StationObs, len(batch.Stations))
+		for i, o := range batch.Stations {
+			o.ObservedAt = ingest.ShiftObserved(o.ObservedAt, batch.SentAt, now)
+			obs[i] = o
+		}
+		if err := s.Capture.SaveStations(ctx, batch.Reporter, obs); err != nil {
+			slog.Error("写入工作站观测失败", "err", err, "count", len(obs), "reporter", batch.Reporter)
+		} else {
+			stations = len(obs)
+		}
 	}
-	if err := s.Capture.SaveStations(ctx, batch.Reporter, obs); err != nil {
-		slog.Error("写入工作站观测失败", "err", err, "count", len(obs), "reporter", batch.Reporter)
-		return 0
+	if len(batch.Samples) > 0 {
+		sm := make([]model.CaptureSample, len(batch.Samples))
+		for i, x := range batch.Samples {
+			x.ObservedAt = ingest.ShiftObserved(x.ObservedAt, batch.SentAt, now)
+			if x.ClientVersion == "" {
+				x.ClientVersion = batch.ClientVersion
+			}
+			sm[i] = x
+		}
+		if err := s.Capture.SaveSamples(ctx, batch.Reporter, sm); err != nil {
+			slog.Error("写入原始样本失败", "err", err, "count", len(sm), "reporter", batch.Reporter)
+		} else {
+			samples = len(sm)
+		}
 	}
-	return len(obs)
+	return stations, samples
+}
+
+// handleSamples:GET /api/samples?code=&kind=&limit=
+//
+// 导出原始样本,给人照着写解码器。code 不填 = 全部码;kind 是 op_response / event;
+// limit 默认 50,上限 200(库里每个码也只留 200 条)。
+func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	code := intOr(q.Get("code"), -1)
+	if q.Get("code") != "" && code < 0 {
+		http.Error(w, "code 要是非负整数", http.StatusBadRequest)
+		return
+	}
+	kind := strings.TrimSpace(q.Get("kind"))
+	if kind != "" && kind != model.SampleOpResponse && kind != model.SampleEvent {
+		http.Error(w, "kind 只能是 op_response 或 event", http.StatusBadRequest)
+		return
+	}
+	limit := intOr(q.Get("limit"), 50)
+	if limit <= 0 || limit > store.SamplesPerCode {
+		http.Error(w, "limit 只能是 1~200", http.StatusBadRequest)
+		return
+	}
+	if s.Capture == nil {
+		http.Error(w, "没有存储", http.StatusServiceUnavailable)
+		return
+	}
+	rows, err := s.Capture.Samples(r.Context(), kind, code, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if rows == nil {
+		rows = []store.SampleRow{}
+	}
+	writeJSON(w, rows)
 }
 
 // stationView 是 /api/stations 的一行:最新观测 + 数据年龄。

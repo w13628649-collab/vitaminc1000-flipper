@@ -150,6 +150,9 @@ func main() {
 	parser.OnMarketRequest = crypt.MarketRequest
 	parser.OnMarketDecoded = crypt.MarketDecoded
 	parser.OnStations = up.addStations
+	// 原始样本:op 197 全键和三条专精事件,用来解字段布局(白名单见 protocol/allowlist.go)
+	parser.Version = version
+	parser.OnSample = up.addSample
 	parser.OnIdentity = func(_, name, loc string) {
 		up.setIdentity(name, loc)
 		reporter.SetCharacter(name) // 诊断记录带上角色名,便于对人
@@ -162,6 +165,8 @@ func main() {
 		OnResponse: func(code byte, _ int16, _ string, params map[byte]any) {
 			parser.HandleResponse(code, params)
 		},
+		// 事件默认全丢:HandleEvent 读完事件码,不在白名单例外里的立刻返回
+		OnEvent: parser.HandleEvent,
 		// 密文只交给加密判定,由它决定是不是市场被加密;这里不再自己下结论
 		OnEncrypted: crypt.Encrypted,
 	}

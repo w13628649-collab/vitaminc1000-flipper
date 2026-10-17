@@ -22,6 +22,10 @@ const maxPending = 100_000
 // 5000 条够攒几十次开图;费率变得慢,丢最旧的没损失
 const maxPendingStations = 5_000
 
+// maxPendingSamples 是断网时最多堆多少条原始样本。protocol 那边每个码每次运行最多 20 条,
+// 码只有几个,这个数只是兜底
+const maxPendingSamples = 200
+
 // uploader 攒一批再发,不是每解析出一条就发一次。
 type uploader struct {
 	server string
@@ -31,6 +35,7 @@ type uploader struct {
 	mu        sync.Mutex
 	pending   []model.MarketOrder
 	stations  []model.StationObs
+	samples   []model.CaptureSample
 	character string
 	location  string
 	seen      int64
@@ -77,11 +82,19 @@ func (u *uploader) addStations(obs []model.StationObs) {
 	u.mu.Unlock()
 }
 
+func (u *uploader) addSample(s model.CaptureSample) {
+	u.mu.Lock()
+	u.samples = append(u.samples, s)
+	u.trimLocked()
+	u.mu.Unlock()
+}
+
 // requeue 把发失败的一批退回队列头部,并记下错误给界面看。
 func (u *uploader) requeue(b model.UploadBatch, err error) {
 	u.mu.Lock()
 	u.pending = append(b.Orders, u.pending...)
 	u.stations = append(b.Stations, u.stations...)
+	u.samples = append(b.Samples, u.samples...)
 	u.trimLocked()
 	u.lastErr = err.Error()
 	u.mu.Unlock()
@@ -91,6 +104,7 @@ func (u *uploader) requeue(b model.UploadBatch, err error) {
 func (u *uploader) trimLocked() {
 	u.pending = trimOldest(u.pending, maxPending)
 	u.stations = trimOldest(u.stations, maxPendingStations)
+	u.samples = trimOldest(u.samples, maxPendingSamples)
 }
 
 func trimOldest[T any](s []T, limit int) []T {
@@ -125,13 +139,13 @@ func (u *uploader) flush(ctx context.Context) {
 	// 已改为记观测时间而不是服务端时刻,不带 SentAt 的话钟慢的成员的单会提前过期。
 	// 每次发送现填:退回队列重发的那批也要用这一次发出的时刻,里面的旧单才保持旧
 	batch := model.UploadBatch{Reporter: u.character, Orders: u.pending,
-		Stations: u.stations, SentAt: time.Now(), ClientVersion: version}
-	u.pending, u.stations = nil, nil
+		Stations: u.stations, Samples: u.samples, SentAt: time.Now(), ClientVersion: version}
+	u.pending, u.stations, u.samples = nil, nil, nil
 	u.mu.Unlock()
 
-	// 只有建筑没有挂单也要发:开一次地图不翻市场是常态。
+	// 只有建筑或样本、没有挂单也要发:开一次地图不翻市场是常态。
 	// 以前这里挂单为空就 return
-	if len(batch.Orders) == 0 && len(batch.Stations) == 0 {
+	if len(batch.Orders) == 0 && len(batch.Stations) == 0 && len(batch.Samples) == 0 {
 		return
 	}
 
@@ -160,12 +174,12 @@ func (u *uploader) flush(ctx context.Context) {
 		// 断网期间数据堆在内存里,连上自动补——这是 HTTP 比 WS 省事的地方
 		u.requeue(batch, err)
 		slog.Warn("上传失败,已退回队列", "count", len(batch.Orders),
-			"stations", len(batch.Stations), "err", err)
+			"stations", len(batch.Stations), "samples", len(batch.Samples), "err", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	var out struct{ Changed, Touched, Stations int }
+	var out struct{ Changed, Touched, Stations, Samples int }
 	_ = json.NewDecoder(resp.Body).Decode(&out)
 
 	u.mu.Lock()
@@ -175,5 +189,6 @@ func (u *uploader) flush(ctx context.Context) {
 	u.lastErr = ""
 	u.mu.Unlock()
 	slog.Info("已上传", "sent", len(batch.Orders), "changed", out.Changed, "touched", out.Touched,
-		"stations", len(batch.Stations), "stations_saved", out.Stations)
+		"stations", len(batch.Stations), "stations_saved", out.Stations,
+		"samples", len(batch.Samples), "samples_saved", out.Samples)
 }

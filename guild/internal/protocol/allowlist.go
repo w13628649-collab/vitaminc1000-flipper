@@ -43,12 +43,15 @@ type Rule struct {
 	Name string // 客户端码表里的名字,只给人看
 	// Keys 是允许进业务层的参数键。空 = 业务层只知道"这条消息发生了",一个参数都拿不到
 	Keys []byte
-	Why  string
+	// Sample 为 true 时,原始样本记录器(sample.go)可以把这条消息的**全部键**原样
+	// 记下来,用来解还没解过的字段布局。只给明确批准的几条开,每个码每次运行最多 20 条
+	Sample bool
+	Why    string
 }
 
-// Allowlist 是当前这套码下的完整白名单。码随游戏版本漂移,所以按名字从 OpCodes 取,
-// 不在这里写死数字;默认码下各行的数值见 allowlist_test.go。
-func Allowlist(op OpCodes) []Rule {
+// Allowlist 是当前这套码下的完整白名单。码随游戏版本漂移,所以按名字从 OpCodes /
+// EventCodes 取,不在这里写死数字;默认码下各行的数值见 allowlist_test.go。
+func Allowlist(op OpCodes, ev EventCodes) []Rule {
 	return []Rule{
 		// ── 操作响应 ──
 		{Kind: KindResponse, Code: op.AuctionGetOffers, Name: "AuctionGetOffers", Keys: []byte{0},
@@ -58,7 +61,8 @@ func Allowlist(op OpCodes) []Rule {
 		{Kind: KindResponse, Code: op.Join, Name: "Join", Keys: []byte{1, 2, 8},
 			Why: "自己的角色 id / 角色名 / 所在区。城市挂单的 LocationId 在包里是空的,靠所在区补"},
 		{Kind: KindResponse, Code: op.GetClusterMapInfo, Name: "GetClusterMapInfo",
-			Keys: []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
+			Keys:   []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
+			Sample: true, // 92 个键只认了 10 个,全键样本用来找建筑 id、地皮挂牌价那几个
 			Why: "区域地图里的建筑:类型、坐标、耐久、营养、银、所有者、两档使用费(23/31 含义未知,原样存)。" +
 				"费率和所有者换个人看是同一个值;坐标只当「哪个建筑」的连接键,不建地图层"},
 
@@ -72,7 +76,35 @@ func Allowlist(op OpCodes) []Rule {
 		{Kind: KindRequest, Code: op.AuctionGetRequests, Name: "AuctionGetRequests",
 			Why: "同上"},
 
-		// ── 事件:默认全丢,这里一行都没有 ──
+		// ── 事件:默认全丢。下面三行是「一条事件都不解」的唯一例外 ──
+		//
+		// 批准:用户 2026-10-17 明确批准(会进游戏打开专精界面让我们抓样本)。
+		// 判准(仓库 CLAUDE.md):专精是玩家自己的进度,换个时间看是同一个值,
+		// 不是"服务端因为你站在那里才推给你的"东西。
+		// 范围:**只记原始样本**(Keys 为空,业务层一个键都拿不到),用来解字段布局;
+		// 解码器写好之前不进任何业务逻辑。码见 docs/client-data.md 第四节
+		{Kind: KindEvent, Code: ev.FullAchievementInfo, Name: "FullAchievementInfo", Sample: true,
+			Why: "专精全量。用户 2026-10-17 批准的例外,只记样本"},
+		{Kind: KindEvent, Code: ev.AchievementProgressInfo, Name: "AchievementProgressInfo", Sample: true,
+			Why: "专精增量。用户 2026-10-17 批准的例外,只记样本"},
+		{Kind: KindEvent, Code: ev.FullAchievementProgressInfo, Name: "FullAchievementProgressInfo", Sample: true,
+			Why: "专精等级。用户 2026-10-17 批准的例外,只记样本"},
+	}
+}
+
+// EventCodes 是白名单例外里用到的事件码(只有这三个,见 Allowlist)。
+type EventCodes struct {
+	FullAchievementInfo         int
+	AchievementProgressInfo     int
+	FullAchievementProgressInfo int
+}
+
+// DefaultEventCodes 取自客户端 1.32.030.345319 的码表(docs/client-data/photon-codes.json)。
+func DefaultEventCodes() EventCodes {
+	return EventCodes{
+		FullAchievementInfo:         150,
+		AchievementProgressInfo:     152,
+		FullAchievementProgressInfo: 153,
 	}
 }
 
@@ -84,21 +116,22 @@ type ruleKey struct {
 // allowIndex 是 Allowlist 按 (方向, 码) 建的索引,码表变了就重建。
 // 每个包都要查一次,不能每次现建一遍切片
 type allowIndex struct {
-	mu    sync.Mutex
-	built bool
-	codes OpCodes
-	rules map[ruleKey]Rule
+	mu     sync.Mutex
+	built  bool
+	codes  OpCodes
+	events EventCodes
+	rules  map[ruleKey]Rule
 }
 
-func (a *allowIndex) lookup(op OpCodes, kind Kind, code int) (Rule, bool) {
+func (a *allowIndex) lookup(op OpCodes, ev EventCodes, kind Kind, code int) (Rule, bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if !a.built || a.codes != op {
+	if !a.built || a.codes != op || a.events != ev {
 		a.rules = map[ruleKey]Rule{}
-		for _, r := range Allowlist(op) {
+		for _, r := range Allowlist(op, ev) {
 			a.rules[ruleKey{r.Kind, r.Code}] = r
 		}
-		a.codes, a.built = op, true
+		a.codes, a.events, a.built = op, ev, true
 	}
 	r, ok := a.rules[ruleKey{kind, code}]
 	return r, ok

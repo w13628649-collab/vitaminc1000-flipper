@@ -18,6 +18,8 @@ type fakeCapture struct {
 	reporter string
 	fees     []store.StationFee
 	since    time.Time
+	samples  []model.CaptureSample
+	query    []any
 }
 
 func (f *fakeCapture) SaveStations(_ context.Context, reporter string, obs []model.StationObs) error {
@@ -29,6 +31,61 @@ func (f *fakeCapture) SaveStations(_ context.Context, reporter string, obs []mod
 func (f *fakeCapture) StationFees(_ context.Context, since time.Time) ([]store.StationFee, error) {
 	f.since = since
 	return f.fees, nil
+}
+
+func (f *fakeCapture) SaveSamples(_ context.Context, reporter string, s []model.CaptureSample) error {
+	f.reporter = reporter
+	f.samples = append(f.samples, s...)
+	return nil
+}
+
+func (f *fakeCapture) Samples(_ context.Context, kind string, code, limit int) ([]store.SampleRow, error) {
+	f.query = []any{kind, code, limit}
+	return nil, nil
+}
+
+// 原始样本跟着上传走:时间纠偏,样本没带版本时用批次的
+func TestUpload_原始样本(t *testing.T) {
+	fc := &fakeCapture{}
+	s := New(nil, nil, nil, time.Minute, nil)
+	s.Capture = fc
+	body, _ := json.Marshal(model.UploadBatch{Reporter: "甲", ClientVersion: "9.9",
+		Samples: []model.CaptureSample{{Code: 153, Kind: model.SampleEvent,
+			Params: json.RawMessage(`[]`), ObservedAt: time.Now().Add(time.Hour)}}})
+	out := postUpload(t, s, string(body))
+	if out["samples"] != 1 || len(fc.samples) != 1 {
+		t.Fatalf("返回 %v,存了 %d 条", out, len(fc.samples))
+	}
+	if fc.samples[0].ClientVersion != "9.9" || fc.samples[0].ObservedAt.After(time.Now()) {
+		t.Fatalf("样本: %+v", fc.samples[0])
+	}
+}
+
+func TestSamples_参数(t *testing.T) {
+	fc := &fakeCapture{}
+	s := New(nil, nil, nil, time.Minute, nil)
+	s.Capture = fc
+	get := func(url string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		return rec
+	}
+	rec := get("/api/samples?code=197&kind=op_response&limit=5")
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Fatalf("状态 %d: %s", rec.Code, rec.Body.String())
+	}
+	if fc.query[0] != "op_response" || fc.query[1] != 197 || fc.query[2] != 5 {
+		t.Fatalf("查询参数: %v", fc.query)
+	}
+	get("/api/samples")
+	if fc.query[0] != "" || fc.query[1] != -1 || fc.query[2] != 50 {
+		t.Fatalf("缺省参数: %v", fc.query)
+	}
+	for _, bad := range []string{"code=-3", "code=x", "kind=request", "limit=0", "limit=500"} {
+		if rec := get("/api/samples?" + bad); rec.Code != http.StatusBadRequest {
+			t.Errorf("%s 应是 400,得到 %d", bad, rec.Code)
+		}
+	}
 }
 
 func postUpload(t *testing.T, s *Server, body string) map[string]int {

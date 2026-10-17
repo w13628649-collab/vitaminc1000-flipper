@@ -77,6 +77,26 @@ type UploadBatch struct {
 	// omitempty:老服务端的 handleUpload 不开 DisallowUnknownFields,多一个字段它
 	// 照样解;老客户端不带这个字段,新服务端解出来是 nil。两个方向都不坏
 	Stations []StationObs `json:"stations,omitempty"`
+	// Samples 是原始样本(还没解过布局的消息原样),兼容性同 Stations
+	Samples []CaptureSample `json:"samples,omitempty"`
+}
+
+// 原始样本的消息方向,和 protocol.Kind.String() 一致
+const (
+	SampleOpResponse = "op_response"
+	SampleEvent      = "event"
+)
+
+// CaptureSample 是一条原样记下来的消息,用来解还没解过的字段布局。
+//
+// Params 是整张参数表、每项带 Go 类型标签:[{"k":17,"t":"[]int32","v":[…]}, …]。
+// 类型标签是要点——同一个字段线上可能是几种 Go 类型,解码器要照着写。
+type CaptureSample struct {
+	Code          int             `json:"code"`
+	Kind          string          `json:"kind"` // op_response | event
+	Params        json.RawMessage `json:"params"`
+	ObservedAt    time.Time       `json:"observed_at"`
+	ClientVersion string          `json:"client_version,omitempty"`
 }
 
 // StationObs 是一次区域地图响应(op 197)里一个建筑的观测。

@@ -78,7 +78,10 @@ type rawOrder struct {
 
 // Parser 有状态:城市挂单的 LocationId 在包里是空的,得靠当前所在地补。
 type Parser struct {
-	Codes OpCodes
+	Codes  OpCodes
+	Events EventCodes
+	// Version 是客户端版本号,写进原始样本:字段布局随版本变,样本得知道自己是哪一版
+	Version string
 
 	// allow 是白名单索引(allowlist.go)。不在里面的消息读完码就丢
 	allow allowIndex
@@ -92,6 +95,8 @@ type Parser struct {
 	characterName string
 	// zoneReqs 是还在等响应的 op 197 请求(station.go)
 	zoneReqs []zoneRequest
+	// sampled 是这次运行里每个 (方向, 码) 已经记了几条样本(sample.go)
+	sampled map[ruleKey]int
 
 	// clock 为 nil 时用 time.Now。留给测试钉时间
 	clock func() time.Time
@@ -107,6 +112,8 @@ type Parser struct {
 	OnMarketDecoded func(n int)
 	// OnStations 解出一次区域地图(op 197)里的建筑时回调。
 	OnStations func(obs []model.StationObs)
+	// OnSample 记下一条原始样本时回调(只有白名单里 Sample 的那几条)。
+	OnSample func(s model.CaptureSample)
 }
 
 func (p *Parser) now() time.Time {
@@ -117,7 +124,7 @@ func (p *Parser) now() time.Time {
 }
 
 func New() *Parser {
-	return &Parser{Codes: DefaultOpCodes()}
+	return &Parser{Codes: DefaultOpCodes(), Events: DefaultEventCodes()}
 }
 
 func (p *Parser) Location() string {
@@ -157,9 +164,12 @@ func (p *Parser) HandleResponse(photonOp byte, params map[byte]any) {
 			code = int(photonOp) // 退回 Photon 层那个操作码
 		}
 	}
-	rule, ok := p.allow.lookup(p.Codes, KindResponse, code)
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindResponse, code)
 	if !ok {
 		return
+	}
+	if rule.Sample {
+		p.recordSample(rule, params) // 全键原样,在剥键之前
 	}
 	params = rule.filter(params)
 	switch code {
@@ -179,7 +189,7 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 	if !ok {
 		return
 	}
-	rule, ok := p.allow.lookup(p.Codes, KindRequest, code)
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindRequest, code)
 	if !ok {
 		return
 	}
@@ -197,6 +207,29 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 		zone, _ := params[0].(string)
 		p.noteZoneRequest(zone, p.now())
 	}
+}
+
+// HandleEvent 处理服务端推来的事件。
+//
+// **抓包一条事件都不解**(仓库 CLAUDE.md「不变的核心要求」),唯一的例外是
+// 白名单里那三条专精事件,而且只记原始样本、不进业务逻辑。
+// 不在例外表里的事件读完 params[252] 立刻返回,别的参数一个不碰。
+//
+// (photon 层为了拿到 252 已经把参数表反序列化了——事件的真码就在参数表里,
+// 不解表拿不到码。这一步之后数据就停在这里,不往上传。)
+func (p *Parser) HandleEvent(_ byte, params map[byte]any) {
+	code, ok := intParam(params, paramEventCode)
+	if !ok {
+		return
+	}
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindEvent, code)
+	if !ok {
+		return
+	}
+	if rule.Sample {
+		p.recordSample(rule, params)
+	}
+	// rule.Keys 对事件全是空的:业务层什么都不拿
 }
 
 func (p *Parser) handleOrders(params map[byte]any) {
