@@ -21,9 +21,11 @@ func clusterMapResponse() map[byte]any {
 		keyUnknown23:       []int64{7, 8},
 		keySilver:          []int64{1 << 40, 5},
 		keyOwners:          []string{"甲公会", ""},
-		keyUnknown31:       "整个值",
-		keyAssociateFee:    []int64{5_000_000, 300}, // 一个像定点、一个像整银
-		keyPublicFee:       []int64{1000, 1001},     // 正好卡在 1000 两侧
+		keyCanUse:          []bool{true, false},
+		keyAccess:          []byte{2, 0, 0, 0, 0, 0, 0, 0}, // 线上的形态:每个建筑 4 字节小端,Public / Closed
+		keyUsable:          []bool{true, false},
+		keyAssociateFee:    []int32{3_600_000, 0}, // 线上是 int[]
+		keyPublicFee:       []int32{3_900_000, 10_000_000},
 		99:                 "白名单外的键",
 	}
 }
@@ -64,16 +66,24 @@ func TestClusterMap_按请求的区解出每个建筑(t *testing.T) {
 	if a.Owner != "甲公会" || b.Owner != "" {
 		t.Fatalf("所有者: %q %q", a.Owner, b.Owner)
 	}
-	// 23 是对得上建筑数的数组,存那一格;31 是标量,存整个值
-	if string(a.Key23) != `{"t":"int64","v":7}` || string(b.Key31) != `{"t":"string","v":"整个值"}` {
-		t.Fatalf("23/31 原样存: %s / %s", a.Key23, b.Key31)
+	// 23 是对得上建筑数的数组,存那一格
+	if string(a.Key23) != `{"t":"int64","v":7}` {
+		t.Fatalf("23 原样存: %s", a.Key23)
+	}
+	// 31 解成访问权限预设,解开了就不再原样存;30/32 是能不能用
+	if a.Access == nil || *a.Access != 2 || b.Access == nil || *b.Access != 0 || a.Key31 != nil {
+		t.Fatalf("访问权限: %v %v key31=%s", a.Access, b.Access, a.Key31)
+	}
+	if !*a.CanUse || !*a.Usable || *b.CanUse || *b.Usable {
+		t.Fatalf("能不能用: %v %v / %v %v", *a.CanUse, *a.Usable, *b.CanUse, *b.Usable)
 	}
 	if a.BuildingKey() != "501@10.5,-3" {
 		t.Fatalf("连接键: %s", a.BuildingKey())
 	}
 }
 
-// 标度没定:原值 > 1000 按 a7m 定点 /10000,否则当整银。原值和归一化值都存
+// 标度 2026-10-19 实测定死:a7m 定点 ÷10000(N 地图 495 台站的原值全是 10000 的整数倍,
+// 最大正好 1000 银 × 10000)。原值和归一化值都存
 func TestClusterMap_费率标度(t *testing.T) {
 	p, got, _ := newMapParser(t)
 	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "0000"})
@@ -84,35 +94,30 @@ func TestClusterMap_费率标度(t *testing.T) {
 		norm *float64
 		want float64
 	}{
-		{a.AssociateFeeRaw, a.AssociateFee, 500}, // 5,000,000 / 10000
-		{b.AssociateFeeRaw, b.AssociateFee, 300}, // 整银
-		{a.PublicFeeRaw, a.PublicFee, 1000},      // 正好 1000 当整银
+		{a.AssociateFeeRaw, a.AssociateFee, 360},
+		{b.AssociateFeeRaw, b.AssociateFee, 0},
+		{a.PublicFeeRaw, a.PublicFee, 390},
+		{b.PublicFeeRaw, b.PublicFee, 1000}, // 上限
 	}
 	for i, c := range cases {
 		if c.raw == nil || c.norm == nil || *c.norm != c.want {
 			t.Errorf("第 %d 条: 原值 %v 归一化 %v,想要 %v", i, c.raw, c.norm, c.want)
 		}
 	}
-	if *a.AssociateFeeRaw != 5_000_000 {
+	if *a.AssociateFeeRaw != 3_600_000 {
 		t.Error("原值要原样存")
-	}
-	// 1001 当整银超上限、当定点不到 1 银,两种读法都说不通:只存原值。
-	// 以前读成 0.1001,取最便宜那台时反而被选中
-	if b.PublicFeeRaw == nil || *b.PublicFeeRaw != 1001 || b.PublicFee != nil {
-		t.Errorf("1001 应只存原值: raw %v fee %v", b.PublicFeeRaw, b.PublicFee)
 	}
 }
 
-func TestNormalizeFee_说不通的区间判失败(t *testing.T) {
-	for raw, want := range map[int64]float64{0: 0, 1000: 1000, 10_000: 1, 5_000_000: 500} {
+func TestNormalizeFee(t *testing.T) {
+	// 以前 ≤ 1000 当整银:原值 1000 会读成 1000 银,其实是 0.1 银
+	for raw, want := range map[int64]float64{0: 0, 1000: 0.1, 10_000: 1, 5_000_000: 500, 10_000_000: 1000} {
 		if got, ok := normalizeFee(raw); !ok || got != want {
 			t.Errorf("%d → %v %v,想要 %v", raw, got, ok, want)
 		}
 	}
-	for _, raw := range []int64{-1, 1001, 9_999} {
-		if got, ok := normalizeFee(raw); ok {
-			t.Errorf("%d 应判失败,得到 %v", raw, got)
-		}
+	if got, ok := normalizeFee(-1); ok {
+		t.Errorf("负数应判失败,得到 %v", got)
 	}
 }
 
@@ -158,7 +163,7 @@ func TestDecodeStations_坐标NaN当没收到(t *testing.T) {
 			keyPosition:     v,
 			keyPublicFee:    []int64{100, 200},
 		}, time.Now())
-		if len(obs) != 2 || obs[0].Pos != nil || obs[1].Pos != nil || *obs[1].PublicFee != 200 {
+		if len(obs) != 2 || obs[0].Pos != nil || obs[1].Pos != nil || *obs[1].PublicFeeRaw != 200 {
 			t.Fatalf("%s:坐标应当没收到、其余照常,得到 %+v", name, obs)
 		}
 		if len(warns) != 1 {
@@ -167,6 +172,24 @@ func TestDecodeStations_坐标NaN当没收到(t *testing.T) {
 		if _, err := json.Marshal(obs); err != nil {
 			t.Fatalf("%s:解出来的建筑必须能序列化: %v", name, err)
 		}
+	}
+}
+
+// key31 的几种形态:每建筑 4 字节小端、每建筑 1 字节、整数数组;长度对不上就原样存
+func TestAccessPresets(t *testing.T) {
+	for name, v := range map[string]any{
+		"4 字节小端": []byte{3, 0, 0, 0, 1, 0, 0, 0},
+		"1 字节":   []byte{3, 1},
+		"整数数组":   []int32{3, 1},
+	} {
+		got, ok := accessPresets(v, 2)
+		if !ok || len(got) != 2 || got[0] != 3 || got[1] != 1 {
+			t.Errorf("%s: %v %v", name, got, ok)
+		}
+	}
+	obs, warns := decodeStations("1000", map[byte]any{keyBuildingType: []int32{1, 2}, keyAccess: []byte{1, 2, 3}}, time.Now())
+	if len(warns) != 1 || obs[0].Access != nil || obs[0].Key31 == nil {
+		t.Fatalf("长度对不上应当告警、原样存: %v %+v", warns, obs[0])
 	}
 }
 

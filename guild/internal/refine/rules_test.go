@@ -100,6 +100,29 @@ func TestFocusCost按规则原文(t *testing.T) {
 	}
 }
 
+// D3:作者 2026-10-19 抓包读到的纤维线(T5/T6 满级,T7/T8 刚解锁)
+func TestSpecFCE(t *testing.T) {
+	fiber := [5]int{60, 100, 100, 1, 1} // 和 262 → 7860
+	want := map[int]float64{4: 22860, 5: 32860, 6: 32860, 7: 8110, 8: 8110}
+	got := SpecFCE(fiber)
+	for tier, w := range want {
+		if got[tier] != w {
+			t.Errorf("T%d FCE = %v, want %v", tier, got[tier], w)
+		}
+	}
+	if full := SpecFCE([5]int{100, 100, 100, 100, 100}); full[8] != MaxFCE || full[4] != MaxFCE {
+		t.Fatalf("全满应当正好 %v: %v", MaxFCE, full)
+	}
+	for _, c := range []struct {
+		lv   [5]int
+		want int
+	}{{fiber, 8}, {[5]int{15, 27, 2, 0, 0}, 6}, {[5]int{21, 1, 0, 0, 0}, 5}, {[5]int{}, 3}} {
+		if got := SpecUnlockedTier(c.lv); got != c.want {
+			t.Errorf("%v 解锁到 T%d, want T%d", c.lv, got, c.want)
+		}
+	}
+}
+
 // E1/E3:T8.4 条 IV 4096,按 500 是 2304,按 1000 是 4608;T2 免费。
 func TestStationFee按规则原文(t *testing.T) {
 	cases := []struct {

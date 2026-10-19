@@ -92,7 +92,7 @@ func TestRefining校验点名写错的键(t *testing.T) {
 	}
 }
 
-// 建筑类型映射按 YAML 写进来;线 → 类型、类型 → 线两个方向都查得到。
+// 额外的建筑类型映射按 YAML 写进来(内置表之外补的,flip.stationMapping 合并)。
 func TestRefining工作站建筑类型映射(t *testing.T) {
 	c, err := Load(writeYAML(t, `
 refining:
@@ -104,17 +104,11 @@ refining:
 		t.Fatal(err)
 	}
 	r := c.Refining
-	if got := r.StationTypesFor("ORE"); !reflect.DeepEqual(got, []int32{501, 502}) {
+	if got := r.StationBuildingTypes["ORE"]; !reflect.DeepEqual(got, []int32{501, 502}) {
 		t.Fatalf("ORE 映射 %v", got)
 	}
-	if r.StationTypesFor("WOOD") != nil {
-		t.Fatal("没映射的线应当是 nil")
-	}
-	if l, ok := r.StationLineOf(601); !ok || l != "HIDE" {
-		t.Fatalf("601 → %q %v", l, ok)
-	}
-	if _, ok := r.StationLineOf(999); ok {
-		t.Fatal("没映射的类型不该查到")
+	if r.StationBuildingTypes["WOOD"] != nil {
+		t.Fatal("没写的线应当是 nil")
 	}
 	if r.StationFeeMaxAgeHours != 24 || r.StationFeeTransmute {
 		t.Fatalf("写了的没生效: %+v", r)

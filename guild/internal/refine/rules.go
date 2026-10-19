@@ -97,6 +97,39 @@ func FocusCost(base, fce float64) float64 {
 	return base * math.Pow(0.5, fce/FocusHalvingFCE)
 }
 
+const (
+	// FCEPerLineLevel / FCEPerTierLevel:精炼专精节点每升一级给的 FCE。D3 ✔ achievements.xml:
+	// 每个 CRAFT_REFINE_<线>_T<n> 节点带两条 craftingfocuscostreduction,
+	// bonus 0.3 管这条线 T4~T8(+30)、bonus 2.5 只管本 tier(+250)
+	FCEPerLineLevel = 30.0
+	FCEPerTierLevel = 250.0
+)
+
+// SpecFCE 按一条线 T4~T8 五个精炼专精节点的等级(抓包读到的,0~100)算各 tier 的 FCE:
+// FCE(t) = 30 × 五个节点等级之和 + 250 × 本 tier 节点等级,封顶 MaxFCE。
+func SpecFCE(levels [5]int) map[int]float64 {
+	sum := 0
+	for _, l := range levels {
+		sum += l
+	}
+	out := make(map[int]float64, 5)
+	for i, l := range levels {
+		out[MinEnchantTier+i] = math.Min(MaxFCE, FCEPerLineLevel*float64(sum)+FCEPerTierLevel*float64(l))
+	}
+	return out
+}
+
+// SpecUnlockedTier 是这条线精炼解锁到 T 几:等级 ≥ 1 的最高 tier。节点的第 0 行就是解锁,
+// 做完等级才变成 1(gamedata.SpecLevels);T4 都没解锁返回 3,和界面「T4 都没解锁」那一项一致
+func SpecUnlockedTier(levels [5]int) int {
+	for i := len(levels) - 1; i >= 0; i-- {
+		if levels[i] >= 1 {
+			return MinEnchantTier + i
+		}
+	}
+	return MinEnchantTier - 1
+}
+
 // CheckFCE 校验用户录入的 FCE。超出 [0, 40000] 说明录错了,不静默截断。
 func CheckFCE(fce float64) error {
 	if !(fce >= 0 && fce <= MaxFCE) {
@@ -231,10 +264,10 @@ var UnverifiedParams = []Unverified{
 	{"fees.transmute_factor", "B5",
 		"T8 冶炼厂「转化」分页选 8.3→8.4、数量 1,记下明细里的基本花费 / 全局折扣 / 主人费用 / 地区税费,实付 ÷ 基础价就是 k"},
 	{"focus.fce", "D3",
-		"命运之轮里 T4~T8 五个精炼节点的等级,或在站里选中产物看显示的专注消耗"},
-	{"focus.unlocked_tier", "A10", "命运之轮 T8 精炼节点是否已解锁"},
-	{"fees.station_per100", "E5", "城内按 N 打开地图,悬停在精炼站上看每 100 营养多少银"},
-	{"fees.transmute_station_per100", "B6", "同上,转化和精炼在同一个站"},
+		"开着客户端登录或切一次区,自动从命运之轮读(事件 150);没读到就看五个精炼节点的等级,或在站里选中产物看显示的专注消耗"},
+	{"focus.unlocked_tier", "A10", "同上自动读;没读到就看命运之轮 T8 精炼节点是否已解锁"},
+	{"fees.station_per100", "E5", "城内按 N 打开地图,客户端自动记下全城精炼站的费率"},
+	{"fees.transmute_station_per100", "B6", "同上,转化就在精炼站上做(buildings.xml 里冶炼匠能转化矿石)"},
 	{"rrr.daily_bonus", "C6", "游戏内「活动」窗口里今天的每日生产加成落在哪些品类、+10 还是 +20"},
 	{"heart_returns", "A7", "用心、开专注精炼一小批,看有没有返还心"},
 }

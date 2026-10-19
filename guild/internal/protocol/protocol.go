@@ -141,6 +141,8 @@ type Parser struct {
 	OnTrade  func(t model.MyTrade)
 	OnWallet func(w model.WalletObs)
 	OnFocus  func(f model.FocusObs)
+	// OnSpec 精炼专精等级变了(spec.go):登录、切区时推,和上次一样不回调
+	OnSpec func(s model.SpecObs)
 }
 
 func (p *Parser) now() time.Time {
@@ -295,6 +297,8 @@ func (p *Parser) HandleEvent(photonCode byte, params map[byte]any) {
 		p.handleMoney(params)
 	case p.Events.CraftingFocusUpdate:
 		p.handleFocus(params)
+	case p.Events.FullAchievementInfo:
+		p.handleSpec(params)
 	}
 }
 

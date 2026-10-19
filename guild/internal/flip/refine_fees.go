@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"albion-guild/internal/gamedata"
 	"albion-guild/internal/refine"
 	"albion-guild/internal/store"
 )
@@ -18,13 +19,13 @@ import (
 //
 // 优先级从高到低:
 //  1. 请求里写明的 fees.station_per100(用户手填)
-//  2. 抓包:这座城、这条线映射到的建筑(refining.station_building_types),
-//     不超过 station_fee_max_age_hours 的,取最便宜那台
+//  2. 抓包:这座城、这条线的精炼站,不超过 station_fee_max_age_hours 的,取最便宜那台
 //  3. 配置的 station_fee_by_city
 //  4. 配置的 station_fee_per100
 //
-// 映射默认是空的:哪个建筑类型是冶炼厂 / 制革厂要等实测样本对着游戏里的 N 地图认。
-// 空着时抓到的费率一律不进计算,只在响应里列出来(StationFeeInfo.Unmapped),界面提示去填映射。
+// 哪种建筑类型是哪条线的精炼站用内置表(internal/gamedata,从客户端 buildings.xml 算的,
+// 2026-10-19 拿 N 地图 495 台站核过),配置 refining.station_building_types 可以再补。
+// 表里没有的类型不进计算,只在响应里列出来(StationFeeInfo.Unmapped)。
 
 // StationFeeSource 是 RefineSource 的可选能力:抓包存下来的工作站观测,每台站最新一条
 // (*store.Store 有;测试里的假数据源实现它就能喂费率)。
@@ -67,10 +68,12 @@ type StationFeeInfo struct {
 	Max      *float64 `json:"max,omitempty"`
 	// Seen 是这座城抓到的新鲜站总数(任何建筑类型、费率合法的)
 	Seen int `json:"seen"`
-	// Unmapped 是这座城抓到、但 station_building_types 里没映射到任何线的建筑类型
+	// Unmapped 是这座城抓到、但不是任何一条线精炼站的建筑类型(铁匠铺、厨房……)
 	Unmapped []KindFee `json:"unmapped"`
 	// Unusable:映射上了、但观测到营养或耐久是 0 的台数(这种站不能精炼),不参与取最便宜
 	Unusable int `json:"unusable"`
+	// Closed:映射上了、但对你不开放的台数(房主设成 Closed / Private,或抓包的角色用不了),不参与
+	Closed int `json:"closed"`
 	// Bad:费率不在 [0, 1000] 内、整台丢掉的台数(标度可能猜错了,服务端日志有告警)
 	Bad int `json:"bad"`
 	// MaxAgeHours 是认多旧以内的抓包费率(refining.station_fee_max_age_hours)
@@ -174,11 +177,28 @@ func (s *Service) stationFeeInfo(ctx context.Context, line refine.Line, city str
 		info.Error = err.Error()
 		return info
 	}
-	return pickStationFee(info, rows, r.StationTypesFor(line.Key), r.StationBuildingTypes, now)
+	m := stationMapping(r.StationBuildingTypes)
+	return pickStationFee(info, rows, m[line.Key], m, now)
+}
+
+// stationMapping 是精炼线 → 认哪些建筑类型:内置表加上配置里额外写的
+func stationMapping(extra map[string][]int32) map[string][]int32 {
+	out := make(map[string][]int32, len(gamedata.Lines))
+	for _, l := range gamedata.Lines {
+		out[l] = gamedata.StationTypes(l)
+	}
+	for l, ids := range extra {
+		for _, id := range ids {
+			if !slices.Contains(out[l], id) {
+				out[l] = append(out[l], id)
+			}
+		}
+	}
+	return out
 }
 
 // pickStationFee 是纯函数:在 rows 里挑这座城、这条线映射到的建筑里最便宜的一台。
-// 假设玩家会去最便宜的站;同价取观测最新的。营养或耐久观测到 0 的站不能用,不参与。
+// 假设玩家会去最便宜的站;同价取观测最新的。对你不开放的、营养或耐久观测到 0 的站不能用,不参与。
 func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 	mapping map[string][]int32, now time.Time) StationFeeInfo {
 
@@ -216,6 +236,10 @@ func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 				k.Stations++
 				k.FeeMin, k.FeeMax, k.AgeH = math.Min(k.FeeMin, fee), math.Max(k.FeeMax, fee), math.Min(k.AgeH, age)
 			}
+			continue
+		}
+		if row.Closed() {
+			info.Closed++
 			continue
 		}
 		if (row.Nutrition != nil && *row.Nutrition == 0) || (row.Durability != nil && *row.Durability == 0) {

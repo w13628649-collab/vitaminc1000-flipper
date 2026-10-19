@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -21,13 +22,17 @@ const (
 	keyUnknown23    = 23 // 含义未知,原样存
 	keySilver       = 24 // long[](AvailableSilver)
 	keyOwners       = 25 // string[]
-	keyUnknown31    = 31 // 含义未知,原样存
-	keyAssociateFee = 33 // long[],只有社区一个来源说它是 Associate
-	keyPublicFee    = 34 // long[],只有社区一个来源说它是 Public
+	keyCanUse       = 30 // bool[],对抓包的这个角色能不能用
+	keyAccess       = 31 // AccessRights.Preset[]:Closed 0 / Private 1 / Public 2 / Custom 3
+	keyUsable       = 32 // bool[],和 30 在样本里总是一样
+	// 两档使用费,线上是 int[](a7m 定点 ×10000)。33 = 公会 / 盟友价、34 = 对外公开价:
+	// 社区一个来源这么说,2026-10-19 的 495 台站里没有一台 33 比 34 贵,和"对自己人便宜"对得上
+	keyAssociateFee = 33
+	keyPublicFee    = 34
 )
 
 // maxUsageFee 是 buildings.xml 里的 maxuseagefee:游戏内能设的使用费上限(每 100 营养,银币)。
-// 线上 key33/34 的标度没定,拿它做量纲断言(normalizeFee)
+// 归一化之后再拿它做一次量纲断言
 const maxUsageFee = 1000
 
 // zoneRequestTTL 是一条 197 请求等响应的最长时间。响应正常一两百毫秒就到,
@@ -184,6 +189,31 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 		}
 	}
 
+	flags := func(key byte) []bool {
+		v, present := params[key]
+		if !present {
+			return nil
+		}
+		a, ok := v.([]bool)
+		if !ok {
+			warns = append(warns, fmt.Sprintf("key%d 形态认不出(%T),当作没收到", key, v))
+			return nil
+		}
+		if !aligned(key, len(a)) {
+			return nil
+		}
+		return a
+	}
+	canUse, usable := flags(keyCanUse), flags(keyUsable)
+	var access []int64
+	if v, present := params[keyAccess]; present {
+		if a, ok := accessPresets(v, n); !ok {
+			warns = append(warns, fmt.Sprintf("key31 形态认不出(%T),当作没收到", v))
+		} else if aligned(keyAccess, len(a)) {
+			access = a
+		}
+	}
+
 	var pos [][]float64
 	if v, present := params[keyPosition]; present {
 		// floatMatrix 遇到 NaN/Inf 整组判失败:坐标进了 Pos,上传时 json.Marshal 整批报错
@@ -227,12 +257,22 @@ func decodeStations(zone string, params map[byte]any, now time.Time) ([]model.St
 		if r := at(public, i); r != nil {
 			o.PublicFeeRaw, o.PublicFee = r, fee(*r)
 		}
+		if canUse != nil {
+			o.CanUse = ptr(canUse[i])
+		}
+		if usable != nil {
+			o.Usable = ptr(usable[i])
+		}
+		if access != nil {
+			o.Access = ptr(int32(access[i]))
+		} else {
+			o.Key31 = rawElement(params, keyAccess, i, len(types))
+		}
 		o.Key23 = rawElement(params, keyUnknown23, i, len(types))
-		o.Key31 = rawElement(params, keyUnknown31, i, len(types))
 		out[i] = o
 	}
 	if ambiguous > 0 {
-		warns = append(warns, fmt.Sprintf("%d 个使用费原值落在 (1000, 10000) 或为负,两种标度都说不通,只存原值", ambiguous))
+		warns = append(warns, fmt.Sprintf("%d 个使用费原值为负,只存原值", ambiguous))
 	}
 
 	// 量纲断言:归一化之后还超过上限,说明标度规则不对(或者那个键根本不是费率)
@@ -261,23 +301,40 @@ func alignPositions(m [][]float64, n int) [][]float64 {
 	return m
 }
 
-// normalizeFee 把线上的使用费换算成银币。客户端字段是 a7m(定点,比例 10000),
-// 但换算发生在没反汇编的代码里,线上到底是定点还是整银没定。
-// 规则(docs/client-data.md 第二点六节):原值 > maxuseagefee(1000)按 /10000,否则原值。
+// normalizeFee 把线上的使用费换算成银币:a7m 定点,÷10000。
 //
-// 落在 (1000, 10000) 的两种读法都说不通:当整银超过上限,当定点不到 1 银。
-// 以前按定点读成零点几银,能过 [0, 1000] 的检查,取最便宜那台时反而被选中——
-// 现在判失败,只存原值。负数同样判失败
+// 2026-10-19 实测定死(docs/client-data.md 第二点六节):N 地图 495 台站,key33/34 原值全是
+// 10000 的整数倍,最大正好 10,000,000 = maxuseagefee 1000 × 10000。以前标度没定,
+// 原值 ≤ 1000 当整银——那样原值 1000(0.1 银)会读成 1000 银。负数判失败
 func normalizeFee(raw int64) (float64, bool) {
-	switch {
-	case raw < 0:
-		return 0, false
-	case raw <= maxUsageFee:
-		return float64(raw), true
-	case raw < model.PriceScale:
+	if raw < 0 {
 		return 0, false
 	}
 	return float64(raw) / model.PriceScale, true
+}
+
+// accessPresets 解 key31(AccessRights.Preset[])。线上到我们这里是 byte[],每个建筑 4 字节
+// 小端 int32(2026-10-19 Lymhurst 99 个建筑 396 字节,值只有 0/2/3);也认一个建筑一字节、
+// 和直接给整数数组的形态
+func accessPresets(v any, n int) ([]int64, bool) {
+	if b, ok := v.([]byte); ok {
+		switch len(b) {
+		case 4 * n:
+			out := make([]int64, n)
+			for i := range n {
+				out[i] = int64(int32(binary.LittleEndian.Uint32(b[4*i:])))
+			}
+			return out, true
+		case n:
+			out := make([]int64, n)
+			for i, x := range b {
+				out[i] = int64(x)
+			}
+			return out, true
+		}
+		return nil, false
+	}
+	return int64s(v)
 }
 
 // rawElement 把含义未知的键带类型标签原样留下:是数组且和建筑数对得上,

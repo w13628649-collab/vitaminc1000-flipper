@@ -31,6 +31,10 @@
   - **城市加成、站点↔物品映射、机制常量全在静态表里**,一个包都不用抓:
     `craftingmodifiers.xml` 141 条 craftinglocation、`buildings.xml` 9,199 条
     craftingitemlist、`ItemValueToNutrition=0.1125`、`maxuseagefee=1000`
+  - **下标表**:专精节点(事件 150)和精炼站建筑类型(op 197 key17)都是"在 xml 里排第几",
+    随客户端升版漂移,由 `cmd/gengamedata` 生成在 `guild/internal/gamedata`。
+    **游戏升版后先重跑 `go generate ./internal/gamedata`**;专精事件对不上指纹会自动停用
+    (客户端日志 Warn),站费认不出站时精炼页会说"没认出能用的 XX"
 
 **录包和离线分析**:客户端加 `-record <目录>` 把 Albion 原始包同时写成 .pcap(256 MB 一个文件);
 `go run ./cmd/pcapdump 录包.pcap` 列出每种消息出现几次,`-dump event:448` 逐条打印参数。

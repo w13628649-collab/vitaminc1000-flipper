@@ -23,6 +23,8 @@ func TestStations存进去每个建筑取最新一条(t *testing.T) {
 	newer.PublicFeeRaw, newer.PublicFee = i64(5_000_000), f64(500)
 	newer.Durability = i64(0)
 	newer.Key23 = json.RawMessage(`{"t":"int64","v":7}`)
+	closed, no := int32(0), false
+	newer.Access, newer.CanUse, newer.Usable = &closed, &no, &no
 	newer.ObservedAt = t0.Add(30 * time.Minute)
 	other := model.StationObs{ZoneID: "1205", Index: 0, BuildingType: 7, ObservedAt: t0}
 
@@ -55,6 +57,12 @@ func TestStations存进去每个建筑取最新一条(t *testing.T) {
 	// 观测到的 0 读回来还是 0,没观测到的是 nil
 	if th.Durability == nil || *th.Durability != 0 || th.Nutrition != nil || th.AssociateFee != nil {
 		t.Fatalf("NULL 和 0 混了: %+v", th)
+	}
+	if th.Access == nil || *th.Access != 0 || th.CanUse == nil || *th.CanUse || th.Usable == nil || *th.Usable {
+		t.Fatalf("能不能用读回: %v %v %v", th.Access, th.CanUse, th.Usable)
+	}
+	if wild.Access != nil || wild.CanUse != nil {
+		t.Fatalf("老形态没这几列应当是 nil: %+v", wild)
 	}
 	var tagged map[string]any
 	if err := json.Unmarshal(th.Key23, &tagged); err != nil || tagged["t"] != "int64" {

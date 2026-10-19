@@ -119,7 +119,54 @@ func TestRefine抓到的站费映射命中且新鲜时用最便宜那台(t *test
 	}
 }
 
-// 映射为空(默认):抓到的费率不进计算,按配置算;响应里把抓到的建筑类型列出来让人去填。
+// 不配置也认得出精炼站:内置表(gamedata)里 431 是 T8 冶炼匠、438 是 T8 伐木场。
+// Thetford 精炼金属锭只看冶炼匠;伐木场是别的线的站,不算没映射;铁匠铺 410 才是
+func TestRefine内置表认得出精炼站(t *testing.T) {
+	s, _ := newFeeService(
+		station("Thetford", "0007", 431, 1, 420, "甲", rNow.Add(-3*time.Hour)),
+		station("Thetford", "0007", 431, 2, 390, "乙", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 438, 3, 80, "伐木场", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 410, 4, 50, "铁匠铺", rNow.Add(-time.Hour)),
+	)
+	p, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	if info.Source != FeeSourceCapture || info.Fee != 390 || p.Fees.StationPer100 != 390 || info.Stations != 2 {
+		t.Fatalf("应当用内置表认出的冶炼匠里最便宜的 390: %+v", info)
+	}
+	if info.Unmapped == nil || len(info.Unmapped) != 1 || info.Unmapped[0].BuildingType != 410 {
+		t.Fatalf("只有铁匠铺算没映射: %+v", info.Unmapped)
+	}
+}
+
+// 对你不开放的站不参与取最便宜:以前 Lymhurst 那台 Closed 的(营养满格、没人用过)也会被挑中
+func TestRefine不开放的站不算(t *testing.T) {
+	no, closed, private, public := false, int32(0), int32(1), int32(2)
+	cheapClosed := station("Thetford", "0007", 431, 1, 100, "关门", rNow.Add(-time.Hour))
+	cheapClosed.CanUse, cheapClosed.Usable, cheapClosed.Access = &no, &no, &closed
+	oldPrivate := station("Thetford", "0007", 431, 2, 150, "老观测私有", rNow.Add(-time.Hour))
+	oldPrivate.Access = &private // 老观测只有访问权限、没有 canUse
+	open := station("Thetford", "0007", 431, 3, 420, "开着", rNow.Add(-time.Hour))
+	open.Access = &public
+	s, _ := newFeeService(cheapClosed, oldPrivate, open,
+		station("Thetford", "0007", 431, 4, 400, "什么都没有的老观测", rNow.Add(-time.Hour)))
+	_, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	if info.Fee != 400 || info.Closed != 2 || info.Stations != 2 {
+		t.Fatalf("应当排除 2 台不开放的、取 400: %+v", info)
+	}
+}
+
+func TestRefine内置表_只有铁匠铺算没映射(t *testing.T) {
+	s, _ := newFeeService(
+		station("Thetford", "0007", 431, 2, 390, "乙", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 438, 3, 80, "伐木场", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 410, 4, 50, "铁匠铺", rNow.Add(-time.Hour)),
+	)
+	_, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	if len(info.Unmapped) != 1 || info.Unmapped[0].BuildingType != 410 {
+		t.Fatalf("只有铁匠铺算没映射: %+v", info.Unmapped)
+	}
+}
+
+// 不是精炼站的类型(或者游戏更新后内置表旧了):抓到的费率不进计算,按配置算;响应里列出来。
 func TestRefine抓到的站费没映射时用配置并列出建筑类型(t *testing.T) {
 	s, _ := newFeeService(
 		station("Thetford", "0000", 501, 1, 420, "甲", rNow.Add(-3*time.Hour)),

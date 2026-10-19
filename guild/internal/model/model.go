@@ -83,6 +83,7 @@ type UploadBatch struct {
 	Trades []MyTrade   `json:"trades,omitempty"`
 	Wallet []WalletObs `json:"wallet,omitempty"`
 	Focus  []FocusObs  `json:"focus,omitempty"`
+	Spec   []SpecObs   `json:"spec,omitempty"`
 }
 
 // 原始样本的消息方向,和 protocol.Kind.String() 一致
@@ -122,28 +123,55 @@ type StationObs struct {
 	// Pos 来自 key18(float[][]),**只当"哪个建筑"的连接键**,不建地图层
 	Pos []float64 `json:"pos,omitempty"`
 	// Durability / Nutrition / Silver 来自 key20 / 22 / 24(long[]),只存原值。
-	// 客户端里它们也是 a7m 定点类型,但比例没定,不归一化
+	// 也是 a7m 定点(营养满格 7,950,000,000 = buildings.xml 的 nutritionstorage 795000 × 10000),
+	// 只拿来判 0,不归一化
 	Durability *int64 `json:"durability,omitempty"`
 	Nutrition  *int64 `json:"nutrition,omitempty"`
 	Silver     *int64 `json:"silver,omitempty"`
 	// Owner 来自 key25(string[])
 	Owner string `json:"owner,omitempty"`
 
-	// 两档使用费(每 100 营养)。key33 = Associate、key34 = Public **只有社区一个来源**,
-	// 客户端侧区分不了,待一张游戏内截图钉死——所以两个都存。
-	// 标度线上没定(a7m 定点比例 10000,还是整银):Raw 是原值,不带 Raw 的是归一化后的
-	// 银币(Raw > 1000 按 /10000,否则原值;1000 是 buildings.xml 的 maxuseagefee)
+	// 两档使用费(每 100 营养)。key33 = 公会 / 盟友价、key34 = 对外公开价(社区一个来源;
+	// 2026-10-19 的 495 台站里没有一台 33 比 34 贵,和"对自己人便宜"对得上)。
+	// 线上是 a7m 定点:Raw 是原值,不带 Raw 的是 ÷10000 后的银币(2026-10-19 实测定死)
 	AssociateFeeRaw *int64   `json:"associate_fee_raw,omitempty"`
 	AssociateFee    *float64 `json:"associate_fee,omitempty"`
 	PublicFeeRaw    *int64   `json:"public_fee_raw,omitempty"`
 	PublicFee       *float64 `json:"public_fee,omitempty"`
 
-	// Key23 / Key31 含义未知,带类型标签原样存({"t":"[]int64","v":…}):
-	// 数组和建筑数对得上就存这个建筑那一格,对不上存整个值
+	// 能不能用(2026-10-19 起解)。Access 来自 key31:房主设的访问权限预设
+	// AccessRights.Preset(客户端元数据:Closed 0 / Private 1 / Public 2 / Custom 3)。
+	// CanUse / Usable 来自 key30 / key32:对抓包的这个角色能不能用(AddBuilding 的 canUse /
+	// usable;样本里两个总是一样,哪个是哪个没分开过)。Lymhurst 那台 Closed 的两个都是 false、
+	// 营养满格从没人用过
+	Access *int32 `json:"access,omitempty"`
+	CanUse *bool  `json:"can_use,omitempty"`
+	Usable *bool  `json:"usable,omitempty"`
+
+	// Key23 含义未知,带类型标签原样存({"t":"[]int64","v":…}):
+	// 数组和建筑数对得上就存这个建筑那一格,对不上存整个值。
+	// Key31 解成 Access 之后不再存;解不开时才原样存
 	Key23 json.RawMessage `json:"key23,omitempty"`
 	Key31 json.RawMessage `json:"key31,omitempty"`
 
 	ObservedAt time.Time `json:"observed_at"`
+}
+
+// AccessRights.Preset 的取值(客户端元数据 Albion.Common.SimulationObjects.AccessRights.Preset)
+const (
+	AccessClosed  = 0
+	AccessPrivate = 1
+	AccessPublic  = 2
+	AccessCustom  = 3
+)
+
+// Closed 是这台站对抓包的这个角色用不了:key30/32 最准(就是"这个角色能不能用");
+// 老观测没有这两个,退回看房主设的访问权限(Closed / Private 对外不开放);都没有当能用
+func (s StationObs) Closed() bool {
+	if s.CanUse != nil || s.Usable != nil {
+		return (s.CanUse != nil && !*s.CanUse) || (s.Usable != nil && !*s.Usable)
+	}
+	return s.Access != nil && (*s.Access == AccessClosed || *s.Access == AccessPrivate)
 }
 
 // BuildingKey 是"哪台站"的连接键:建筑类型 + 坐标(保留两位小数)。
@@ -276,4 +304,14 @@ type FocusObs struct {
 	Character  string    `json:"character"`
 	Focus      float64   `json:"focus"`
 	ObservedAt time.Time `json:"observed_at"`
+}
+
+// SpecObs 是一次精炼专精观测(事件 FullAchievementInfo,登录、切区时推)。
+//
+// Levels:线(ORE / HIDE / FIBER / WOOD / ROCK)→ T4~T8 节点等级。0 = 还没解锁,
+// 1~99 = 解锁了、升到几级,100 = 满级(internal/gamedata.SpecLevels)
+type SpecObs struct {
+	Character  string            `json:"character"`
+	Levels     map[string][5]int `json:"levels"`
+	ObservedAt time.Time         `json:"observed_at"`
 }

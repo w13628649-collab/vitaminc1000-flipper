@@ -181,6 +181,7 @@ func main() {
 	parser.OnTrade = up.addTrade
 	parser.OnWallet = up.addWallet
 	parser.OnFocus = up.addFocus
+	parser.OnSpec = up.addSpec
 	parser.OnIdentity = func(_, name, loc string) {
 		up.setIdentity(name, loc)
 		reporter.SetCharacter(name) // 诊断记录带上角色名,便于对人

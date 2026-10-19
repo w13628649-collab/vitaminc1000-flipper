@@ -48,6 +48,7 @@ type uploader struct {
 	trades    []model.MyTrade
 	wallet    []model.WalletObs
 	focus     []model.FocusObs
+	spec      []model.SpecObs
 	character string
 	location  string
 	seen      int64
@@ -110,6 +111,13 @@ func (u *uploader) addFocus(f model.FocusObs) {
 	u.mu.Unlock()
 }
 
+func (u *uploader) addSpec(s model.SpecObs) {
+	u.mu.Lock()
+	u.spec = append(u.spec, s)
+	u.trimLocked()
+	u.mu.Unlock()
+}
+
 func (u *uploader) addStations(obs []model.StationObs) {
 	u.mu.Lock()
 	u.stations = append(u.stations, obs...)
@@ -133,6 +141,7 @@ func (u *uploader) requeue(b model.UploadBatch, err error) {
 	u.trades = append(b.Trades, u.trades...)
 	u.wallet = append(b.Wallet, u.wallet...)
 	u.focus = append(b.Focus, u.focus...)
+	u.spec = append(b.Spec, u.spec...)
 	u.trimLocked()
 	u.lastErr = err.Error()
 	u.mu.Unlock()
@@ -146,6 +155,7 @@ func (u *uploader) trimLocked() {
 	u.trades = trimOldest(u.trades, maxPendingLedger)
 	u.wallet = trimOldest(u.wallet, maxPendingLedger)
 	u.focus = trimOldest(u.focus, maxPendingLedger)
+	u.spec = trimOldest(u.spec, maxPendingLedger)
 }
 
 func trimOldest[T any](s []T, limit int) []T {
@@ -215,7 +225,7 @@ func (l batchLimits) grow() batchLimits {
 }
 
 func batchItems(b model.UploadBatch) int {
-	return len(b.Orders) + len(b.Stations) + len(b.Samples) + len(b.Trades) + len(b.Wallet) + len(b.Focus)
+	return len(b.Orders) + len(b.Stations) + len(b.Samples) + len(b.Trades) + len(b.Wallet) + len(b.Focus) + len(b.Spec)
 }
 
 // takeLocked 从队列头拿一批,不超过 limits。调用方必须持锁
@@ -233,10 +243,10 @@ func (u *uploader) takeLocked() model.UploadBatch {
 		Stations: append([]model.StationObs(nil), u.stations[:s]...),
 		Samples:  append([]model.CaptureSample(nil), u.samples[:m]...),
 		// 个人账本整批带走:量小,不值得参与限额
-		Trades: u.trades, Wallet: u.wallet, Focus: u.focus,
+		Trades: u.trades, Wallet: u.wallet, Focus: u.focus, Spec: u.spec,
 		SentAt: time.Now(), ClientVersion: version}
 	u.pending, u.stations, u.samples = u.pending[n:], u.stations[s:], u.samples[m:]
-	u.trades, u.wallet, u.focus = nil, nil, nil
+	u.trades, u.wallet, u.focus, u.spec = nil, nil, nil, nil
 	return b
 }
 
@@ -391,7 +401,7 @@ func (u *uploader) send(ctx context.Context, batch model.UploadBatch) bool {
 	slog.Info("已上传", "sent", len(batch.Orders), "changed", out.Changed, "touched", out.Touched,
 		"stations", len(batch.Stations), "stations_saved", saved,
 		"samples", len(batch.Samples), "samples_saved", deref(out.Samples),
-		"trades", len(batch.Trades), "wallet", len(batch.Wallet), "focus", len(batch.Focus))
+		"trades", len(batch.Trades), "wallet", len(batch.Wallet), "focus", len(batch.Focus), "spec", len(batch.Spec))
 	return true
 }
 

@@ -60,9 +60,9 @@ func Allowlist(op OpCodes, ev EventCodes) []Rule {
 			Why: "切区的响应,key0 是目的地区 id。现在的游戏里切区走它(OpenRadar 两万九千个包的" +
 				"语料里 op 17 一次都没出现),Join 响应的 key8 兜底"},
 		{Kind: KindResponse, Code: op.GetClusterMapInfo, Name: "GetClusterMapInfo",
-			Keys: []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
-			Why: "区域地图里的建筑:类型、坐标、耐久、营养、银、所有者、两档使用费(23/31 含义未知,原样存)。" +
-				"坐标只当「哪个建筑」的连接键"},
+			Keys: []byte{17, 18, 20, 22, 23, 24, 25, 30, 31, 32, 33, 34},
+			Why: "区域地图里的建筑:类型、坐标、耐久、营养、银、所有者、能不能用(30/32)、访问权限预设(31)、" +
+				"两档使用费(23 含义未知,原样存)。坐标只当「哪个建筑」的连接键"},
 
 		{Kind: KindResponse, Code: op.AuctionBuyOffer, Name: "AuctionBuyOffer",
 			Why: "即时买的结果,只看 returnCode(0 = 成交),不读参数"},
@@ -92,6 +92,9 @@ func Allowlist(op OpCodes, ev EventCodes) []Rule {
 			Why: "银币余额:key0 对象 id、key1 当前银币(×10000)"},
 		{Kind: KindEvent, Code: ev.CraftingFocusUpdate, Name: "CraftingFocusUpdate", Keys: []byte{0, 3},
 			Why: "专注余额:key0 对象 id、key3 余额(float)"},
+		{Kind: KindEvent, Code: ev.FullAchievementInfo, Name: "FullAchievementInfo", Keys: []byte{0, 1, 2, 3},
+			Why: "命运之轮节点等级:key0 对象 id、key1 满级节点下标、key2 节点下标、key3 对应等级。" +
+				"只取精炼那几条线 T4~T8 的等级算专精 FCE 和解锁到 T 几(spec.go)"},
 	}
 }
 
@@ -99,11 +102,12 @@ func Allowlist(op OpCodes, ev EventCodes) []Rule {
 type EventCodes struct {
 	UpdateMoney         int
 	CraftingFocusUpdate int
+	FullAchievementInfo int
 }
 
 // DefaultEventCodes 取自客户端 1.32.030.345319 的码表(docs/client-data/photon-codes.json)。
 func DefaultEventCodes() EventCodes {
-	return EventCodes{UpdateMoney: 81, CraftingFocusUpdate: 10}
+	return EventCodes{UpdateMoney: 81, CraftingFocusUpdate: 10, FullAchievementInfo: 150}
 }
 
 type ruleKey struct {

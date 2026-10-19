@@ -51,6 +51,10 @@ type ledgerState struct {
 	selfObject int64 // 自己角色的对象 id(Join 响应 key0),认 UpdateMoney / 专注是不是自己的
 	lastSilver int64
 	lastFocus  float64
+	// 专精(spec.go):上次报出去的是哪个角色的哪套等级;下标表对不上时只 Warn 一次
+	lastSpec     map[string][5]int
+	lastSpecChar string
+	specWarned   bool
 }
 
 // cacheOrders 记下这批挂单,给即时买卖查订单号用。调用方不持锁

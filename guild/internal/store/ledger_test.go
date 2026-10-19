@@ -81,4 +81,29 @@ func TestLedger_存取和汇总(t *testing.T) {
 	if sum.Wallet == nil || sum.Wallet.Silver != 250 || sum.Focus == nil || sum.Focus.Focus != 30000 {
 		t.Fatalf("余额: %+v %+v", sum.Wallet, sum.Focus)
 	}
+	if sum.Spec != nil {
+		t.Fatalf("没存过专精应当是 nil: %+v", sum.Spec)
+	}
+}
+
+// 专精:取最新的一次,不受汇总窗口限制(等级只涨不掉,旧读数也比没有强)
+func TestLedger_专精(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	t0 := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	old := model.SpecObs{Character: "甲", ObservedAt: t0.Add(-30 * 24 * time.Hour),
+		Levels: map[string][5]int{"ORE": {76, 100, 90, 1, 1}}}
+	cur := model.SpecObs{Character: "甲", ObservedAt: t0,
+		Levels: map[string][5]int{"ORE": {76, 100, 91, 1, 1}, "FIBER": {60, 100, 100, 1, 1}}}
+	if err := st.SaveSpec(ctx, []model.SpecObs{old, cur, cur}); err != nil {
+		t.Fatal(err)
+	}
+	sum, err := st.LedgerSummary(ctx, t0.Add(-time.Hour), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Spec == nil || !sum.Spec.ObservedAt.Equal(t0) || sum.Spec.Levels["ORE"] != [5]int{76, 100, 91, 1, 1} ||
+		sum.Spec.Levels["FIBER"] != [5]int{60, 100, 100, 1, 1} {
+		t.Fatalf("专精: %+v", sum.Spec)
+	}
 }

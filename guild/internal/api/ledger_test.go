@@ -17,6 +17,7 @@ type fakeLedger struct {
 	trades []store.TradeRow
 	wallet []model.WalletObs
 	focus  []model.FocusObs
+	spec   []model.SpecObs
 	query  store.TradeQuery
 }
 
@@ -32,12 +33,20 @@ func (f *fakeLedger) SaveFocus(_ context.Context, o []model.FocusObs) error {
 	f.focus = append(f.focus, o...)
 	return nil
 }
+func (f *fakeLedger) SaveSpec(_ context.Context, o []model.SpecObs) error {
+	f.spec = append(f.spec, o...)
+	return nil
+}
 func (f *fakeLedger) MyTrades(_ context.Context, q store.TradeQuery) ([]store.TradeRecord, error) {
 	f.query = q
 	return nil, nil
 }
 func (f *fakeLedger) LedgerSummary(_ context.Context, since time.Time, _ int) (store.LedgerSummary, error) {
-	return store.LedgerSummary{Since: since}, nil
+	sum := store.LedgerSummary{Since: since}
+	if len(f.spec) > 0 {
+		sum.Spec = &f.spec[len(f.spec)-1]
+	}
+	return sum, nil
 }
 
 // 税和创建费的口径:销售税按成交总额,只有卖出才有;创建费按挂单价 × 挂单总件数,只有挂单才有,
@@ -94,6 +103,12 @@ func TestUpload_个人账本(t *testing.T) {
 		},
 		Wallet: []model.WalletObs{{Character: "甲", Silver: 100, ObservedAt: now.Add(-skew)}, {Silver: -5}},
 		Focus:  []model.FocusObs{{Character: "甲", Focus: 30000, ObservedAt: now.Add(-skew)}},
+		Spec: []model.SpecObs{
+			{Character: "甲", ObservedAt: now.Add(-skew), Levels: map[string][5]int{"FIBER": {60, 100, 100, 1, 1}}},
+			{Character: "甲", Levels: map[string][5]int{"FIBER": {101, 0, 0, 0, 0}}}, // 超满级
+			{Character: "甲", Levels: map[string][5]int{"GOLD": {1, 0, 0, 0, 0}}},    // 线不认识
+			{Character: "甲"}, // 没有等级
+		},
 	}
 	body, _ := json.Marshal(batch)
 	out := postUpload(t, s, string(body))
@@ -112,6 +127,33 @@ func TestUpload_个人账本(t *testing.T) {
 	}
 	if len(fl.wallet) != 1 || len(fl.focus) != 1 {
 		t.Fatalf("银币 %+v、专注 %+v", fl.wallet, fl.focus)
+	}
+	if len(fl.spec) != 1 {
+		t.Fatalf("专精只该存 1 条合规的: %+v", fl.spec)
+	}
+	if d := fl.spec[0].ObservedAt.Sub(now); d < -2*time.Second || d > 2*time.Second {
+		t.Fatalf("专精时间要按钟差纠偏,得到 %v", fl.spec[0].ObservedAt)
+	}
+
+	// 汇总接口把专精换算成 FCE 和解锁 tier,界面直接用
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/ledger/summary?days=1&items=1", nil))
+	var sum struct {
+		Spec struct {
+			Character string `json:"character"`
+			Lines     map[string]struct {
+				Levels       [5]int             `json:"levels"`
+				FCE          map[string]float64 `json:"fce"`
+				UnlockedTier int                `json:"unlocked_tier"`
+			} `json:"lines"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &sum); err != nil {
+		t.Fatal(err)
+	}
+	f := sum.Spec.Lines["FIBER"]
+	if sum.Spec.Character != "甲" || f.UnlockedTier != 8 || f.FCE["5"] != 32860 || f.FCE["8"] != 8110 {
+		t.Fatalf("汇总里的专精: %s", rec.Body)
 	}
 }
 

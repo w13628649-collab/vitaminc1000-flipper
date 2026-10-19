@@ -3,6 +3,7 @@ package store
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"time"
@@ -85,6 +86,23 @@ func (s *Store) SaveFocus(ctx context.Context, obs []model.FocusObs) error {
 	return s.pool.SendBatch(ctx, batch).Close()
 }
 
+// SaveSpec 存精炼专精观测。同一时刻的重复观测跳过。
+func (s *Store) SaveSpec(ctx context.Context, obs []model.SpecObs) error {
+	if len(obs) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
+	for _, o := range obs {
+		lv, err := json.Marshal(o.Levels)
+		if err != nil {
+			return fmt.Errorf("专精等级序列化: %w", err)
+		}
+		batch.Queue(`INSERT INTO my_spec (character, levels, observed_at) VALUES ($1,$2,$3)
+			ON CONFLICT DO NOTHING`, o.Character, lv, o.ObservedAt)
+	}
+	return s.pool.SendBatch(ctx, batch).Close()
+}
+
 // TradeQuery 是查成交的条件。零值字段不筛。
 type TradeQuery struct {
 	Since  time.Time
@@ -163,6 +181,7 @@ type LedgerSummary struct {
 	ByItem []ItemFlow       `json:"by_item"`
 	Wallet *model.WalletObs `json:"wallet,omitempty"` // 最近一次银币余额
 	Focus  *model.FocusObs  `json:"focus,omitempty"`  // 最近一次专注余额
+	Spec   *model.SpecObs   `json:"spec,omitempty"`   // 最近一次精炼专精
 }
 
 // Summary 汇总 since 以来的账本。物品按 |Net| 从大到小,最多 itemLimit 个。
@@ -238,6 +257,20 @@ func (s *Store) LedgerSummary(ctx context.Context, since time.Time, itemLimit in
 	switch {
 	case err == nil:
 		out.Focus = &f
+	case err != pgx.ErrNoRows:
+		return out, err
+	}
+	// 专精不看 since:等级只涨不掉,一个月前读到的也比没有强(界面写明是什么时候读的)
+	var sp model.SpecObs
+	var lv []byte
+	err = s.pool.QueryRow(ctx, `SELECT character, levels, observed_at FROM my_spec
+		ORDER BY observed_at DESC LIMIT 1`).Scan(&sp.Character, &lv, &sp.ObservedAt)
+	switch {
+	case err == nil:
+		if err := json.Unmarshal(lv, &sp.Levels); err != nil {
+			return out, fmt.Errorf("专精等级: %w", err)
+		}
+		out.Spec = &sp
 	case err != pgx.ErrNoRows:
 		return out, err
 	}

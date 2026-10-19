@@ -2,15 +2,19 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"albion-guild/internal/conf"
+	"albion-guild/internal/gamedata"
 	"albion-guild/internal/ingest"
 	"albion-guild/internal/model"
+	"albion-guild/internal/refine"
 	"albion-guild/internal/store"
 	"albion-guild/internal/world"
 )
@@ -21,6 +25,7 @@ type ledgerStore interface {
 	SaveMyTrades(ctx context.Context, reporter string, rows []store.TradeRow) (int, error)
 	SaveWallet(ctx context.Context, obs []model.WalletObs) error
 	SaveFocus(ctx context.Context, obs []model.FocusObs) error
+	SaveSpec(ctx context.Context, obs []model.SpecObs) error
 	MyTrades(ctx context.Context, q store.TradeQuery) ([]store.TradeRecord, error)
 	LedgerSummary(ctx context.Context, since time.Time, itemLimit int) (store.LedgerSummary, error)
 }
@@ -154,7 +159,64 @@ func (s *Server) saveLedger(ctx context.Context, batch model.UploadBatch) (trade
 			slog.Error("写入专注余额失败", "err", err, "count", len(f))
 		}
 	}
+	if len(batch.Spec) > 0 {
+		sp := make([]model.SpecObs, 0, len(batch.Spec))
+		for _, o := range batch.Spec {
+			if why := specRejected(o); why != "" {
+				slog.Warn("上传的专精不合规,丢弃", "why", why, "reporter", batch.Reporter)
+				continue
+			}
+			o.Character, o.ObservedAt = stripNUL(o.Character), shift(o.ObservedAt)
+			sp = append(sp, o)
+		}
+		if err := s.Ledger.SaveSpec(ctx, sp); err != nil {
+			slog.Error("写入精炼专精失败", "err", err, "count", len(sp))
+		}
+	}
 	return trades
+}
+
+// specRejected 校验一次上传的专精:线只认 gamedata.Lines,等级在 0~100
+func specRejected(o model.SpecObs) string {
+	if len(o.Levels) == 0 {
+		return "没有等级"
+	}
+	for l, lv := range o.Levels {
+		if !slices.Contains(gamedata.Lines, l) {
+			return "线不认识: " + l
+		}
+		for _, n := range lv {
+			if n < 0 || n > gamedata.MaxSpecLevel {
+				return fmt.Sprintf("%s 的等级 %d 超出 0~%d", l, n, gamedata.MaxSpecLevel)
+			}
+		}
+	}
+	return ""
+}
+
+// specView 是汇总接口里的专精:每条线的等级,和按它算好的 FCE、解锁到 T 几,
+// 精炼页直接拿来填(公式只在 refine 里有一份)
+type specView struct {
+	Character  string              `json:"character"`
+	ObservedAt time.Time           `json:"observed_at"`
+	Lines      map[string]specLine `json:"lines"`
+}
+
+type specLine struct {
+	Levels       [5]int          `json:"levels"` // T4~T8
+	FCE          map[int]float64 `json:"fce"`
+	UnlockedTier int             `json:"unlocked_tier"` // 3 = T4 都没解锁
+}
+
+func newSpecView(o *model.SpecObs) *specView {
+	if o == nil {
+		return nil
+	}
+	v := &specView{Character: o.Character, ObservedAt: o.ObservedAt, Lines: map[string]specLine{}}
+	for l, lv := range o.Levels {
+		v.Lines[l] = specLine{Levels: lv, FCE: refine.SpecFCE(lv), UnlockedTier: refine.SpecUnlockedTier(lv)}
+	}
+	return v
 }
 
 func ledgerSince(r *http.Request) (time.Time, int, bool) {
@@ -210,7 +272,7 @@ func (s *Server) handleLedgerSummary(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, map[string]any{"days": days, "summary": sum,
+	writeJSON(w, map[string]any{"days": days, "summary": sum, "spec": newSpecView(sum.Spec),
 		"notes": []string{
 			"物品进出是现金流口径:买进还没卖掉的货算在花出去的钱里,囤货期看起来是亏的",
 			"市场邮件不带品质,挂单成交的品质记 0",

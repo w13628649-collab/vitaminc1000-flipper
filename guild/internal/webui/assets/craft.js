@@ -86,7 +86,16 @@ craftRestore();
 const cLine = () => craftLine(craft.p.line) || craftLine("ORE");
 const cTarget = () => refineID(cLine().refined, craft.p.tier, craft.p.ench);
 const cCity = () => craft.p.cityBy[craft.p.line] || cLine().city;
-const cFCE = () => craft.p.fce[craft.p.line] || {};
+// 专精和「解锁到 T 几」:自己填了按填的,没填就按抓包读到的(事件 150,登录、切区时推;
+// 个人账本接口带着服务端算好的 FCE 和解锁 tier,见 craftCapFocus)
+const cSpec = () => craft.capSpec?.lines?.[craft.p.line] || null;
+const cFCEMine = () => craft.p.fce[craft.p.line] || {};
+const cFCECap = () => (!Object.keys(cFCEMine()).length && cSpec()) || null;
+const cFCE = () => cFCECap()?.fce || cFCEMine();
+const cUnlockCap = () => (craft.p.unlocked[craft.p.line] == null && cSpec()) || null;
+const cUnlock = () => craft.p.unlocked[craft.p.line] ?? cSpec()?.unlocked_tier ?? null;
+const cTierText = t => (t === 3 ? "T4 都没解锁" : `T${t}`);
+const cSpecWho = () => { const s = craft.capSpec; return s ? `${s.character ? s.character + " · " : ""}${agoText(s.observed_at)}` : ""; };
 const cToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -108,7 +117,7 @@ function craftConfirmed() {
   const p = craft.p, city = cCity(), out = [];
   if (p.k != null) out.push("fees.transmute_factor");
   if (cFCEFull()) out.push("focus.fce");
-  if (p.unlocked[p.line] != null) out.push("focus.unlocked_tier");
+  if (cUnlock() != null) out.push("focus.unlocked_tier");
   if (p.station[city] != null) out.push("fees.station_per100");
   if (p.tstation[city] != null) out.push("fees.transmute_station_per100");
   if (cBonus() != null) out.push("rrr.daily_bonus");
@@ -287,13 +296,19 @@ function craftSyncForm() {
 
   // 高级
   $("c-fce-line").textContent = `(${L.line === "ORE" ? "矿石" : L.line === "HIDE" ? "兽皮" : L.line === "FIBER" ? "纤维" : "木材"}精炼,按 tier)`;
-  const fce = cFCE();
+  const fce = cFCEMine(), spec = cSpec();
   if (!$("c-fce").children.length) {
     $("c-fce").innerHTML = CRAFT_TIERS.map(t => `<div class="ctrl"><label for="c-fce-${t}">T${t}</label>
       <input type="number" id="c-fce-${t}" data-fce="${t}" min="0" max="40000" step="100" placeholder="0"></div>`).join("");
   }
-  for (const t of CRAFT_TIERS) setVal(`c-fce-${t}`, fce[t] || fce[t] === 0 ? fce[t] : null);
-  // 「服务端默认」和「T8(全部)」分开:选了 T8 才算核对过
+  // 框里只放自己填的;没填时占位符是抓包读到的数(不填就按它算)
+  for (const t of CRAFT_TIERS) {
+    setVal(`c-fce-${t}`, fce[t] || fce[t] === 0 ? fce[t] : null);
+    setPh(`c-fce-${t}`, spec ? spec.fce[t] : 0);
+  }
+  $("c-fce-cap").hidden = !(spec && Object.keys(fce).length);
+  // 「服务端默认」和「T8(全部)」分开:选了 T8 才算核对过。抓到了的话空着那一项就是「按抓包」
+  $("c-unlock").options[0].textContent = spec ? `按抓包(${cTierText(spec.unlocked_tier)})` : "服务端默认(T8)";
   $("c-unlock").value = p.unlocked[p.line] == null ? "" : String(p.unlocked[p.line]);
   const heartDef = craft.data?.params_used && !p.heart ? craft.data.params_used.heart_returns : null;
   $("c-heart").options[0].textContent = `服务端默认${heartDef == null ? "" : heartDef ? "(返还)" : "(不返还)"}`;
@@ -336,12 +351,13 @@ function craftSyncForm() {
 }
 
 // ── 抓到的工作站费率(响应里的 station_fee,flip/refine_fees.go) ──
-// 优先级:你填的 > 抓包(这座城这条线映射上的站里最便宜那台)> 配置按城市 > 配置默认。
-// 建筑类型 → 精炼线的映射在服务端配置 refining.station_building_types,默认空
+// 优先级:你填的 > 抓包(这座城这条线的精炼站里最便宜那台)> 配置按城市 > 配置默认。
+// 哪种建筑是哪条线的精炼站,服务端有内置表(从客户端 buildings.xml 算的)
 const cFee = city => { const sf = craft.data?.station_fee; return sf && sf.city === city ? sf : null; };
 const ageWord = h => (h == null || !isFinite(h) ? "时间不明" : h < 1 ? `${Math.max(1, Math.round(h * 60))} 分钟前`
   : h < 48 ? `${Math.round(h)} 小时前` : `${Math.round(h / 24)} 天前`);
-const LINE_STATION = { ORE: "冶炼厂", HIDE: "制革厂" };
+// 游戏里的叫法(localization:@BUILDINGS_T8_SMELTER 冶炼匠……)
+const LINE_STATION = { ORE: "冶炼匠", HIDE: "皮匠", FIBER: "纺织匠", WOOD: "伐木场" };
 const stationWord = line => LINE_STATION[line] || "这条线的精炼站";
 function feeTitle(sf) {
   const s = sf.station;
@@ -349,7 +365,7 @@ function feeTitle(sf) {
   return `${sf.city} 抓到 ${sf.stations} 台${stationWord(sf.line)},最便宜 ${num(sf.min)}(${s.owner || "无主"}的站,${ageWord(s.age_h)},${s.reporter || "成员"}抓的)`
     + `${sf.max != null && sf.max !== sf.min ? `、最贵 ${num(sf.max)}` : ""}。按最便宜那台算;站有没有营养、耐久够不够要进游戏看`
     + `${sf.unusable ? `(观测到营养或耐久为 0 的 ${sf.unusable} 台已排除)` : ""}`
-    + `${sf.transmute ? "。转化主人费率也按它算(假设转化和精炼在同一个站,没核实)" : ""}`;
+    + `${sf.transmute ? "。转化也在这台站上做,主人费率按同一个费率算" : ""}`;
 }
 // 一句话说站费从哪来:「抓包 · 甲的站 · 3 小时前」/「配置默认 500」
 function feeSrcText(sf) {
@@ -359,35 +375,26 @@ function feeSrcText(sf) {
     case "request": return `你填的 ${num(sf.fee)}`;
     case "config": return `配置按城市 ${num(sf.fee)}`;
   }
-  const seen = sf.unmapped?.length ? `;抓到 ${num(sf.seen)} 台站,建筑类型还没映射` : "";
+  const seen = sf.seen ? `;${esc(sf.city)} 抓到的 ${num(sf.seen)} 台站里没有能用的${stationWord(sf.line)}` : "";
   return `配置默认 ${num(sf.fee)}${seen}`;
 }
-// 站费框下面:这座城抓到了、但还不知道是哪种站的费率。点「用这个」等于手填
+// 站费框下面:这座城开过地图、却一台这条线的站都没认出来时说一句。
+// 正常是这座城本来就少(精炼站都扎堆在专精城);要是明明有,多半是游戏更新后内置表旧了
 function craftFeeSeen() {
   const input = $("c-station");
   let el = $("c-feeseen");
-  const sf = cFee(cCity()), un = sf?.unmapped || [];
-  if (!un.length || sf.source === "capture") { el?.remove(); return; }
+  const sf = cFee(cCity());
+  if (!sf || sf.source === "capture" || craft.p.station[cCity()] != null || !sf.seen) { el?.remove(); return; }
   if (!el) {
     el = document.createElement("p");
     el.id = "c-feeseen";
     el.className = "sub c-feeseen";
     input.parentElement.append(el);
   }
-  el.innerHTML = `抓到 ${esc(sf.city)} 的建筑费率:${un.map(k => `类型 ${k.building_type} ${num(k.fee_min)}${
-    k.fee_max !== k.fee_min ? `~${num(k.fee_max)}` : ""}(${k.stations} 台,${ageWord(k.age_h)})
-    <button class="act ghost mini-act" data-use-fee="${k.fee_min}" title="把 ${num(k.fee_min)} 填进站费,等于手填">用这个</button>`).join(";")}。
-    还不知道哪种是${stationWord(sf.line)};在服务端配置 refining.station_building_types 里填上就自动用。`;
+  const why = [sf.unusable ? `${sf.unusable} 台没营养或没耐久` : "", sf.bad ? `${sf.bad} 台费率读出来不对` : ""].filter(Boolean);
+  el.textContent = `${sf.city} 开过地图(${num(sf.seen)} 台站),没认出能用的${stationWord(sf.line)}${why.length ? `(${why.join("、")})` : ""}。`
+    + `站费先按配置;明明有的话可能是游戏更新了,要重新生成建筑表`;
 }
-$("v-craft").addEventListener("click", e => {
-  const b = e.target.closest("[data-use-fee]");
-  if (!b) return;
-  const v = Number(b.dataset.useFee), city = cCity();
-  if (!(isFinite(v) && v >= 0 && v <= 1000)) return;
-  craft.p.station[city] = v;
-  cMark(`station:${city}`, true);
-  craftChanged();
-});
 
 // 金价:只用来画「为专注养 premium 小号」的门槛线(D6)。服务端配置里记了量 k 那天的金价就用它,
 // 没有就用 2026-09-26 AODP 的金价;用户可以自己改
@@ -427,7 +434,7 @@ function craftBadges() {
   if (ts == null && sf?.transmute) {
     // 主人费率按抓到的那台算(站费哪怕是你填的,主人费率没填就还是抓包的)
     badge("c-tstation-badge", true, `抓包 · ${ageWord(sf.station?.age_h)}`,
-      `转化主人费率按抓到的站费算(假设转化和精炼在同一个站,没核实)。${feeTitle(sf)}`);
+      `转化也在精炼站上做(客户端 buildings.xml 里冶炼匠的可制造清单就有矿石转化),主人费率按抓到的站费算。${feeTitle(sf)}`);
   } else {
     badge("c-tstation-badge", ts != null, ts != null ? filled("fees.transmute_station_per100") : "未核实",
       ts != null ? `${city} 的转化主人费率按你填的 ${ts} 算` : "服务端默认值,没核实。校准里填主人费用可以反推");
@@ -435,13 +442,24 @@ function craftBadges() {
   const b = cBonus(), stale = craft.p.bonus[craft.p.line] && b == null;
   badge("c-bonus-badge", b != null, b != null ? `今天 · ${cToday()}` : stale ? "昨天填的,已作废" : "未核实",
     "每日生产加成每天换品类,只能看游戏里的「活动」窗口手填;只对填的那一天有效");
-  const ul = p.unlocked[p.line];
-  badge("c-unlock-badge", ul != null, ul != null ? filled("focus.unlocked_tier") : "未核实",
-    ul != null ? `按你选的:精炼解锁到 T${ul}` : "服务端默认按 T8 全解锁算。命运之轮里看 T8 精炼节点解锁没有,选一下就算核对过");
-  const fceKeys = Object.keys(cFCE()).length;
-  badge("c-fce-badge", cFCEFull(), cFCEFull() ? filled("focus.fce") : fceKeys ? "只填了一部分" : "未核实",
-    cFCEFull() ? "这条线的专精按你填的算(0 也是填了)"
-      : `T4~T${p.tier} 每一级都填了才算核对过;没填的按 0 算。没点过这条线的专精就点「全填 0」`);
+  const ul = p.unlocked[p.line], spec = cSpec();
+  const lvText = spec ? `命运之轮 T4~T8 精炼节点 ${spec.levels.join(" / ")} 级(0 = 没解锁)` : "";
+  if (cUnlockCap()) {
+    badge("c-unlock-badge", true, `抓包 · ${cSpecWho()}`, `${lvText}:精炼解锁到 ${cTierText(spec.unlocked_tier)}。自己选了就按选的`);
+  } else {
+    badge("c-unlock-badge", ul != null, ul != null ? filled("focus.unlocked_tier") : "未核实",
+      ul != null ? `按你选的:精炼解锁到 ${cTierText(ul)}${spec ? `(抓包读到 ${cTierText(spec.unlocked_tier)})` : ""}`
+        : "服务端默认按 T8 全解锁算。开着客户端登录一次游戏会自动读;也可以看命运之轮自己选");
+  }
+  const fceKeys = Object.keys(cFCEMine()).length;
+  if (cFCECap()) {
+    badge("c-fce-badge", true, `抓包 · ${cSpecWho()}`,
+      `${lvText}。FCE = 30 × 五个节点等级之和 + 250 × 本 tier 等级。自己填了就按填的`);
+  } else {
+    badge("c-fce-badge", cFCEFull(), cFCEFull() ? filled("focus.fce") : fceKeys ? "只填了一部分" : "未核实",
+      cFCEFull() ? `这条线的专精按你填的算(0 也是填了)${spec ? "。抓包也读到了,点「改用抓包读到的」换回去" : ""}`
+        : `T4~T${p.tier} 每一级都填了才算核对过;没填的按 0 算。开着客户端登录一次游戏会自动读`);
+  }
   badge("c-heart-badge", !!p.heart, p.heart ? filled("heart_returns") : "未核实",
     p.heart ? `按你选的:心${p.heart === "1" ? "" : "不"}参与返还` : "只影响用心的那几条配方(.4 没有心配方);用心、开专注精炼一小批,看有没有返还心");
   // 高级区的摘要:折起来也看得到改过哪些
@@ -458,7 +476,12 @@ function craftBadges() {
   if (p.bid) mine.push("挂买单收料");
   if (p.leftover) mine.push("余料估值");
   if (p.capital != null) mine.push("本金");
-  $("c-adv-sum").textContent = mine.length ? `你改过:${mine.join("、")}` : "全部用服务端默认";
+  const auto = [];
+  if (cFCECap()) auto.push("专精");
+  if (cUnlockCap()) auto.push("解锁");
+  if (st == null && sf?.source === "capture") auto.push("站费");
+  $("c-adv-sum").textContent = [mine.length ? `你改过:${mine.join("、")}` : "",
+    auto.length ? `抓包自动填:${auto.join("、")}` : ""].filter(Boolean).join(";") || "全部用服务端默认";
   craftCalSummary();
 }
 
@@ -477,7 +500,7 @@ function craftBody() {
   else if (craft.capFocus) body.focus.budget = craft.capFocus.focus;
   const fce = cFCE();
   for (const t of CRAFT_TIERS) body.focus.fce[t] = Number(fce[t]) || 0;
-  if (p.unlocked[p.line] != null) body.focus.unlocked_tier = p.unlocked[p.line];
+  if (cUnlock() != null) body.focus.unlocked_tier = cUnlock();
   if (p.transport != null) body.sources.transport_pct = p.transport / 100;
   if (p.bidMax != null) body.sources.bid_max_qty = p.bidMax;
   if (p.maxAge != null) body.sources.max_age_hours = p.maxAge;
@@ -988,9 +1011,11 @@ function craftUnvHTML(res, c) {
   // 主人费率只看 transmute:站费是你填的、主人费率没填时,主人费率仍是抓包的
   const sf = res.station_fee, capKeys = new Set([...(sf?.source === "capture" ? ["fees.station_per100"] : []),
     ...(sf?.transmute ? ["fees.transmute_station_per100"] : [])]);
+  const specKeys = new Set([...(cFCECap() ? ["focus.fce"] : []), ...(cUnlockCap() ? ["focus.unlocked_tier"] : [])]);
   const items = used.map(u => {
     const when = cConfDate(u.key);
-    const tag = capKeys.has(u.key) ? `抓包 · ${ageWord(sf.station?.age_h)}`
+    const tag = specKeys.has(u.key) ? `抓包 · ${cSpecWho()}`
+      : capKeys.has(u.key) ? `抓包 · ${ageWord(sf.station?.age_h)}`
       : u.confirmed ? `你填的${when ? " · " + when : ""}` : u.is_default ? "默认值,没核实" : "服务端配置的值,没核实";
     return `<li class="${u.confirmed ? "mine" : "def"}" title="${esc(`规则表 ${u.rule}。怎么核对:${u.check}`)}">
       <b>${esc(UNVERIFIED_WORD[u.key] || u.key)}</b> ${esc(unvValue(u))} <em>${esc(tag)}</em></li>`;
@@ -1093,8 +1118,6 @@ function craftCardHTML(res) {
       tip: `(开专注的利润 − max(0, 不开专注的最好利润))÷ 每根专注;premium 门槛 ${num(craftPremiumSPF())} 银/点` },
     sf && { k: "站费", v: `${num(sf.fee)} 银/100 营养`, tip: feeTitle(sf) },
     sf && { k: "站费来源", v: feeSrcWord(sf), tip: feeTitle(sf) },
-    sf && !sf.source && sf.unmapped?.length && { k: "抓到的站", v: `${num(sf.seen)} 台,类型还没映射`, vc: "warnish",
-      tip: "精炼参数里站费框下面列着抓到的类型,点「用这个」就按它算" },
     { k: "用到的价最旧", v: ageTag(c.oldest_age_h, c.oldest_age_h == null ? "没有用到带观测时间的价"
       : c.age_level === "red" ? "用到的价里最旧的超过 24 小时,先进游戏看一眼"
       : c.age_level === "yellow" ? "用到的价里最旧的超过 6 小时,下单前核一下" : "用到的价都在 6 小时以内") },
@@ -2193,9 +2216,9 @@ function craftCalCompute() {
 function craftCalSummary() {
   const p = craft.p, fce = cFCE();
   const parts = [p.k != null ? `k=${p.k}(${p.kSrc === "calib" ? "实测" : "手填"} ${p.kAt || ""})` : "k 未核实"];
-  const set = CRAFT_TIERS.filter(t => fce[t] > 0);
-  parts.push(set.length ? `专精 ${set.map(t => `T${t} ${num(fce[t])}`).join("、")}`
-    : cFCEFull() ? "专精全是 0(你填的)" : "专精没填(按 0 算)");
+  const set = CRAFT_TIERS.filter(t => fce[t] > 0), cap = cFCECap() ? "(抓包)" : "";
+  parts.push(set.length ? `专精${cap} ${set.map(t => `T${t} ${num(fce[t])}`).join("、")}`
+    : cFCEFull() ? `专精全是 0${cap || "(你填的)"}` : "专精没填(按 0 算)");
   $("c-cal-sum").textContent = parts.join(" · ");
 }
 
@@ -2254,21 +2277,38 @@ function craftRoute(id) {
   craft.p.line = r.line; craft.p.tier = r.tier; craft.p.ench = r.ench;
   if (changed) { craft.open.clear(); craftSave(); }
 }
-// 抓包读到的专注余额(事件 CraftingFocusUpdate,记在个人账本里):「今日可用专注」空着时用它,
-// 不用再手填(个人优化建议 #2 的一小半)。超过 12 小时的不用:专注一直在回,太旧的数偏小
+// 抓包读到的专注余额(事件 CraftingFocusUpdate)和精炼专精(事件 FullAchievementInfo),都记在个人账本里:
+// 「今日可用专注」、专精、「解锁到 T 几」空着时用它们,不用再手填(个人优化建议 #2)。
+// 专注超过 12 小时的不用:专注一直在回,太旧的数偏小。专精不看年龄:等级只涨不掉
 const CAP_FOCUS_MAX_H = 12;
 async function craftCapFocus() {
-  let next = null;
+  let next = null, spec = null;
   try {
-    const f = (await getJSON("/api/ledger/summary?days=1&items=1")).summary?.focus;
+    const j = await getJSON("/api/ledger/summary?days=1&items=1"), f = j.summary?.focus;
     if (f && (Date.now() - Date.parse(f.observed_at)) / 3600000 <= CAP_FOCUS_MAX_H) next = { focus: Math.floor(f.focus), at: f.observed_at };
+    spec = j.spec || null;
   } catch (e) { return; }   // 老服务端没有账本接口:照旧用默认
-  if (JSON.stringify(next) === JSON.stringify(craft.capFocus ?? null)) return;
+  const focusChanged = JSON.stringify(next) !== JSON.stringify(craft.capFocus ?? null);
+  const specChanged = JSON.stringify(spec) !== JSON.stringify(craft.capSpec ?? null);
+  if (!focusChanged && !specChanged) return;
+  // 换之前记下这一刻是不是正按抓包算:换前换后有一边在用,就要重算
+  const usedBefore = craft.p.budget == null && focusChanged || !!(cFCECap() || cUnlockCap()) && specChanged;
   craft.capFocus = next;
-  // 正在按它算(没自己填):换了就重算。第一次进页面时计划可能已经发出去了,那份没带它,也要重算
-  if (craft.p.budget == null) craftChanged();
+  craft.capSpec = spec;
+  const usedAfter = craft.p.budget == null && focusChanged || !!(cFCECap() || cUnlockCap()) && specChanged;
+  // 第一次进页面时计划可能已经发出去了,那份没带它,也要重算
+  if (usedBefore || usedAfter) craftChanged();
   else craftSyncForm();
 }
+// 「改用抓包读到的」:清掉这条线手填的专精和解锁,回到按抓包算
+$("c-fce-cap").addEventListener("click", () => {
+  const p = craft.p;
+  delete p.fce[p.line];
+  delete p.unlocked[p.line];
+  cMark(`fce:${p.line}`, false);
+  cMark(`unlocked:${p.line}`, false);
+  craftChanged();
+});
 function craftShow() {
   craftCapFocus();
   craftRenderGrid();

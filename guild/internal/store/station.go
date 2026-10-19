@@ -27,10 +27,15 @@ func (s *Store) SaveStations(ctx context.Context, reporter string, obs []model.S
 	rows := make([][]any, 0, len(obs))
 	for _, o := range obs {
 		city, _ := world.ClusterCity(o.ZoneID)
+		var access any
+		if o.Access != nil {
+			access = int16(*o.Access)
+		}
 		rows = append(rows, []any{
 			o.ZoneID, city, o.BuildingKey(), o.Index, o.BuildingType, nilIfEmpty(o.Pos),
 			o.Durability, o.Nutrition, o.Silver, o.Owner,
 			o.AssociateFeeRaw, o.AssociateFee, o.PublicFeeRaw, o.PublicFee,
+			access, o.CanUse, o.Usable,
 			jsonOrNil(o.Key23), jsonOrNil(o.Key31), o.ObservedAt, reporter,
 		})
 	}
@@ -38,6 +43,7 @@ func (s *Store) SaveStations(ctx context.Context, reporter string, obs []model.S
 		[]string{"zone_id", "city", "building_key", "idx", "building_type", "pos",
 			"durability", "nutrition", "silver", "owner",
 			"associate_fee_raw", "associate_fee", "public_fee_raw", "public_fee",
+			"access", "can_use", "usable",
 			"key23", "key31", "observed_at", "reporter"},
 		pgx.CopyFromRows(rows))
 	return err
@@ -49,6 +55,7 @@ func (s *Store) StationFees(ctx context.Context, since time.Time) ([]StationFee,
 		SELECT zone_id, city, building_key, idx, building_type, pos,
 			durability, nutrition, silver, owner,
 			associate_fee_raw, associate_fee, public_fee_raw, public_fee,
+			access, can_use, usable,
 			key23, key31, observed_at, reporter
 		FROM (
 			SELECT DISTINCT ON (zone_id, building_key) *
@@ -66,12 +73,17 @@ func (s *Store) StationFees(ctx context.Context, since time.Time) ([]StationFee,
 	for rows.Next() {
 		var f StationFee
 		var idx, btype int32
+		var access *int16
 		var key23, key31 []byte
 		if err := rows.Scan(&f.ZoneID, &f.City, &f.BuildingKey, &idx, &btype, &f.Pos,
 			&f.Durability, &f.Nutrition, &f.Silver, &f.Owner,
 			&f.AssociateFeeRaw, &f.AssociateFee, &f.PublicFeeRaw, &f.PublicFee,
+			&access, &f.CanUse, &f.Usable,
 			&key23, &key31, &f.ObservedAt, &f.Reporter); err != nil {
 			return nil, err
+		}
+		if access != nil {
+			f.Access = ptrInt32(int32(*access))
 		}
 		f.Index, f.BuildingType = int(idx), btype
 		f.Key23, f.Key31 = key23, key31
@@ -79,6 +91,8 @@ func (s *Store) StationFees(ctx context.Context, since time.Time) ([]StationFee,
 	}
 	return out, rows.Err()
 }
+
+func ptrInt32(v int32) *int32 { return &v }
 
 func nilIfEmpty(p []float64) any {
 	if len(p) == 0 {

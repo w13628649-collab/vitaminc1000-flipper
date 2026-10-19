@@ -58,15 +58,16 @@ type Refining struct {
 	// BidOrders:把「挂买单收料」列进候选。默认只当参照行,不进推荐(收不收得到不知道)
 	BidOrders bool `yaml:"bid_orders"`
 
-	// StationBuildingTypes:精炼线(ORE/HIDE/FIBER/WOOD)→ 抓包报的建筑类型 id(op 197 的 key17)。
-	// 哪个类型是冶炼厂、哪个是制革厂要等实测样本对着游戏里的 N 地图认,所以默认空:
-	// 空着时抓到的费率不进计算,只在精炼页列出来「抓到 N 台站,建筑类型还没映射」。
-	// 填上以后,这座城这条线有新鲜观测就用最便宜那台的费率,优先于 station_fee_by_city
+	// StationBuildingTypes:精炼线(ORE/HIDE/FIBER/WOOD)→ 额外认作精炼站的建筑类型 id(op 197 的 key17)。
+	// 平时不用填:内置表(internal/gamedata)已经从客户端 buildings.xml 算好了每条线 T2~T8 的站,
+	// 2026-10-19 拿 N 地图核过。游戏更新加了新站、内置表还没重新生成时,在这里补上就能先用。
+	// 认得出的站有新鲜观测就用最便宜那台的费率,优先于 station_fee_by_city
 	StationBuildingTypes map[string][]int32 `yaml:"station_building_types"`
 	// StationFeeMaxAgeHours:抓包费率多旧以内才用。房主设的费率不常变,默认 168(一周)
 	StationFeeMaxAgeHours float64 `yaml:"station_fee_max_age_hours"`
-	// StationFeeTransmute:抓到的精炼站费率也当转化主人费率用。依据只是 UnverifiedParams 里
-	// 「转化和精炼在同一个站」这一句,没在游戏里核对过,所以做成开关,默认 true
+	// StationFeeTransmute:抓到的精炼站费率也当转化主人费率用。转化在精炼站上做是静态数据定的
+	// (buildings.xml 里冶炼匠的可制造清单有 T?_ORE_LEVELn,分在 TRANSMUTATION 类),
+	// 一台站一个使用费;做成开关是留个退路,默认 true
 	StationFeeTransmute bool `yaml:"station_fee_transmute"`
 }
 
@@ -108,21 +109,6 @@ func DefaultRefining() Refining {
 		StationFeeMaxAgeHours:     168,
 		StationFeeTransmute:       true,
 	}
-}
-
-// StationTypesFor 是这条精炼线映射到的建筑类型;没映射时为 nil。
-func (r Refining) StationTypesFor(line string) []int32 { return r.StationBuildingTypes[line] }
-
-// StationLineOf 是建筑类型映射到的精炼线(同一类型映射到几条线时取第一条,按线名排序)。
-func (r Refining) StationLineOf(buildingType int32) (string, bool) {
-	for _, l := range RefiningLines {
-		for _, t := range r.StationBuildingTypes[l] {
-			if t == buildingType {
-				return l, true
-			}
-		}
-	}
-	return "", false
 }
 
 // Window 是精炼页读抓包的窗口。
