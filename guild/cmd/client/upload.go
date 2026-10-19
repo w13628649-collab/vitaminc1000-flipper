@@ -25,9 +25,10 @@ const maxPending = 100_000
 // 5000 条够攒几十次开图;费率变得慢,丢最旧的没损失
 const maxPendingStations = 5_000
 
-// maxPendingSamples 是断网时最多堆多少条原始样本。protocol 那边每个码每次运行最多 20 条,
-// 码只有几个,这个数只是兜底
-const maxPendingSamples = 200
+// maxPendingSamples 是最多堆多少条原始样本。明文全抓之后一次运行会冒出一两百个码,
+// protocol 那边每个码最多 20 条;进区、登录那一刻是一大波,正好是最想要的那批
+// (阿瓦隆之路的门就是进区时推的)。队列满了从最老的丢,所以要够装下开局那一波
+const maxPendingSamples = 5000
 
 // uploader 攒一批再发,不是每解析出一条就发一次。
 type uploader struct {
@@ -145,7 +146,7 @@ const (
 	maxBatchBytes    = 4 << 20 // 留一半余量
 	maxBatchOrders   = 20_000  // 一条约 100 字节,约 2 MB
 	maxBatchStations = 2_000
-	maxBatchSamples  = 20
+	maxBatchSamples  = 100 // 单条几百字节到几十 KB,100 条离 maxBatchBytes 还远;超了 encode 会拆
 	// maxBatchesPerFlush 是一次 flush 最多连发几批:积压能尽快补完,又不至于一直占着
 	maxBatchesPerFlush = 20
 )

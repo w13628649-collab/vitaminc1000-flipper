@@ -166,7 +166,7 @@ func main() {
 		OnResponse: func(code byte, _ int16, _ string, params map[byte]any) {
 			parser.HandleResponse(code, params)
 		},
-		// 事件默认全丢:HandleEvent 读完事件码,不在白名单例外里的立刻返回
+		// 事件:HandleEvent 记全键样本(明文全抓),还没有类型化处理器
 		OnEvent: parser.HandleEvent,
 		// 密文只交给加密判定,由它决定是不是市场被加密;这里不再自己下结论
 		OnEncrypted: crypt.Encrypted,

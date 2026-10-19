@@ -592,6 +592,9 @@ UDP 5056 换出口),`internal/capture/manager.go` 可以参考。
 
 ## 二点十、边界:一条能写成 if 的判准
 
+> **2026-10-19 起这一节的方针已不适用。** 用户决定明文全抓全解:所有认得出码的
+> 请求、响应、事件都记全键样本,要用哪条就写解码器。下面保留当时的分析。
+
 这一维查完,结论是**条款里没有地图条文**——T&C 三段全文扫
 `map/radar/overlay/minimap/coordinate/position/location/gather/harvest`,
 **命中数全部为 0**。唯一一条位置性质的禁止是 §11.2 iii)"不得互相当斥候",

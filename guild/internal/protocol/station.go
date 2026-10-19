@@ -104,7 +104,7 @@ func CityZone(zone string) bool {
 	return ok
 }
 
-func (p *Parser) handleClusterMap(params map[byte]any, rule Rule) {
+func (p *Parser) handleClusterMap(params map[byte]any) {
 	now := p.now()
 	zone, why, firstDrop := p.takeZoneRequest(now)
 	if zone == "" {
@@ -118,10 +118,6 @@ func (p *Parser) handleClusterMap(params map[byte]any, rule Rule) {
 	}
 	if !CityZone(zone) {
 		return
-	}
-	// 样本在区号校验之后才记,而且只记白名单里那几个键(rule.filter 过的 params)
-	if rule.Sample {
-		p.recordSample(rule, params)
 	}
 	obs, warns := decodeStations(zone, params, now)
 	for _, w := range warns {

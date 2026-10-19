@@ -78,7 +78,7 @@ func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch)
 		for _, x := range batch.Samples {
 			if why := sampleRejected(x); why != "" {
 				rejected++
-				slog.Debug("上传的样本不在白名单,丢弃", "kind", x.Kind, "code", x.Code, "why", why)
+				slog.Debug("上传的样本不合规,丢弃", "kind", x.Kind, "code", x.Code, "why", why)
 				continue
 			}
 			x.ObservedAt = ingest.ShiftObserved(x.ObservedAt, batch.SentAt, now)
@@ -89,7 +89,7 @@ func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch)
 			sm = append(sm, x)
 		}
 		if rejected > 0 {
-			slog.Warn("上传的样本不在白名单,丢弃", "count", rejected, "reporter", batch.Reporter,
+			slog.Warn("上传的样本不合规,丢弃", "count", rejected, "reporter", batch.Reporter,
 				"client_version", batch.ClientVersion)
 		}
 		if len(sm) == 0 {
@@ -104,26 +104,25 @@ func (s *Server) saveCaptureExtras(ctx context.Context, batch model.UploadBatch)
 	return stations, samples
 }
 
-// sampleRejected 按抓包白名单校验一条上传的样本,不合规返回原因。
+// sampleRejected 校验一条上传的样本,不合规返回原因。
 //
-// 「只收这几条」以前只在客户端执行,服务端任意 kind/code 都照存;SaveSamples
-// 只按出现过的 (kind, code) 修剪,换着码传表就无限增长。现在 (方向, 码) 必须是
-// 白名单里允许记样本的那几行,非全键样本的每个参数键必须在 Keys 里
+// 2026-10-19 起明文全抓,样本不再按白名单收,但 /api/upload 不鉴权,形状还是要卡:
+// 方向只能是那三种、码不超过 protocol.MaxCode——SaveSamples 按 (kind, code) 各留
+// store.SamplesPerCode 条,换着码传表就无限增长,卡住码的范围表才有上限
 func sampleRejected(x model.CaptureSample) string {
-	rule, ok := protocol.SampleRule(protocol.DefaultOpCodes(), protocol.DefaultEventCodes(), x.Kind, x.Code)
-	if !ok {
-		return "这个 (方向, 码) 不允许记样本"
+	switch x.Kind {
+	case model.SampleOpRequest, model.SampleOpResponse, model.SampleEvent:
+	default:
+		return "方向不认识"
+	}
+	if x.Code < 0 || x.Code > protocol.MaxCode {
+		return fmt.Sprintf("码 %d 超出 0..%d", x.Code, protocol.MaxCode)
 	}
 	var params []struct {
 		K int `json:"k"`
 	}
 	if err := json.Unmarshal(x.Params, &params); err != nil {
 		return "params 不是参数表数组"
-	}
-	for _, p := range params {
-		if !rule.SampleKeyAllowed(p.K) {
-			return fmt.Sprintf("参数键 %d 不在白名单", p.K)
-		}
 	}
 	return ""
 }
@@ -151,7 +150,7 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	kind := strings.TrimSpace(q.Get("kind"))
-	if kind != "" && kind != model.SampleOpResponse && kind != model.SampleEvent {
+	if kind != "" && kind != model.SampleOpRequest && kind != model.SampleOpResponse && kind != model.SampleEvent {
 		http.Error(w, "kind 只能是 op_response 或 event", http.StatusBadRequest)
 		return
 	}

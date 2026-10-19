@@ -2,8 +2,6 @@ package protocol
 
 import (
 	"encoding/json"
-	"slices"
-	"strings"
 	"testing"
 
 	"albion-guild/internal/model"
@@ -18,18 +16,8 @@ func sampleParser(t *testing.T) (*Parser, *[]model.CaptureSample) {
 	return p, &got
 }
 
-// 专精事件(用户 2026-10-17 批准的例外)原样记下来,每个参数带 Go 类型
-func TestHandleEvent_专精事件记样本(t *testing.T) {
-	p, got := sampleParser(t)
-	p.HandleEvent(1, map[byte]any{paramEventCode: int16(153),
-		0: int64(42), 1: []int32{1, 2}, 2: []any{"x", int16(3)}})
-	if len(*got) != 1 {
-		t.Fatalf("应记 1 条,得到 %d", len(*got))
-	}
-	s := (*got)[0]
-	if s.Code != 153 || s.Kind != model.SampleEvent || s.ClientVersion != "1.2.3" || s.ObservedAt.IsZero() {
-		t.Fatalf("样本头不对: %+v", s)
-	}
+func sampleKeys(t *testing.T, s model.CaptureSample) map[int]string {
+	t.Helper()
 	var params []TaggedParam
 	if err := json.Unmarshal(s.Params, &params); err != nil {
 		t.Fatal(err)
@@ -38,84 +26,129 @@ func TestHandleEvent_专精事件记样本(t *testing.T) {
 	for _, tp := range params {
 		types[tp.K] = tp.T
 	}
-	if types[0] != "int64" || types[1] != "[]int32" || types[2] != "[]interface {}" || types[252] != "int16" {
+	return types
+}
+
+// 明文全抓:任何事件都原样记全键样本,每个参数带 Go 类型
+func TestHandleEvent_任何事件都记全键样本(t *testing.T) {
+	p, got := sampleParser(t)
+	p.HandleEvent(1, map[byte]any{paramEventCode: int16(448),
+		0: int64(42), 1: []float32{1, 2}, 3: "TNL-031", 7: int64(638000000000000000)})
+	if len(*got) != 1 {
+		t.Fatalf("应记 1 条,得到 %d", len(*got))
+	}
+	s := (*got)[0]
+	if s.Code != 448 || s.Kind != model.SampleEvent || s.ClientVersion != "1.2.3" || s.ObservedAt.IsZero() {
+		t.Fatalf("样本头不对: %+v", s)
+	}
+	types := sampleKeys(t, s)
+	if types[0] != "int64" || types[1] != "[]float32" || types[3] != "string" || types[7] != "int64" ||
+		types[252] != "int16" {
 		t.Fatalf("类型标签: %v\n%s", types, s.Params)
 	}
 }
 
-// 不在例外表里的事件立刻返回,什么都不记;码按 int 认,150+256 不能被截成 150
-func TestHandleEvent_其他事件一律丢弃(t *testing.T) {
+// 事件记样本,但不进业务层:带上 Join 的键也改不了身份和位置;没有码的不记
+func TestHandleEvent_事件不进业务层(t *testing.T) {
 	p, got := sampleParser(t)
 	var identity bool
 	p.OnIdentity = func(_, _, _ string) { identity = true }
-	for _, code := range []any{byte(3), byte(29), int16(151), int16(406), int32(711), int16(2)} {
+	for _, code := range []any{byte(3), byte(29), int16(2), int16(406)} {
 		p.HandleEvent(1, map[byte]any{paramEventCode: code, 0: "x", 1: "guid", 2: "名字", 8: "0007"})
 	}
 	p.HandleEvent(1, map[byte]any{0: "没有事件码"})
-	if len(*got) != 0 || identity || p.Location() != "" {
-		t.Fatalf("事件漏进来了:样本 %d 条、身份回调 %v、位置 %q", len(*got), identity, p.Location())
+	if identity || p.Location() != "" {
+		t.Fatalf("事件进了业务层:身份回调 %v、位置 %q", identity, p.Location())
+	}
+	if len(*got) != 4 {
+		t.Fatalf("4 条有码的事件都该记样本,得到 %d", len(*got))
 	}
 }
 
-// 每个码每次运行最多 20 条,各码分开数
+// 请求、响应、事件三个方向都记,同一个码按方向分开数
+func TestSample_三个方向都记且分开数(t *testing.T) {
+	p, got := sampleParser(t)
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(81), 1: "请求"})
+	p.HandleResponse(1, map[byte]any{paramOperationCode: int16(81), 0: []string{offerJSON}})
+	p.HandleEvent(1, map[byte]any{paramEventCode: int16(81)})
+	kinds := map[string]int{}
+	for _, s := range *got {
+		if s.Code != 81 {
+			t.Fatalf("码不对: %+v", s)
+		}
+		kinds[s.Kind]++
+	}
+	want := map[string]int{model.SampleOpRequest: 1, model.SampleOpResponse: 1, model.SampleEvent: 1}
+	if len(kinds) != 3 || kinds[model.SampleOpRequest] != 1 || kinds[model.SampleOpResponse] != 1 ||
+		kinds[model.SampleEvent] != 1 {
+		t.Fatalf("得到 %v,想要 %v", kinds, want)
+	}
+}
+
+// 每个 (方向, 码) 每次运行最多 20 条,各码分开数
 func TestSample_每个码最多20条(t *testing.T) {
 	p, got := sampleParser(t)
 	for range 30 {
-		p.HandleEvent(1, map[byte]any{paramEventCode: int16(150)})
-		p.HandleEvent(1, map[byte]any{paramEventCode: int16(152)})
+		p.HandleEvent(1, map[byte]any{paramEventCode: int16(3)})
+		p.HandleEvent(1, map[byte]any{paramEventCode: int16(448)})
 	}
 	n := map[int]int{}
 	for _, s := range *got {
 		n[s.Code]++
 	}
-	if n[150] != MaxSamplesPerCode || n[152] != MaxSamplesPerCode {
+	if n[3] != MaxSamplesPerCode || n[448] != MaxSamplesPerCode {
 		t.Fatalf("得到 %v", n)
 	}
 }
 
-// 197 响应:样本只记白名单里那几个键(全键样本没有用户批准),
-// 而且只记配上了请求、是城区本体的那条
-func TestSample_197响应只记白名单键(t *testing.T) {
+// 样本在白名单过滤之前记:197 响应的样本带全部键(含表外的 99 和 253),
+// 配没配上请求、是不是城区都记;业务层照旧只认配上了请求的城区
+func TestSample_记在白名单过滤之前(t *testing.T) {
 	p, got := sampleParser(t)
 	var stations []model.StationObs
 	p.OnStations = func(o []model.StationObs) { stations = append(stations, o...) }
-	// 先来几条不该记的:没有请求、个人岛、野外区
-	p.HandleResponse(1, clusterMapResponse())
-	for _, zone := range []string{"ISLAND-PLAYER-xxx", "1234"} {
-		p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: zone})
-		p.HandleResponse(1, clusterMapResponse())
-	}
-	if len(*got) != 0 {
-		t.Fatalf("配不上请求 / 不是城区的 197 不该记样本,得到 %d 条", len(*got))
-	}
-	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "0000"})
-	p.HandleResponse(1, clusterMapResponse())
 
-	if len(*got) != 1 || (*got)[0].Kind != model.SampleOpResponse || (*got)[0].Code != 197 {
-		t.Fatalf("应记一条 197 样本,得到 %+v", *got)
+	resp := func() map[byte]any { r := clusterMapResponse(); r[99] = "表外的键"; return r }
+	p.HandleResponse(1, resp()) // 没有请求
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "1234"})
+	p.HandleResponse(1, resp()) // 野外区
+	p.HandleRequest(1, map[byte]any{paramOperationCode: int16(197), 0: "0000"})
+	p.HandleResponse(1, resp()) // 城区
+
+	var responses []model.CaptureSample
+	for _, s := range *got {
+		if s.Kind == model.SampleOpResponse && s.Code == 197 {
+			responses = append(responses, s)
+		}
 	}
-	var params []TaggedParam
-	if err := json.Unmarshal((*got)[0].Params, &params); err != nil {
-		t.Fatal(err)
+	if len(responses) != 3 {
+		t.Fatalf("三条 197 响应都该记样本,得到 %d", len(responses))
 	}
-	var keys []int
-	for _, tp := range params {
-		keys = append(keys, tp.K)
-	}
-	if !slices.Equal(keys, []int{17, 18, 20, 22, 23, 24, 25, 31, 33, 34}) {
-		t.Fatalf("样本只能带白名单里的键,得到 %v", keys)
-	}
-	if strings.Contains(string((*got)[0].Params), "白名单外的键") {
-		t.Fatalf("白名单外的键进了样本: %s", (*got)[0].Params)
+	types := sampleKeys(t, responses[2])
+	if types[99] != "string" || types[253] != "int16" || types[34] == "" {
+		t.Fatalf("样本该带全部键: %v", types)
 	}
 	if len(stations) != 2 {
-		t.Fatalf("业务层照常解出建筑,得到 %d", len(stations))
+		t.Fatalf("业务层只认配上请求的城区,应解出 2 个建筑,得到 %d", len(stations))
 	}
-	// 请求不记样本
-	for _, s := range *got {
-		if s.Kind != model.SampleOpResponse {
-			t.Fatalf("只有响应和事件记样本: %+v", s)
-		}
+}
+
+// 挂单走的是没有 253 的那条路,按卖单列表的码记
+func TestSample_没有253的挂单也记(t *testing.T) {
+	p, got := sampleParser(t)
+	p.HandleResponse(1, map[byte]any{0: []string{offerJSON}})
+	if len(*got) != 1 || (*got)[0].Kind != model.SampleOpResponse || (*got)[0].Code != p.Codes.AuctionGetOffers {
+		t.Fatalf("得到 %+v", *got)
+	}
+}
+
+// 码超出 MaxCode 的不记:服务端也按这个上限收,记了也传不上去
+func TestSample_码超范围不记(t *testing.T) {
+	p, got := sampleParser(t)
+	p.HandleEvent(1, map[byte]any{paramEventCode: int32(MaxCode + 1)})
+	p.HandleEvent(1, map[byte]any{paramEventCode: int16(-1)})
+	if len(*got) != 0 {
+		t.Fatalf("得到 %+v", *got)
 	}
 }
 

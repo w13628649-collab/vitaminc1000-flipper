@@ -83,6 +83,7 @@ type UploadBatch struct {
 
 // 原始样本的消息方向,和 protocol.Kind.String() 一致
 const (
+	SampleOpRequest  = "op_request"
 	SampleOpResponse = "op_response"
 	SampleEvent      = "event"
 )
@@ -93,7 +94,7 @@ const (
 // 类型标签是要点——同一个字段线上可能是几种 Go 类型,解码器要照着写。
 type CaptureSample struct {
 	Code          int             `json:"code"`
-	Kind          string          `json:"kind"` // op_response | event
+	Kind          string          `json:"kind"` // op_request | op_response | event
 	Params        json.RawMessage `json:"params"`
 	ObservedAt    time.Time       `json:"observed_at"`
 	ClientVersion string          `json:"client_version,omitempty"`

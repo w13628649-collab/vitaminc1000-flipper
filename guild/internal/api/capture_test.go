@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"albion-guild/internal/model"
+	"albion-guild/internal/protocol"
 	"albion-guild/internal/store"
 )
 
@@ -61,26 +62,25 @@ func TestUpload_原始样本(t *testing.T) {
 	}
 }
 
-// 「只收这几条」服务端也要执行:/api/upload 不鉴权,老版本、开发版、改过的客户端
-// 都能往里塞人物位置事件的样本、野外区的建筑。白名单外的整条丢掉
-func TestUpload_服务端按白名单收样本和建筑(t *testing.T) {
+// 明文全抓之后样本不再按白名单收,但 /api/upload 不鉴权,形状要卡:方向认识、
+// 码在 0..protocol.MaxCode、params 是参数表数组。建筑照旧只收城区本体
+func TestUpload_服务端卡样本形状和建筑(t *testing.T) {
 	fc := &fakeCapture{}
 	s := New(nil, nil, nil, time.Minute, nil)
 	s.Capture = fc
 	p := func(s string) json.RawMessage { return json.RawMessage(s) }
-	var samples []model.CaptureSample
-	for code := 29; code <= 33; code++ { // NewCharacter 之类的人物事件
-		samples = append(samples, model.CaptureSample{Kind: model.SampleEvent, Code: code,
-			Params: p(`[{"k":4,"t":"[]float32","v":[1,2]}]`)})
+	samples := []model.CaptureSample{
+		// 不合规的四条
+		{Kind: "随便写", Code: 3, Params: p(`[]`)},
+		{Kind: model.SampleEvent, Code: -1, Params: p(`[]`)},
+		{Kind: model.SampleEvent, Code: protocol.MaxCode + 1, Params: p(`[]`)},
+		{Kind: model.SampleOpResponse, Code: 197, Params: p(`"不是数组"`)},
+		// 合规的四条:三个方向都收,任意键都收;含 NUL 的要换掉
+		{Kind: model.SampleEvent, Code: 29, Params: p(`[{"k":4,"t":"[]float32","v":[1,2]}]`)},
+		{Kind: model.SampleOpRequest, Code: 197, Params: p(`[{"k":0,"t":"string","v":"0000"}]`)},
+		{Kind: model.SampleOpResponse, Code: 197, Params: p(`[{"k":99,"t":"string","v":"x"}]`)},
+		{Kind: model.SampleEvent, Code: 150, Params: p(`[{"k":0,"t":"string","v":"a\u0000b"},{"k":252,"t":"int16","v":150}]`)},
 	}
-	samples = append(samples,
-		model.CaptureSample{Kind: "随便写", Code: 3, Params: p(`[]`)},
-		model.CaptureSample{Kind: model.SampleOpResponse, Code: 197, Params: p(`[{"k":99,"t":"string","v":"x"}]`)}, // 表外的键
-		model.CaptureSample{Kind: model.SampleOpResponse, Code: 197, Params: p(`"不是数组"`)},
-		// 合规的两条:197 只带白名单键;专精事件全键(含 NUL,要换掉)
-		model.CaptureSample{Kind: model.SampleOpResponse, Code: 197, Params: p(`[{"k":17,"t":"[]int32","v":[1]},{"k":34,"t":"[]int64","v":[5]}]`)},
-		model.CaptureSample{Kind: model.SampleEvent, Code: 150, Params: p(`[{"k":0,"t":"string","v":"a\u0000b"},{"k":252,"t":"int16","v":150}]`)},
-	)
 	body, _ := json.Marshal(model.UploadBatch{Reporter: "甲", Samples: samples,
 		Stations: []model.StationObs{
 			{ZoneID: "PLAYERISLAND-xxx", Pos: []float64{1, 2}},
@@ -89,11 +89,11 @@ func TestUpload_服务端按白名单收样本和建筑(t *testing.T) {
 			{ZoneID: "4000", BuildingType: 7, Owner: "甲\x00公会"},
 		}})
 	out := postUpload(t, s, string(body))
-	if out["samples"] != 2 || len(fc.samples) != 2 {
-		t.Fatalf("只该存 2 条合规样本,返回 %v、存了 %+v", out, fc.samples)
+	if out["samples"] != 4 || len(fc.samples) != 4 {
+		t.Fatalf("只该存 4 条合规样本,返回 %v、存了 %+v", out, fc.samples)
 	}
-	if strings.Contains(string(fc.samples[1].Params), `\u0000`) {
-		t.Fatalf("jsonb 不收 \\u0000: %s", fc.samples[1].Params)
+	if strings.Contains(string(fc.samples[3].Params), `\u0000`) {
+		t.Fatalf("jsonb 不收 \\u0000: %s", fc.samples[3].Params)
 	}
 	if out["stations"] != 1 || len(fc.saved) != 1 || fc.saved[0].ZoneID != "4000" {
 		t.Fatalf("只该存城区本体的建筑,返回 %v、存了 %+v", out, fc.saved)

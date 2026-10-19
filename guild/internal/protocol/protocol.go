@@ -78,12 +78,11 @@ type rawOrder struct {
 
 // Parser 有状态:城市挂单的 LocationId 在包里是空的,得靠当前所在地补。
 type Parser struct {
-	Codes  OpCodes
-	Events EventCodes
+	Codes OpCodes
 	// Version 是客户端版本号,写进原始样本:字段布局随版本变,样本得知道自己是哪一版
 	Version string
 
-	// allow 是白名单索引(allowlist.go)。不在里面的消息读完码就丢
+	// allow 是业务层白名单索引(allowlist.go)。不在里面的消息记完样本就停,不进处理器
 	allow allowIndex
 
 	// 客户端给每张网卡起一个抓包 goroutine,但只有一个 Parser——
@@ -117,7 +116,8 @@ type Parser struct {
 	OnMarketDecoded func(n int)
 	// OnStations 解出一次区域地图(op 197)里的建筑时回调。
 	OnStations func(obs []model.StationObs)
-	// OnSample 记下一条原始样本时回调(只有白名单里 Sample 的那几条)。
+	// OnSample 记下一条原始样本时回调。所有认得出码的消息都记,
+	// 每个 (方向, 码) 每次运行最多 MaxSamplesPerCode 条(sample.go)
 	OnSample func(s model.CaptureSample)
 }
 
@@ -129,7 +129,7 @@ func (p *Parser) now() time.Time {
 }
 
 func New() *Parser {
-	return &Parser{Codes: DefaultOpCodes(), Events: DefaultEventCodes()}
+	return &Parser{Codes: DefaultOpCodes()}
 }
 
 func (p *Parser) Location() string {
@@ -155,8 +155,8 @@ func (p *Parser) Character() (id, name string) {
 // —— 而 handleOrders 读的恰恰就是 params[0],也就是说唯一能拿到挂单的
 // 那条路被堵住了。症状是"日志一切正常、库里一条挂单都没有"。
 //
-// 认出码之后先过白名单(allowlist.go):不在表里的直接返回,在表里的只把
-// 表内的键交给下面的 handle*。
+// 认出码之后先记全键样本(sample.go),再过业务层白名单(allowlist.go):
+// 不在表里的到此为止,在表里的只把表内的键交给下面的 handle*。
 func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 	code, hasCode := intParam(params, paramOperationCode)
 	if !hasCode {
@@ -171,7 +171,8 @@ func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 		}
 		code = p.Codes.AuctionGetOffers
 	}
-	rule, ok := p.allow.lookup(p.Codes, p.Events, KindResponse, code)
+	p.recordSample(KindResponse, code, params)
+	rule, ok := p.allow.lookup(p.Codes, KindResponse, code)
 	if !ok {
 		return
 	}
@@ -188,7 +189,7 @@ func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 	case p.Codes.Join:
 		p.handleJoin(params)
 	case p.Codes.GetClusterMapInfo:
-		p.handleClusterMap(params, rule) // 样本在里面区号校验过了才记
+		p.handleClusterMap(params)
 	}
 }
 
@@ -199,7 +200,8 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 	if !ok {
 		return
 	}
-	rule, ok := p.allow.lookup(p.Codes, p.Events, KindRequest, code)
+	p.recordSample(KindRequest, code, params)
+	rule, ok := p.allow.lookup(p.Codes, KindRequest, code)
 	if !ok {
 		return
 	}
@@ -219,31 +221,16 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 	}
 }
 
-// HandleEvent 处理服务端推来的事件。
+// HandleEvent 处理服务端推来的事件:记全键样本。
 //
-// **抓包一条事件都不解**(仓库 CLAUDE.md「不变的核心要求」),唯一的例外是
-// 白名单里那三条专精事件,而且只记原始样本、不进业务逻辑。
-// 不在例外表里的事件读完 params[252] 立刻返回,别的参数一个不碰。
-//
-// (photon 层为了拿到 252 已经把参数表反序列化了——事件的真码就在参数表里,
-// 不解表拿不到码。这一步之后数据就停在这里,不往上传。)
+// 还没有事件的类型化处理器——要用哪条事件,先看它的样本,再在 allowlist.go 加一行、
+// 在这里加一个分支。
 func (p *Parser) HandleEvent(_ byte, params map[byte]any) {
 	code, ok := intParam(params, paramEventCode)
 	if !ok {
 		return
 	}
-	rule, ok := p.allow.lookup(p.Codes, p.Events, KindEvent, code)
-	if !ok {
-		return
-	}
-	if rule.Sample {
-		if rule.SampleAllKeys {
-			p.recordSample(rule, params) // 只有用户批准的那三条专精事件
-		} else {
-			p.recordSample(rule, rule.filter(params))
-		}
-	}
-	// rule.Keys 对事件全是空的:业务层什么都不拿
+	p.recordSample(KindEvent, code, params)
 }
 
 func (p *Parser) handleOrders(params map[byte]any) {
