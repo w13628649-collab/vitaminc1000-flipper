@@ -149,7 +149,7 @@ const roleTag = (r, big) => (r ? `<span class="rtag ${r.role === "raw" ? "raw" :
   r.role === "raw" ? "原料:采集来的,拿去精炼" : "半成品:原料精炼出来的"}">${ROLE_WORD[r.role]}</span>` : "");
 
 // ── 视图切换 ───────────────────────────────────────────────
-const views = ["desk", "ideas", "lookup", "craft", "rank", "review", "book", "live"];
+const views = ["desk", "ideas", "bm", "lookup", "craft", "rank", "review", "book", "live"];
 // 单独文件里的页面(精炼页 craft.js)登记自己的钩子:hash() 切过来时地址栏写什么、
 // route(arg) 地址栏带着参数进来、show() 切到这页、hide() 离开这页(退订实时)
 const viewHooks = {};
@@ -185,6 +185,7 @@ function show(name, push = true) {
     if (lookup.stale) refreshLookupLive();
   }
   if (name === "rank") loadRank();
+  if (name === "bm") loadBM();
   if (name === "review") loadReview();
   if (name === "book") loadBook();
   // 不在这页时只记了数据,没画;顺便对一次账
@@ -1414,6 +1415,124 @@ $("trade-form").addEventListener("submit", async e => {
     loadCalibration();
   } catch (err) { alert("记账失败:" + err.message); }
 });
+
+// ── 黑市:主城秒买、卖进黑市的采购单 ─────────────────────────
+// 服务端解好了分配(高品质能卖进低品质的单、每张黑市单只算一次),这里只负责摆出来。
+// 默认按这单总赚排;点「每件赚」「利润率」表头换排序
+const bmUI = { all: null, cities: null, sort: "profit", plan: null, seq: 0, timer: 0 };
+try {
+  const saved = JSON.parse(localStorage.getItem("bm-ui") || "{}");
+  if (Array.isArray(saved.cities)) bmUI.cities = saved.cities;
+  if (saved.age) $("bm-age").value = saved.age;
+  if (saved.cityAge) $("bm-city-age").value = saved.cityAge;
+} catch (e) { /* 读不了就用默认 */ }
+const bmSave = () => {
+  try {
+    localStorage.setItem("bm-ui", JSON.stringify({ cities: bmUI.cities, age: $("bm-age").value, cityAge: $("bm-city-age").value }));
+  } catch (e) { /* 记不住也能用 */ }
+};
+const minutesAgo = t => Math.max(0, Math.round((Date.now() - Date.parse(t)) / 60000));
+const ageShort = m => (m < 60 ? `${m} 分钟` : `${+(m / 60).toFixed(m < 600 ? 1 : 0)} 小时`);
+const priceSpan = (lo, hi) => (lo === hi ? num(lo) : `${num(lo)}–${num(hi)}`);
+
+async function loadBM() {
+  const seq = ++bmUI.seq;
+  const q = new URLSearchParams({ bm_age: $("bm-age").value, city_age: $("bm-city-age").value });
+  if (bmUI.cities && bmUI.all && bmUI.cities.length && bmUI.cities.length < bmUI.all.length) q.set("cities", bmUI.cities.join(","));
+  $("bm-refresh").disabled = true;
+  try {
+    const plan = await getJSON("/api/blackmarket?" + q);
+    if (seq !== bmUI.seq) return;
+    if (!bmUI.all && !q.has("cities")) bmUI.all = plan.cities;   // 不带 cities 时回来的就是全部可选
+    if (!bmUI.cities) bmUI.cities = bmUI.all ? [...bmUI.all] : plan.cities;
+    bmUI.plan = plan;
+    for (const r of plan.rows) noteName(r.item_id, r.name);
+    renderBM();
+  } catch (e) {
+    if (seq !== bmUI.seq) return;
+    $("bm-error").textContent = e.status === 404 ? "服务端还没有黑市接口,先升级服务端。" : String(e.message || e);
+    $("bm-error").hidden = false;
+  } finally {
+    if (seq === bmUI.seq) $("bm-refresh").disabled = false;
+  }
+}
+
+function renderBM() {
+  const plan = bmUI.plan;
+  if (!plan) return;
+  const all = bmUI.all || plan.cities;
+  $("bm-cities").innerHTML = all.map(c =>
+    `<button data-city="${esc(c)}" aria-pressed="${bmUI.cities.includes(c)}">${esc(c)}</button>`).join("");
+
+  const rows = [...plan.rows];
+  const unit = r => (r.qty ? r.profit / r.qty : 0);
+  if (bmUI.sort === "margin") rows.sort((a, b) => b.margin - a.margin);
+  else if (bmUI.sort === "unit") rows.sort((a, b) => unit(b) - unit(a));
+  for (const th of document.querySelectorAll("#bm-table th[data-sort]")) {
+    if (th.dataset.sort === bmUI.sort) th.setAttribute("aria-sort", "descending"); else th.removeAttribute("aria-sort");
+  }
+
+  let profit = 0, cost = 0, qty = 0;
+  for (const r of plan.rows) { profit += r.profit; cost += r.cost; qty += r.qty; }
+  const bmSeen = plan.bm_newest ? `${ageShort(minutesAgo(plan.bm_newest))}前` : "没抓过";
+  $("bm-kpis").innerHTML = `
+    <div><b class="${profit > 0 ? "pos" : ""}">${num(profit)}</b><i>整张单做完能赚</i>
+      <em>${num(plan.rows.length)} 行${plan.truncated ? `,另有 ${num(plan.truncated)} 行没列出` : ""}</em></div>
+    <div><b>${num(cost)}</b><i>要带的本金</i><em>${num(qty)} 件</em></div>
+    <div><b>${num(plan.items)}</b><i>黑市有买单的物品</i>
+      <em>${!plan.items ? "" : plan.capture_items === plan.items ? "全是自己抓的"
+        : plan.capture_items ? `${num(plan.capture_items)} 个是自己抓的,其余来自 AODP` : "全来自 AODP"}</em></div>
+    <div><b>${bmSeen}</b><i>上次翻黑市</i>
+      <em>黑市 ${plan.bm_max_age_min} 分钟、主城 ${ageShort(plan.city_max_age_min)}内的数据</em></div>`;
+
+  $("bm-error").textContent = plan.error ? `有一路数据没取到,下面是用剩下的算的:${plan.error}` : "";
+  $("bm-error").hidden = !plan.error;
+
+  $("bm-rows").innerHTML = rows.map(r => {
+    const est = r.buy_est || r.sell_est;
+    const route = r.buy_quality === r.sell_quality ? qualityTag(r.buy_quality)
+      : `${qualityTag(r.buy_quality)}<span class="sub"> → </span>${qualityTag(r.sell_quality)}`;
+    const estWhy = [r.buy_est && "主城", r.sell_est && "黑市"].filter(Boolean).join("和");
+    return `<tr>
+      <td class="l">${itemCell(r.item_id, NAMES.get(r.item_id) || r.name || r.item_id)}</td>
+      <td class="l">${route}</td>
+      <td class="l">${cityDot(r.city)}${r.city === "Caerleon" ? ' <span class="tag high" title="和黑市在同一座城,不用运">同城</span>' : ""}</td>
+      <td>${priceSpan(r.buy_low, r.buy_high)}</td>
+      <td>${priceSpan(r.sell_low, r.sell_high)}</td>
+      <td>${num(unit(r))}</td>
+      <td${est ? ` title="${estWhy}那侧用的是 AODP 的最优价,只知道至少有这么多"` : ""}>${num(r.qty)}${est ? "+" : ""}</td>
+      <td class="pos"><b>${num(r.profit)}</b></td>
+      <td>${pct(r.margin, 0)}</td>
+      <td class="l sub">黑市 ${ageShort(minutesAgo(r.sell_seen))}<br>主城 ${ageShort(minutesAgo(r.buy_seen))}</td>
+    </tr>`;
+  }).join("");
+  $("bm-table").hidden = !rows.length;
+  $("bm-empty").hidden = !!rows.length;
+  $("bm-empty").textContent = !plan.items
+    ? `最近 ${plan.bm_max_age_min} 分钟没有黑市买单的数据。去 Caerleon 黑市翻几页,这里就会有。`
+    : "黑市有买单,但选中的城市里没有比它便宜的货。换几座城,或者把主城数据放宽一点。";
+}
+
+$("bm-cities").addEventListener("click", e => {
+  const b = e.target.closest("button[data-city]");
+  if (!b || !bmUI.cities) return;
+  const c = b.dataset.city;
+  const next = bmUI.cities.includes(c) ? bmUI.cities.filter(x => x !== c) : [...bmUI.cities, c];
+  if (!next.length) return;   // 至少留一座
+  bmUI.cities = (bmUI.all || next).filter(x => next.includes(x));
+  bmSave();
+  loadBM();
+});
+for (const id of ["bm-age", "bm-city-age"]) $(id).addEventListener("change", () => { bmSave(); loadBM(); });
+$("bm-refresh").addEventListener("click", loadBM);
+document.querySelector("#bm-table thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if (!th) return;
+  bmUI.sort = th.dataset.sort;
+  renderBM();
+});
+// 开着这页时每分钟刷一次:回来翻过黑市、主城,数会自己跟上
+setInterval(() => { if (currentView === "bm" && !document.hidden) loadBM(); }, 60000);
 
 // ── 复盘:抓包记下的个人成交 ───────────────────────────────
 // 数据来自 /api/ledger/*:即时买卖、市场邮件(挂单成交 / 到期)、银币和专注余额。

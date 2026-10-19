@@ -20,6 +20,7 @@
     <nav>
       <button data-view="desk" aria-current="page">总览</button>
       <button data-view="ideas">机会</button>
+      <button data-view="bm">黑市</button>
       <button data-view="lookup">查价</button>
       <button data-view="craft">精炼</button>
       <button data-view="rank">销量榜</button>
@@ -407,6 +408,39 @@
       <tbody id="rank-rows"></tbody>
     </table>
     <div class="empty" id="rank-empty">还没有历史数据。</div>
+  </section>
+
+  <!-- ═══════════ 黑市 ═══════════ -->
+  <section class="view" id="v-bm" hidden>
+    <div class="bar">
+      <div class="seg" id="bm-cities" aria-label="去哪买"></div>
+      <label class="f" title="黑市买单被别的倒爷吃得快,要比主城严">黑市数据不超过
+        <select id="bm-age"><option value="15">15 分钟</option><option value="30">30 分钟</option>
+          <option value="45" selected>45 分钟</option><option value="60">1 小时</option><option value="120">2 小时</option></select></label>
+      <label class="f">主城数据不超过
+        <select id="bm-city-age"><option value="60">1 小时</option><option value="180" selected>3 小时</option>
+          <option value="360">6 小时</option><option value="720">12 小时</option></select></label>
+      <button class="mini" id="bm-refresh">刷新</button>
+    </div>
+    <div class="kpis" id="bm-kpis"></div>
+    <div class="banner" id="bm-error" hidden></div>
+    <div class="tablewrap">
+      <table class="tight" id="bm-table">
+        <thead><tr>
+          <th class="l">物品</th><th class="l" title="主城买的品质 → 卖进黑市哪个品质的买单">品质</th>
+          <th class="l">去哪买</th><th>买价</th><th title="黑市买单的价,税前">黑市收</th>
+          <th data-sort="unit" title="扣过销售税">每件赚</th><th>能做几件</th>
+          <th data-sort="profit" aria-sort="descending">这单总赚</th><th data-sort="margin">利润率</th>
+          <th class="l">数据龄</th>
+        </tr></thead>
+        <tbody id="bm-rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="bm-empty" hidden></div>
+    <ul class="note" id="bm-notes">
+      <li>能做几件后面带 + 的,有一侧用的是 AODP 的最优价,只知道至少有 1 件。</li>
+      <li>黑市买单抢得最凶,跑到时可能已经没了;进出 Caerleon 只能骑,周边红区全掉落;高附魔货在黑市出得慢。</li>
+    </ul>
   </section>
 
   <!-- ═══════════ 复盘 ═══════════ -->

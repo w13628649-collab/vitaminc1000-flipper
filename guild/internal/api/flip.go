@@ -39,6 +39,7 @@ func (s *Server) registerFlip(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/calibration", s.handleCalibration)
 	s.registerLookup(mux)
 	s.registerRefine(mux)
+	mux.HandleFunc("GET /api/blackmarket", s.handleBlackMarket)
 }
 
 func (s *Server) handleMenu(w http.ResponseWriter, r *http.Request) {
