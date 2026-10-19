@@ -462,6 +462,51 @@ only **live market data** is not sent"。也就是说 op 81 的响应是密文,
 **这条推翻了"开一次游戏看 Clear/Detected 就能定"的说法**:那个绿灯做完,
 op 197 是不是明文照样未知。要单独验。
 
+### 字段级加密:玩家实时位置被单独 XOR(2026-10-19 补)
+
+**这条纠正了对话里说过的"玩家位置几乎肯定是明文"——那是错的。**
+来源是 [Nouuu/Albion-Online-OpenRadar](https://github.com/Nouuu/Albion-Online-OpenRadar)
+的 `docs/technical/PLAYER_POSITIONS_MITM.md`,作者声明对着自己的抓包语料验证过
+(2026-08-14),我们这边用码表交叉核了一条。
+
+SBI 的做法不是整条连接加密,而是**只保护最要紧的那几个字段**:
+
+| | 被动抓包能读吗 |
+|---|---|
+| 事件 29 `NewCharacter` 的名字、公会、联盟、装备、阵营旗、血量 | **能** |
+| 事件 29 / 3 `Move` 里的**实时坐标** | **不能**——和一个 8 字节 XorCode 做了 XOR |
+| XorCode 本身 | 走事件 `KeySync` 下发,**被 Photon 内置 AES 包了一层** |
+| 资源节点(39/40/46)、怪(123)的坐标 | **能**,没加 XOR |
+
+Photon 那层 AES 按它的描述是:DH 交换(Oakley 768 位素数,生成元 22),
+密钥 = SHA256(共享密钥),AES-256-CBC,IV 全零。被动监听拿不到 DH 私钥,
+就解不开 KeySync,就拿不到 XorCode,位置就解不出来。
+
+**我们码表里 `KeySync` = 事件 602**(OpenRadar 写 603,并注明"每次上游枚举插入都会挪"),
+差一位,机制在 1.32.030.345319 里确实存在。
+
+这个设计很精:**绝大部分流量不加密(省 CPU,大团战几百人同屏),只对 PvP 要命的那个
+字段做最便宜的 XOR,而 XOR 的密钥每个会话只需要一条 AES 消息。** PvE 信息(资源、怪)
+放着不管,PvP 位置护住。
+
+能读到位置的老雷达(DEATHEYE)靠的是**主动中间人代理**(Cryptonite):在客户端和服务器
+之间架一个 UDP 代理,截获 DH 交换,分别和两头各做一次 DH,从而拿到 AES 会话密钥。
+这能成立是因为这个 DH **没有身份认证**——和 TLS 不带证书时会被中间人是同一个道理。
+那已经不是被动监听,是改了游戏的网络路径。
+
+和本节上面"加密是按消息粒度"不冲突:KeySync 那条是按消息加密的,
+位置字段是在明文消息里按字段混淆的,两层都是"挑着加"。
+
+### ExitLag 用户:抓包可能什么都看不到
+
+OpenRadar 的 README 记了一条和我们直接相关的坑:**ExitLag 默认的转发方式(WFP)在
+NDIS 层之上截走 Albion 的流量,Npcap 什么都看不到,Wireshark 也看不到。**
+要在 ExitLag 里 Settings → Advanced → Packet redirection method 改成 **NDIS (Legacy)**。
+
+亚服玩家用加速器很常见。我们客户端如果"开着游戏、一条包都没有",先查这个。
+OpenRadar 还为此做了多网卡同时监听 + 运行时切换(加速器开关、WiFi 换网线都会让
+UDP 5056 换出口),`internal/capture/manager.go` 可以参考。
+
 ## 二点八、我们的抓包层现状
 
 查的时候顺手核的,记下来:
