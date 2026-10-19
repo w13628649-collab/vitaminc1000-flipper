@@ -184,7 +184,7 @@ function ageTag(h, title) {
   const t = title || (lv === "red" ? "超过 24 小时:这个价多半已经变了" : lv === "yellow" ? "超过 6 小时:进游戏看一眼再下单" : "6 小时以内");
   return `<span class="agetag ${lv}" title="${esc(t)}">${h < 1 ? Math.max(1, Math.round(h * 60)) + " 分钟" : h.toFixed(1) + " 小时"}</span>`;
 }
-const SRC_NAME = { capture: "抓包", aodp: "AODP" };
+const SRC_NAME = { capture: "抓包", aodp: "AODP", "capture+aodp": "抓包+AODP" };
 
 // 警告代码 → 短标签(引擎 refine/plan.go 和服务层 flip/refine.go 的全部代码)。没列的原样显示代码
 const CRAFT_WARN = {
@@ -279,7 +279,9 @@ function craftSyncForm() {
   $("c-custom").innerHTML = CRAFT_TIERS.filter(t => t <= p.tier).reverse().map(t =>
     `<label><input type="checkbox" data-ct="${t}"${p.customTiers.includes(t) ? " checked" : ""}> T${t}</label>`).join("");
   setVal("c-budget", p.budget);
-  setPh("c-budget", sd.focus_per_day);
+  setPh("c-budget", craft.capFocus ? craft.capFocus.focus : sd.focus_per_day);
+  $("c-budget").title = craft.capFocus
+    ? `空着时按抓包读到的专注余额算(${agoText(craft.capFocus.at)});自己填了就按填的` : "";
   $("c-budget").max = String(sd.focus_cap || CRAFT_FALLBACK.focus_cap);
   $("c-sort").value = p.sort;
 
@@ -472,6 +474,7 @@ function craftBody() {
   };
   if (p.focusMode === "custom") body.focus.custom_tiers = p.customTiers.filter(t => t >= 4 && t <= p.tier);
   if (p.budget != null) body.focus.budget = p.budget;
+  else if (craft.capFocus) body.focus.budget = craft.capFocus.focus;
   const fce = cFCE();
   for (const t of CRAFT_TIERS) body.focus.fce[t] = Number(fce[t]) || 0;
   if (p.unlocked[p.line] != null) body.focus.unlocked_tier = p.unlocked[p.line];
@@ -492,6 +495,47 @@ function craftBody() {
   return body;
 }
 
+// ── 最赚件数(POST /api/refine/qtyscan):每算完一次计划就跟着扫一遍件数 ──
+const qscan = { sig: "", data: null, pending: false, err: null, at: 0, seq: 0 };
+async function craftQtyScan(force) {
+  const sig = craft.sig;
+  if (!sig || (!force && sig === qscan.sig && (qscan.pending || Date.now() - qscan.at < 20000))) return;
+  qscan.sig = sig;
+  qscan.pending = true;
+  qscan.err = null;
+  const seq = ++qscan.seq;
+  craftQtyScanPaint();
+  try {
+    const res = await getJSON("/api/refine/qtyscan", { method: "POST", headers: { "Content-Type": "application/json" }, body: sig });
+    if (seq !== qscan.seq) return;
+    qscan.data = res;
+    qscan.at = Date.now();
+  } catch (e) {
+    if (seq !== qscan.seq) return;
+    qscan.err = e;
+    qscan.sig = "";   // 失败了:下次还要能再算
+  }
+  qscan.pending = false;
+  craftQtyScanPaint();
+}
+function craftQtyScanPaint() {
+  const el = $("c-qscan");
+  if (el && craft.data) el.innerHTML = qscanHTML(craft.data);
+}
+function qscanHTML(res) {
+  if (qscan.err) return `<span class="sub">没算出来</span> <button class="act ghost mini-act" data-qty-scan>再算</button>`;
+  const d = qscan.data;
+  if (!d || d.target !== res.target || qscan.pending) return `<span class="sub">正在算…</span>`;
+  const b = d.best;
+  if (!b) return `<span class="sub">做多少件都不赚</span>`;
+  // 顶到 1 万件、又有只知道价不知道件数的盘口:利润一直涨只是因为按不限量算,给不出件数
+  if (d.unbounded) return `<span class="sub" title="有的价只有 AODP、不知道挂了几件,按不限量算,件数越多越赚。去游戏里翻一下那几个市场就算得出来">算不出:有的盘口不知道挂了几件</span>`;
+  const vpd = d.volume_per_day, days = vpd ? b.qty / vpd : null;
+  const why = days != null ? `出售城市每天成交约 ${fq(vpd)} 件,${num(b.qty)} 件要卖 ${days < 1 ? "不到 1" : days.toFixed(1)} 天` : "";
+  return `<span${why ? ` title="${esc(why)}"` : ""}>${num(b.qty)} 件 <b class="${b.total >= 0 ? "pos" : "neg"}">${sgn(b.total)}</b></span>${
+    b.qty !== res.qty ? ` <button class="act ghost mini-act" data-set-qty="${b.qty}">设成 ${num(b.qty)} 件</button>` : ""}`;
+}
+
 // ── 计算 ──
 // opts.force:参数没变也重新请求(重算按钮、实时推送、切回本页);opts.live:实时触发的,旧结果不变灰
 async function craftLoad(opts = {}) {
@@ -499,7 +543,8 @@ async function craftLoad(opts = {}) {
   clearTimeout(craft.retry);
   const body = craftBody();
   const sig = JSON.stringify(body);
-  if (!opts.force && sig === craft.sig && (craft.pending || Date.now() - craft.loadedAt < 20000)) return;
+  // 同样的参数 3 秒内不重复要(连点同一格);再久就重新要一份——服务端有结果缓存,数据没变时很便宜
+  if (!opts.force && sig === craft.sig && (craft.pending || Date.now() - craft.loadedAt < 3000)) return;
   craft.sig = sig;
   const seq = ++craft.seq;
   craft.pending = true;
@@ -526,12 +571,11 @@ async function craftLoad(opts = {}) {
     craftLiveAfter(res, opts);
     craftStatus("ok", opts);
     craftAfterPlan(res);
+    craftQtyScan();
     // 实时重算过的计划旁边摆一张旧矩阵,当前目标那一格就对不上了:矩阵开着就跟着重算
     // (攒 3 秒:矩阵是 25 次计算,推送连着来时不用每条都算)
-    if (opts.live && $("c-mx").open) {
-      clearTimeout(mx.liveTimer);
-      mx.liveTimer = setTimeout(() => craftMatrixLoad({ force: true }), 3000);
-    }
+    if (opts.live && $("c-mx").open) craftMatrixLive(craftPushedAt(opts.quote) || "now");
+    else craftMatrixLoad();   // 参数变了矩阵跟着变;没变时按签名跳过
     // 实时重算后推荐那条的单根成本变了就闪一下:涨红跌绿(成本涨是坏事)
     if (opts.live && prev?.target === res.target) {
       const a = prev.candidates?.find(c => !c.reference), b = res.candidates?.find(c => !c.reference);
@@ -594,16 +638,34 @@ async function craftAfterPlan(res) {
   try { tree = await craftTree(res.target); } catch (e) { return; }   // 配方树没拉到:这一轮不订,下次算完再试
   if (craft.data !== res) return;   // 等配方树的时候又算了一份新的
   craft.keys = new Set(craftKeysOf(res, tree));
-  if (currentView === "craft") rtSetKeys("craft", [...craft.keys], { snapshot: false });
+  craftSubscribe();
   craftStatus("ok");
   // 心不按物品族编号,按族拉名字拉不到:单独按 id 查一次,查到就重画
   const hearts = [...new Set((tree.chain || []).flatMap(n => (n.recipes || []).flatMap(r => (r.inputs || [])
     .filter(i => i.kind === "heart").map(i => i.item))))].filter(id => !cName(id));
   if (hearts.length && await resolveNames(hearts) && craft.data === res) craftRender(res);
 }
+// 订阅 = 当前目标的配方树,加上矩阵开着时整条线读过的盘口(服务端给的 keys):
+// 这条线上任何一处有新抓包,矩阵都跟着重算,不只是当前目标那一格
+function craftSubscribe() {
+  if (currentView !== "craft") return;
+  const keys = new Set(craft.keys);
+  if ($("c-mx").open) for (const k of mx.keys) keys.add(k);
+  rtSetKeys("craft", [...keys], { snapshot: false });
+}
+// 推送只命中矩阵、没命中当前目标时:攒 3 秒重算矩阵(25 档,推送连着来时不用每条都算)
+function craftMatrixLive(after) {
+  clearTimeout(mx.liveTimer);
+  mx.liveAfter = after;
+  mx.liveTimer = setTimeout(() => craftMatrixLoad({ force: true, after: mx.liveAfter }), 3000);
+}
 function onCraftQuote(q, pushed) {
   // 快照不触发(那是刚订阅时补的);不在这页时已经退订,晚到的也不管
-  if (!pushed || currentView !== "craft" || !craft.data || !craft.keys.has(q.k)) return;
+  if (!pushed || currentView !== "craft" || !craft.data) return;
+  if (!craft.keys.has(q.k)) {
+    if ($("c-mx").open && mx.keys.has(q.k)) craftMatrixLive(craftPushedAt(q) || "now");
+    return;
+  }
   craft.liveQuote = q;
   const now = Date.now();
   if (!craft.liveFirst) craft.liveFirst = now;
@@ -1015,6 +1077,8 @@ function craftCardHTML(res) {
     over && { k: "你的本金", v: num(cap), vc: "neg", tip: "高级参数里填的本金;开工本金超过它了" },
     over && fit != null && { k: "本金最多撑", vc: "neg", v: fit < 1 ? "1 件都备不齐"
       : `${num(fit)} 件/批${fit < res.qty ? ` <button class="act ghost mini-act" data-set-qty="${fit}">设成 ${num(fit)} 件</button>` : ""}` },
+    !dimmed && { k: "最赚的件数", v: `<span id="c-qscan">${qscanHTML(res)}</span>`,
+      tip: "同样的参数按 1 到 1 万件各算一遍,这一批利润最高的那个件数。料越买越贵、吃买单越卖越便宜,所以不是越多越好" },
     { k: "每天总利润", v: d && !dimmed ? sgn(d.profit) : "—", vc: vc(d?.profit), tip: limitsText(d), strong: true },
     { k: "每天件数", v: d && !dimmed ? fq(d.units) : "—", tip: limitsText(d) },
     { k: "每天卡在", v: d && !dimmed ? esc(BIND_WORD[d.binding] || d.binding) : "—", tip: limitsText(d) },
@@ -1424,6 +1488,7 @@ $("c-result").addEventListener("click", e => {
     $("c-cal").scrollIntoView({ block: "start", behavior: "smooth" });
     return;
   }
+  if (e.target.closest("[data-qty-scan]")) { craftQtyScan(true); return; }
   const sq = e.target.closest("[data-set-qty]");
   if (sq) {
     const n = Number(sq.dataset.setQty);
@@ -1535,8 +1600,8 @@ function craftDataHTML(res) {
   if (b.conflicted?.length && b.conflicts_since) {
     lists.push(`<li><b>串城检测覆盖自 ${esc(dhm(b.conflicts_since))} 起:</b>比这更早的串城(服务端重启前)看不到</li>`);
   }
-  if (b.aodp_newer?.length) line("抓包之后 AODP 报了不同的价(阶梯可能变了):", b.aodp_newer,
-    x => `${esc(cLabel(x.item) || x.item)} @ ${esc(x.city)} ${x.side === "sell" ? "卖单" : "买单"} 抓包 ${num(x.capture_price)}(${fq(x.capture_age_h)}h)→ AODP ${num(x.aodp_price)}(${fq(x.aodp_age_h)}h)`);
+  if (b.aodp_newer?.length) line("抓包之后 AODP 报了新价,已按新价修正阶梯顶部:", b.aodp_newer,
+    x => `${esc(cLabel(x.item) || x.item)} @ ${esc(x.city)} ${x.side === "sell" ? "卖单" : "买单"} 抓包 ${num(x.capture_price)}(${fq(x.capture_age_h)}h)→ AODP ${num(x.aodp_price)}(${fq(x.aodp_age_h)}h)${x.dropped ? `,剔掉 ${x.dropped} 档已经没了的单` : ""}`);
   if (b.aodp_ok === false) lists.push(`<li><b>AODP 当前价这次没取到:</b>${esc(b.aodp_error || "")}</li>`);
   // 有要紧的事(缺价、串城、AODP 更新……)默认展开;用户自己开合过就照他的
   const open = craft.dataOpen ?? lists.length > 0;
@@ -1726,7 +1791,9 @@ $("v-craft").addEventListener("change", e => {
 // 矩阵接口只认查询参数里那几项个人参数(k、站费、专注、专精、解锁、出售方式和出售城市、生产加成、
 // 个人岛、数据年龄、本金、核对过的参数);跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 页面上写明。
 // 默认按日化从高到低排:它替代的是表格的排行榜,排序主键是日化绝对收益(不是档位)
-const mx = { data: null, sig: "", seq: 0, pending: false, err: null, sort: { key: "daily", dir: "desc" }, qty: null, liveTimer: 0 };
+const mx = { data: null, sig: "", seq: 0, pending: false, err: null, sort: { key: "daily", dir: "desc" }, qty: null, liveTimer: 0,
+  keys: new Set(), view: "modes", msort: { key: "top", dir: "desc" } };
+try { if (localStorage.getItem("craft.mx.view") === "best") mx.view = "best"; } catch (e) { /* 读不了就用默认 */ }
 function craftMatrixQuery() {
   const p = craft.p, body = craftBody();
   const q = new URLSearchParams({ line: p.line, city: body.city, qty: String(mx.qty || p.qty) });
@@ -1764,9 +1831,11 @@ async function craftMatrixLoad(opts = {}) {
   mx.err = null;
   craftMatrixRender();
   try {
-    const res = await getJSON("/api/refine/matrix?" + qs);
+    const res = await getJSON("/api/refine/matrix?" + qs + (opts.after ? `&after=${encodeURIComponent(opts.after)}` : ""));
     if (seq !== mx.seq) return;
     mx.data = res;
+    mx.keys = new Set(res.keys || []);
+    craftSubscribe();
     if (res.server_defaults) craft.sd = res.server_defaults;
   } catch (e) {
     if (seq !== mx.seq) return;
@@ -1818,6 +1887,60 @@ function mxRows(res) {
     };
   });
 }
+// 「各种开法」:每档一行,开不开专注 × 挂卖单 / 吃买单,再加挂买单收料,格子里是这一批的利润。
+// 用户要的是不用一格一格点就看出哪档、哪种开法赚钱(个人优化建议 #8);细的看「最好的一条」
+const MX_MODE_COLS = [
+  { k: "level", label: "档位", l: true },
+  { k: "fp", label: "开专注 · 挂卖单" }, { k: "ft", label: "开专注 · 吃买单" },
+  { k: "np", label: "不开专注 · 挂卖单" }, { k: "nt", label: "不开专注 · 吃买单" },
+  { k: "bid", label: "挂买单收料", tip: "料不吃卖单、挂买单慢慢收,专注和第一列同一种开法,按主出售方式卖" },
+  { k: "volume", label: "日成交量", tip: "出售城市的日均成交件数" },
+];
+const MX_MODE_KEYS = ["fp", "ft", "np", "nt", "bid"];
+function mxModeRows(res) {
+  const off = res.params_used?.focus?.mode === "off";
+  const m0 = res.params_used?.sell?.modes?.[0] || "post";
+  return (res.cells || []).map(c => {
+    const withF = off ? c.with_focus : c.best, noF = off ? c.best : c.no_focus;
+    // 拿不满料的路线利润不能当真,当作算不出
+    const v = (b, mode) => (b && b.filled ? b.profit?.[mode] ?? null : null);
+    const r = { c, target: c.target, level: c.tier * 10 + c.enchant,
+      fp: v(withF, "post"), ft: v(withF, "take"), np: v(noF, "post"), nt: v(noF, "take"), bid: v(c.bid, m0),
+      volume: c.volume?.known ? c.volume.per_day : null, unfilled: !!c.best && !c.best.filled };
+    const totals = MX_MODE_KEYS.map(k => r[k]?.total).filter(x => x != null);
+    r.top = totals.length ? Math.max(...totals) : null;
+    return r;
+  });
+}
+const mxSortVal = (r, k) => (MX_MODE_KEYS.includes(k) ? r[k]?.total ?? null : r[k]);
+function mxModesHTML(res) {
+  const rows = mxModeRows(res);
+  const { key, dir } = mx.msort;
+  rows.sort((a, b) => {
+    const x = mxSortVal(a, key), y = mxSortVal(b, key);
+    if ((x == null) !== (y == null)) return x == null ? 1 : -1;   // 算不出来的永远排最后
+    return (dir === "desc" ? y - x : x - y) || a.level - b.level;
+  });
+  const cur = cTarget();
+  const cell = (r, k) => {
+    const p = r[k];
+    if (!p) return `<td><span class="sub">—</span></td>`;
+    const top = p.total === r.top && r.top > 0;
+    return `<td class="${p.total >= 0 ? "pos" : "neg"}">${top ? "<b>" : ""}${sgn(p.total)}${top ? "</b>" : ""}${
+      p.total_pct == null ? "" : `<span class="subln">${spct(p.total_pct)}</span>`}</td>`;
+  };
+  return `<div class="tablewrap"><table class="tight c-mxt c-mxmodes">
+    <thead><tr>${MX_MODE_COLS.map(c => `<th data-mxm="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${
+      c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr class="main${r.target === cur ? " cur" : ""}${r.unfilled ? " unfilled" : ""}" data-mxt="${esc(r.target)}">
+      <td class="l"><b>${esc(cTier(r.target))}</b> <span class="sub">${esc(cName(r.target))}</span></td>
+      ${MX_MODE_KEYS.map(k => cell(r, k)).join("")}
+      <td>${r.volume == null ? `<span class="sub" title="没有成交量数据">—</span>` : fq(r.volume)}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+const mxViewSeg = () => `<div class="seg c-mxview">${[["modes", "各种开法"], ["best", "最好的一条"]].map(([v, t]) =>
+  `<button data-mx-view="${v}" aria-pressed="${mx.view === v}">${t}</button>`).join("")}</div>`;
 function craftMatrixRender() {
   const box = $("c-mx-body");
   const res = mx.data, L = cLine();
@@ -1831,6 +1954,17 @@ function craftMatrixRender() {
     return;
   }
   if (!res) { box.innerHTML = mx.pending ? `<p class="c-status busy">正在算…</p>` : ""; return; }
+  const typingQty = document.activeElement?.id === "c-mx-qty";
+  if (mx.view === "modes") {
+    box.innerHTML = `<div class="c-row c-mxbar">${mxViewSeg()}
+        <div class="ctrl"><label for="c-mx-qty">每档按几件算</label>
+          <input type="number" id="c-mx-qty" min="1" max="10000" step="1" value="${esc(mx.qty || "")}" placeholder="${esc(craft.p.qty)}"></div>
+        <button class="act ghost" data-mx-reload>重算这张表</button>
+        <p class="sub c-mxnote">格子里是每档 ${num(res.qty)} 件这一批的利润,下一行是总利润率;每行最赚的那种加粗。点一行看那一档的明细</p>
+      </div>${mxModesHTML(res)}`;
+    if (typingQty) $("c-mx-qty").focus();
+    return;
+  }
   const rows = mxRows(res);
   const { key, dir } = mx.sort;
   const col = MX_COLS.find(c => c.k === key) || MX_COLS[0];
@@ -1844,7 +1978,7 @@ function craftMatrixRender() {
   const th = craftPremiumSPF(), cur = cTarget(), qtyBound = rows.filter(r => r.b?.daily?.binding === "qty").length;
   const m0 = res.params_used?.sell?.modes?.[0] || "post";
   const typing = document.activeElement?.id === "c-mx-qty";   // 正在改件数:重画完把焦点还回去
-  box.innerHTML = `<div class="c-row c-mxbar">
+  box.innerHTML = `<div class="c-row c-mxbar">${mxViewSeg()}
       <div class="ctrl"><label for="c-mx-qty">每档按几件算</label>
         <input type="number" id="c-mx-qty" min="1" max="10000" step="1" value="${esc(mx.qty || "")}" placeholder="${esc(craft.p.qty)}"></div>
       <button class="act ghost" data-mx-reload>重算这张表</button>
@@ -1853,7 +1987,7 @@ function craftMatrixRender() {
         <li>跨城买料、挂买单收料、余料估值、成交份额、心返还按服务端默认 —— 这几项改过的话,当前目标这一格和上面的卡片会对不上。</li>
         ${qtyBound ? `<li>有 ${qtyBound} 档的日化卡在「这一批的件数」:单根成本只按这个件数沿阶梯算过,想看真实日产就把件数调大。</li>` : ""}
         ${rows.some(r => r.lb) ? "<li>浅红底的格子拿不满料:成本是下界,利润和日化算不准,排在最后。</li>" : ""}
-        <li>推送命中当前目标的配方树时,这张表也跟着重算。</li></ul></details>
+        <li>这条线上任何一处有新抓包,这张表都跟着重算。</li></ul></details>
     </div>
     <div class="tablewrap"><table class="tight c-mxt">
       <thead><tr>${MX_COLS.map(c => `<th data-mxk="${c.k}" class="s${c.l ? " l" : ""}"${c.k === key ? ` data-dir="${dir}"` : ""}${c.tip ? ` title="${esc(c.tip)}"` : ""}>${c.label}</th>`).join("")}</tr></thead>
@@ -1873,9 +2007,27 @@ function craftMatrixRender() {
     </table></div>`;
   if (typing) $("c-mx-qty").focus();
 }
-$("c-mx").addEventListener("toggle", () => { if ($("c-mx").open) { craftMatrixRender(); craftMatrixLoad(); } });
+$("c-mx").addEventListener("toggle", () => {
+  if ($("c-mx").open) { craftMatrixRender(); craftMatrixLoad(); }
+  craftSubscribe();   // 关上就不再订整条线
+});
 $("c-mx-body").addEventListener("click", e => {
   if (e.target.closest("[data-mx-reload]")) { craftMatrixLoad({ force: true }); return; }
+  const vb = e.target.closest("button[data-mx-view]");
+  if (vb) {
+    mx.view = vb.dataset.mxView;
+    try { localStorage.setItem("craft.mx.view", mx.view); } catch (err) { /* 记不住也能用 */ }
+    craftMatrixRender();
+    return;
+  }
+  const mth = e.target.closest("th[data-mxm]");
+  if (mth) {
+    const k = mth.dataset.mxm;
+    mx.msort = mx.msort.key === k ? { key: k, dir: mx.msort.dir === "desc" ? "asc" : "desc" }
+      : { key: k, dir: k === "level" ? "asc" : "desc" };
+    craftMatrixRender();
+    return;
+  }
   const th = e.target.closest("th[data-mxk]");
   if (th) {
     const k = th.dataset.mxk;
@@ -1892,7 +2044,8 @@ $("c-mx-body").addEventListener("click", e => {
   craft.open.clear();
   craftChanged({ grid: true, now: true });
   craftMatrixRender();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  // 矩阵在明细上面:点了一行就往下看那一档的明细
+  $("c-status").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("c-mx-body").addEventListener("input", e => {
   if (e.target.id !== "c-mx-qty") return;
@@ -2101,12 +2254,28 @@ function craftRoute(id) {
   craft.p.line = r.line; craft.p.tier = r.tier; craft.p.ench = r.ench;
   if (changed) { craft.open.clear(); craftSave(); }
 }
+// 抓包读到的专注余额(事件 CraftingFocusUpdate,记在个人账本里):「今日可用专注」空着时用它,
+// 不用再手填(个人优化建议 #2 的一小半)。超过 12 小时的不用:专注一直在回,太旧的数偏小
+const CAP_FOCUS_MAX_H = 12;
+async function craftCapFocus() {
+  let next = null;
+  try {
+    const f = (await getJSON("/api/ledger/summary?days=1&items=1")).summary?.focus;
+    if (f && (Date.now() - Date.parse(f.observed_at)) / 3600000 <= CAP_FOCUS_MAX_H) next = { focus: Math.floor(f.focus), at: f.observed_at };
+  } catch (e) { return; }   // 老服务端没有账本接口:照旧用默认
+  if (JSON.stringify(next) === JSON.stringify(craft.capFocus ?? null)) return;
+  craft.capFocus = next;
+  // 正在按它算(没自己填):换了就重算。第一次进页面时计划可能已经发出去了,那份没带它,也要重算
+  if (craft.p.budget == null) craftChanged();
+  else craftSyncForm();
+}
 function craftShow() {
+  craftCapFocus();
   craftRenderGrid();
   craftSyncForm();
   craftNames(craft.p.line).then(() => { craftRenderGrid(); if (craft.data) craftRender(craft.data); });
   // 回到这页:照上次的树重新订阅;不在这页时退订了实时,手上那份可能旧了,隔得久就强制重算一次
-  if (craft.keys.size) rtSetKeys("craft", [...craft.keys], { snapshot: false });
+  if (craft.keys.size || mx.keys.size) craftSubscribe();
   // 从导航点进来会连着调两次(show 改地址栏 → hashchange → route → 再 show 一次):
   // 同样的参数已经在算了就不再发一份。以前数据隔了 15 秒时两次都带 force,一次点击两个请求
   if (craft.pending && JSON.stringify(craftBody()) === craft.sig) return;

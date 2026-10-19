@@ -241,11 +241,13 @@ type AODPNewer struct {
 	CaptureAgeH  float64 `json:"capture_age_h"`
 	AODPPrice    int64   `json:"aodp_price"`
 	AODPAgeH     float64 `json:"aodp_age_h"`
+	// Dropped 是按 AODP 新价剔掉的抓包档数(比新价更优的那几档,见 spliceAODP)
+	Dropped int `json:"dropped"`
 }
 
 // 服务层加的警告代码(引擎自己的见 refine/plan.go)。
 const (
-	WarnAODPNewer       = "aodp_newer"       // 抓包阶梯之后 AODP 报了不同的价,阶梯可能变了
+	WarnAODPNewer       = "aodp_newer"       // 抓包阶梯之后 AODP 报了不同的价,已按新价修正阶梯顶部
 	WarnAODPUnavailable = "aodp_unavailable" // AODP 当前价没取到
 	WarnConflicted      = "conflicted"       // 盘口最近串过城,读簿时没剔幽灵单
 )
@@ -470,10 +472,11 @@ func (o ordersOnly) CapturedItems(context.Context, []string, []int, time.Time) (
 // 读簿、取 AODP 在建快照时做(refine_snap.go)。max_age_hours 是请求参数,所以合并放在请求时。
 //
 // 每个盘口边按 scan.MergeSide 择边(扫描、查价页同一个函数),但有一处不同:
-// **抓包有阶梯时一律用抓包**,哪怕 MergeSide 因为 AODP 更新、价不同而选了 AODP。
-// 精炼要沿阶梯吃深度,AODP 只有一个价、没有件数,换成它等于假设那个价有无限件
-// (卖一只有几件、却要吃二十几件时,会全按卖一算)。所以留着阶梯,把这种边列进
-// books.aodp_newer、加一条 aodp_newer 警告,让人知道阶梯顶上可能已经变了。
+// MergeSide 因为 AODP 更新、价不同而选了 AODP 时,**不整边换成 AODP**,而是把 AODP 的新价
+// 拼进抓包阶梯(spliceAODP)。精炼要沿阶梯吃深度,AODP 只有一个价、没有件数,整边换成它
+// 等于假设那个价有无限件;可原样留着旧阶梯,顶上那几档可能早被买走了,算出来的利润是虚的
+// (用户实测:查价页已经是新价,精炼页还按旧价算,算着赚、做了亏)。这种边照旧列进
+// books.aodp_newer,带上剔掉了几档。
 //
 // 反过来,抓包这一边整个比 maxAgeHours(请求的 sources.max_age_hours)还旧、而 AODP 的价
 // 在这个年龄以内时,用 AODP(深度未知):引擎会把太旧的抓包当缺价丢掉,留着它等于把
@@ -546,10 +549,16 @@ func (s *Service) mergeBooks(keys []model.QuoteKey, snaps map[string]*refineSnap
 			}
 			if m.Superseded {
 				capAge := now.Sub(side.Levels[0].Seen).Hours()
+				aodpAt := at.T
+				if aodpAt.After(now) {
+					aodpAt = now
+				}
+				var dropped int
+				l, dropped = spliceAODP(l, k.Side, px, aodpAt)
 				info.AODPNewer = append(info.AODPNewer, AODPNewer{
 					Item: k.ItemID, City: k.LocationID, Side: sideWord(k.Side),
 					CapturePrice: side.Levels[0].Price, CaptureAgeH: round3(capAge),
-					AODPPrice: px, AODPAgeH: round3(aodpAge),
+					AODPPrice: px, AODPAgeH: round3(aodpAge), Dropped: dropped,
 				})
 			}
 		case aodpOK:
@@ -585,7 +594,7 @@ func (s *Service) mergeBooks(keys []model.QuoteKey, snaps map[string]*refineSnap
 	})
 	if n := len(info.AODPNewer); n > 0 {
 		warns = append(warns, refine.Warning{Code: WarnAODPNewer,
-			Msg: fmt.Sprintf("%d 个盘口边在抓包之后 AODP 报了不同的最优价(%s):仍按抓包阶梯算,阶梯顶上可能已经变了,见 books.aodp_newer",
+			Msg: fmt.Sprintf("%d 个盘口边在抓包之后 AODP 报了不同的最优价(%s):已按新价修正阶梯顶部,新价那档件数不知道、按 1 件算,见 books.aodp_newer",
 				n, newerSample(info.AODPNewer))})
 	}
 	if n := len(info.Conflicted); n > 0 {
@@ -607,6 +616,48 @@ func ladderOf(side book.Side) refine.Ladder {
 		l.LevelSeen = append(l.LevelSeen, lv.Seen)
 	}
 	return l
+}
+
+// spliceAODP 把一个比抓包新、价又不同的 AODP 最优价拼进抓包阶梯。
+//
+// 挂单列表按价排序,AODP 的新最优价就是那一刻盘口的第一档:
+//   - 抓包里比它更优的档已经没了(被吃掉或撤单),剔掉
+//   - 和它同价的那档还在,件数照抓包的,观测时刻改成 AODP 的
+//   - 它比抓包所有档都优(有人新挂了更好的单):放在最上面,件数不知道,按 1 件算,
+//     再往下吃就是抓包的深度——不假设新价有无限件
+//
+// 抓包的档全被剔掉时,盘口只剩一个不知道件数的价,和 AODP 兜底同一个样子(DepthUnknown)。
+// 返回拼好的阶梯和剔掉的档数。
+func spliceAODP(l refine.Ladder, side model.Side, px int64, at time.Time) (refine.Ladder, int) {
+	out := refine.Ladder{Seen: at, Truncated: l.Truncated, Source: "capture+aodp"}
+	if l.Seen.After(at) {
+		out.Seen = l.Seen
+	}
+	dropped := 0
+	top := false // 抓包里有和新价同价的档
+	for i, lv := range l.Levels {
+		seen := l.Seen
+		if len(l.LevelSeen) == len(l.Levels) && !l.LevelSeen[i].IsZero() {
+			seen = l.LevelSeen[i]
+		}
+		switch {
+		case book.Better(side, lv.Price, px):
+			dropped++
+			continue
+		case lv.Price == px:
+			top, seen = true, at
+		}
+		out.Levels = append(out.Levels, lv)
+		out.LevelSeen = append(out.LevelSeen, seen)
+	}
+	if len(out.Levels) == 0 {
+		return refine.Ladder{Levels: []depth.Level{{Price: px}}, Seen: at, Source: "aodp", DepthUnknown: true}, dropped
+	}
+	if !top {
+		out.Levels = append([]depth.Level{{Price: px, Qty: 1}}, out.Levels...)
+		out.LevelSeen = append([]time.Time{at}, out.LevelSeen...)
+	}
+	return out, dropped
 }
 
 func sideWord(s model.Side) string {
@@ -752,6 +803,9 @@ type RefineMatrix struct {
 	ServerDefaults ServerDefaults          `json:"server_defaults"`
 	// StationFee 同 RefinePlan.StationFee
 	StationFee StationFeeInfo `json:"station_fee"`
+	// Keys 是这张表读了哪些盘口边(model.QuoteKey.String()):界面开着矩阵时订阅它们,
+	// 这条线上任何一处有新抓包就重算,不只是当前目标的配方树
+	Keys []string `json:"keys"`
 }
 
 // MatrixCell 是矩阵的一格。
@@ -766,6 +820,12 @@ type MatrixCell struct {
 	Data   *refine.DataInfo `json:"data"`
 	// Best 是排第一的普通候选(不含参照行);tier 没解锁、拿不满料时也照样给,看 filled
 	Best *MatrixBest `json:"best"`
+	// NoFocus / WithFocus 是换一种专注开法再算一遍的最好那条,一格里就能比开不开专注:
+	// 参数开着专注时给 NoFocus(不开专注),参数是不开专注时给 WithFocus(按「自动」开)
+	NoFocus   *MatrixBest `json:"no_focus,omitempty"`
+	WithFocus *MatrixBest `json:"with_focus,omitempty"`
+	// Bid 是「挂买单收料」那条参照路线(和 Best 同一种专注开法)
+	Bid *MatrixBest `json:"bid,omitempty"`
 	// Candidates 是这一格一共列了几条普通候选
 	Candidates int `json:"candidates"`
 	// Warnings 是和路线无关的警告(卖价、断崖、成交量、未解锁)
@@ -868,10 +928,28 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 			for i := range next {
 				p := base
 				p.Target = targets[i]
-				res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes,
-					Volume: sellSnap.volume(targets[i], s.Cfg.Refining.VolumeDays)})
+				vol := sellSnap.volume(targets[i], s.Cfg.Refining.VolumeDays)
+				res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes, Volume: vol})
 				cells[i] = matrixCell(targets[i], res, err)
 				results[i] = res
+				if err != nil {
+					continue
+				}
+				// 换一种专注开法再算一遍:用户想在一张表里看开不开专注各赚多少
+				alt := p
+				if p.Focus.Mode == refine.FocusOff {
+					alt.Focus.Mode = refine.FocusAuto
+				} else {
+					alt.Focus.Mode = refine.FocusOff
+				}
+				if r2, err := refine.Plan(refine.Input{Params: alt, Books: books, Recipes: recipes, Volume: vol}); err == nil {
+					b, _ := matrixBests(r2)
+					if p.Focus.Mode == refine.FocusOff {
+						cells[i].WithFocus = b
+					} else {
+						cells[i].NoFocus = b
+					}
+				}
 			}
 		}()
 	}
@@ -893,6 +971,10 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 		Line: line.Key, City: base.City, Qty: base.Qty, ParamsUsed: base, Now: now,
 		Unverified: []refine.UnverifiedUsed{}, Cells: cells, Books: info, Warnings: warns,
 		RecipeSource: recipes.Source(), ServerDefaults: s.serverDefaults(),
+		Keys: make([]string, len(keys)),
+	}
+	for i, k := range keys {
+		out.Keys[i] = k.String()
 	}
 	if out.Warnings == nil {
 		out.Warnings = []refine.Warning{}
@@ -913,28 +995,44 @@ func matrixCell(target string, res *refine.Result, err error) MatrixCell {
 	}
 	c.Sell, c.Volume, c.Data = &res.Sell, &res.Volume, &res.Data
 	c.Warnings = res.Warnings
+	c.Best, c.Bid = matrixBests(res)
 	for _, cand := range res.Candidates {
-		if cand.Reference != "" {
-			continue
-		}
-		c.Candidates++
-		if c.Best == nil {
-			c.Best = &MatrixBest{
-				ID: cand.ID, Label: cand.Label, Filled: cand.Filled,
-				UnitCost: cand.UnitCost, TotalCost: cand.TotalCost, UpfrontCapital: cand.UpfrontCapital,
-				Profit: cand.Profit, Focus: cand.Focus, SilverPerFocus: cand.SilverPerFocus, Daily: cand.Daily,
-				OldestAgeH: cand.OldestAgeH, AgeLevel: cand.AgeLevel, Warnings: cand.Warnings,
-			}
-			for i := range cand.Breakeven {
-				if cand.Breakeven[i].Item == res.MainRaw {
-					be := cand.Breakeven[i]
-					c.Best.MainRawBreakeven = &be
-					break
-				}
-			}
+		if cand.Reference == "" {
+			c.Candidates++
 		}
 	}
 	return c
+}
+
+// matrixBests 取一次计算里排第一的普通候选,和「挂买单收料」那条参照路线(没有就是 nil)。
+func matrixBests(res *refine.Result) (best, bid *MatrixBest) {
+	for i := range res.Candidates {
+		cand := &res.Candidates[i]
+		switch {
+		case cand.Reference == "" && best == nil:
+			best = matrixBestOf(cand, res.MainRaw)
+		case cand.Reference == "bid" && bid == nil:
+			bid = matrixBestOf(cand, res.MainRaw)
+		}
+	}
+	return best, bid
+}
+
+func matrixBestOf(cand *refine.Candidate, mainRaw string) *MatrixBest {
+	b := &MatrixBest{
+		ID: cand.ID, Label: cand.Label, Filled: cand.Filled,
+		UnitCost: cand.UnitCost, TotalCost: cand.TotalCost, UpfrontCapital: cand.UpfrontCapital,
+		Profit: cand.Profit, Focus: cand.Focus, SilverPerFocus: cand.SilverPerFocus, Daily: cand.Daily,
+		OldestAgeH: cand.OldestAgeH, AgeLevel: cand.AgeLevel, Warnings: cand.Warnings,
+	}
+	for i := range cand.Breakeven {
+		if cand.Breakeven[i].Item == mainRaw {
+			be := cand.Breakeven[i]
+			b.MainRawBreakeven = &be
+			break
+		}
+	}
+	return b
 }
 
 // ── 配方树 ─────────────────────────────────────────────────────────────

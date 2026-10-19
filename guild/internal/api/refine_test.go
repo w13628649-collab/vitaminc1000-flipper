@@ -224,6 +224,36 @@ func get(t *testing.T, srv *httptest.Server, path string) (*http.Response, []byt
 
 // ── 参数校验 ───────────────────────────────────────────────────────────
 
+// 最赚件数:请求体和计划一样;坏请求体照样 400
+func TestRefine最赚件数接口(t *testing.T) {
+	srv := refineServer(&refineSrc{})
+	defer srv.Close()
+	resp, err := http.Post(srv.URL+"/api/refine/qtyscan", "application/json",
+		strings.NewReader(`{"target":"T4_METALBAR_LEVEL1@1","qty":10}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := readBody(t, resp)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("%d %s", resp.StatusCode, raw)
+	}
+	var got flip.RefineQtyScan
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Target != "T4_METALBAR_LEVEL1@1" || len(got.Points) == 0 || got.Current == nil || got.Current.Qty != 10 {
+		t.Fatalf("回包: %s", raw)
+	}
+	resp, err = http.Post(srv.URL+"/api/refine/qtyscan", "application/json", strings.NewReader(`{"qty":10}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	readBody(t, resp)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("缺 target 该 400,得到 %d", resp.StatusCode)
+	}
+}
+
 func TestRefine接口参数不合法回400且不读数据(t *testing.T) {
 	src := fullSrc(time.Now())
 	srv := refineServer(src)

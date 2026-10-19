@@ -310,20 +310,20 @@ func TestRefine抓包没有的用AODP兜底标深度未知(t *testing.T) {
 	}
 }
 
-// 抓包有阶梯、AODP 之后报了不同的价:MergeSide 会选 AODP,精炼页仍用阶梯(要吃深度),
-// 但列进 aodp_newer 并加警告
-func TestRefineAODP更新且不同价时仍用阶梯但告警(t *testing.T) {
+// 抓包有阶梯、AODP 之后报了不同的价:按新价修正阶梯顶部(spliceAODP),列进 aodp_newer 并加警告
+func TestRefineAODP更新且不同价时修正阶梯顶部(t *testing.T) {
 	src := barFixture()
 	src.prices = append(src.prices, aodp.PriceRecord{ItemID: tBar, City: "Thetford", Quality: 1,
-		SellPriceMin: 950, SellPriceMinDate: aodp.Stamp{T: rNow.Add(-10 * time.Minute)}})
+		SellPriceMin: 1005, SellPriceMinDate: aodp.Stamp{T: rNow.Add(-10 * time.Minute)}})
 	s, _ := newRefineService(src)
 	res := mustRefine(t, s, s.RefineDefaults(tBar, ""))
 
-	if res.Sell.Post.BestAsk != 1000 || res.Sell.Post.Source != "capture" {
-		t.Fatalf("仍用抓包阶梯: %+v", res.Sell.Post)
+	// 1000 那档被买走了:卖一是 AODP 的 1005
+	if res.Sell.Post.BestAsk != 1005 || res.Sell.Post.Source != "capture+aodp" {
+		t.Fatalf("卖一该修正成 AODP 的新价: %+v", res.Sell.Post)
 	}
 	want := []AODPNewer{{Item: tBar, City: "Thetford", Side: "sell", CapturePrice: 1000, CaptureAgeH: 1,
-		AODPPrice: 950, AODPAgeH: round3(10.0 / 60)}}
+		AODPPrice: 1005, AODPAgeH: round3(10.0 / 60), Dropped: 1}}
 	if len(res.Books.AODPNewer) != 1 || res.Books.AODPNewer[0] != want[0] {
 		t.Fatalf("aodp_newer: %+v", res.Books.AODPNewer)
 	}
@@ -337,6 +337,48 @@ func TestRefineAODP更新且不同价时仍用阶梯但告警(t *testing.T) {
 	s2, _ := newRefineService(src2)
 	if res2 := mustRefine(t, s2, s2.RefineDefaults(tBar, "")); len(res2.Books.AODPNewer) != 0 {
 		t.Fatalf("同价不该告警: %+v", res2.Books.AODPNewer)
+	}
+}
+
+func TestSpliceAODP(t *testing.T) {
+	t0, t1 := rNow.Add(-time.Hour), rNow.Add(-5*time.Minute)
+	asks := refine.Ladder{Levels: []depth.Level{{Price: 1000, Qty: 20}, {Price: 1010, Qty: 30}},
+		LevelSeen: []time.Time{t0, t0}, Seen: t0, Source: "capture"}
+	bids := refine.Ladder{Levels: []depth.Level{{Price: 900, Qty: 5}, {Price: 890, Qty: 10}},
+		LevelSeen: []time.Time{t0, t0}, Seen: t0, Source: "capture"}
+	lv := func(l refine.Ladder) []depth.Level { return l.Levels }
+	for _, c := range []struct {
+		name    string
+		in      refine.Ladder
+		side    model.Side
+		px      int64
+		want    []depth.Level
+		dropped int
+		unknown bool
+	}{
+		{"新挂了更便宜的卖单:顶上加 1 件", asks, model.SideOffer, 950,
+			[]depth.Level{{Price: 950, Qty: 1}, {Price: 1000, Qty: 20}, {Price: 1010, Qty: 30}}, 0, false},
+		{"便宜那档被买走了", asks, model.SideOffer, 1005,
+			[]depth.Level{{Price: 1005, Qty: 1}, {Price: 1010, Qty: 30}}, 1, false},
+		{"新价正好是抓包的第二档:件数照抓包", asks, model.SideOffer, 1010,
+			[]depth.Level{{Price: 1010, Qty: 30}}, 1, false},
+		{"抓包的档全没了:只剩不知道件数的价", asks, model.SideOffer, 1100,
+			[]depth.Level{{Price: 1100}}, 2, true},
+		{"买单:最高那档没了", bids, model.SideRequest, 895,
+			[]depth.Level{{Price: 895, Qty: 1}, {Price: 890, Qty: 10}}, 1, false},
+		{"买单:有人出了更高价", bids, model.SideRequest, 920,
+			[]depth.Level{{Price: 920, Qty: 1}, {Price: 900, Qty: 5}, {Price: 890, Qty: 10}}, 0, false},
+	} {
+		got, dropped := spliceAODP(c.in, c.side, c.px, t1)
+		if !slices.Equal(lv(got), c.want) || dropped != c.dropped || got.DepthUnknown != c.unknown {
+			t.Errorf("%s: 得到 %+v(剔 %d,未知 %v)", c.name, got.Levels, dropped, got.DepthUnknown)
+		}
+		if !got.DepthUnknown && (len(got.LevelSeen) != len(got.Levels) || !got.LevelSeen[0].Equal(t1)) {
+			t.Errorf("%s: 顶上那档的观测时刻该是 AODP 的: %v", c.name, got.LevelSeen)
+		}
+	}
+	if !slices.Equal(asks.Levels, []depth.Level{{Price: 1000, Qty: 20}, {Price: 1010, Qty: 30}}) {
+		t.Fatal("输入的阶梯被改了")
 	}
 }
 
@@ -782,6 +824,23 @@ func TestRefineMatrix一条线25格共用一次读簿(t *testing.T) {
 	if len(m.Unverified) == 0 {
 		t.Fatal("矩阵要列未核实参数")
 	}
+	// 一格里能比开不开专注、挂买单收料:默认开着专注,所以给 no_focus,不给 with_focus
+	if bar.NoFocus == nil || bar.WithFocus != nil || bar.Bid == nil || len(bar.NoFocus.Focus.Tiers) != 0 {
+		t.Fatalf("T4.1 那一格应有不开专注的那条和挂买单那条: no_focus %+v with_focus %+v bid %+v", bar.NoFocus, bar.WithFocus, bar.Bid)
+	}
+	off := base
+	off.Focus.Mode = refine.FocusOff
+	m2, err := s.RefineMatrix(context.Background(), "ORE", off)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := m2.Cells[1]; c.WithFocus == nil || c.NoFocus != nil {
+		t.Fatalf("参数不开专注时该给 with_focus: %+v", c)
+	}
+	// 读了哪些盘口边要交给界面订阅:至少有目标在生产城的卖单
+	if !slices.Contains(m.Keys, tBar+"|Thetford|1|0") {
+		t.Fatalf("keys 里该有 %s 的卖单: %d 个", tBar, len(m.Keys))
+	}
 
 	for _, bad := range []struct {
 		line string
@@ -982,10 +1041,14 @@ func TestRefine抓包太旧时用更新的AODP(t *testing.T) {
 		t.Fatalf("books: %+v", res.Books)
 	}
 
-	// 默认的 72h:10 小时前的抓包阶梯照用
+	// 默认的 72h:10 小时前的抓包没超龄,可 AODP 1 小时前报的卖一是 205,
+	// 比它便宜的 200 那档已经没了(spliceAODP),按 AODP 的价买
 	res2 := mustRefine(t, s, s.RefineDefaults(tBar, ""))
-	if st := oreBuy(t, res2.Candidates[0]); st.Source != "capture" || st.PriceFrom != 200 {
-		t.Fatalf("没超过数据最大年龄时仍用抓包阶梯: %+v", st)
+	if st := oreBuy(t, res2.Candidates[0]); st.Source != "aodp" || st.PriceFrom != 205 {
+		t.Fatalf("AODP 更新时,比它便宜的抓包档该剔掉: %+v", st)
+	}
+	if n := res2.Books.AODPNewer; len(n) != 1 || n[0].Item != tOre || n[0].Dropped != 1 {
+		t.Fatalf("aodp_newer: %+v", n)
 	}
 	// AODP 也太旧:照旧当缺价(stale),不拿更旧的 AODP 顶
 	src.prices[len(src.prices)-1].SellPriceMinDate = aodp.Stamp{T: rNow.Add(-8 * time.Hour)}

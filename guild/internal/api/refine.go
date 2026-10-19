@@ -22,6 +22,7 @@ import (
 // 由客户端存本地、每次请求带上;服务端是全公会共用的,只放默认值(conf.Refining)。
 //
 //	POST /api/refine/plan     请求体是 refine.Params 的 JSON(见 refine/params.go 的 json 标签)
+//	POST /api/refine/qtyscan  请求体同上;按一串件数各算一遍,找这一批利润最高的件数
 //	GET  /api/refine/matrix   一条线 25 个档位各取最好的一条
 //	GET  /api/refine/recipe   配方树和转化格子
 
@@ -36,21 +37,18 @@ const (
 
 func (s *Server) registerRefine(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/refine/plan", s.handleRefinePlan)
+	mux.HandleFunc("POST /api/refine/qtyscan", s.handleRefineQtyScan)
 	mux.HandleFunc("GET /api/refine/matrix", s.handleRefineMatrix)
 	mux.HandleFunc("GET /api/refine/recipe", s.handleRefineRecipe)
 }
 
-// handleRefinePlan:POST /api/refine/plan。
-//
-// 请求体解码两遍:第一遍只取 target 和 city,拿它们向服务端要打底的参数
-// (站费按城市、每日加成按线,见 refine.DefaultsFrom);第二遍把整个请求体解码到打底的参数上。
-// 请求里没写的字段保持默认值,写了的——包括零值(站费 0、心不返还)——照写的算。
-// 不认识的字段直接 400:参数名拼错时悄悄用了默认值,算出来的数看着对、其实不是你要的
-func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
+// refineRequest 解码精炼计算的请求体(handleRefinePlan、handleRefineQtyScan 共用)。
+// 不合法时已经写好了 400,返回 ok=false
+func (s *Server) refineRequest(ctx context.Context, w http.ResponseWriter, r *http.Request) (p refine.Params, fee flip.StationFeeInfo, opts flip.RefineOpts, ok bool) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, refineMaxBody))
 	if err != nil {
 		http.Error(w, "请求体读取失败: "+err.Error(), http.StatusBadRequest)
-		return
+		return p, fee, opts, false
 	}
 	// 站费两项只看「请求里写没写」:写了就以请求为准,没写才轮到抓包 / 配置(见 flip.SettleStationFee)
 	var probe struct {
@@ -63,33 +61,46 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &probe); err != nil {
 		http.Error(w, "请求体不是合法的 JSON: "+err.Error(), http.StatusBadRequest)
-		return
+		return p, fee, opts, false
 	}
 	target := strings.TrimSpace(probe.Target)
 	if target == "" {
 		http.Error(w, "缺少 target(要做的半成品,例如 T8_METALBAR_LEVEL4@4)", http.StatusBadRequest)
-		return
+		return p, fee, opts, false
 	}
-	ctx, cancel := contextWithTimeout(r, refineTimeout)
-	defer cancel()
-	p, fee := s.Flip.RefineDefaultsLive(ctx, target, strings.TrimSpace(probe.City))
+	p, fee = s.Flip.RefineDefaultsLive(ctx, target, strings.TrimSpace(probe.City))
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&p); err != nil {
 		http.Error(w, "请求体解析失败: "+err.Error(), http.StatusBadRequest)
-		return
+		return p, fee, opts, false
 	}
 	p.Target, p.City = target, strings.TrimSpace(p.City)
 	if p.City == "" {
 		p.City = s.Flip.RefineDefaults(target, "").City
 	}
 	flip.SettleStationFee(&p, &fee, probe.Fees.StationPer100 != nil, probe.Fees.TransmuteStationPer100 != nil)
-	opts, err := refineOpts(r.URL.Query())
+	opts, err = refineOpts(r.URL.Query())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return p, fee, opts, false
+	}
+	return p, fee, opts, true
+}
+
+// handleRefinePlan:POST /api/refine/plan。
+//
+// 请求体解码两遍:第一遍只取 target 和 city,拿它们向服务端要打底的参数
+// (站费按城市、每日加成按线,见 refine.DefaultsFrom);第二遍把整个请求体解码到打底的参数上。
+// 请求里没写的字段保持默认值,写了的——包括零值(站费 0、心不返还)——照写的算。
+// 不认识的字段直接 400:参数名拼错时悄悄用了默认值,算出来的数看着对、其实不是你要的
+func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := contextWithTimeout(r, refineTimeout)
+	defer cancel()
+	p, fee, opts, ok := s.refineRequest(ctx, w, r)
+	if !ok {
 		return
 	}
-
 	res, err := s.Flip.RefineWith(ctx, p, opts)
 	if err != nil {
 		writeRefineError(w, err)
@@ -99,6 +110,22 @@ func (s *Server) handleRefinePlan(w http.ResponseWriter, r *http.Request) {
 	out := *res
 	out.StationFee = fee
 	writeJSON(w, &out)
+}
+
+// handleRefineQtyScan:POST /api/refine/qtyscan,请求体和 /api/refine/plan 一样,qty 当作「现在的件数」。
+func (s *Server) handleRefineQtyScan(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := contextWithTimeout(r, refineTimeout)
+	defer cancel()
+	p, _, opts, ok := s.refineRequest(ctx, w, r)
+	if !ok {
+		return
+	}
+	res, err := s.Flip.RefineQtyScan(ctx, p, opts)
+	if err != nil {
+		writeRefineError(w, err)
+		return
+	}
+	writeJSON(w, res)
 }
 
 // handleRefineMatrix:GET /api/refine/matrix?line=ORE&city=Thetford&qty=10
