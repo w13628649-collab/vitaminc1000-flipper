@@ -858,3 +858,11 @@ table.c-transt tr.grp .sub{font-weight:400; margin-left:6px}
   .bookside .ladders{grid-template-columns:1fr}
   .kpis{grid-auto-flow:row; grid-template-columns:1fr 1fr}
 }
+
+/* 复盘 */
+.kpis b.pos{color:var(--gain)} .kpis b.neg{color:var(--warn)}
+#rv-items tr[data-item]{cursor:pointer}
+#rv-items tr[aria-selected=true]{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--bronze)}
+#rv-filter button.mini{margin-left:6px}
+.rv-iq{display:flex; align-items:center; gap:8px}   /* 品质标跟在物品名后面,不折行 */
+#rv-notes{padding:12px 0 4px 18px; margin:0}

@@ -149,7 +149,7 @@ const roleTag = (r, big) => (r ? `<span class="rtag ${r.role === "raw" ? "raw" :
   r.role === "raw" ? "原料:采集来的,拿去精炼" : "半成品:原料精炼出来的"}">${ROLE_WORD[r.role]}</span>` : "");
 
 // ── 视图切换 ───────────────────────────────────────────────
-const views = ["desk", "ideas", "lookup", "craft", "rank", "book", "live"];
+const views = ["desk", "ideas", "lookup", "craft", "rank", "review", "book", "live"];
 // 单独文件里的页面(精炼页 craft.js)登记自己的钩子:hash() 切过来时地址栏写什么、
 // route(arg) 地址栏带着参数进来、show() 切到这页、hide() 离开这页(退订实时)
 const viewHooks = {};
@@ -185,6 +185,7 @@ function show(name, push = true) {
     if (lookup.stale) refreshLookupLive();
   }
   if (name === "rank") loadRank();
+  if (name === "review") loadReview();
   if (name === "book") loadBook();
   // 不在这页时只记了数据,没画;顺便对一次账
   if (name === "live") { liveUI.full = true; liveFlush(); liveResyncNow(); }
@@ -1412,6 +1413,127 @@ $("trade-form").addEventListener("submit", async e => {
     $("t-owner").value = f.owner.value;
     loadCalibration();
   } catch (err) { alert("记账失败:" + err.message); }
+});
+
+// ── 复盘:抓包记下的个人成交 ───────────────────────────────
+// 数据来自 /api/ledger/*:即时买卖、市场邮件(挂单成交 / 到期)、银币和专注余额。
+// 口径同服务端 LedgerSummary:花出 = 成交额 + 创建费,到手 = 成交额 − 税 − 创建费
+const TRADE_KIND = {
+  instant_buy: "直接买入", instant_sell: "直接卖出",
+  order_sold: "卖单成交", order_bought: "求购成交",
+  sell_expired: "卖单到期", buy_expired: "求购到期", bm_sell_expired: "黑市卖单到期",
+};
+const BUY_KINDS = new Set(["instant_buy", "order_bought", "buy_expired"]);
+const SELL_KINDS = new Set(["instant_sell", "order_sold", "sell_expired", "bm_sell_expired"]);
+const EXPIRED_KINDS = new Set(["sell_expired", "buy_expired", "bm_sell_expired"]);
+const REVIEW_LIMIT = 500;
+const RV_EMPTY = $("rv-empty").innerHTML;
+const review = { days: 7, item: "", seq: 0 };
+try { review.days = Number(localStorage.getItem("review-days")) || 7; } catch (e) { /* 读不了就用默认 */ }
+const signed = n => (n > 0 ? "+" : "") + num(n);
+const signClass = n => (n > 0 ? "pos" : n < 0 ? "neg" : "");
+// 这一笔让银币变了多少:买是花出去(含创建费),卖是到手(扣税和创建费)
+const cashOf = t => (BUY_KINDS.has(t.kind) ? -(t.total + t.fee) : t.total - t.tax - t.fee);
+
+async function loadReview() {
+  const seq = ++review.seq;   // 连点几个时段时,只画最后一次的结果
+  for (const b of $("rv-days").querySelectorAll("button"))
+    b.setAttribute("aria-pressed", String(Number(b.dataset.days) === review.days));
+  const q = new URLSearchParams({ days: review.days, limit: REVIEW_LIMIT });
+  if (review.item) q.set("item", review.item);
+  try {
+    const [sum, list] = await Promise.all([
+      getJSON(`/api/ledger/summary?days=${review.days}&items=200`),
+      getJSON("/api/ledger/trades?" + q),
+    ]);
+    const s = sum.summary || {}, items = s.by_item || [], trades = list.trades || [];
+    await resolveNames([...items.map(f => f.item_id), ...trades.map(t => t.item_id)], 60);
+    if (seq !== review.seq) return;
+    renderReviewKpis(s);
+    renderReviewItems(items);
+    renderReviewTrades(trades);
+    $("rv-notes").innerHTML = (sum.notes || []).map(n => `<li>${esc(n)}</li>`).join("");
+  } catch (e) {
+    if (seq !== review.seq) return;
+    $("rv-empty").textContent = e.status === 404 ? "服务端还没有复盘接口,先升级服务端。" : String(e.message || e);
+    $("rv-empty").style.display = "";
+  }
+}
+
+function renderReviewKpis(s) {
+  let buy = 0, buyQty = 0, sell = 0, sellQty = 0, tax = 0, fee = 0, unfilled = 0, n = 0;
+  for (const k of s.by_kind || []) {
+    n += k.count; tax += k.tax; fee += k.fee;
+    if (BUY_KINDS.has(k.kind)) { buy += k.total + k.fee; buyQty += k.amount; }
+    if (SELL_KINDS.has(k.kind)) { sell += k.total - k.tax - k.fee; sellQty += k.amount; }
+    if (EXPIRED_KINDS.has(k.kind)) unfilled += k.unfilled;
+  }
+  const w = s.wallet, f = s.focus;
+  $("rv-kpis").innerHTML = `
+    <div><b class="${signClass(sell - buy)}">${signed(sell - buy)}</b><i>净现金流</i>
+      <em>${num(n)} 笔成交</em></div>
+    <div><b>${num(buy)}</b><i>买入花出</i><em>${num(buyQty)} 件,含求购单创建费</em></div>
+    <div><b>${num(sell)}</b><i>卖出到手</i><em>${num(sellQty)} 件,已扣税和创建费</em></div>
+    <div><b>${num(tax + fee)}</b><i>税和创建费</i>
+      <em>${unfilled ? `${num(unfilled)} 张挂单一件没成交就到期` : `税 ${num(tax)},创建费 ${num(fee)}`}</em></div>
+    <div><b>${w ? num(w.silver) : "—"}</b><i>银币余额</i>
+      <em>${w ? agoSpan(w.observed_at) : "游戏里银币一变就有"}${f ? `,专注 ${num(f.focus)}` : ""}</em></div>`;
+}
+
+function renderReviewItems(items) {
+  const money = (qty, v) => (qty || v ? num(v) : "");
+  $("rv-items").innerHTML = items.map(f => `<tr data-item="${esc(f.item_id)}"${
+    f.item_id === review.item ? ' aria-selected="true"' : ""}>
+    <td class="l">${itemCell(f.item_id, NAMES.get(f.item_id) || f.item_id)}</td>
+    <td>${f.bought_qty ? num(f.bought_qty) : ""}</td><td>${money(f.bought_qty, f.buy_cost)}</td>
+    <td>${f.sold_qty ? num(f.sold_qty) : ""}</td><td>${money(f.sold_qty, f.sell_net)}</td>
+    <td class="${signClass(f.net)}">${signed(f.net)}</td><td>${num(f.trades)}</td>
+  </tr>`).join("");
+  $("rv-items-table").hidden = !items.length;
+}
+
+function renderReviewTrades(trades) {
+  const at = t => new Date(t).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  $("rv-trades").innerHTML = trades.map(t => {
+    const qty = EXPIRED_KINDS.has(t.kind) && t.order_amount
+      ? `${num(t.amount)} / ${num(t.order_amount)}` : num(t.amount);
+    const cash = cashOf(t);
+    return `<tr title="${esc(t.character)}">
+      <td class="l sub">${at(t.observed_at)}</td>
+      <td class="l">${esc(TRADE_KIND[t.kind] || t.kind)}</td>
+      <td class="l"><div class="rv-iq">${itemCell(t.item_id, NAMES.get(t.item_id) || t.item_id)}${t.quality > 1 ? qualityTag(t.quality) : ""}</div></td>
+      <td>${qty}</td><td>${t.unit_price ? num(t.unit_price) : "—"}</td><td>${num(t.total)}</td>
+      <td class="sub">${t.tax + t.fee ? num(t.tax + t.fee) : ""}</td>
+      <td class="${signClass(cash)}">${signed(cash)}</td>
+      <td class="l">${t.city ? cityDot(t.city) : `<span class="sub">${esc(t.location)}</span>`}</td>
+    </tr>`;
+  }).join("");
+  $("rv-trades-table").hidden = !trades.length;
+  $("rv-empty").innerHTML = RV_EMPTY;
+  $("rv-empty").style.display = trades.length ? "none" : "";
+  const name = review.item ? NAMES.get(review.item) || review.item : "";
+  $("rv-filter").innerHTML = (name ? `只看${esc(name)} <button class="mini" data-clear>看全部</button>` : "") +
+    (trades.length >= REVIEW_LIMIT ? ` 只列最近 ${REVIEW_LIMIT} 笔` : "");
+}
+
+$("rv-days").addEventListener("click", e => {
+  const b = e.target.closest("button[data-days]");
+  if (!b) return;
+  review.days = Number(b.dataset.days);
+  try { localStorage.setItem("review-days", String(review.days)); } catch (e) { /* 记不住也能用 */ }
+  loadReview();
+});
+$("rv-items").addEventListener("click", e => {
+  if (e.target.closest("a")) return;   // 点物品名是去查价页
+  const tr = e.target.closest("tr[data-item]");
+  if (!tr) return;
+  review.item = review.item === tr.dataset.item ? "" : tr.dataset.item;
+  loadReview();
+});
+$("rv-filter").addEventListener("click", e => {
+  if (!e.target.closest("button[data-clear]")) return;
+  review.item = "";
+  loadReview();
 });
 
 async function loadBook() {

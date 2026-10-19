@@ -23,6 +23,7 @@
       <button data-view="lookup">查价</button>
       <button data-view="craft">精炼</button>
       <button data-view="rank">销量榜</button>
+      <button data-view="review">复盘</button>
       <button data-view="book">记账</button>
       <button data-view="live">实时</button>
     </nav>
@@ -406,6 +407,44 @@
       <tbody id="rank-rows"></tbody>
     </table>
     <div class="empty" id="rank-empty">还没有历史数据。</div>
+  </section>
+
+  <!-- ═══════════ 复盘 ═══════════ -->
+  <section class="view" id="v-review" hidden>
+    <div class="bar">
+      <div class="seg" id="rv-days">
+        <button data-days="1">24 小时</button><button data-days="7">7 天</button>
+        <button data-days="30">30 天</button><button data-days="3650">全部</button>
+      </div>
+    </div>
+    <div class="kpis" id="rv-kpis"></div>
+
+    <h3>每件物品的进出 <span class="sub">点一行,下面的明细只看这件</span></h3>
+    <div class="tablewrap">
+      <table class="tight" id="rv-items-table">
+        <thead><tr>
+          <th class="l">物品</th><th>买入件数</th><th title="成交额 + 求购单创建费">花出</th>
+          <th>卖出件数</th><th title="成交额 − 销售税 − 卖单创建费">到手</th>
+          <th title="到手 − 花出">净现金流</th><th>笔数</th>
+        </tr></thead>
+        <tbody id="rv-items"></tbody>
+      </table>
+    </div>
+
+    <h3>成交明细 <span class="sub" id="rv-filter"></span></h3>
+    <div class="tablewrap">
+      <table class="tight" id="rv-trades-table">
+        <thead><tr>
+          <th class="l">时间</th><th class="l">种类</th><th class="l">物品</th>
+          <th title="到期的单:成交 / 挂单总件数">件数</th><th>单价</th><th>成交额</th>
+          <th title="销售税 + 创建费">税费</th><th title="这一笔让银币多了或少了多少">现金</th><th class="l">地点</th>
+        </tr></thead>
+        <tbody id="rv-trades"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="rv-empty">这段时间没有成交。开着客户端在游戏里直接买卖就会记下;
+      挂单的成交写在市场邮件里,在游戏里点开那封邮件才记得到。</div>
+    <ul class="note" id="rv-notes"></ul>
   </section>
 
   <!-- ═══════════ 记账 ═══════════ -->
