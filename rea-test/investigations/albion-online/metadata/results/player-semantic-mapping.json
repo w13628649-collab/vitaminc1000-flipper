@@ -1,0 +1,4078 @@
+{
+  "evidence_id": "AO-META-PLAYER-SEMANTICS-001",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "metadata_sha256": "b0cffb9a6945366c0057390c2144edbfb7b9fb0b9a2f327ed8517e3051b7684b",
+  "version": "1.32.030.345319",
+  "user_server": "Asia/East",
+  "parameter_schema_evidence_id": "AO-META-PARAMETER-ORDER-001",
+  "parameter_key_basis": "按已恢复父先、每级 MetadataToken 升序、en 过滤的 setter 列表静态推导。尚无当前包样本。",
+  "mappings": [
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 0,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61823,
+      "field_name": "cvx",
+      "declared_type": "long",
+      "native_offset": "0x10",
+      "metadata_file_offset": 15241148,
+      "token": "0x40034e1",
+      "semantic": "客户端本地实体/对象 ID",
+      "conclusion_status": "静态值流确认",
+      "observed_value_flow": [
+        "cjb.d 0x180aacaf0 按 atd.cvx（0x10）调用 ciy.a(long) 0x18096f090 查询本地实体；不存在时创建 cp0 并加入实体表。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180aacaf0-adjacent",
+        "AO-META-DISASM-18096f090-adjacent"
+      ],
+      "unresolved": [
+        "跨地图和重连的 ID 生命周期未观察。",
+        "不能与公开 GameInfo 永久角色 ID 直接等同。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 1,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61824,
+      "field_name": "cvy",
+      "declared_type": "string",
+      "native_offset": "0x18",
+      "metadata_file_offset": 15241160,
+      "token": "0x40034e2",
+      "semantic": "角色显示名来源（原始字符串）",
+      "conclusion_status": "静态值流及 UI 用途确认",
+      "observed_value_flow": [
+        "cjb.d 0x180aacaf0 将 atd.cvy（0x18）传给 cp0..ctor 0x180bd6ea0。",
+        "cp0..ctor 调用 cp0.af(string) 0x180bd9010；原串存 cp0.ajf（0x358），名称处理结果存 cp0.ajg（0x360）。",
+        "cp0.aeo 0x1805b9a90 读取 0x360；CharacterName.UpdateText 0x1814afa00 经 vtable slot24/offset0x2b8 取名并传给 UILabel.set_text 0x1819426a0。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180aacaf0-adjacent",
+        "AO-META-DISASM-180bd6ea0-adjacent",
+        "AO-META-DISASM-180bd9010-adjacent",
+        "AO-META-LEAF-1805b9a90",
+        "AO-META-DISASM-1814afa00-adjacent"
+      ],
+      "unresolved": [
+        "显示层可处理本地化或特殊 placeholder；字段值不保证等于最终显示文本。",
+        "实际包中 Photon 字符串的物理编码未逐项验证。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 7,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61830,
+      "field_name": "cv4",
+      "declared_type": "System.Guid",
+      "native_offset": "0x40",
+      "metadata_file_offset": 15241232,
+      "token": "0x40034e8",
+      "semantic": "角色对象 Guid 值；永久身份映射未知",
+      "conclusion_status": "静态值流确认，身份范围未知",
+      "observed_value_flow": [
+        "cp0..ctor 0x180bd6ea0 将 Guid 传给 cpx..ctor 0x180bc8ae0，存 cpx.ahr（0x1f0）。",
+        "csc.v 0x180becdc0 尾部将 atd.cv4（0x40）再次赋值给 cpx.ahr（0x1f0）。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180bd6ea0-adjacent",
+        "AO-META-DISASM-180bc8ae0-adjacent",
+        "AO-META-DISASM-180becdc0-adjacent"
+      ],
+      "unresolved": [
+        "是否等于 GameInfo/player 永久角色 ID 未追到。",
+        "Guid 字节序、压缩和序列化物理编码未验证。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 8,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61831,
+      "field_name": "cv5",
+      "declared_type": "string",
+      "native_offset": "0x50",
+      "metadata_file_offset": 15241244,
+      "token": "0x40034e9",
+      "semantic": "公会名来源（原始字符串）",
+      "conclusion_status": "静态值流及 UI 关联确认",
+      "observed_value_flow": [
+        "csc.v 指令0x180bee55a 读 atd.cv5（0x50），经 slot76/offset0x5f8 调 cp0.aer 0x180bd8db0。",
+        "原串存 cp0.ai9（0x328）；名称处理后经 slot78/offset0x618 的 cp0.aet 0x1805b8540 存 cp0.ai6（0x308）。",
+        "cp0.aes 0x1805b9b70（slot77/offset0x608）读0x308；CharacterName.UpdateText 指令0x1814afde2/0x1814afe23 取其作为公会显示文本。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bd8db0-adjacent",
+        "AO-META-LEAF-1805b8540",
+        "AO-META-LEAF-1805b9b70",
+        "AO-META-DISASM-1814afa00-adjacent"
+      ],
+      "unresolved": [
+        "名称处理可改变渲染文本。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 9,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61832,
+      "field_name": "cv6",
+      "declared_type": "System.Guid",
+      "native_offset": "0x58",
+      "metadata_file_offset": 15241256,
+      "token": "0x40034ea",
+      "semantic": "公会 Guid",
+      "conclusion_status": "强静态语义推导（值流与命名 UI 枚举一致）",
+      "observed_value_flow": [
+        "csc.v 指令0x180bee41f 读 atd.cv6（0x58），经 slot74/offset0x5d8 调 cp0.aep 0x180bd8da0 存 cp0.ai8（0x318）。",
+        "getter cp0.gy 0x180bda8e0（slot73/offset0x5c8）读取0x318。",
+        "CharacterName.CheckGuildAndAllianceStandingState 0x1814a55e0 比较该 Guid 非空且双方相等时返回 standing6。",
+        "GetColorSettingForStanding 0x1814a72f0 的跳表把 standing6 指向0x1814a7480，随后 context9；命名枚举 CharacterNameSettingContext.OtherGuild=9。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-1814a55e0-adjacent",
+        "AO-META-DISASM-1814a72f0-adjacent",
+        "AO-META-LEAF-180bd8da0",
+        "AO-META-LEAF-180bda8e0"
+      ],
+      "unresolved": [
+        "未以当前服务器实际数据包验证；不能据此取得服务器未发送的公会信息。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 51,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61874,
+      "field_name": "cxc",
+      "declared_type": "string",
+      "native_offset": "0x158",
+      "metadata_file_offset": 15241760,
+      "token": "0x4003514",
+      "semantic": "联盟名来源（原始字符串）",
+      "conclusion_status": "静态值流及 UI 关联确认",
+      "observed_value_flow": [
+        "csc.v 指令0x180bee69c 读 atd.cxc（0x158），经 slot84/offset0x678 调 cp0.aey 0x180bd8ee0。",
+        "原串存 cp0.ajd（0x348）；名称处理后经 slot86 的 cp0.ae0 存 cp0.ai7（0x310）。",
+        "cp0.aez 0x1805b9b80（slot85/offset0x688）读0x310；CharacterName.UpdateText 指令0x1814afe0a 取其与公会名组合。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bd8ee0-adjacent",
+        "AO-META-LEAF-1805b9b80",
+        "AO-META-DISASM-1814afa00-adjacent"
+      ],
+      "unresolved": [
+        "名称处理可改变渲染文本。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 52,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61875,
+      "field_name": "cxd",
+      "declared_type": "System.Guid",
+      "native_offset": "0x160",
+      "metadata_file_offset": 15241772,
+      "token": "0x4003515",
+      "semantic": "联盟 Guid",
+      "conclusion_status": "强静态语义推导（值流与命名 UI 枚举一致）",
+      "observed_value_flow": [
+        "csc.v 指令0x180bee666 读 atd.cxd（0x160），经 slot82/offset0x658 调 cp0.aew 0x180bd8ed0 存 cp0.ajc（0x338）。",
+        "getter cp0.gz 0x180bda8f0（slot81/offset0x648）读取0x338。",
+        "CheckGuildAndAllianceStandingState 0x1814a55e0 的第二 Guid 比较非空且双方相等时返回 standing5。",
+        "GetColorSettingForStanding 跳表把 standing5 指向0x1814a746c，随后 context10；命名枚举 CharacterNameSettingContext.OtherAlliance=10。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-1814a55e0-adjacent",
+        "AO-META-DISASM-1814a72f0-adjacent",
+        "AO-META-LEAF-180bd8ed0",
+        "AO-META-LEAF-180bda8f0"
+      ],
+      "unresolved": [
+        "未以当前服务器实际数据包验证；联盟的实时成员范围未观察。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 10,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61833,
+      "field_name": "cv7",
+      "declared_type": "string",
+      "native_offset": "0x68",
+      "metadata_file_offset": 15241268,
+      "token": "0x40034eb",
+      "semantic": "未知字符串；不是本轮确认的联盟名",
+      "conclusion_status": "仅确认值流",
+      "observed_value_flow": [
+        "csc.v 指令0x180beddb4 读 atd.cv7（0x68）并存 cpx.aht（0x208）。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent"
+      ],
+      "unresolved": [
+        "具体业务意义未知。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 13,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61836,
+      "field_name": "cwa",
+      "declared_type": "string",
+      "native_offset": "0x78",
+      "metadata_file_offset": 15241304,
+      "token": "0x40034ee",
+      "semantic": "未知字符串",
+      "conclusion_status": "仅确认值流",
+      "observed_value_flow": [
+        "csc.v 指令0x180bedeef 读 atd.cwa（0x78）并存 cpx.ahw（0x218）。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent"
+      ],
+      "unresolved": [
+        "具体业务意义未知。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 40,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61863,
+      "field_name": "cw1",
+      "declared_type": "int[]",
+      "native_offset": "0x118",
+      "metadata_file_offset": 15241628,
+      "token": "0x4003509",
+      "semantic": "装备物品索引数组",
+      "conclusion_status": "静态值流与装备变更事件共用处理确认",
+      "observed_value_flow": [
+        "csc.v 指令0x180bedf62 读 atd.cw1（0x118）并调用 cp0.af(int[]) 0x180bd9770。",
+        "cp0.af 逐元素经 bdh.abo(int) 0x180609120 查询物品表，负值清空对应位置；查到的 bc9 对象存 cp0.agy:bc9[]（0x2c8）。",
+        "CharacterEquipmentChanged=90 handler crr.aft 0x180be90e0 从 alv.bw4（key2/0x20）读取 int[]，调用同一 cp0.af。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bd9770-adjacent",
+        "AO-META-DISASM-180be90e0-adjacent"
+      ],
+      "unresolved": [
+        "数组 index 到命名 EquipmentSlot 的完整映射未证明。",
+        "int 索引如何对应公开物品 ID/客户端 unique name 需要另核对物品表。"
+      ]
+    },
+    {
+      "event_code": 90,
+      "event_names": [
+        "CharacterEquipmentChanged"
+      ],
+      "event_type": "alv",
+      "parameter_key": 2,
+      "declaring_type": "alv",
+      "declaring_type_index": 12029,
+      "field_index": 60518,
+      "field_name": "bw4",
+      "declared_type": "int[]",
+      "native_offset": "0x20",
+      "metadata_file_offset": 15225488,
+      "token": "0x4002fc8",
+      "semantic": "装备物品索引数组，与 NewCharacter key40 同类",
+      "conclusion_status": "静态值流确认",
+      "observed_value_flow": [
+        "crr.aft 0x180be90e0 使用 ci9.b<alv>，把 alv.bw4（0x20）传给 cp0.af(int[]) 0x180bd9770。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bd9770-adjacent",
+        "AO-META-DISASM-180be90e0-adjacent"
+      ],
+      "unresolved": [
+        "具体装备槽位置和字段的条件省略规则未实测。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 43,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61866,
+      "field_name": "cw4",
+      "declared_type": "int[]",
+      "native_offset": "0x130",
+      "metadata_file_offset": 15241664,
+      "token": "0x400350c",
+      "semantic": "bil 对象索引数组；外观/skin 候选",
+      "conclusion_status": "值流确认，具体语义未知",
+      "observed_value_flow": [
+        "csc.v 指令0x180bee038 读 atd.cw4（0x130）并调用 cp0.x8(int[]) 0x180bdab90。",
+        "cp0.x8 经另一表 be7.abp(int) 0x18064db20 查询 bil，结果存 cp0.agz:bil[]（0x2d0），负值清空。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bdab90-adjacent"
+      ],
+      "unresolved": [
+        "不能仅凭 bil 与 bc9 类型差异确认 skin；数组槽语义未知。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 19,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61842,
+      "field_name": "cwg",
+      "declared_type": "float",
+      "native_offset": "0xa8",
+      "metadata_file_offset": 15241376,
+      "token": "0x40034f4",
+      "semantic": "未知 float",
+      "conclusion_status": "仅确认值流",
+      "observed_value_flow": [
+        "csc.v 从 atd.cwg（0xa8）经 virtual slot18/offset0x258 调 cpo.ad9(float) 0x180bbf0d0；存实体0x40及simulationObject0x68。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent",
+        "AO-META-DISASM-180bbf0d0-adjacent"
+      ],
+      "unresolved": [
+        "未证实 HP、速度或其它业务名称。"
+      ]
+    },
+    {
+      "event_code": 29,
+      "event_names": [
+        "NewCharacter"
+      ],
+      "event_type": "atd",
+      "parameter_key": 20,
+      "declaring_type": "atd",
+      "declaring_type_index": 12307,
+      "field_index": 61843,
+      "field_name": "cwh",
+      "declared_type": "float",
+      "native_offset": "0xac",
+      "metadata_file_offset": 15241388,
+      "token": "0x40034f5",
+      "semantic": "未知 float",
+      "conclusion_status": "仅确认值流",
+      "observed_value_flow": [
+        "csc.v 从 atd.cwh（0xac）存 cp0.agx（0x2c4）。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180becdc0-adjacent"
+      ],
+      "unresolved": [
+        "未证实业务含义。"
+      ]
+    },
+    {
+      "event_code": 6,
+      "event_names": [
+        "HealthUpdate"
+      ],
+      "event_type": "ap9",
+      "parameter_key": 2,
+      "declaring_type": "ap9",
+      "declaring_type_index": 12190,
+      "field_index": 61306,
+      "field_name": "ch6",
+      "declared_type": "float",
+      "native_offset": "0x20",
+      "metadata_file_offset": 15234944,
+      "token": "0x40032dc",
+      "semantic": "生命值更新状态 float；当前HP/最大HP具体语义未确认",
+      "conclusion_status": "生命值处理链确认，标量业务意义未知",
+      "observed_value_flow": [
+        "cpo.aq7 0x180bc2cb0 使用 ci9.b<ap9>，把 ap9.ch6（0x20）传给 a46..ctor 0x1808f16b0，存 a46+0x10。",
+        "a46 状态经 virtual slot46/offset0x418 调 cpo.x8(a46) 0x180bc5aa0；再调用 a44<a46> 状态模型应用函数0x1828f2590，实体字段0x88。",
+        "CharacterName.UpdateSliders 0x1814ae840 从实体0x88状态经 a44<a46>.y 0x1828f2e80 取得 float，分母包含 entity+0xa4 和状态对象+0x50；再更新 fillAmount。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180bc2cb0-adjacent",
+        "AO-META-DISASM-1808f16b0-adjacent",
+        "AO-META-DISASM-180bc5aa0-adjacent",
+        "AO-META-DISASM-1814ae840-adjacent"
+      ],
+      "unresolved": [
+        "尚未还原 a44<a46> 状态更新、时间插值和最大值变化的完整计算。",
+        "不能直接命名 key2=当前HP、key3=最大HP；也未确认单次伤害或增量含义。"
+      ]
+    },
+    {
+      "event_code": 6,
+      "event_names": [
+        "HealthUpdate"
+      ],
+      "event_type": "ap9",
+      "parameter_key": 3,
+      "declaring_type": "ap9",
+      "declaring_type_index": 12190,
+      "field_index": 61307,
+      "field_name": "ch7",
+      "declared_type": "float",
+      "native_offset": "0x24",
+      "metadata_file_offset": 15234956,
+      "token": "0x40032dd",
+      "semantic": "生命值更新状态 float；当前HP/最大HP具体语义未确认",
+      "conclusion_status": "生命值处理链确认，标量业务意义未知",
+      "observed_value_flow": [
+        "cpo.aq7 0x180bc2cb0 使用 ci9.b<ap9>，把 ap9.ch7（0x24）传给 a46..ctor 0x1808f16b0，存 a46+0x18。",
+        "a46 状态经 virtual slot46/offset0x418 调 cpo.x8(a46) 0x180bc5aa0；再调用 a44<a46> 状态模型应用函数0x1828f2590，实体字段0x88。",
+        "CharacterName.UpdateSliders 0x1814ae840 从实体0x88状态经 a44<a46>.y 0x1828f2e80 取得 float，分母包含 entity+0xa4 和状态对象+0x50；再更新 fillAmount。"
+      ],
+      "evidence_ids": [
+        "AO-META-DISASM-180bc2cb0-adjacent",
+        "AO-META-DISASM-1808f16b0-adjacent",
+        "AO-META-DISASM-180bc5aa0-adjacent",
+        "AO-META-DISASM-1814ae840-adjacent"
+      ],
+      "unresolved": [
+        "尚未还原 a44<a46> 状态更新、时间插值和最大值变化的完整计算。",
+        "不能直接命名 key2=当前HP、key3=最大HP；也未确认单次伤害或增量含义。"
+      ]
+    }
+  ],
+  "evidence_files": {
+    "AO-META-DISASM-180aacaf0-adjacent": {
+      "path": "results/disassembly-180aacaf0-adjacent.json",
+      "sha256": "b624d5dd4f62b6a40d411640c6c4960613bd4c29b92f754e49f794176938019d"
+    },
+    "AO-META-DISASM-18096f090-adjacent": {
+      "path": "results/disassembly-18096f090-adjacent.json",
+      "sha256": "cea850e6d982d9153eb90b7d503b8aa61812ae8af9810f24d1b4c7783c49f3d0"
+    },
+    "AO-META-DISASM-180bd6ea0-adjacent": {
+      "path": "results/disassembly-180bd6ea0-adjacent.json",
+      "sha256": "c74bf7d9f46b4c32a6a9f0ebb0b2f148feb4b118990057b412937c804efe338f"
+    },
+    "AO-META-DISASM-180bd9010-adjacent": {
+      "path": "results/disassembly-180bd9010-adjacent.json",
+      "sha256": "81a46c909ab6c0151415a04fa1e63464279c8af50480b9b7ec37185c827c99fa"
+    },
+    "AO-META-LEAF-1805b9a90": {
+      "path": "results/leaf-1805b9a90.json",
+      "sha256": "80f99e7d16f7cc4d11dc061b1c58168e720e60fa15c49826597256c8ee049d42"
+    },
+    "AO-META-DISASM-1814afa00-adjacent": {
+      "path": "results/disassembly-1814afa00-adjacent.json",
+      "sha256": "11b0d4c83dbd582d41dd1a376156589c9c9028eac3717fee92e3cbe03483a88a"
+    },
+    "AO-META-DISASM-180bc8ae0-adjacent": {
+      "path": "results/disassembly-180bc8ae0-adjacent.json",
+      "sha256": "514ae33fb8730002be9eabc714d97d79641a750cbd60e0e0ca9c5a70699e9878"
+    },
+    "AO-META-DISASM-180becdc0-adjacent": {
+      "path": "results/disassembly-180becdc0-adjacent.json",
+      "sha256": "514deb606bbea67cf8d2e33e0e790e523a80d40b948a0d937f3311dd5af5a555"
+    },
+    "AO-META-DISASM-180bd8db0-adjacent": {
+      "path": "results/disassembly-180bd8db0-adjacent.json",
+      "sha256": "e2e51227c5a46ecc5dc3bcd95adc702cb63e662c1808da32b673137a3a8482c6"
+    },
+    "AO-META-LEAF-1805b8540": {
+      "path": "results/leaf-1805b8540.json",
+      "sha256": "012996acd1ca0e87fc4ee23e39ad10ecb97b36f7862f151f599ddd7a9eb5fe13"
+    },
+    "AO-META-LEAF-1805b9b70": {
+      "path": "results/leaf-1805b9b70.json",
+      "sha256": "96dfed3bd7f13e31414bc9ee5bb1a204e14bd30d9cf4c64569e84a2eee8f0d97"
+    },
+    "AO-META-DISASM-1814a55e0-adjacent": {
+      "path": "results/disassembly-1814a55e0-adjacent.json",
+      "sha256": "86506002c22a4dfef34e0e61dd86e54c9a8cf4d89ba52ce280f1e0a9cc37a1f7"
+    },
+    "AO-META-DISASM-1814a72f0-adjacent": {
+      "path": "results/disassembly-1814a72f0-adjacent.json",
+      "sha256": "a48bc7b83b32b845eda744bff9005e8759b25d5e3ce3050634cabdac65017e37"
+    },
+    "AO-META-LEAF-180bd8da0": {
+      "path": "results/leaf-180bd8da0.json",
+      "sha256": "cb0c5cafe3416c4c54888149fc76a7ea41f2f404aca949a44c8050b05970e77c"
+    },
+    "AO-META-LEAF-180bda8e0": {
+      "path": "results/leaf-180bda8e0.json",
+      "sha256": "3be7068f3ea0557d09b9154310539c5af227aa6f5fc7d61eb30136a45e27daba"
+    },
+    "AO-META-DISASM-180bd8ee0-adjacent": {
+      "path": "results/disassembly-180bd8ee0-adjacent.json",
+      "sha256": "6b4736b5ed2d4004661f3efa0039d2c1d98b326233046cbb1675ad6097e051ad"
+    },
+    "AO-META-LEAF-1805b9b80": {
+      "path": "results/leaf-1805b9b80.json",
+      "sha256": "b46424d59ac05cdbaf20d00cd0c6c74e39cfdbdd541396980b88bbb22110c708"
+    },
+    "AO-META-LEAF-180bd8ed0": {
+      "path": "results/leaf-180bd8ed0.json",
+      "sha256": "223744455e5736e8dff9e010cc2e300e1aded10bec0d24fecf8e5a34c20ff671"
+    },
+    "AO-META-LEAF-180bda8f0": {
+      "path": "results/leaf-180bda8f0.json",
+      "sha256": "3b7b70caa800e8e7f8faea3d2d244f17099b65d83ab07b9737b9b9a72a40de98"
+    },
+    "AO-META-DISASM-180bd9770-adjacent": {
+      "path": "results/disassembly-180bd9770-adjacent.json",
+      "sha256": "0739ba0c60f6f506d8043d73a3a48dfced053d8f96f76c86ce8c79ccb579caef"
+    },
+    "AO-META-DISASM-180be90e0-adjacent": {
+      "path": "results/disassembly-180be90e0-adjacent.json",
+      "sha256": "b59e38cd304f3b4c19ec2a3e45c07de1e92cf6f3643be1c3c1e0389bc6e0d995"
+    },
+    "AO-META-DISASM-180bdab90-adjacent": {
+      "path": "results/disassembly-180bdab90-adjacent.json",
+      "sha256": "509920341d24b88ff933b3eb8d1953ae322cc2d5c848f7f674a0262ed89faf46"
+    },
+    "AO-META-DISASM-180bbf0d0-adjacent": {
+      "path": "results/disassembly-180bbf0d0-adjacent.json",
+      "sha256": "5c7120bb402a105a9211345e33e33d8aa32513686d9860d2a4c7dfc5723a6cb3"
+    },
+    "AO-META-DISASM-180bc2cb0-adjacent": {
+      "path": "results/disassembly-180bc2cb0-adjacent.json",
+      "sha256": "5fe83c5318c45e4b44bf3737e938d6025745c2e38861f3222e4befaffc5e2084"
+    },
+    "AO-META-DISASM-1808f16b0-adjacent": {
+      "path": "results/disassembly-1808f16b0-adjacent.json",
+      "sha256": "a0e2ade7df27caca59d0d3f8d53a130cca28977a4519f589fd3ddd54e3d1f74a"
+    },
+    "AO-META-DISASM-180bc5aa0-adjacent": {
+      "path": "results/disassembly-180bc5aa0-adjacent.json",
+      "sha256": "406d823b9d75b6e88f2c65fb8ab8bd7afa01844dc789cf4252c86d650268225b"
+    },
+    "AO-META-DISASM-1814ae840-adjacent": {
+      "path": "results/disassembly-1814ae840-adjacent.json",
+      "sha256": "e88f8df46d04bba59fbf20dd63625492224bfbc84cf8b9e45f61be7d76548264"
+    }
+  },
+  "selected_field_layouts": [
+    {
+      "type_index": 12752,
+      "name": "a44",
+      "image": "Albion.Common.dll",
+      "metadata_file_offset": 18822056,
+      "token": "0x2000934",
+      "parent": null,
+      "fields": [
+        {
+          "own_metadata_ordinal": 0,
+          "field_index": 64190,
+          "name": "a",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269552,
+          "token": "0x4003e20",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 1,
+          "field_index": 64191,
+          "name": "b",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269564,
+          "token": "0x4003e21",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e21",
+            "range_index": 35627,
+            "range_file_offset": 21865560,
+            "blob_file_offset": 20558344,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 2,
+          "field_index": 64192,
+          "name": "c",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269576,
+          "token": "0x4003e22",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e22",
+            "range_index": 35628,
+            "range_file_offset": 21865568,
+            "blob_file_offset": 20558352,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 3,
+          "field_index": 64193,
+          "name": "d",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269588,
+          "token": "0x4003e23",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e23",
+            "range_index": 35629,
+            "range_file_offset": 21865576,
+            "blob_file_offset": 20558360,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 4,
+          "field_index": 64194,
+          "name": "e",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269600,
+          "token": "0x4003e24",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 5,
+          "field_index": 64195,
+          "name": "f",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269612,
+          "token": "0x4003e25",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e25",
+            "range_index": 35630,
+            "range_file_offset": 21865584,
+            "blob_file_offset": 20558368,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 6,
+          "field_index": 64196,
+          "name": "g",
+          "type": "a44+a<<kind=0x13,data=0x44f>>",
+          "type_index": 18343,
+          "metadata_file_offset": 15269624,
+          "token": "0x4003e26",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e26",
+            "range_index": 35631,
+            "range_file_offset": 21865592,
+            "blob_file_offset": 20558376,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 7,
+          "field_index": 64197,
+          "name": "h",
+          "type": "a44+b<<kind=0x13,data=0x44f>>",
+          "type_index": 18478,
+          "metadata_file_offset": 15269636,
+          "token": "0x4003e27",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e27",
+            "range_index": 35632,
+            "range_file_offset": 21865600,
+            "blob_file_offset": 20558384,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 8,
+          "field_index": 64198,
+          "name": "i",
+          "type": "long",
+          "type_index": 34277,
+          "metadata_file_offset": 15269648,
+          "token": "0x4003e28",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e28",
+            "range_index": 35633,
+            "range_file_offset": 21865608,
+            "blob_file_offset": 20558392,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 9,
+          "field_index": 64199,
+          "name": "j",
+          "type": "bm<a44<<kind=0x13,data=0x44f>>,<kind=0x13,data=0x44f>>",
+          "type_index": 18588,
+          "metadata_file_offset": 15269660,
+          "token": "0x4003e29",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 10,
+          "field_index": 64200,
+          "name": "k",
+          "type": "bm<a44<<kind=0x13,data=0x44f>>,<kind=0x13,data=0x44f>>",
+          "type_index": 18588,
+          "metadata_file_offset": 15269672,
+          "token": "0x4003e2a",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 11,
+          "field_index": 64201,
+          "name": "l",
+          "type": "bm<a44<<kind=0x13,data=0x44f>>,float>",
+          "type_index": 18589,
+          "metadata_file_offset": 15269684,
+          "token": "0x4003e2b",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 12,
+          "field_index": 64202,
+          "name": "m",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269696,
+          "token": "0x4003e2c",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 13,
+          "field_index": 64203,
+          "name": "n",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15269708,
+          "token": "0x4003e2d",
+          "native_offset": "0x0",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e2d",
+            "range_index": 35634,
+            "range_file_offset": 21865616,
+            "blob_file_offset": 20558400,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 14,
+          "field_index": 64204,
+          "name": "o",
+          "type": "c4",
+          "type_index": 48623,
+          "metadata_file_offset": 15269720,
+          "token": "0x4003e2e",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 15,
+          "field_index": 64205,
+          "name": "p",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15269732,
+          "token": "0x4003e2f",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 16,
+          "field_index": 64206,
+          "name": "q",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15269744,
+          "token": "0x4003e30",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 17,
+          "field_index": 64207,
+          "name": "r",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269756,
+          "token": "0x4003e31",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 18,
+          "field_index": 64208,
+          "name": "s",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15269768,
+          "token": "0x4003e32",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 19,
+          "field_index": 64209,
+          "name": "t",
+          "type": "<kind=0x13,data=0x44f>",
+          "type_index": 2300,
+          "metadata_file_offset": 15269780,
+          "token": "0x4003e33",
+          "native_offset": "0x0",
+          "attribute": null
+        }
+      ]
+    },
+    {
+      "type_index": 12757,
+      "name": "a46",
+      "image": "Albion.Common.dll",
+      "metadata_file_offset": 18822466,
+      "token": "0x2000937",
+      "parent": {
+        "type_index": 12749,
+        "name": "a45"
+      },
+      "fields": [
+        {
+          "own_metadata_ordinal": 0,
+          "field_index": 64216,
+          "name": "f",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15269864,
+          "token": "0x4003e3a",
+          "native_offset": "0x28",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3a",
+            "range_index": 35635,
+            "range_file_offset": 21865624,
+            "blob_file_offset": 20558408,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 1,
+          "field_index": 64217,
+          "name": "g",
+          "type": "a46+EffectType",
+          "type_index": 65942,
+          "metadata_file_offset": 15269876,
+          "token": "0x4003e3b",
+          "native_offset": "0x30",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3b",
+            "range_index": 35636,
+            "range_file_offset": 21865632,
+            "blob_file_offset": 20558416,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 2,
+          "field_index": 64218,
+          "name": "h",
+          "type": "a46+a",
+          "type_index": 65948,
+          "metadata_file_offset": 15269888,
+          "token": "0x4003e3c",
+          "native_offset": "0x34",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3c",
+            "range_index": 35637,
+            "range_file_offset": 21865640,
+            "blob_file_offset": 20558424,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 3,
+          "field_index": 64219,
+          "name": "i",
+          "type": "a46+b",
+          "type_index": 65951,
+          "metadata_file_offset": 15269900,
+          "token": "0x4003e3d",
+          "native_offset": "0x38",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3d",
+            "range_index": 35638,
+            "range_file_offset": 21865648,
+            "blob_file_offset": 20558432,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 4,
+          "field_index": 64220,
+          "name": "j",
+          "type": "long",
+          "type_index": 34277,
+          "metadata_file_offset": 15269912,
+          "token": "0x4003e3e",
+          "native_offset": "0x40",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3e",
+            "range_index": 35639,
+            "range_file_offset": 21865656,
+            "blob_file_offset": 20558440,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 5,
+          "field_index": 64221,
+          "name": "k",
+          "type": "int",
+          "type_index": 34245,
+          "metadata_file_offset": 15269924,
+          "token": "0x4003e3f",
+          "native_offset": "0x48",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e3f",
+            "range_index": 35640,
+            "range_file_offset": 21865664,
+            "blob_file_offset": 20558448,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 6,
+          "field_index": 64222,
+          "name": "l",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269936,
+          "token": "0x4003e40",
+          "native_offset": "0x4c",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e40",
+            "range_index": 35641,
+            "range_file_offset": 21865672,
+            "blob_file_offset": 20558456,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 7,
+          "field_index": 64223,
+          "name": "m",
+          "type": "a46+ReflectDamageBehavior",
+          "type_index": 65945,
+          "metadata_file_offset": 15269948,
+          "token": "0x4003e41",
+          "native_offset": "0x50",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e41",
+            "range_index": 35642,
+            "range_file_offset": 21865680,
+            "blob_file_offset": 20558464,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 8,
+          "field_index": 64224,
+          "name": "n",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269960,
+          "token": "0x4003e42",
+          "native_offset": "0x54",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e42",
+            "range_index": 35643,
+            "range_file_offset": 21865688,
+            "blob_file_offset": 20558472,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 9,
+          "field_index": 64225,
+          "name": "o",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269972,
+          "token": "0x4003e43",
+          "native_offset": "0x55",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e43",
+            "range_index": 35644,
+            "range_file_offset": 21865696,
+            "blob_file_offset": 20558480,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 10,
+          "field_index": 64226,
+          "name": "p",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15269984,
+          "token": "0x4003e44",
+          "native_offset": "0x56",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e44",
+            "range_index": 35645,
+            "range_file_offset": 21865704,
+            "blob_file_offset": 20558488,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 11,
+          "field_index": 64227,
+          "name": "q",
+          "type": "Albion.Common.GameData.SpellInfos.EffectInfos.OnDamageEventBehaviours",
+          "type_index": 37005,
+          "metadata_file_offset": 15269996,
+          "token": "0x4003e45",
+          "native_offset": "0x58",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e45",
+            "range_index": 35646,
+            "range_file_offset": 21865712,
+            "blob_file_offset": 20558496,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 12,
+          "field_index": 64228,
+          "name": "r",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15270008,
+          "token": "0x4003e46",
+          "native_offset": "0x5c",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e46",
+            "range_index": 35647,
+            "range_file_offset": 21865720,
+            "blob_file_offset": 20558504,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 13,
+          "field_index": 64229,
+          "name": "s",
+          "type": "a4a",
+          "type_index": 44870,
+          "metadata_file_offset": 15270020,
+          "token": "0x4003e47",
+          "native_offset": "0x60",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e47",
+            "range_index": 35648,
+            "range_file_offset": 21865728,
+            "blob_file_offset": 20558512,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 14,
+          "field_index": 64230,
+          "name": "t",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15270032,
+          "token": "0x4003e48",
+          "native_offset": "0x68",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e48",
+            "range_index": 35649,
+            "range_file_offset": 21865736,
+            "blob_file_offset": 20558520,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 15,
+          "field_index": 64231,
+          "name": "u",
+          "type": "System.Collections.Generic.HashSet`1<long>",
+          "type_index": 9371,
+          "metadata_file_offset": 15270044,
+          "token": "0x4003e49",
+          "native_offset": "0x70",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 16,
+          "field_index": 64232,
+          "name": "v",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15270056,
+          "token": "0x4003e4a",
+          "native_offset": "0x78",
+          "attribute": {
+            "image": "Albion.Common.dll",
+            "token": "0x4003e4a",
+            "range_index": 35650,
+            "range_file_offset": 21865744,
+            "blob_file_offset": 20558528,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        }
+      ]
+    },
+    {
+      "type_index": 19490,
+      "name": "cpo",
+      "image": "Albion.PhotonClient.dll",
+      "metadata_file_offset": 19374572,
+      "token": "0x20001da",
+      "parent": {
+        "type_index": 19491,
+        "name": "cpp"
+      },
+      "fields": [
+        {
+          "own_metadata_ordinal": 0,
+          "field_index": 96482,
+          "name": "x0",
+          "type": "ceg<c0w>",
+          "type_index": 18704,
+          "metadata_file_offset": 15657056,
+          "token": "0x4000777",
+          "native_offset": "0x50",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 1,
+          "field_index": 96483,
+          "name": "abw",
+          "type": "ceg<c0t>",
+          "type_index": 18701,
+          "metadata_file_offset": 15657068,
+          "token": "0x4000778",
+          "native_offset": "0x58",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 2,
+          "field_index": 96484,
+          "name": "ab4",
+          "type": "ceg<c0u>",
+          "type_index": 18702,
+          "metadata_file_offset": 15657080,
+          "token": "0x4000779",
+          "native_offset": "0x60",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 3,
+          "field_index": 96485,
+          "name": "ab5",
+          "type": "ceg<c0v>",
+          "type_index": 18703,
+          "metadata_file_offset": 15657092,
+          "token": "0x400077a",
+          "native_offset": "0x68",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 4,
+          "field_index": 96486,
+          "name": "acc",
+          "type": "cpo+a",
+          "type_index": 68193,
+          "metadata_file_offset": 15657104,
+          "token": "0x400077b",
+          "native_offset": "0x70",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 5,
+          "field_index": 96487,
+          "name": "acg",
+          "type": "a4c",
+          "type_index": 44874,
+          "metadata_file_offset": 15657116,
+          "token": "0x400077c",
+          "native_offset": "0x78",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400077c",
+            "range_index": 60644,
+            "range_file_offset": 22065696,
+            "blob_file_offset": 20818820,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 6,
+          "field_index": 96488,
+          "name": "ac2",
+          "type": "a5k",
+          "type_index": 44954,
+          "metadata_file_offset": 15657128,
+          "token": "0x400077d",
+          "native_offset": "0x80",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400077d",
+            "range_index": 60645,
+            "range_file_offset": 22065704,
+            "blob_file_offset": 20818828,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 7,
+          "field_index": 96489,
+          "name": "ac3",
+          "type": "a44<a46>",
+          "type_index": 18462,
+          "metadata_file_offset": 15657140,
+          "token": "0x400077e",
+          "native_offset": "0x88",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400077e",
+            "range_index": 60646,
+            "range_file_offset": 22065712,
+            "blob_file_offset": 20818836,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 8,
+          "field_index": 96490,
+          "name": "ac4",
+          "type": "a44<a46>",
+          "type_index": 18462,
+          "metadata_file_offset": 15657152,
+          "token": "0x400077f",
+          "native_offset": "0x90",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400077f",
+            "range_index": 60647,
+            "range_file_offset": 22065720,
+            "blob_file_offset": 20818844,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 9,
+          "field_index": 96491,
+          "name": "ac5",
+          "type": "cjr",
+          "type_index": 49368,
+          "metadata_file_offset": 15657164,
+          "token": "0x4000780",
+          "native_offset": "0x98",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000780",
+            "range_index": 60648,
+            "range_file_offset": 22065728,
+            "blob_file_offset": 20818852,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 10,
+          "field_index": 96492,
+          "name": "ada",
+          "type": "int",
+          "type_index": 34245,
+          "metadata_file_offset": 15657176,
+          "token": "0x4000781",
+          "native_offset": "0xa0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000781",
+            "range_index": 60649,
+            "range_file_offset": 22065736,
+            "blob_file_offset": 20818860,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 11,
+          "field_index": 96493,
+          "name": "adc",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15657188,
+          "token": "0x4000782",
+          "native_offset": "0xa4",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000782",
+            "range_index": 60650,
+            "range_file_offset": 22065744,
+            "blob_file_offset": 20818868,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 12,
+          "field_index": 96494,
+          "name": "adl",
+          "type": "dd",
+          "type_index": 50768,
+          "metadata_file_offset": 15657200,
+          "token": "0x4000783",
+          "native_offset": "0xa8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000783",
+            "range_index": 60651,
+            "range_file_offset": 22065752,
+            "blob_file_offset": 20818876,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 13,
+          "field_index": 96495,
+          "name": "adn",
+          "type": "dd",
+          "type_index": 50768,
+          "metadata_file_offset": 15657212,
+          "token": "0x4000784",
+          "native_offset": "0xb0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000784",
+            "range_index": 60652,
+            "range_file_offset": 22065760,
+            "blob_file_offset": 20818884,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 14,
+          "field_index": 96496,
+          "name": "ads",
+          "type": "long",
+          "type_index": 34277,
+          "metadata_file_offset": 15657224,
+          "token": "0x4000785",
+          "native_offset": "0xb8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000785",
+            "range_index": 60653,
+            "range_file_offset": 22065768,
+            "blob_file_offset": 20818892,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 15,
+          "field_index": 96497,
+          "name": "aei",
+          "type": "long",
+          "type_index": 34277,
+          "metadata_file_offset": 15657236,
+          "token": "0x4000786",
+          "native_offset": "0xc0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000786",
+            "range_index": 60654,
+            "range_file_offset": 22065776,
+            "blob_file_offset": 20818900,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 16,
+          "field_index": 96498,
+          "name": "aep",
+          "type": "cju<clk>",
+          "type_index": 18757,
+          "metadata_file_offset": 15657248,
+          "token": "0x4000787",
+          "native_offset": "0xc8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000787",
+            "range_index": 60655,
+            "range_file_offset": 22065784,
+            "blob_file_offset": 20818908,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 17,
+          "field_index": 96499,
+          "name": "aer",
+          "type": "c0r",
+          "type_index": 48408,
+          "metadata_file_offset": 15657260,
+          "token": "0x4000788",
+          "native_offset": "0xd0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000788",
+            "range_index": 60656,
+            "range_file_offset": 22065792,
+            "blob_file_offset": 20818916,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 18,
+          "field_index": 96500,
+          "name": "aet",
+          "type": "long",
+          "type_index": 34279,
+          "metadata_file_offset": 15657272,
+          "token": "0x4000789",
+          "native_offset": "0xd8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 19,
+          "field_index": 96501,
+          "name": "aev",
+          "type": "b3i",
+          "type_index": 46455,
+          "metadata_file_offset": 15657284,
+          "token": "0x400078a",
+          "native_offset": "0xe0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 20,
+          "field_index": 96502,
+          "name": "aew",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15657296,
+          "token": "0x400078b",
+          "native_offset": "0xe8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400078b",
+            "range_index": 60657,
+            "range_file_offset": 22065800,
+            "blob_file_offset": 20818924,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 21,
+          "field_index": 96503,
+          "name": "aey",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15657308,
+          "token": "0x400078c",
+          "native_offset": "0xf0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 22,
+          "field_index": 96504,
+          "name": "ae0",
+          "type": "c4",
+          "type_index": 48623,
+          "metadata_file_offset": 15657320,
+          "token": "0x400078d",
+          "native_offset": "0xf8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 23,
+          "field_index": 96505,
+          "name": "ae2",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15657332,
+          "token": "0x400078e",
+          "native_offset": "0x100",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 24,
+          "field_index": 96506,
+          "name": "ae8",
+          "type": "bil+a",
+          "type_index": 67091,
+          "metadata_file_offset": 15657344,
+          "token": "0x400078f",
+          "native_offset": "0x108",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400078f",
+            "range_index": 60658,
+            "range_file_offset": 22065808,
+            "blob_file_offset": 20818932,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 25,
+          "field_index": 96507,
+          "name": "afc",
+          "type": "int",
+          "type_index": 34245,
+          "metadata_file_offset": 15657356,
+          "token": "0x4000790",
+          "native_offset": "0x120",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 26,
+          "field_index": 96508,
+          "name": "afd",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15657368,
+          "token": "0x4000791",
+          "native_offset": "0x124",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 27,
+          "field_index": 96509,
+          "name": "aff",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32117,
+          "metadata_file_offset": 15657380,
+          "token": "0x4000792",
+          "native_offset": "0x128",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 28,
+          "field_index": 96510,
+          "name": "afg",
+          "type": "g7s",
+          "type_index": 55912,
+          "metadata_file_offset": 15657392,
+          "token": "0x4000793",
+          "native_offset": "0x130",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 29,
+          "field_index": 96511,
+          "name": "afh",
+          "type": "System.Collections.Generic.List`1<ars>",
+          "type_index": 14378,
+          "metadata_file_offset": 15657404,
+          "token": "0x4000794",
+          "native_offset": "0x138",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 30,
+          "field_index": 96512,
+          "name": "afi",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15657416,
+          "token": "0x4000795",
+          "native_offset": "0x140",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 31,
+          "field_index": 96513,
+          "name": "afj",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15657428,
+          "token": "0x4000796",
+          "native_offset": "0x148",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 32,
+          "field_index": 96514,
+          "name": "afk",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15657440,
+          "token": "0x4000797",
+          "native_offset": "0x150",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 33,
+          "field_index": 96515,
+          "name": "afl",
+          "type": "System.Collections.Generic.Dictionary`2<System.Type,c1l>",
+          "type_index": 7714,
+          "metadata_file_offset": 15657452,
+          "token": "0x4000798",
+          "native_offset": "0x158",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 34,
+          "field_index": 96516,
+          "name": "afm",
+          "type": "System.Collections.Generic.Dictionary`2<Albion.Common.Photon.EventCodes,c1l>",
+          "type_index": 6467,
+          "metadata_file_offset": 15657464,
+          "token": "0x4000799",
+          "native_offset": "0x160",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 35,
+          "field_index": 96517,
+          "name": "afn",
+          "type": "System.Collections.Generic.Dictionary`2<System.Type,System.Collections.Generic.List`1<System.Type>>",
+          "type_index": 7678,
+          "metadata_file_offset": 15657476,
+          "token": "0x400079a",
+          "native_offset": "-0x80000000",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400079a",
+            "range_index": 60659,
+            "range_file_offset": 22065816,
+            "blob_file_offset": 20818940,
+            "blob_size": 8,
+            "blob_hex": "0154a30100000000",
+            "constructor_method_indices": [
+              107348
+            ],
+            "argument_start": 5
+          }
+        }
+      ]
+    },
+    {
+      "type_index": 19510,
+      "name": "cpx",
+      "image": "Albion.PhotonClient.dll",
+      "metadata_file_offset": 19376212,
+      "token": "0x20001ee",
+      "parent": {
+        "type_index": 19490,
+        "name": "cpo"
+      },
+      "fields": [
+        {
+          "own_metadata_ordinal": 0,
+          "field_index": 96583,
+          "name": "agm",
+          "type": "string[]",
+          "type_index": 24949,
+          "metadata_file_offset": 15658268,
+          "token": "0x40007dc",
+          "native_offset": "0x0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 1,
+          "field_index": 96584,
+          "name": "agp",
+          "type": "string[]",
+          "type_index": 24949,
+          "metadata_file_offset": 15658280,
+          "token": "0x40007dd",
+          "native_offset": "0x8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 2,
+          "field_index": 96585,
+          "name": "ags",
+          "type": "Albion.Common.GameData.TemporaryFlaggingStatus",
+          "type_index": 40964,
+          "metadata_file_offset": 15658292,
+          "token": "0x40007de",
+          "native_offset": "0x168",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007de",
+            "range_index": 60668,
+            "range_file_offset": 22065888,
+            "blob_file_offset": 20819012,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 3,
+          "field_index": 96586,
+          "name": "agt",
+          "type": "System.Nullable`1<Albion.Common.GameData.FlaggingStatus>",
+          "type_index": 16059,
+          "metadata_file_offset": 15658304,
+          "token": "0x40007df",
+          "native_offset": "0x169",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007df",
+            "range_index": 60669,
+            "range_file_offset": 22065896,
+            "blob_file_offset": 20819020,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 4,
+          "field_index": 96587,
+          "name": "agu",
+          "type": "bgi",
+          "type_index": 47290,
+          "metadata_file_offset": 15658316,
+          "token": "0x40007e0",
+          "native_offset": "0x16b",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e0",
+            "range_index": 60670,
+            "range_file_offset": 22065904,
+            "blob_file_offset": 20819028,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 5,
+          "field_index": 96588,
+          "name": "agv",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15658328,
+          "token": "0x40007e1",
+          "native_offset": "0x16c",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e1",
+            "range_index": 60671,
+            "range_file_offset": 22065912,
+            "blob_file_offset": 20819036,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 6,
+          "field_index": 96589,
+          "name": "ag0",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15658340,
+          "token": "0x40007e2",
+          "native_offset": "0x16d",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e2",
+            "range_index": 60672,
+            "range_file_offset": 22065920,
+            "blob_file_offset": 20819044,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 7,
+          "field_index": 96590,
+          "name": "ag5",
+          "type": "Albion.Common.GameData.FlaggingStatus",
+          "type_index": 31682,
+          "metadata_file_offset": 15658352,
+          "token": "0x40007e3",
+          "native_offset": "0x16e",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e3",
+            "range_index": 60673,
+            "range_file_offset": 22065928,
+            "blob_file_offset": 20819052,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 8,
+          "field_index": 96591,
+          "name": "ag7",
+          "type": "Albion.Common.GameData.FlaggingStatus",
+          "type_index": 31682,
+          "metadata_file_offset": 15658364,
+          "token": "0x40007e4",
+          "native_offset": "0x16f",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e4",
+            "range_index": 60674,
+            "range_file_offset": 22065936,
+            "blob_file_offset": 20819060,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 9,
+          "field_index": 96592,
+          "name": "ag8",
+          "type": "a68",
+          "type_index": 44994,
+          "metadata_file_offset": 15658376,
+          "token": "0x40007e5",
+          "native_offset": "0x170",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e5",
+            "range_index": 60675,
+            "range_file_offset": 22065944,
+            "blob_file_offset": 20819068,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 10,
+          "field_index": 96593,
+          "name": "ag9",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15658388,
+          "token": "0x40007e6",
+          "native_offset": "0x178",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e6",
+            "range_index": 60676,
+            "range_file_offset": 22065952,
+            "blob_file_offset": 20819076,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 11,
+          "field_index": 96594,
+          "name": "ahb",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15658400,
+          "token": "0x40007e7",
+          "native_offset": "0x180",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e7",
+            "range_index": 60677,
+            "range_file_offset": 22065960,
+            "blob_file_offset": 20819084,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 12,
+          "field_index": 96595,
+          "name": "ahd",
+          "type": "int",
+          "type_index": 34245,
+          "metadata_file_offset": 15658412,
+          "token": "0x40007e8",
+          "native_offset": "0x188",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e8",
+            "range_index": 60678,
+            "range_file_offset": 22065968,
+            "blob_file_offset": 20819092,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 13,
+          "field_index": 96596,
+          "name": "ahe",
+          "type": "a8v",
+          "type_index": 45193,
+          "metadata_file_offset": 15658424,
+          "token": "0x40007e9",
+          "native_offset": "0x190",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007e9",
+            "range_index": 60679,
+            "range_file_offset": 22065976,
+            "blob_file_offset": 20819100,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 14,
+          "field_index": 96597,
+          "name": "ahf",
+          "type": "bool",
+          "type_index": 27835,
+          "metadata_file_offset": 15658436,
+          "token": "0x40007ea",
+          "native_offset": "0x198",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 15,
+          "field_index": 96598,
+          "name": "ahg",
+          "type": "bm<bgi,bgi>",
+          "type_index": 18604,
+          "metadata_file_offset": 15658448,
+          "token": "0x40007eb",
+          "native_offset": "0x1a0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 16,
+          "field_index": 96599,
+          "name": "ahh",
+          "type": "bl<Albion.Common.GameData.TemporaryFlaggingStatus>",
+          "type_index": 18551,
+          "metadata_file_offset": 15658460,
+          "token": "0x40007ec",
+          "native_offset": "0x1a8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 17,
+          "field_index": 96600,
+          "name": "ahi",
+          "type": "bt",
+          "type_index": 47959,
+          "metadata_file_offset": 15658472,
+          "token": "0x40007ed",
+          "native_offset": "0x1b0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 18,
+          "field_index": 96601,
+          "name": "ahk",
+          "type": "bk",
+          "type_index": 47521,
+          "metadata_file_offset": 15658484,
+          "token": "0x40007ee",
+          "native_offset": "0x1b8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 19,
+          "field_index": 96602,
+          "name": "ahl",
+          "type": "bk",
+          "type_index": 47519,
+          "metadata_file_offset": 15658496,
+          "token": "0x40007ef",
+          "native_offset": "0x1c0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 20,
+          "field_index": 96603,
+          "name": "ahm",
+          "type": "bm<b4q,Albion.Common.Time.GameTimeStamp>",
+          "type_index": 18602,
+          "metadata_file_offset": 15658508,
+          "token": "0x40007f0",
+          "native_offset": "0x1c8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 21,
+          "field_index": 96604,
+          "name": "ahn",
+          "type": "bl<b4r>",
+          "type_index": 18565,
+          "metadata_file_offset": 15658520,
+          "token": "0x40007f1",
+          "native_offset": "0x1d0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 22,
+          "field_index": 96605,
+          "name": "aho",
+          "type": "System.Action`1<bool>",
+          "type_index": 4934,
+          "metadata_file_offset": 15658532,
+          "token": "0x40007f2",
+          "native_offset": "0x1d8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f2",
+            "range_index": 60680,
+            "range_file_offset": 22065984,
+            "blob_file_offset": 20819108,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 23,
+          "field_index": 96606,
+          "name": "ahp",
+          "type": "System.Action",
+          "type_index": 26071,
+          "metadata_file_offset": 15658544,
+          "token": "0x40007f3",
+          "native_offset": "0x1e0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f3",
+            "range_index": 60681,
+            "range_file_offset": 22065992,
+            "blob_file_offset": 20819116,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 24,
+          "field_index": 96607,
+          "name": "ahq",
+          "type": "cpr",
+          "type_index": 49710,
+          "metadata_file_offset": 15658556,
+          "token": "0x40007f4",
+          "native_offset": "0x1e8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f4",
+            "range_index": 60682,
+            "range_file_offset": 22066000,
+            "blob_file_offset": 20819124,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 25,
+          "field_index": 96608,
+          "name": "ahr",
+          "type": "System.Guid",
+          "type_index": 32494,
+          "metadata_file_offset": 15658568,
+          "token": "0x40007f5",
+          "native_offset": "0x1f0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f5",
+            "range_index": 60683,
+            "range_file_offset": 22066008,
+            "blob_file_offset": 20819132,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 26,
+          "field_index": 96609,
+          "name": "ahs",
+          "type": "bj",
+          "type_index": 47477,
+          "metadata_file_offset": 15658580,
+          "token": "0x40007f6",
+          "native_offset": "0x200",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f6",
+            "range_index": 60684,
+            "range_file_offset": 22066016,
+            "blob_file_offset": 20819140,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 27,
+          "field_index": 96610,
+          "name": "aht",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15658592,
+          "token": "0x40007f7",
+          "native_offset": "0x208",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f7",
+            "range_index": 60685,
+            "range_file_offset": 22066024,
+            "blob_file_offset": 20819148,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 28,
+          "field_index": 96611,
+          "name": "ahu",
+          "type": "Albion.Common.GameData.FounderState",
+          "type_index": 31868,
+          "metadata_file_offset": 15658604,
+          "token": "0x40007f8",
+          "native_offset": "0x210",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f8",
+            "range_index": 60686,
+            "range_file_offset": 22066032,
+            "blob_file_offset": 20819156,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 29,
+          "field_index": 96612,
+          "name": "ahv",
+          "type": "Albion.Common.GameData.FounderState",
+          "type_index": 31868,
+          "metadata_file_offset": 15658616,
+          "token": "0x40007f9",
+          "native_offset": "0x214",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007f9",
+            "range_index": 60687,
+            "range_file_offset": 22066040,
+            "blob_file_offset": 20819164,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 30,
+          "field_index": 96613,
+          "name": "ahw",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15658628,
+          "token": "0x40007fa",
+          "native_offset": "0x218",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007fa",
+            "range_index": 60688,
+            "range_file_offset": 22066048,
+            "blob_file_offset": 20819172,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 31,
+          "field_index": 96614,
+          "name": "ahx",
+          "type": "bdq",
+          "type_index": 47100,
+          "metadata_file_offset": 15658640,
+          "token": "0x40007fb",
+          "native_offset": "0x220",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007fb",
+            "range_index": 60689,
+            "range_file_offset": 22066056,
+            "blob_file_offset": 20819180,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 32,
+          "field_index": 96615,
+          "name": "ahy",
+          "type": "bdq",
+          "type_index": 47100,
+          "metadata_file_offset": 15658652,
+          "token": "0x40007fc",
+          "native_offset": "0x228",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007fc",
+            "range_index": 60690,
+            "range_file_offset": 22066064,
+            "blob_file_offset": 20819188,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 33,
+          "field_index": 96616,
+          "name": "ahz",
+          "type": "a44<a46>",
+          "type_index": 18462,
+          "metadata_file_offset": 15658664,
+          "token": "0x40007fd",
+          "native_offset": "0x230",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007fd",
+            "range_index": 60691,
+            "range_file_offset": 22066072,
+            "blob_file_offset": 20819196,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 34,
+          "field_index": 96617,
+          "name": "ah0",
+          "type": "a44<a47>",
+          "type_index": 18464,
+          "metadata_file_offset": 15658676,
+          "token": "0x40007fe",
+          "native_offset": "0x238",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007fe",
+            "range_index": 60692,
+            "range_file_offset": 22066080,
+            "blob_file_offset": 20819204,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 35,
+          "field_index": 96618,
+          "name": "ah1",
+          "type": "cju<clo>",
+          "type_index": 18763,
+          "metadata_file_offset": 15658688,
+          "token": "0x40007ff",
+          "native_offset": "0x240",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x40007ff",
+            "range_index": 60693,
+            "range_file_offset": 22066088,
+            "blob_file_offset": 20819212,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 36,
+          "field_index": 96619,
+          "name": "ah2",
+          "type": "int",
+          "type_index": 34245,
+          "metadata_file_offset": 15658700,
+          "token": "0x4000800",
+          "native_offset": "0x248",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000800",
+            "range_index": 60694,
+            "range_file_offset": 22066096,
+            "blob_file_offset": 20819220,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 37,
+          "field_index": 96620,
+          "name": "ah3",
+          "type": "cpq",
+          "type_index": 49708,
+          "metadata_file_offset": 15658712,
+          "token": "0x4000801",
+          "native_offset": "0x250",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 38,
+          "field_index": 96621,
+          "name": "ah4",
+          "type": "cps",
+          "type_index": 49715,
+          "metadata_file_offset": 15658724,
+          "token": "0x4000802",
+          "native_offset": "0x258",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000802",
+            "range_index": 60695,
+            "range_file_offset": 22066104,
+            "blob_file_offset": 20819228,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 39,
+          "field_index": 96622,
+          "name": "ah5",
+          "type": "cpz",
+          "type_index": 49729,
+          "metadata_file_offset": 15658736,
+          "token": "0x4000803",
+          "native_offset": "0x260",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000803",
+            "range_index": 60696,
+            "range_file_offset": 22066112,
+            "blob_file_offset": 20819236,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 40,
+          "field_index": 96623,
+          "name": "ah6",
+          "type": "cpv",
+          "type_index": 49721,
+          "metadata_file_offset": 15658748,
+          "token": "0x4000804",
+          "native_offset": "0x268",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000804",
+            "range_index": 60697,
+            "range_file_offset": 22066120,
+            "blob_file_offset": 20819244,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 41,
+          "field_index": 96624,
+          "name": "ah7",
+          "type": "b4r",
+          "type_index": 46527,
+          "metadata_file_offset": 15658760,
+          "token": "0x4000805",
+          "native_offset": "0x270",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000805",
+            "range_index": 60698,
+            "range_file_offset": 22066128,
+            "blob_file_offset": 20819252,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 42,
+          "field_index": 96625,
+          "name": "ah8",
+          "type": "b4s",
+          "type_index": 46530,
+          "metadata_file_offset": 15658772,
+          "token": "0x4000806",
+          "native_offset": "0x278",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000806",
+            "range_index": 60699,
+            "range_file_offset": 22066136,
+            "blob_file_offset": 20819260,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 43,
+          "field_index": 96626,
+          "name": "ah9",
+          "type": "bm<bool,bool>",
+          "type_index": 18591,
+          "metadata_file_offset": 15658784,
+          "token": "0x4000807",
+          "native_offset": "0x280",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 44,
+          "field_index": 96627,
+          "name": "aia",
+          "type": "System.Collections.Generic.Dictionary`2<byte,System.Collections.Generic.List`1<c0p>>",
+          "type_index": 6388,
+          "metadata_file_offset": 15658796,
+          "token": "0x4000808",
+          "native_offset": "0x288",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 45,
+          "field_index": 96628,
+          "name": "aib",
+          "type": "Albion.Common.Time.GameTimeStamp",
+          "type_index": 32115,
+          "metadata_file_offset": 15658808,
+          "token": "0x4000809",
+          "native_offset": "0x290",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 46,
+          "field_index": 96629,
+          "name": "aic",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15658820,
+          "token": "0x400080a",
+          "native_offset": "0x298",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400080a",
+            "range_index": 60700,
+            "range_file_offset": 22066144,
+            "blob_file_offset": 20819268,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 47,
+          "field_index": 96630,
+          "name": "aid",
+          "type": "cpx+a",
+          "type_index": 68204,
+          "metadata_file_offset": 15658832,
+          "token": "0x400080b",
+          "native_offset": "0x2a0",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 48,
+          "field_index": 96631,
+          "name": "aie",
+          "type": "cpx+b",
+          "type_index": 68206,
+          "metadata_file_offset": 15658844,
+          "token": "0x400080c",
+          "native_offset": "0x2a8",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 49,
+          "field_index": 96632,
+          "name": "aif",
+          "type": "System.Action`1<cpy>",
+          "type_index": 5252,
+          "metadata_file_offset": 15658856,
+          "token": "0x400080d",
+          "native_offset": "0x2b0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400080d",
+            "range_index": 60701,
+            "range_file_offset": 22066152,
+            "blob_file_offset": 20819276,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 50,
+          "field_index": 96633,
+          "name": "aig",
+          "type": "cpx+c",
+          "type_index": 68208,
+          "metadata_file_offset": 15658868,
+          "token": "0x400080e",
+          "native_offset": "0x2b8",
+          "attribute": null
+        }
+      ]
+    },
+    {
+      "type_index": 19513,
+      "name": "cp0",
+      "image": "Albion.PhotonClient.dll",
+      "metadata_file_offset": 19376458,
+      "token": "0x20001f6",
+      "parent": {
+        "type_index": 19510,
+        "name": "cpx"
+      },
+      "fields": [
+        {
+          "own_metadata_ordinal": 0,
+          "field_index": 96688,
+          "name": "agw",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15659528,
+          "token": "0x4000845",
+          "native_offset": "0x2c0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000845",
+            "range_index": 60707,
+            "range_file_offset": 22066200,
+            "blob_file_offset": 20819324,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 1,
+          "field_index": 96689,
+          "name": "agx",
+          "type": "float",
+          "type_index": 39780,
+          "metadata_file_offset": 15659540,
+          "token": "0x4000846",
+          "native_offset": "0x2c4",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000846",
+            "range_index": 60708,
+            "range_file_offset": 22066208,
+            "blob_file_offset": 20819332,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 2,
+          "field_index": 96690,
+          "name": "agy",
+          "type": "bc9[]",
+          "type_index": 25247,
+          "metadata_file_offset": 15659552,
+          "token": "0x4000847",
+          "native_offset": "0x2c8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000847",
+            "range_index": 60709,
+            "range_file_offset": 22066216,
+            "blob_file_offset": 20819340,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 3,
+          "field_index": 96691,
+          "name": "agz",
+          "type": "bil[]",
+          "type_index": 25266,
+          "metadata_file_offset": 15659564,
+          "token": "0x4000848",
+          "native_offset": "0x2d0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000848",
+            "range_index": 60710,
+            "range_file_offset": 22066224,
+            "blob_file_offset": 20819348,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 4,
+          "field_index": 96692,
+          "name": "ag2",
+          "type": "bool",
+          "type_index": 27831,
+          "metadata_file_offset": 15659576,
+          "token": "0x4000849",
+          "native_offset": "0x2d8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x4000849",
+            "range_index": 60711,
+            "range_file_offset": 22066232,
+            "blob_file_offset": 20819356,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 5,
+          "field_index": 96693,
+          "name": "ag3",
+          "type": "System.Guid",
+          "type_index": 32494,
+          "metadata_file_offset": 15659588,
+          "token": "0x400084a",
+          "native_offset": "0x2dc",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084a",
+            "range_index": 60712,
+            "range_file_offset": 22066240,
+            "blob_file_offset": 20819364,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 6,
+          "field_index": 96694,
+          "name": "ag4",
+          "type": "bcg+i",
+          "type_index": 66628,
+          "metadata_file_offset": 15659600,
+          "token": "0x400084b",
+          "native_offset": "0x2f0",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084b",
+            "range_index": 60713,
+            "range_file_offset": 22066248,
+            "blob_file_offset": 20819372,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 7,
+          "field_index": 96695,
+          "name": "aha",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659612,
+          "token": "0x400084c",
+          "native_offset": "0x2f8",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084c",
+            "range_index": 60714,
+            "range_file_offset": 22066256,
+            "blob_file_offset": 20819380,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 8,
+          "field_index": 96696,
+          "name": "ai5",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659624,
+          "token": "0x400084d",
+          "native_offset": "0x300",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084d",
+            "range_index": 60715,
+            "range_file_offset": 22066264,
+            "blob_file_offset": 20819388,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 9,
+          "field_index": 96697,
+          "name": "ai6",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659636,
+          "token": "0x400084e",
+          "native_offset": "0x308",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084e",
+            "range_index": 60716,
+            "range_file_offset": 22066272,
+            "blob_file_offset": 20819396,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 10,
+          "field_index": 96698,
+          "name": "ai7",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659648,
+          "token": "0x400084f",
+          "native_offset": "0x310",
+          "attribute": {
+            "image": "Albion.PhotonClient.dll",
+            "token": "0x400084f",
+            "range_index": 60717,
+            "range_file_offset": 22066280,
+            "blob_file_offset": 20819404,
+            "blob_size": 8,
+            "blob_hex": "013eba0100000000",
+            "constructor_method_indices": [
+              113214
+            ],
+            "argument_start": 5
+          }
+        },
+        {
+          "own_metadata_ordinal": 11,
+          "field_index": 96699,
+          "name": "ai8",
+          "type": "System.Guid",
+          "type_index": 32494,
+          "metadata_file_offset": 15659660,
+          "token": "0x4000850",
+          "native_offset": "0x318",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 12,
+          "field_index": 96700,
+          "name": "ai9",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659672,
+          "token": "0x4000851",
+          "native_offset": "0x328",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 13,
+          "field_index": 96701,
+          "name": "ajb",
+          "type": "bux",
+          "type_index": 48088,
+          "metadata_file_offset": 15659684,
+          "token": "0x4000852",
+          "native_offset": "0x330",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 14,
+          "field_index": 96702,
+          "name": "ajc",
+          "type": "System.Guid",
+          "type_index": 32494,
+          "metadata_file_offset": 15659696,
+          "token": "0x4000853",
+          "native_offset": "0x338",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 15,
+          "field_index": 96703,
+          "name": "ajd",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659708,
+          "token": "0x4000854",
+          "native_offset": "0x348",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 16,
+          "field_index": 96704,
+          "name": "aje",
+          "type": "Albion.Common.GameData.GuildPermission",
+          "type_index": 32638,
+          "metadata_file_offset": 15659720,
+          "token": "0x4000855",
+          "native_offset": "0x350",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 17,
+          "field_index": 96705,
+          "name": "ajf",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659732,
+          "token": "0x4000856",
+          "native_offset": "0x358",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 18,
+          "field_index": 96706,
+          "name": "ajg",
+          "type": "string",
+          "type_index": 40427,
+          "metadata_file_offset": 15659744,
+          "token": "0x4000857",
+          "native_offset": "0x360",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 19,
+          "field_index": 96707,
+          "name": "ajh",
+          "type": "System.Action`1<cp0>",
+          "type_index": 5249,
+          "metadata_file_offset": 15659756,
+          "token": "0x4000858",
+          "native_offset": "0x368",
+          "attribute": null
+        },
+        {
+          "own_metadata_ordinal": 20,
+          "field_index": 96708,
+          "name": "aji",
+          "type": "bk",
+          "type_index": 47521,
+          "metadata_file_offset": 15659768,
+          "token": "0x4000859",
+          "native_offset": "0x370",
+          "attribute": null
+        }
+      ]
+    }
+  ],
+  "selected_metadata_vtable_entries": [
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 24,
+      "virtual_method_offset": "0x2b8",
+      "metadata_file_offset": 17172200,
+      "raw_hex": "b3250460",
+      "encoded": "0x600425b3",
+      "kind": 3,
+      "index": 135897,
+      "method_definition": {
+        "index": 135897,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aeo",
+        "slot": 24,
+        "metadata_file_offset": 8504156
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135897,
+          "name": "aeo",
+          "token": "0x6001860",
+          "native_va": "0x1805b9a90",
+          "native_rva": "0x5b9a90",
+          "native_file_offset": 5996688,
+          "pointer_slot_file_offset": 79866344
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 46,
+      "virtual_method_offset": "0x418",
+      "metadata_file_offset": 17172288,
+      "raw_hex": "95210460",
+      "encoded": "0x60042195",
+      "kind": 3,
+      "index": 135370,
+      "method_definition": {
+        "index": 135370,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cpo",
+        "name": "x8",
+        "slot": 46,
+        "metadata_file_offset": 8487292
+      },
+      "native_symbols": [
+        {
+          "type_index": 19490,
+          "type": "cpo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135370,
+          "name": "x8",
+          "token": "0x6001651",
+          "native_va": "0x180bc5aa0",
+          "native_rva": "0xbc5aa0",
+          "native_file_offset": 12337312,
+          "pointer_slot_file_offset": 79862128
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 73,
+      "virtual_method_offset": "0x5c8",
+      "metadata_file_offset": 17172396,
+      "raw_hex": "cb250460",
+      "encoded": "0x600425cb",
+      "kind": 3,
+      "index": 135909,
+      "method_definition": {
+        "index": 135909,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "gy",
+        "slot": 73,
+        "metadata_file_offset": 8504540
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135909,
+          "name": "gy",
+          "token": "0x600186c",
+          "native_va": "0x180bda8e0",
+          "native_rva": "0xbda8e0",
+          "native_file_offset": 12422880,
+          "pointer_slot_file_offset": 79866440
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 74,
+      "virtual_method_offset": "0x5d8",
+      "metadata_file_offset": 17172400,
+      "raw_hex": "cd250460",
+      "encoded": "0x600425cd",
+      "kind": 3,
+      "index": 135910,
+      "method_definition": {
+        "index": 135910,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aep",
+        "slot": 74,
+        "metadata_file_offset": 8504572
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135910,
+          "name": "aep",
+          "token": "0x600186d",
+          "native_va": "0x180bd8da0",
+          "native_rva": "0xbd8da0",
+          "native_file_offset": 12415904,
+          "pointer_slot_file_offset": 79866448
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 76,
+      "virtual_method_offset": "0x5f8",
+      "metadata_file_offset": 17172408,
+      "raw_hex": "d1250460",
+      "encoded": "0x600425d1",
+      "kind": 3,
+      "index": 135912,
+      "method_definition": {
+        "index": 135912,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aer",
+        "slot": 76,
+        "metadata_file_offset": 8504636
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135912,
+          "name": "aer",
+          "token": "0x600186f",
+          "native_va": "0x180bd8db0",
+          "native_rva": "0xbd8db0",
+          "native_file_offset": 12415920,
+          "pointer_slot_file_offset": 79866464
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 77,
+      "virtual_method_offset": "0x608",
+      "metadata_file_offset": 17172412,
+      "raw_hex": "d3250460",
+      "encoded": "0x600425d3",
+      "kind": 3,
+      "index": 135913,
+      "method_definition": {
+        "index": 135913,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aes",
+        "slot": 77,
+        "metadata_file_offset": 8504668
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135913,
+          "name": "aes",
+          "token": "0x6001870",
+          "native_va": "0x1805b9b70",
+          "native_rva": "0x5b9b70",
+          "native_file_offset": 5996912,
+          "pointer_slot_file_offset": 79866472
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 78,
+      "virtual_method_offset": "0x618",
+      "metadata_file_offset": 17172416,
+      "raw_hex": "d5250460",
+      "encoded": "0x600425d5",
+      "kind": 3,
+      "index": 135914,
+      "method_definition": {
+        "index": 135914,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aet",
+        "slot": 78,
+        "metadata_file_offset": 8504700
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135914,
+          "name": "aet",
+          "token": "0x6001871",
+          "native_va": "0x1805b8540",
+          "native_rva": "0x5b8540",
+          "native_file_offset": 5991232,
+          "pointer_slot_file_offset": 79866480
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 79,
+      "virtual_method_offset": "0x628",
+      "metadata_file_offset": 17172420,
+      "raw_hex": "d7250460",
+      "encoded": "0x600425d7",
+      "kind": 3,
+      "index": 135915,
+      "method_definition": {
+        "index": 135915,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aeu",
+        "slot": 79,
+        "metadata_file_offset": 8504732
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135915,
+          "name": "aeu",
+          "token": "0x6001872",
+          "native_va": "0x1805b9bc0",
+          "native_rva": "0x5b9bc0",
+          "native_file_offset": 5996992,
+          "pointer_slot_file_offset": 79866488
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 81,
+      "virtual_method_offset": "0x648",
+      "metadata_file_offset": 17172428,
+      "raw_hex": "db250460",
+      "encoded": "0x600425db",
+      "kind": 3,
+      "index": 135917,
+      "method_definition": {
+        "index": 135917,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "gz",
+        "slot": 81,
+        "metadata_file_offset": 8504796
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135917,
+          "name": "gz",
+          "token": "0x6001874",
+          "native_va": "0x180bda8f0",
+          "native_rva": "0xbda8f0",
+          "native_file_offset": 12422896,
+          "pointer_slot_file_offset": 79866504
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 82,
+      "virtual_method_offset": "0x658",
+      "metadata_file_offset": 17172432,
+      "raw_hex": "dd250460",
+      "encoded": "0x600425dd",
+      "kind": 3,
+      "index": 135918,
+      "method_definition": {
+        "index": 135918,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aew",
+        "slot": 82,
+        "metadata_file_offset": 8504828
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135918,
+          "name": "aew",
+          "token": "0x6001875",
+          "native_va": "0x180bd8ed0",
+          "native_rva": "0xbd8ed0",
+          "native_file_offset": 12416208,
+          "pointer_slot_file_offset": 79866512
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 84,
+      "virtual_method_offset": "0x678",
+      "metadata_file_offset": 17172440,
+      "raw_hex": "e1250460",
+      "encoded": "0x600425e1",
+      "kind": 3,
+      "index": 135920,
+      "method_definition": {
+        "index": 135920,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aey",
+        "slot": 84,
+        "metadata_file_offset": 8504892
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135920,
+          "name": "aey",
+          "token": "0x6001877",
+          "native_va": "0x180bd8ee0",
+          "native_rva": "0xbd8ee0",
+          "native_file_offset": 12416224,
+          "pointer_slot_file_offset": 79866528
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 85,
+      "virtual_method_offset": "0x688",
+      "metadata_file_offset": 17172444,
+      "raw_hex": "e3250460",
+      "encoded": "0x600425e3",
+      "kind": 3,
+      "index": 135921,
+      "method_definition": {
+        "index": 135921,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "aez",
+        "slot": 85,
+        "metadata_file_offset": 8504924
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135921,
+          "name": "aez",
+          "token": "0x6001878",
+          "native_va": "0x1805b9b80",
+          "native_rva": "0x5b9b80",
+          "native_file_offset": 5996928,
+          "pointer_slot_file_offset": 79866536
+        }
+      ]
+    },
+    {
+      "type": "cp0",
+      "type_index": 19513,
+      "slot": 86,
+      "virtual_method_offset": "0x698",
+      "metadata_file_offset": 17172448,
+      "raw_hex": "e5250460",
+      "encoded": "0x600425e5",
+      "kind": 3,
+      "index": 135922,
+      "method_definition": {
+        "index": 135922,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cp0",
+        "name": "ae0",
+        "slot": 86,
+        "metadata_file_offset": 8504956
+      },
+      "native_symbols": [
+        {
+          "type_index": 19513,
+          "type": "cp0",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135922,
+          "name": "ae0",
+          "token": "0x6001879",
+          "native_va": "0x1805b8f70",
+          "native_rva": "0x5b8f70",
+          "native_file_offset": 5993840,
+          "pointer_slot_file_offset": 79866544
+        }
+      ]
+    },
+    {
+      "type": "cpo",
+      "type_index": 19490,
+      "slot": 18,
+      "virtual_method_offset": "0x258",
+      "metadata_file_offset": 17170584,
+      "raw_hex": "f5200460",
+      "encoded": "0x600420f5",
+      "kind": 3,
+      "index": 135290,
+      "method_definition": {
+        "index": 135290,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cpo",
+        "name": "ad9",
+        "slot": 18,
+        "metadata_file_offset": 8484732
+      },
+      "native_symbols": [
+        {
+          "type_index": 19490,
+          "type": "cpo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135290,
+          "name": "ad9",
+          "token": "0x6001601",
+          "native_va": "0x180bbf0d0",
+          "native_rva": "0xbbf0d0",
+          "native_file_offset": 12310224,
+          "pointer_slot_file_offset": 79861488
+        }
+      ]
+    },
+    {
+      "type": "cpo",
+      "type_index": 19490,
+      "slot": 46,
+      "virtual_method_offset": "0x418",
+      "metadata_file_offset": 17170696,
+      "raw_hex": "95210460",
+      "encoded": "0x60042195",
+      "kind": 3,
+      "index": 135370,
+      "method_definition": {
+        "index": 135370,
+        "image": "Albion.PhotonClient.dll",
+        "type": "cpo",
+        "name": "x8",
+        "slot": 46,
+        "metadata_file_offset": 8487292
+      },
+      "native_symbols": [
+        {
+          "type_index": 19490,
+          "type": "cpo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135370,
+          "name": "x8",
+          "token": "0x6001651",
+          "native_va": "0x180bc5aa0",
+          "native_rva": "0xbc5aa0",
+          "native_file_offset": 12337312,
+          "pointer_slot_file_offset": 79862128
+        }
+      ]
+    }
+  ],
+  "guild_alliance_context_constants": [
+    {
+      "type": "CharacterNameSettingContext",
+      "image": "Assembly-CSharp.dll",
+      "name": "OtherGuild",
+      "fieldIndex": 8737,
+      "typeIndex": 34244,
+      "dataIndex": 3006,
+      "index": 857,
+      "metadata_file_offset": 10655020,
+      "default_data_file_offset": 11026382,
+      "il2cpp_kind": 8,
+      "value": 9,
+      "encoded_hex": "12"
+    },
+    {
+      "type": "CharacterNameSettingContext",
+      "image": "Assembly-CSharp.dll",
+      "name": "OtherAlliance",
+      "fieldIndex": 8738,
+      "typeIndex": 34244,
+      "dataIndex": 3007,
+      "index": 858,
+      "metadata_file_offset": 10655032,
+      "default_data_file_offset": 11026383,
+      "il2cpp_kind": 8,
+      "value": 10,
+      "encoded_hex": "14"
+    }
+  ],
+  "standing_jump_table": {
+    "va": "0x1814a7604",
+    "file_offset": 21650436,
+    "raw_hex": "30744a0144744a0144744a0158744a016c744a0180744a0194744a01a8744a0120754a01bc744a0120754a01",
+    "sha256": "6e3c66e499014d083d2dbdca7de1ff1304e899aa222a1a2f2776ef5b34fb5c64",
+    "index_expression": "standing - 1",
+    "entries": [
+      {
+        "standing": 1,
+        "entry_file_offset": 21650436,
+        "rva": "0x14a7430",
+        "target_va": "0x1814a7430"
+      },
+      {
+        "standing": 2,
+        "entry_file_offset": 21650440,
+        "rva": "0x14a7444",
+        "target_va": "0x1814a7444"
+      },
+      {
+        "standing": 3,
+        "entry_file_offset": 21650444,
+        "rva": "0x14a7444",
+        "target_va": "0x1814a7444"
+      },
+      {
+        "standing": 4,
+        "entry_file_offset": 21650448,
+        "rva": "0x14a7458",
+        "target_va": "0x1814a7458"
+      },
+      {
+        "standing": 5,
+        "entry_file_offset": 21650452,
+        "rva": "0x14a746c",
+        "target_va": "0x1814a746c"
+      },
+      {
+        "standing": 6,
+        "entry_file_offset": 21650456,
+        "rva": "0x14a7480",
+        "target_va": "0x1814a7480"
+      },
+      {
+        "standing": 7,
+        "entry_file_offset": 21650460,
+        "rva": "0x14a7494",
+        "target_va": "0x1814a7494"
+      },
+      {
+        "standing": 8,
+        "entry_file_offset": 21650464,
+        "rva": "0x14a74a8",
+        "target_va": "0x1814a74a8"
+      },
+      {
+        "standing": 9,
+        "entry_file_offset": 21650468,
+        "rva": "0x14a7520",
+        "target_va": "0x1814a7520"
+      },
+      {
+        "standing": 10,
+        "entry_file_offset": 21650472,
+        "rva": "0x14a74bc",
+        "target_va": "0x1814a74bc"
+      },
+      {
+        "standing": 11,
+        "entry_file_offset": 21650476,
+        "rva": "0x14a7520",
+        "target_va": "0x1814a7520"
+      }
+    ]
+  },
+  "health_generic_usages": [
+    {
+      "slot_va": "0x184e57b10",
+      "slot_file_offset": 82138896,
+      "encoded": "0xc005b4af",
+      "kind": 6,
+      "index": 186967,
+      "method_spec": {
+        "index": 186967,
+        "file_offset": 70772660,
+        "method_definition_index": 79485,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "n",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x180bc5ab9",
+      "disassembly_evidence_id": "AO-META-DISASM-180bc5aa0-adjacent"
+    },
+    {
+      "slot_va": "0x184e57b10",
+      "slot_file_offset": 82138896,
+      "encoded": "0xc005b4af",
+      "kind": 6,
+      "index": 186967,
+      "method_spec": {
+        "index": 186967,
+        "file_offset": 70772660,
+        "method_definition_index": 79485,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "n",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x180bc5ad8",
+      "disassembly_evidence_id": "AO-META-DISASM-180bc5aa0-adjacent"
+    },
+    {
+      "slot_va": "0x184e58070",
+      "slot_file_offset": 82140272,
+      "encoded": "0xc005b4b7",
+      "kind": 6,
+      "index": 186971,
+      "method_spec": {
+        "index": 186971,
+        "file_offset": 70772708,
+        "method_definition_index": 79461,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "p",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x1814ae862",
+      "disassembly_evidence_id": "AO-META-DISASM-1814ae840-adjacent"
+    },
+    {
+      "slot_va": "0x184e58478",
+      "slot_file_offset": 82141304,
+      "encoded": "0xc005b4bd",
+      "kind": 6,
+      "index": 186974,
+      "method_spec": {
+        "index": 186974,
+        "file_offset": 70772744,
+        "method_definition_index": 79483,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "y",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x1814ae86e",
+      "disassembly_evidence_id": "AO-META-DISASM-1814ae840-adjacent"
+    },
+    {
+      "slot_va": "0x184e58478",
+      "slot_file_offset": 82141304,
+      "encoded": "0xc005b4bd",
+      "kind": 6,
+      "index": 186974,
+      "method_spec": {
+        "index": 186974,
+        "file_offset": 70772744,
+        "method_definition_index": 79483,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "y",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x1814ae9d2",
+      "disassembly_evidence_id": "AO-META-DISASM-1814ae840-adjacent"
+    },
+    {
+      "slot_va": "0x184e58478",
+      "slot_file_offset": 82141304,
+      "encoded": "0xc005b4bd",
+      "kind": 6,
+      "index": 186974,
+      "method_spec": {
+        "index": 186974,
+        "file_offset": 70772744,
+        "method_definition_index": 79483,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "y",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x1814aed58",
+      "disassembly_evidence_id": "AO-META-DISASM-1814ae840-adjacent"
+    },
+    {
+      "slot_va": "0x184e58478",
+      "slot_file_offset": 82141304,
+      "encoded": "0xc005b4bd",
+      "kind": 6,
+      "index": 186974,
+      "method_spec": {
+        "index": 186974,
+        "file_offset": 70772744,
+        "method_definition_index": 79483,
+        "type": "a44",
+        "image": "Albion.Common.dll",
+        "method": "y",
+        "generic_class_arguments": [
+          {
+            "data": 12757,
+            "bits": 1179648,
+            "name": "a46"
+          }
+        ],
+        "generic_method_arguments": []
+      },
+      "instruction_va": "0x1814af0f5",
+      "disassembly_evidence_id": "AO-META-DISASM-1814ae840-adjacent"
+    }
+  ],
+  "limitations": [
+    "AO-META Evidence ID 为调查自定义编号，非 REA MCP Evidence ID。",
+    "地址为首选文件 VA；非运行时 ASLR 地址。native_offset 为解码后对象相对偏移，非网络包字节偏移。",
+    "本专题仅只读静态文件及限定反汇编；没有游戏运行、服务器实际样本或覆盖验证。",
+    "folded native pointers 可对应多种 metadata 方法；本文件结合具体类型 vtable、字段布局和 usage 判断。",
+    "没有把角色对象 Guid 等同于公开永久 ID，也没有将未追出的字段语义补猜。"
+  ]
+}

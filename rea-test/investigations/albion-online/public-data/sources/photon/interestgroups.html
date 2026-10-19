@@ -1,0 +1,260 @@
+<!doctype html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  <title>Gcore</title>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      -ms-overflow-style: -ms-autohiding-scrollbar;
+      -webkit-text-size-adjust: 100%;
+      font-size: 16px;
+      overflow-x: hidden;
+      overflow-y: visible;
+    }
+
+    body {
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-font-smoothing: antialiased;
+      background: #F9F9F9;
+      color: #888888;
+      font-family: "Noto Sans", Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      margin: 0;
+      min-width: 20rem;
+      overflow-x: hidden;
+      overflow-y: visible;
+      text-align: center;
+    }
+
+    p {
+      margin: 0;
+      padding: 0;
+    }
+
+    p.text {
+      font-weight: 400;
+      color: #161616;
+      font-size: 14px;
+      line-height: 22px;
+      word-wrap: break-word;
+    }
+
+    span.domain {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 24px;
+    }
+
+    p:not(:last-child) {
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      color: #161616;
+      font-size: 1.125rem;
+      font-weight: 600;
+      line-height: 24px;
+      margin: 0 0 1rem 0;
+      word-wrap: break-word;
+    }
+
+    .wrapper {
+      -moz-flex-flow: column nowrap;
+      -ms-flex-flow: column nowrap;
+      -webkit-flex-flow: column nowrap;
+      display: -moz-box;
+      display: -ms-flexbox;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      flex-flow: column nowrap;
+      min-height: 100vh;
+      padding: 1.5rem 1rem;
+    }
+
+    .main {
+      -moz-box-align: center;
+      -moz-box-flex: 1;
+      -moz-flex-flow: column nowrap;
+      -moz-flex: 1 1 auto;
+      -ms-flex-align: center;
+      -ms-flex-flow: column nowrap;
+      -ms-flex: 1 1 auto;
+      -webkit-align-items: center;
+      -webkit-box-align: center;
+      -webkit-box-flex: 1;
+      -webkit-flex-flow: column nowrap;
+      -webkit-flex: 1 1 auto;
+      align-items: center;
+      display: -moz-box;
+      display: -ms-flexbox;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      flex-flow: column nowrap;
+      flex: 1 1 auto;
+    }
+
+    .content {
+      background: #fff;
+      border-radius: 0.25rem;
+      box-shadow: 0 0.125rem 0.313rem rgba(0, 0, 0, 0.1);
+      font-size: 0.938rem;
+      margin: auto auto 1.25rem auto;
+      max-width: 40rem;
+      padding: 1.25rem;
+      width: 100%;
+    }
+
+    .content> :first-child {
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .reference {
+      display: flex;
+      justify-content: space-between;
+      color: #AEA9B4;
+      margin: 0 auto auto auto;
+      max-width: 40rem;
+      width: 100%;
+    }
+
+    .reference-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+      font-size: 12px;
+    }
+
+    .reference-item>.label {
+      font-weight: 600;
+    }
+
+    .reference-item>.value {
+      font-weight: 400;
+    }
+
+    .center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: auto;
+      height: auto;
+      max-height: 100%;
+      max-width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- s:wrapper -->
+  <div class="wrapper">
+
+    <!-- s:main -->
+    <main class="main">
+      <header style="display:none;"></header>
+      <!-- CONTENT -->
+      <div id='JSCookieMSG' style="display:none;width: 100%;margin: auto auto 1.25rem auto;">
+        <div class="content">
+    <h2>
+        
+        Please enable cookies
+        
+    </h2>
+    <p class="text">
+        
+        This website uses a security service to protect itself from online attacks. The service requires full cookie
+        support to view the website. Enable cookies on your browser and try again.
+        
+    </p>
+</div>
+      </div>
+      <noscript>
+        <style type=" text/css">
+          .loader {
+            display: none;
+          }
+        </style>
+      </noscript>
+      <noscript style="display:none;width: 100%;margin: auto auto 1.25rem auto;">
+        <div class="content">
+  <h2>
+    
+    Please enable JavaScript
+    
+  </h2>
+  <p class="text">
+    
+    This website uses a security service to protect itself from online attacks. The service requires full JavaScript
+    support to view the website. Enable JavaScript on your browser and try again.
+    
+  </p>
+</div>
+      </noscript>
+
+
+      <!-- s:loader -->
+      <div class="content loader" id="loading-content">
+        <h2>
+          
+          Browser Validation Page
+          
+        </h2>
+        <p class="text">
+          <span class="domain">doc.photonengine.com</span> is using security service for protection against online
+          attacks. This process is automatic. You will be redirected once the validation is complete
+      </div>
+      <!-- e:loader -->
+
+      <!-- s:reference -->
+      <div class="reference">
+        <div class="reference-item">
+          <div class="label">Reference ID</div>
+          <div class="value">1d9a8ee5ff0c4b327f045ceced8f27b8</div>
+        </div>
+        <div class="reference-item">
+          <div class="label">IP address</div>
+          <div class="value">203.177.129.182</div>
+        </div>
+        <div class="reference-item">
+          <div class="label">Date and time</div>
+          <div class="value">10/13/2026 09:41 AM UTC</div>
+        </div>
+      </div>
+      <!-- e:reference -->
+
+      <script type="text/javascript">
+        function sbbloadmid(){if(window.__SBB__ && window.__SBB__.rmp){var smbMode="frmrld";if(smbMode=="frm"){var bodyObj=document.getElementsByTagName("body")[0];var submitFrm=document.createElement("form");bodyObj.appendChild(submitFrm);submitFrm.id="sbmtfrm";submitFrm.method="post";submitFrm.action="";submitFrm.sbbSbmt=submitFrm.submit;var input=document.createElement("input");input.type="hidden";input.name="hsc";input.value=1185;submitFrm.appendChild(input);submitFrm.sbbSbmt();}else window.location.reload(true);}else{setTimeout("sbbloadmid()", 50);}}var cookieenabled=false;if(navigator.cookieEnabled){if(navigator.cookieEnabled==true){var exdate=new Date();exdate.setDate(exdate.getDate()+1);document.cookie="sbtsck=javXQS+TKbHaomvZdsH43sBxr1R+/8nMAxXSu8tnlvFH6c=;expires="+exdate.toGMTString()+";path=/; SameSite=Lax;";cookieenabled=(document.cookie.indexOf("sbtsck")!=-1)? true : false;}}if(cookieenabled){setTimeout("sbbloadmid()", 50);}else{var oJSCookieMSGObj=document.getElementById('JSCookieMSG');var loadingContent=document.getElementById('loading-content');oJSCookieMSGObj.style.display='block';loadingContent.style.display='none';}
+      </script>
+              <div style='display:none' id='sbbhscc'></div>
+          <script type="text/javascript">
+            var sbbvscc='';
+            var sbbgscc='';
+            function genPid() {return String.fromCharCode(121)+String.fromCharCode(116) ; };
+          </script>
+        <div id='sbbfrcc' style='position: absolute; top: -10px; left: 30px; font-size:1px'></div>
+  <script type="text/javascript">function sbbgc(check_name){var start=document.cookie.indexOf(check_name+"=");var oVal='';var len=start+check_name.length+1;if((!start)&&(document.cookie.substring(0, check_name.length)!=check_name)){oVal='';}else if(start==-1){oVal='';}else{var end=document.cookie.indexOf(';', len);if(end==-1)end=document.cookie.length;var oVal=document.cookie.substring(len, end);};return oVal;}function addmg(inm, ext){var primgobj=document.createElement('IMG');primgobj.src=window.location.protocol+"//"+window.location.hostname+(window.location.port && window.location.port !=80 ? ':'+window.location.port : '')+"/sbbi/?sbbpg="+inm+(ext ? "&"+ext : "");var sbbDiv=document.getElementById('sbbfrcc');sbbDiv.appendChild(primgobj);};function addprid(prid){var oldVal=sbbgc("PRLST");if((oldVal.indexOf(prid)==-1)&&(oldVal.split('/').length < 5)){if(oldVal !=''){oldVal+='/';}document.cookie='PRLST='+oldVal+escape(prid)+';path=/; SameSite=Lax;';}}var sbbeccf=function(){this.sp3="jass";this.sf1=function(vd){return sf2(vd)+32;};var sf2=function(avd){return avd * 12;};this.sf4=function(yavd){return yavd+2;};var strrp=function(str, key, value){if(str.indexOf('&'+key+'=')> -1 || str.indexOf(key+'=')==0){var idx=str.indexOf('&'+key+'=');if(idx==-1)idx=str.indexOf(key+'=');var end=str.indexOf('&', idx+1);var newstr;if(end !=-1)newstr=str.substr(0, idx)+str.substr(end+(idx ? 0 : 1))+'&'+key+'='+value;else newstr=str.substr(0, idx)+'&'+key+'='+value;return newstr;}else return str+'&'+key+'='+value;};var strgt=function(name, text){if(typeof text !='string')return "";var nameEQ=name+"=";var ca=text.split(/[;&]/);for(var i=0;i < ca.length;i++){var c=ca[i];while(c.charAt(0)==' ')c=c.substring(1, c.length);if(c.indexOf(nameEQ)==0)return c.substring(nameEQ.length, c.length);}return "";};this.sfecgs={sbbgh: function(){var domain=document.location.host;if(domain.indexOf('www.')==0)domain=domain.replace('www.', '');return domain;}, f: function(name, value){var fv="";if(window.globalStorage){var host=this.sbbgh();try{if(typeof(value)!="undefined")globalStorage[host][name]=value;else{fv=globalStorage[host][name];if(typeof(fv.toString)!="undefined")fv=fv.toString();}}catch(e){}}return fv;}, name: "sbbrf"};this.sfecls={f: function(name, value){var fv="";try{if(window.localStorage){if(typeof(value)!="undefined")localStorage.setItem(name, value);else{fv=localStorage.getItem(name);if(typeof(fv.toString)!="undefined")fv=fv.toString();}}}catch(e){}return fv;}, name: "sbbrf"};this.sbbcv=function(invl){try{var invalArr=invl.split("-");if(invalArr.length > 1){if(invalArr[0]=="A" || invalArr[0]=="D"){invl=invalArr[1];}else invl="";}if(invl==null || typeof(invl)=="undefined" || invl=="falseImgUT" || invl=="undefined" || invl=="null" || invl !=encodeURI(invl))invl="";if(typeof(invl).toLowerCase()=="string")if(invl.length > 20)if(invl.substr(0, 2)!="h4")invl="";}catch(ex){invl="";}return invl;};this.sbbsv=function(fv){for(var elm in this){if(this[elm].name=="sbbrf"){this[elm].f("altutgv2", fv);}}document.cookie="UTGv2="+fv+';expires=Sun, 11-Apr-27 09:41:05 GMT;path=/; SameSite=Lax;';};this.sbbgv=function(){var valArr=Array();var currVal="";for(var elm in this){if(this[elm].name=="sbbrf"){currVal=this[elm].f("altutgv2");currVal=this.sbbcv(currVal);if(currVal !="")valArr[currVal]=(typeof(valArr[currVal])!="undefined" ? valArr[currVal]+1 : 1);}}var lb=0;var fv="";for(var val in valArr){if(valArr[val] > lb){fv=val;lb=valArr[val]}}if(fv=="")fv=sbbgc("UTGv2");fv=this.sbbcv(fv);if(fv !="")this.sbbsv(fv);else this.sbbsv("D-h47336cfd51620dbea8acead86aa86daaf47");return fv;};};function m2vr(m1, m2){var i=0;var rc="";var est="ghijklmnopqrstuvwyz";var rnum;var rpl;var charm1=m1.charAt(i);var charm2=m2.charAt(i);while(charm1 !="" || charm2 !=""){rnum=Math.floor(Math.random()* est.length);rpl=est.substring(rnum, rnum+1);rc+=(charm1=="" ? rpl : charm1)+(charm2=="" ? rpl : charm2);i++;charm1=m1.charAt(i);charm2=m2.charAt(i);}return rc;}function sbbls(prid){try{var eut=sbbgc("UTGv2");window.sbbeccfi=new sbbeccf();window.sbbgs=sbbeccfi.sbbgv();if(eut !=sbbgs && sbbgs !="" && typeof(sbbfcr)=="undefined"){addmg('utMedia', "vii="+m2vr("4f100d5da00a5aa696e4ac2e9473c16f", sbbgs));}var sbbiframeObj=document.createElement('IFRAME');var dfx=new Date();sbbiframeObj.id='SBBCrossIframe';sbbiframeObj.title='SBBCrossIframe';sbbiframeObj.tabindex='-1';sbbiframeObj.lang='en';sbbiframeObj.style.visibility='hidden';sbbiframeObj.setAttribute('aria-hidden', 'true');sbbiframeObj.style.border='0px';if(document.all){sbbiframeObj.style.position='absolute';sbbiframeObj.style.top='-1px';sbbiframeObj.style.height='1px';sbbiframeObj.style.width='28px';}else{sbbiframeObj.style.height='1px';sbbiframeObj.style.width='0px';}sbbiframeObj.scrolling="NO";sbbiframeObj.src=window.location.protocol+"//"+window.location.hostname+(window.location.port && window.location.port !=80 ? ':'+window.location.port : '')+'/sbbi/?sbbpg=sbbShell&gprid='+prid + '&sbbgs='+sbbgs+'&ddl='+(Math.round(dfx.getTime()/1000)-1791884465)+'';var sbbDiv=document.getElementById('sbbfrcc');sbbDiv.appendChild(sbbiframeObj);}catch(ex){;}}try{var y=unescape(sbbvscc.replace(/^<\!\-\-\s*|\s*\-\->$/g, ''));document.getElementById('sbbhscc').innerHTML=y;var x=unescape(sbbgscc.replace(/^<\!\-\-\s*|\s*\-\->$/g, ''));}catch(e){x='function genPid(){return "jser";}';}try{if(window.gprid==undefined)document.write('<'+'script type="text/javascri'+'pt">'+x+"var gprid=genPid();addprid(gprid);sbbls(gprid);<"+"/script>");}catch(e){addprid("dwer");}</script>
+
+    </main>
+    <!-- e:main -->
+
+  </div>
+  <!-- e:wrapper -->
+</body>
+
+</html>

@@ -1,0 +1,2621 @@
+0x1809835b0 mov      rax, rsp
+0x1809835b3 mov      word ptr [rax + 0x20], r9w
+0x1809835b8 mov      qword ptr [rax + 0x18], r8
+0x1809835bc mov      qword ptr [rax + 8], rcx
+0x1809835c0 push     rbx
+0x1809835c1 push     rsi
+0x1809835c2 push     rdi
+0x1809835c3 push     r12
+0x1809835c5 push     r13
+0x1809835c7 push     r14
+0x1809835c9 push     r15
+0x1809835cb sub      rsp, 0xc0
+0x1809835d2 movaps   xmmword ptr [rax - 0x48], xmm6
+0x1809835d6 movaps   xmmword ptr [rax - 0x58], xmm7
+0x1809835da movzx    ebx, r9w
+0x1809835de mov      rdi, r8
+0x1809835e1 mov      r15, rcx
+0x1809835e4 cmp      byte ptr [rip + 0x46f7537], 0
+0x1809835eb jne      0x180983684
+0x1809835f1 lea      rcx, [rip + 0x44bf708]
+0x1809835f8 call     0x180361910
+0x1809835fd lea      rcx, [rip + 0x44bf854]
+0x180983604 call     0x180361910
+0x180983609 lea      rcx, [rip + 0x44bf9a8]
+0x180983610 call     0x180361910
+0x180983615 lea      rcx, [rip + 0x4416d34]
+0x18098361c call     0x180361910
+0x180983621 lea      rcx, [rip + 0x447f2e0]
+0x180983628 call     0x180361910
+0x18098362d lea      rcx, [rip + 0x44853a4]
+0x180983634 call     0x180361910
+0x180983639 lea      rcx, [rip + 0x44875f0]
+0x180983640 call     0x180361910
+0x180983645 lea      rcx, [rip + 0x44c2a44]
+0x18098364c call     0x180361910
+0x180983651 lea      rcx, [rip + 0x44c4d90]
+0x180983658 call     0x180361910
+0x18098365d lea      rcx, [rip + 0x44ca4b4]
+0x180983664 call     0x180361910
+0x180983669 lea      rcx, [rip + 0x44ee460]
+0x180983670 call     0x180361910
+0x180983675 mov      byte ptr [rip + 0x46f74a6], 1
+0x18098367c movzx    ebx, word ptr [rsp + 0x118]
+0x180983684 movsx    eax, bx
+0x180983687 dec      eax
+0x180983689 cmp      eax, 0x2c6
+0x18098368e ja       0x1809864cc
+0x180983694 cdqe     
+0x180983696 lea      rdx, [rip - 0x98369d]
+0x18098369d movzx    eax, byte ptr [rdx + rax + 0x9868b0]
+0x1809836a5 mov      ecx, dword ptr [rdx + rax*4 + 0x986688]
+0x1809836ac add      rcx, rdx
+0x1809836af jmp      rcx
+0x1809836b1 mov      rcx, qword ptr [rip + 0x4487578]
+0x1809836b8 cmp      dword ptr [rcx + 0xe4], 0
+0x1809836bf jne      0x1809836c6
+0x1809836c1 call     0x180361bf0
+0x1809836c6 xor      ecx, ecx
+0x1809836c8 call     0x180956650
+0x1809836cd test     rax, rax
+0x1809836d0 je       0x18098666f
+0x1809836d6 xor      r9d, r9d
+0x1809836d9 movzx    r8d, word ptr [rsp + 0x118]
+0x1809836e2 mov      rdx, rdi
+0x1809836e5 mov      rcx, rax
+0x1809836e8 call     0x18096dd50 ; Albion.PhotonClient.dll:ciy.a
+0x1809836ed jmp      0x18098650f
+0x1809836f2 inc      dword ptr [r15 + 0x140]
+0x1809836f9 xor      r8d, r8d
+0x1809836fc mov      dl, 9
+0x1809836fe mov      rcx, r15
+0x180983701 call     0x18097ec70 ; Albion.PhotonClient.dll:ci7.e
+0x180983706 xor      r13d, r13d
+0x180983709 cmp      dword ptr [r15 + 0x20], 3
+0x18098370e jne      0x180983714
+0x180983710 mov      dword ptr [r15 + 0x20], r13d
+0x180983714 mov      rcx, qword ptr [r15 + 0x180]
+0x18098371b test     rcx, rcx
+0x18098371e je       0x18098666f
+0x180983724 xor      edx, edx
+0x180983726 call     0x180b026c0 ; Albion.PhotonClient.dll:dfn.c
+0x18098372b xor      edx, edx
+0x18098372d mov      rcx, r15
+0x180983730 call     0x180987db0 ; Albion.PhotonClient.dll:ci7.z
+0x180983735 jmp      0x180986512
+0x18098373a mov      rcx, qword ptr [r15 + 0x180]
+0x180983741 test     rcx, rcx
+0x180983744 je       0x180986681
+0x18098374a xor      r8d, r8d
+0x18098374d mov      rdx, rdi
+0x180983750 call     0x180b027f0 ; Albion.PhotonClient.dll:dfn.c
+0x180983755 jmp      0x18098650f
+0x18098375a xor      r8d, r8d
+0x18098375d mov      rdx, rdi
+0x180983760 mov      rcx, r15
+0x180983763 call     0x180976260 ; Albion.PhotonClient.dll:ci7.a5
+0x180983768 jmp      0x18098650f
+0x18098376d xor      r8d, r8d
+0x180983770 mov      rdx, rdi
+0x180983773 mov      rcx, r15
+0x180983776 call     0x1809783a0 ; Albion.PhotonClient.dll:ci7.bk
+0x18098377b jmp      0x18098650f
+0x180983780 cmp      byte ptr [rip + 0x46f73c2], 0
+0x180983787 jne      0x1809837b4
+0x180983789 lea      rcx, [rip + 0x4467128]
+0x180983790 call     0x180361910
+0x180983795 lea      rcx, [rip + 0x44e2f54]
+0x18098379c call     0x180361910
+0x1809837a1 lea      rcx, [rip + 0x4449968]
+0x1809837a8 call     0x180361910
+0x1809837ad mov      byte ptr [rip + 0x46f7395], 1
+0x1809837b4 mov      rdx, qword ptr [rip + 0x4449955]
+0x1809837bb mov      rcx, rdi
+0x1809837be call     0x182003eb0
+0x1809837c3 mov      rsi, qword ptr [r15 + 0x228]
+0x1809837ca test     rax, rax
+0x1809837cd je       0x18098666f
+0x1809837d3 mov      rdi, qword ptr [rax + 0x10]
+0x1809837d7 movzx    ebx, byte ptr [rax + 0x18]
+0x1809837db mov      rcx, qword ptr [rip + 0x44670d6]
+0x1809837e2 call     0x180361b10
+0x1809837e7 mov      r14, rax
+0x1809837ea xor      r9d, r9d
+0x1809837ed movzx    r8d, bl
+0x1809837f1 mov      rdx, rdi
+0x1809837f4 mov      rcx, rax
+0x1809837f7 call     0x180a99710 ; Assembly-CSharp.dll:gqc..ctor | Albion.PhotonClient.dll:c5o..ctor | Albion.PhotonClient.dll:c6u..ctor | Albion.PhotonClient.dll:c60..ctor | Albion.PhotonClient.dll:c7a..ctor | Albion.PhotonClient.dll:c7h..ctor | Albion.PhotonClient.dll:c7i..ctor | Albion.PhotonClient.dll:c8j..ctor | Albion.PhotonClient.dll:dbu..ctor | Newtonsoft.Json.dll:Newtonsoft.Json.Bson.BsonValue..ctor
+0x1809837fc test     rsi, rsi
+0x1809837ff je       0x18098666f
+0x180983805 mov      r9, qword ptr [rip + 0x44e2ee4]
+0x18098380c xor      r8d, r8d
+0x18098380f mov      rdx, r14
+0x180983812 mov      rcx, rsi
+0x180983815 call     0x182003b60
+0x18098381a mov      rdi, qword ptr [rsp + 0x110]
+0x180983822 jmp      0x18098650f
+0x180983827 cmp      byte ptr [rip + 0x46f731c], 0
+0x18098382e jne      0x180983843
+0x180983830 lea      rcx, [rip + 0x443cb61]
+0x180983837 call     0x180361910
+0x18098383c mov      byte ptr [rip + 0x46f7307], 1
+0x180983843 mov      rdx, qword ptr [rip + 0x443cb4e]
+0x18098384a mov      rcx, rdi
+0x18098384d call     0x182003eb0
+0x180983852 cmp      qword ptr [r15 + 0x270], 0
+0x18098385a je       0x18098650f
+0x180983860 mov      rcx, qword ptr [r15 + 0x270]
+0x180983867 mov      r9, qword ptr [rcx + 0x18]
+0x18098386b mov      r8, qword ptr [rcx + 0x28]
+0x18098386f mov      rdx, rax
+0x180983872 mov      rcx, qword ptr [rcx + 0x40]
+0x180983876 call     r9
+0x180983879 jmp      0x18098650f
+0x18098387e mov      rcx, qword ptr [r15 + 0x180]
+0x180983885 test     rcx, rcx
+0x180983888 je       0x180986681
+0x18098388e xor      r8d, r8d
+0x180983891 mov      rdx, rdi
+0x180983894 call     0x180aff6d0 ; Albion.PhotonClient.dll:dfn.b
+0x180983899 jmp      0x18098650f
+0x18098389e cmp      byte ptr [rip + 0x46f72ad], 0
+0x1809838a5 jne      0x1809838c6
+0x1809838a7 lea      rcx, [rip + 0x44853ea]
+0x1809838ae call     0x180361910
+0x1809838b3 lea      rcx, [rip + 0x44208c6]
+0x1809838ba call     0x180361910
+0x1809838bf mov      byte ptr [rip + 0x46f728c], 1
+0x1809838c6 mov      rdx, qword ptr [rip + 0x44208b3]
+0x1809838cd mov      rcx, rdi
+0x1809838d0 call     0x182003eb0
+0x1809838d5 mov      r8, qword ptr [r15 + 0x70]
+0x1809838d9 test     rax, rax
+0x1809838dc je       0x18098666f
+0x1809838e2 mov      edx, dword ptr [rax + 0x18]
+0x1809838e5 test     r8, r8
+0x1809838e8 je       0x18098666f
+0x1809838ee xor      ecx, ecx
+0x1809838f0 mov      dword ptr [rsp + 0x20], edx
+0x1809838f4 mov      r9, qword ptr [rax + 0x10]
+0x1809838f8 mov      rdx, qword ptr [rip + 0x4485399]
+0x1809838ff call     0x180018ca0
+0x180983904 jmp      0x18098650f
+0x180983909 mov      rcx, qword ptr [r15 + 0x190]
+0x180983910 test     rcx, rcx
+0x180983913 je       0x18098650f
+0x180983919 xor      r8d, r8d
+0x18098391c mov      rdx, rdi
+0x18098391f call     0x180a5b560 ; Albion.PhotonClient.dll:c3d.cl
+0x180983924 jmp      0x18098650f
+0x180983929 xor      r9d, r9d
+0x18098392c movzx    r8d, bx
+0x180983930 mov      rdx, rdi
+0x180983933 mov      rcx, r15
+0x180983936 call     0x18097f270 ; Albion.PhotonClient.dll:ci7.e
+0x18098393b jmp      0x18098650f
+0x180983940 cmp      byte ptr [rip + 0x46f71fb], 0
+0x180983947 jne      0x18098398c
+0x180983949 lea      rcx, [rip + 0x4489030]
+0x180983950 call     0x180361910
+0x180983955 lea      rcx, [rip + 0x446fe5c]
+0x18098395c call     0x180361910
+0x180983961 lea      rcx, [rip + 0x44f0f48]
+0x180983968 call     0x180361910
+0x18098396d lea      rcx, [rip + 0x44855e4]
+0x180983974 call     0x180361910
+0x180983979 lea      rcx, [rip + 0x4450710]
+0x180983980 call     0x180361910
+0x180983985 mov      byte ptr [rip + 0x46f71b6], 1
+0x18098398c mov      rdx, qword ptr [rip + 0x44506fd]
+0x180983993 mov      rcx, rdi
+0x180983996 call     0x182003eb0
+0x18098399b mov      rdi, rax
+0x18098399e mov      rcx, qword ptr [rip + 0x4488fdb]
+0x1809839a5 cmp      dword ptr [rcx + 0xe4], 0
+0x1809839ac jne      0x1809839b3
+0x1809839ae call     0x180361bf0
+0x1809839b3 xor      ecx, ecx
+0x1809839b5 call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x1809839ba mov      rbx, rax
+0x1809839bd test     rdi, rdi
+0x1809839c0 je       0x18098666f
+0x1809839c6 movss    xmm6, dword ptr [rdi + 0x10]
+0x1809839cb movss    xmm7, dword ptr [rdi + 0x14]
+0x1809839d0 movzx    esi, byte ptr [rdi + 0x18]
+0x1809839d4 mov      rdi, qword ptr [rdi + 0x20]
+0x1809839d8 mov      rcx, qword ptr [rip + 0x446fdd9]
+0x1809839df call     0x180361b10
+0x1809839e4 mov      r14, rax
+0x1809839e7 xor      r13d, r13d
+0x1809839ea mov      qword ptr [rsp + 0x28], r13
+0x1809839ef mov      qword ptr [rsp + 0x20], rdi
+0x1809839f4 movzx    r9d, sil
+0x1809839f8 unpcklps xmm6, xmm7
+0x1809839fb movq     r8, xmm6
+0x180983a00 mov      rdx, rbx
+0x180983a03 mov      rcx, rax
+0x180983a06 call     0x180a9a950 ; Albion.PhotonClient.dll:c8y..ctor
+0x180983a0b mov      rcx, qword ptr [rip + 0x4485546]
+0x180983a12 cmp      dword ptr [rcx + 0xe4], r13d
+0x180983a19 jne      0x180983a20
+0x180983a1b call     0x180361bf0
+0x180983a20 cmp      byte ptr [rip + 0x46f6f7b], r13b
+0x180983a27 jne      0x180983a3c
+0x180983a29 lea      rcx, [rip + 0x4485528]
+0x180983a30 call     0x180361910
+0x180983a35 mov      byte ptr [rip + 0x46f6f66], 1
+0x180983a3c mov      rcx, qword ptr [rip + 0x4485515]
+0x180983a43 cmp      dword ptr [rcx + 0xe4], r13d
+0x180983a4a jne      0x180983a51
+0x180983a4c call     0x180361bf0
+0x180983a51 mov      rcx, qword ptr [rip + 0x4485500]
+0x180983a58 call     0x180361710
+0x180983a5d mov      rcx, qword ptr [rax]
+0x180983a60 test     rcx, rcx
+0x180983a63 je       0x18098666f
+0x180983a69 mov      rcx, qword ptr [rcx + 0x228]
+0x180983a70 test     rcx, rcx
+0x180983a73 je       0x18098666f
+0x180983a79 mov      r9, qword ptr [rip + 0x44f0e30]
+0x180983a80 xor      r8d, r8d
+0x180983a83 mov      rdx, r14
+0x180983a86 call     0x182003b60
+0x180983a8b mov      rdi, qword ptr [rsp + 0x110]
+0x180983a93 jmp      0x180986512
+0x180983a98 mov      rcx, qword ptr [r15 + 0x1b0]
+0x180983a9f test     rcx, rcx
+0x180983aa2 je       0x18098650f
+0x180983aa8 xor      r9d, r9d
+0x180983aab movzx    r8d, bx
+0x180983aaf mov      rdx, rdi
+0x180983ab2 call     0x180b23630 ; Albion.PhotonClient.dll:dgi.b
+0x180983ab7 jmp      0x18098650f
+0x180983abc cmp      byte ptr [rip + 0x46f708a], 0
+0x180983ac3 jne      0x180983ae4
+0x180983ac5 lea      rcx, [rip + 0x444e384]
+0x180983acc call     0x180361910
+0x180983ad1 lea      rcx, [rip + 0x44494e0]
+0x180983ad8 call     0x180361910
+0x180983add mov      byte ptr [rip + 0x46f7069], 1
+0x180983ae4 mov      rdx, qword ptr [rip + 0x44494cd]
+0x180983aeb mov      rcx, rdi
+0x180983aee call     0x182003eb0
+0x180983af3 mov      rbx, rax
+0x180983af6 test     rax, rax
+0x180983af9 je       0x18098666f
+0x180983aff movups   xmm6, xmmword ptr [rax + 0x10]
+0x180983b03 mov      rcx, qword ptr [rip + 0x444e346]
+0x180983b0a call     0x180361b10
+0x180983b0f mov      rsi, rax
+0x180983b12 xor      edx, edx
+0x180983b14 mov      rcx, rax
+0x180983b17 call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x180983b1c mov      rax, qword ptr [r15 + 0x50]
+0x180983b20 test     rax, rax
+0x180983b23 je       0x18098666f
+0x180983b29 mov      ecx, dword ptr [rbx + 0x24]
+0x180983b2c mov      edx, dword ptr [rbx + 0x28]
+0x180983b2f mov      r8d, dword ptr [rbx + 0x30]
+0x180983b33 movss    xmm0, dword ptr [rbx + 0x34]
+0x180983b38 movss    xmm1, dword ptr [rbx + 0x38]
+0x180983b3d test     rsi, rsi
+0x180983b40 je       0x18098666f
+0x180983b46 xor      r13d, r13d
+0x180983b49 mov      qword ptr [rsp + 0x48], r13
+0x180983b4e movss    dword ptr [rsp + 0x40], xmm1
+0x180983b54 movss    dword ptr [rsp + 0x38], xmm0
+0x180983b5a mov      dword ptr [rsp + 0x30], r8d
+0x180983b5f mov      dword ptr [rsp + 0x28], edx
+0x180983b63 mov      dword ptr [rsp + 0x20], ecx
+0x180983b67 mov      r9d, dword ptr [rbx + 0x2c]
+0x180983b6b mov      r8d, dword ptr [rbx + 0x20]
+0x180983b6f mov      rdx, qword ptr [rax + 0x80]
+0x180983b76 mov      rcx, rsi
+0x180983b79 call     0x18079ca30 ; Albion.Common.dll:bux.j
+0x180983b7e cmp      qword ptr [r15 + 0x278], r13
+0x180983b85 je       0x180986512
+0x180983b8b mov      rcx, qword ptr [r15 + 0x278]
+0x180983b92 movdqa   xmmword ptr [rsp + 0x60], xmm6
+0x180983b98 mov      rax, qword ptr [rcx + 0x18]
+0x180983b9c mov      r9, qword ptr [rcx + 0x28]
+0x180983ba0 mov      r8, rsi
+0x180983ba3 lea      rdx, [rsp + 0x60]
+0x180983ba8 mov      rcx, qword ptr [rcx + 0x40]
+0x180983bac call     rax
+0x180983bae jmp      0x180986512
+0x180983bb3 cmp      byte ptr [rip + 0x46f6f86], 0
+0x180983bba jne      0x180983bcf
+0x180983bbc lea      rcx, [rip + 0x4458475]
+0x180983bc3 call     0x180361910
+0x180983bc8 mov      byte ptr [rip + 0x46f6f71], 1
+0x180983bcf mov      rdx, qword ptr [rip + 0x4458462]
+0x180983bd6 mov      rcx, rdi
+0x180983bd9 call     0x182003eb0
+0x180983bde mov      rcx, qword ptr [r15 + 0x190]
+0x180983be5 test     rcx, rcx
+0x180983be8 je       0x18098666f
+0x180983bee mov      rcx, qword ptr [rcx + 0x48]
+0x180983bf2 test     rcx, rcx
+0x180983bf5 je       0x18098666f
+0x180983bfb xor      r8d, r8d
+0x180983bfe mov      rdx, rax
+0x180983c01 call     0x180acda10 ; Albion.PhotonClient.dll:ddp.k
+0x180983c06 jmp      0x18098650f
+0x180983c0b cmp      byte ptr [rip + 0x46f6f2f], 0
+0x180983c12 jne      0x180983c27
+0x180983c14 lea      rcx, [rip + 0x444c6ad]
+0x180983c1b call     0x180361910
+0x180983c20 mov      byte ptr [rip + 0x46f6f1a], 1
+0x180983c27 mov      rdx, qword ptr [rip + 0x444c69a]
+0x180983c2e mov      rcx, rdi
+0x180983c31 call     0x182003eb0
+0x180983c36 mov      rcx, qword ptr [r15 + 0x190]
+0x180983c3d test     rcx, rcx
+0x180983c40 je       0x18098666f
+0x180983c46 mov      rcx, qword ptr [rcx + 0x48]
+0x180983c4a test     rcx, rcx
+0x180983c4d je       0x18098666f
+0x180983c53 xor      r8d, r8d
+0x180983c56 mov      rdx, rax
+0x180983c59 call     0x180acd910 ; Albion.PhotonClient.dll:ddp.k
+0x180983c5e jmp      0x18098650f
+0x180983c63 mov      rcx, qword ptr [r15 + 0x178]
+0x180983c6a test     rcx, rcx
+0x180983c6d je       0x180986681
+0x180983c73 xor      r9d, r9d
+0x180983c76 movzx    r8d, bx
+0x180983c7a mov      rdx, rdi
+0x180983c7d call     0x180b14d40 ; Albion.PhotonClient.dll:df9.k
+0x180983c82 jmp      0x18098650f
+0x180983c87 mov      rax, qword ptr [r15 + 0x190]
+0x180983c8e test     rax, rax
+0x180983c91 je       0x18098650f
+0x180983c97 mov      rcx, qword ptr [rax + 0x58]
+0x180983c9b test     rcx, rcx
+0x180983c9e je       0x18098666f
+0x180983ca4 xor      r9d, r9d
+0x180983ca7 movzx    r8d, bx
+0x180983cab mov      rdx, rdi
+0x180983cae call     0x180a80750 ; Albion.PhotonClient.dll:c3g.k
+0x180983cb3 jmp      0x18098650f
+0x180983cb8 mov      rax, qword ptr [r15 + 0x190]
+0x180983cbf test     rax, rax
+0x180983cc2 je       0x18098666f
+0x180983cc8 mov      rcx, qword ptr [rax + 0xb8]
+0x180983ccf test     rcx, rcx
+0x180983cd2 je       0x18098666f
+0x180983cd8 xor      r9d, r9d
+0x180983cdb movzx    r8d, bx
+0x180983cdf mov      rdx, rdi
+0x180983ce2 call     0x18098bc40 ; Albion.PhotonClient.dll:cja.a
+0x180983ce7 jmp      0x18098650f
+0x180983cec mov      rax, qword ptr [r15 + 0x190]
+0x180983cf3 test     rax, rax
+0x180983cf6 je       0x18098666f
+0x180983cfc mov      rcx, qword ptr [rax + 0x68]
+0x180983d00 test     rcx, rcx
+0x180983d03 je       0x18098666f
+0x180983d09 xor      r9d, r9d
+0x180983d0c movzx    r8d, bx
+0x180983d10 mov      rdx, rdi
+0x180983d13 call     0x180ada740 ; Albion.PhotonClient.dll:de4.m
+0x180983d18 jmp      0x18098650f
+0x180983d1d mov      rcx, qword ptr [r15 + 0x190]
+0x180983d24 test     rcx, rcx
+0x180983d27 je       0x18098666f
+0x180983d2d xor      r8d, r8d
+0x180983d30 mov      rdx, rdi
+0x180983d33 call     0x180a58ea0 ; Albion.PhotonClient.dll:c3d.c2
+0x180983d38 jmp      0x18098650f
+0x180983d3d mov      rax, qword ptr [r15 + 0x190]
+0x180983d44 test     rax, rax
+0x180983d47 je       0x18098666f
+0x180983d4d mov      rcx, qword ptr [rax + 0x70]
+0x180983d51 test     rcx, rcx
+0x180983d54 je       0x18098666f
+0x180983d5a xor      r9d, r9d
+0x180983d5d movzx    r8d, bx
+0x180983d61 mov      rdx, rdi
+0x180983d64 call     0x180b1ed30 ; Albion.PhotonClient.dll:dg9.r
+0x180983d69 jmp      0x18098650f
+0x180983d6e mov      rcx, qword ptr [r15 + 0x190]
+0x180983d75 test     rcx, rcx
+0x180983d78 je       0x18098666f
+0x180983d7e xor      r8d, r8d
+0x180983d81 mov      rdx, rdi
+0x180983d84 call     0x180a5acb0 ; Albion.PhotonClient.dll:c3d.c9
+0x180983d89 jmp      0x18098650f
+0x180983d8e cmp      byte ptr [rip + 0x46f6daa], 0
+0x180983d95 jne      0x180983dce
+0x180983d97 lea      rcx, [rip + 0x4471172]
+0x180983d9e call     0x180361910
+0x180983da3 lea      rcx, [rip + 0x44f2f46]
+0x180983daa call     0x180361910
+0x180983daf lea      rcx, [rip + 0x44851a2]
+0x180983db6 call     0x180361910
+0x180983dbb lea      rcx, [rip + 0x445969e]
+0x180983dc2 call     0x180361910
+0x180983dc7 mov      byte ptr [rip + 0x46f6d71], 1
+0x180983dce mov      rdx, qword ptr [rip + 0x445968b]
+0x180983dd5 mov      rcx, rdi
+0x180983dd8 call     0x182003eb0
+0x180983ddd test     rax, rax
+0x180983de0 je       0x18098666f
+0x180983de6 mov      r12, qword ptr [rax + 0x10]
+0x180983dea mov      r15, qword ptr [rax + 0x18]
+0x180983dee mov      r14, qword ptr [rax + 0x20]
+0x180983df2 movzx    esi, byte ptr [rax + 0x28]
+0x180983df6 mov      edi, dword ptr [rax + 0x2c]
+0x180983df9 mov      rbx, qword ptr [rax + 0x30]
+0x180983dfd mov      rcx, qword ptr [rip + 0x447110c]
+0x180983e04 call     0x180361b10
+0x180983e09 mov      qword ptr [rsp + 0x50], rax
+0x180983e0e xor      r13d, r13d
+0x180983e11 mov      qword ptr [rsp + 0x38], r13
+0x180983e16 mov      qword ptr [rsp + 0x30], rbx
+0x180983e1b mov      dword ptr [rsp + 0x28], edi
+0x180983e1f mov      byte ptr [rsp + 0x20], sil
+0x180983e24 mov      r9, r14
+0x180983e27 mov      r8, r15
+0x180983e2a mov      rdx, r12
+0x180983e2d mov      rcx, rax
+0x180983e30 call     0x180a9ab90 ; Albion.PhotonClient.dll:c9g..ctor
+0x180983e35 mov      rcx, qword ptr [rip + 0x448511c]
+0x180983e3c cmp      dword ptr [rcx + 0xe4], r13d
+0x180983e43 jne      0x180983e4a
+0x180983e45 call     0x180361bf0
+0x180983e4a cmp      byte ptr [rip + 0x46f6b51], r13b
+0x180983e51 jne      0x180983e66
+0x180983e53 lea      rcx, [rip + 0x44850fe]
+0x180983e5a call     0x180361910
+0x180983e5f mov      byte ptr [rip + 0x46f6b3c], 1
+0x180983e66 mov      rcx, qword ptr [rip + 0x44850eb]
+0x180983e6d cmp      dword ptr [rcx + 0xe4], r13d
+0x180983e74 jne      0x180983e7b
+0x180983e76 call     0x180361bf0
+0x180983e7b mov      rcx, qword ptr [rip + 0x44850d6]
+0x180983e82 call     0x180361710
+0x180983e87 mov      rcx, qword ptr [rax]
+0x180983e8a test     rcx, rcx
+0x180983e8d je       0x18098666f
+0x180983e93 mov      rcx, qword ptr [rcx + 0x228]
+0x180983e9a test     rcx, rcx
+0x180983e9d je       0x18098666f
+0x180983ea3 mov      r9, qword ptr [rip + 0x44f2e46]
+0x180983eaa xor      r8d, r8d
+0x180983ead mov      rdx, qword ptr [rsp + 0x50]
+0x180983eb2 call     0x182003b60
+0x180983eb7 mov      r15, qword ptr [rsp + 0x100]
+0x180983ebf mov      rdi, qword ptr [rsp + 0x110]
+0x180983ec7 jmp      0x180986512
+0x180983ecc mov      rax, qword ptr [r15 + 0x190]
+0x180983ed3 test     rax, rax
+0x180983ed6 je       0x18098666f
+0x180983edc mov      rcx, qword ptr [rax + 0x78]
+0x180983ee0 test     rcx, rcx
+0x180983ee3 je       0x18098666f
+0x180983ee9 xor      r9d, r9d
+0x180983eec movzx    r8d, bx
+0x180983ef0 mov      rdx, rdi
+0x180983ef3 call     0x180ab73c0 ; Albion.PhotonClient.dll:cjm.a
+0x180983ef8 jmp      0x18098650f
+0x180983efd mov      rax, qword ptr [r15 + 0x190]
+0x180983f04 test     rax, rax
+0x180983f07 je       0x18098666f
+0x180983f0d mov      rcx, qword ptr [rax + 0x80]
+0x180983f14 test     rcx, rcx
+0x180983f17 je       0x18098666f
+0x180983f1d xor      r9d, r9d
+0x180983f20 movzx    r8d, bx
+0x180983f24 mov      rdx, rdi
+0x180983f27 call     0x180a4f040 ; Albion.PhotonClient.dll:c24.c
+0x180983f2c jmp      0x18098650f
+0x180983f31 cmp      byte ptr [rip + 0x46f6c03], 0
+0x180983f38 jne      0x180983f71
+0x180983f3a lea      rcx, [rip + 0x44f9787]
+0x180983f41 call     0x180361910
+0x180983f46 lea      rcx, [rip + 0x448500b]
+0x180983f4d call     0x180361910
+0x180983f52 lea      rcx, [rip + 0x445f27f]
+0x180983f59 call     0x180361910
+0x180983f5e lea      rcx, [rip + 0x44b8e6b]
+0x180983f65 call     0x180361910
+0x180983f6a mov      byte ptr [rip + 0x46f6bca], 1
+0x180983f71 mov      rdx, qword ptr [rip + 0x445f260]
+0x180983f78 mov      rcx, rdi
+0x180983f7b call     0x182003eb0
+0x180983f80 test     rax, rax
+0x180983f83 je       0x18098666f
+0x180983f89 mov      rdi, qword ptr [rax + 0x10]
+0x180983f8d mov      ebx, dword ptr [rax + 0x18]
+0x180983f90 mov      rcx, qword ptr [rip + 0x44b8e39]
+0x180983f97 call     0x180361b10
+0x180983f9c mov      rsi, rax
+0x180983f9f xor      r9d, r9d
+0x180983fa2 mov      r8d, ebx
+0x180983fa5 mov      rdx, rdi
+0x180983fa8 mov      rcx, rax
+0x180983fab call     0x180a9a260 ; Albion.PhotonClient.dll:c79..ctor | Albion.PhotonClient.dll:c8e..ctor | Albion.PhotonClient.dll:dau..ctor | Albion.PhotonClient.dll:dbc..ctor | Albion.PhotonClient.dll:dbg..ctor
+0x180983fb0 mov      rcx, qword ptr [rip + 0x4484fa1]
+0x180983fb7 cmp      dword ptr [rcx + 0xe4], 0
+0x180983fbe jne      0x180983fc5
+0x180983fc0 call     0x180361bf0
+0x180983fc5 cmp      byte ptr [rip + 0x46f69d6], 0
+0x180983fcc jne      0x180983fe1
+0x180983fce lea      rcx, [rip + 0x4484f83]
+0x180983fd5 call     0x180361910
+0x180983fda mov      byte ptr [rip + 0x46f69c1], 1
+0x180983fe1 mov      rcx, qword ptr [rip + 0x4484f70]
+0x180983fe8 cmp      dword ptr [rcx + 0xe4], 0
+0x180983fef jne      0x180983ff6
+0x180983ff1 call     0x180361bf0
+0x180983ff6 mov      rcx, qword ptr [rip + 0x4484f5b]
+0x180983ffd call     0x180361710
+0x180984002 mov      rcx, qword ptr [rax]
+0x180984005 test     rcx, rcx
+0x180984008 je       0x18098666f
+0x18098400e mov      rcx, qword ptr [rcx + 0x228]
+0x180984015 test     rcx, rcx
+0x180984018 je       0x18098666f
+0x18098401e mov      r9, qword ptr [rip + 0x44f96a3]
+0x180984025 xor      r8d, r8d
+0x180984028 mov      rdx, rsi
+0x18098402b call     0x182003b60
+0x180984030 mov      rdi, qword ptr [rsp + 0x110]
+0x180984038 jmp      0x18098650f
+0x18098403d cmp      byte ptr [rip + 0x46f6af6], 0
+0x180984044 jne      0x18098407d
+0x180984046 lea      rcx, [rip + 0x44f992b]
+0x18098404d call     0x180361910
+0x180984052 lea      rcx, [rip + 0x4484eff]
+0x180984059 call     0x180361910
+0x18098405e lea      rcx, [rip + 0x445f2d3]
+0x180984065 call     0x180361910
+0x18098406a lea      rcx, [rip + 0x44b8eb7]
+0x180984071 call     0x180361910
+0x180984076 mov      byte ptr [rip + 0x46f6abd], 1
+0x18098407d mov      rdx, qword ptr [rip + 0x445f2b4]
+0x180984084 mov      rcx, rdi
+0x180984087 call     0x182003eb0
+0x18098408c test     rax, rax
+0x18098408f je       0x18098666f
+0x180984095 mov      rdi, qword ptr [rax + 0x10]
+0x180984099 mov      rbx, qword ptr [rax + 0x18]
+0x18098409d mov      rcx, qword ptr [rip + 0x44b8e84]
+0x1809840a4 call     0x180361b10
+0x1809840a9 mov      rsi, rax
+0x1809840ac xor      r9d, r9d
+0x1809840af mov      r8, rbx
+0x1809840b2 mov      rdx, rdi
+0x1809840b5 mov      rcx, rax
+0x1809840b8 call     0x180a9b1a0 ; Albion.PhotonClient.dll:dav..ctor
+0x1809840bd mov      rcx, qword ptr [rip + 0x4484e94]
+0x1809840c4 cmp      dword ptr [rcx + 0xe4], 0
+0x1809840cb jne      0x1809840d2
+0x1809840cd call     0x180361bf0
+0x1809840d2 cmp      byte ptr [rip + 0x46f68c9], 0
+0x1809840d9 jne      0x1809840ee
+0x1809840db lea      rcx, [rip + 0x4484e76]
+0x1809840e2 call     0x180361910
+0x1809840e7 mov      byte ptr [rip + 0x46f68b4], 1
+0x1809840ee mov      rcx, qword ptr [rip + 0x4484e63]
+0x1809840f5 cmp      dword ptr [rcx + 0xe4], 0
+0x1809840fc jne      0x180984103
+0x1809840fe call     0x180361bf0
+0x180984103 mov      rcx, qword ptr [rip + 0x4484e4e]
+0x18098410a call     0x180361710
+0x18098410f mov      rcx, qword ptr [rax]
+0x180984112 test     rcx, rcx
+0x180984115 je       0x18098666f
+0x18098411b mov      rcx, qword ptr [rcx + 0x228]
+0x180984122 test     rcx, rcx
+0x180984125 je       0x18098666f
+0x18098412b mov      r9, qword ptr [rip + 0x44f9846]
+0x180984132 xor      r8d, r8d
+0x180984135 mov      rdx, rsi
+0x180984138 call     0x182003b60
+0x18098413d mov      rdi, qword ptr [rsp + 0x110]
+0x180984145 jmp      0x18098650f
+0x18098414a cmp      byte ptr [rip + 0x46f69eb], 0
+0x180984151 jne      0x18098418a
+0x180984153 lea      rcx, [rip + 0x4466b7e]
+0x18098415a call     0x180361910
+0x18098415f lea      rcx, [rip + 0x44e2992]
+0x180984166 call     0x180361910
+0x18098416b lea      rcx, [rip + 0x4484de6]
+0x180984172 call     0x180361910
+0x180984177 lea      rcx, [rip + 0x444862a]
+0x18098417e call     0x180361910
+0x180984183 mov      byte ptr [rip + 0x46f69b2], 1
+0x18098418a mov      rdx, qword ptr [rip + 0x4448617]
+0x180984191 mov      rcx, rdi
+0x180984194 call     0x182003eb0
+0x180984199 test     rax, rax
+0x18098419c je       0x180986681
+0x1809841a2 mov      rdi, qword ptr [rax + 0x10]
+0x1809841a6 mov      rbx, qword ptr [rax + 0x18]
+0x1809841aa mov      rcx, qword ptr [rip + 0x4466b27]
+0x1809841b1 call     0x180361b10
+0x1809841b6 mov      rsi, rax
+0x1809841b9 xor      r9d, r9d
+0x1809841bc mov      r8, rbx
+0x1809841bf mov      rdx, rdi
+0x1809841c2 mov      rcx, rax
+0x1809841c5 call     0x180a99810 ; Albion.PhotonClient.dll:c5u..ctor | Albion.PhotonClient.dll:c63..ctor
+0x1809841ca mov      rcx, qword ptr [rip + 0x4484d87]
+0x1809841d1 cmp      dword ptr [rcx + 0xe4], 0
+0x1809841d8 jne      0x1809841df
+0x1809841da call     0x180361bf0
+0x1809841df cmp      byte ptr [rip + 0x46f67bc], 0
+0x1809841e6 jne      0x1809841fb
+0x1809841e8 lea      rcx, [rip + 0x4484d69]
+0x1809841ef call     0x180361910
+0x1809841f4 mov      byte ptr [rip + 0x46f67a7], 1
+0x1809841fb mov      rcx, qword ptr [rip + 0x4484d56]
+0x180984202 cmp      dword ptr [rcx + 0xe4], 0
+0x180984209 jne      0x180984210
+0x18098420b call     0x180361bf0
+0x180984210 mov      rcx, qword ptr [rip + 0x4484d41]
+0x180984217 call     0x180361710
+0x18098421c mov      rcx, qword ptr [rax]
+0x18098421f test     rcx, rcx
+0x180984222 je       0x180986681
+0x180984228 mov      rcx, qword ptr [rcx + 0x228]
+0x18098422f test     rcx, rcx
+0x180984232 je       0x180986681
+0x180984238 mov      r9, qword ptr [rip + 0x44e28b9]
+0x18098423f xor      r8d, r8d
+0x180984242 mov      rdx, rsi
+0x180984245 call     0x182003b60
+0x18098424a mov      rdi, qword ptr [rsp + 0x110]
+0x180984252 jmp      0x18098650f
+0x180984257 cmp      byte ptr [rip + 0x46f68da], 0
+0x18098425e jne      0x180984297
+0x180984260 lea      rcx, [rip + 0x446a591]
+0x180984267 call     0x180361910
+0x18098426c lea      rcx, [rip + 0x44e8695]
+0x180984273 call     0x180361910
+0x180984278 lea      rcx, [rip + 0x4484cd9]
+0x18098427f call     0x180361910
+0x180984284 lea      rcx, [rip + 0x444c9a5]
+0x18098428b call     0x180361910
+0x180984290 mov      byte ptr [rip + 0x46f68a1], 1
+0x180984297 mov      rdx, qword ptr [rip + 0x444c992]
+0x18098429e mov      rcx, rdi
+0x1809842a1 call     0x182003eb0
+0x1809842a6 test     rax, rax
+0x1809842a9 je       0x18098666f
+0x1809842af mov      rdi, qword ptr [rax + 0x10]
+0x1809842b3 mov      ebx, dword ptr [rax + 0x18]
+0x1809842b6 mov      rcx, qword ptr [rip + 0x446a53b]
+0x1809842bd call     0x180361b10
+0x1809842c2 mov      rsi, rax
+0x1809842c5 xor      r9d, r9d
+0x1809842c8 mov      r8d, ebx
+0x1809842cb mov      rdx, rdi
+0x1809842ce mov      rcx, rax
+0x1809842d1 call     0x180a9a260 ; Albion.PhotonClient.dll:c79..ctor | Albion.PhotonClient.dll:c8e..ctor | Albion.PhotonClient.dll:dau..ctor | Albion.PhotonClient.dll:dbc..ctor | Albion.PhotonClient.dll:dbg..ctor
+0x1809842d6 mov      rcx, qword ptr [rip + 0x4484c7b]
+0x1809842dd cmp      dword ptr [rcx + 0xe4], 0
+0x1809842e4 jne      0x1809842eb
+0x1809842e6 call     0x180361bf0
+0x1809842eb cmp      byte ptr [rip + 0x46f66b0], 0
+0x1809842f2 jne      0x180984307
+0x1809842f4 lea      rcx, [rip + 0x4484c5d]
+0x1809842fb call     0x180361910
+0x180984300 mov      byte ptr [rip + 0x46f669b], 1
+0x180984307 mov      rcx, qword ptr [rip + 0x4484c4a]
+0x18098430e cmp      dword ptr [rcx + 0xe4], 0
+0x180984315 jne      0x18098431c
+0x180984317 call     0x180361bf0
+0x18098431c mov      rcx, qword ptr [rip + 0x4484c35]
+0x180984323 call     0x180361710
+0x180984328 mov      rcx, qword ptr [rax]
+0x18098432b test     rcx, rcx
+0x18098432e je       0x18098666f
+0x180984334 mov      rcx, qword ptr [rcx + 0x228]
+0x18098433b test     rcx, rcx
+0x18098433e je       0x18098666f
+0x180984344 mov      r9, qword ptr [rip + 0x44e85bd]
+0x18098434b xor      r8d, r8d
+0x18098434e mov      rdx, rsi
+0x180984351 call     0x182003b60
+0x180984356 mov      rdi, qword ptr [rsp + 0x110]
+0x18098435e jmp      0x18098650f
+0x180984363 cmp      byte ptr [rip + 0x46f67cf], 0
+0x18098436a jne      0x180984397
+0x18098436c lea      rcx, [rip + 0x446a325]
+0x180984373 call     0x180361910
+0x180984378 lea      rcx, [rip + 0x44e82d9]
+0x18098437f call     0x180361910
+0x180984384 lea      rcx, [rip + 0x4484bcd]
+0x18098438b call     0x180361910
+0x180984390 mov      byte ptr [rip + 0x46f67a2], 1
+0x180984397 mov      rcx, qword ptr [rip + 0x446a2fa]
+0x18098439e call     0x180361b10
+0x1809843a3 mov      rbx, rax
+0x1809843a6 xor      edx, edx
+0x1809843a8 mov      rcx, rax
+0x1809843ab call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x1809843b0 mov      rcx, qword ptr [rip + 0x4484ba1]
+0x1809843b7 cmp      dword ptr [rcx + 0xe4], 0
+0x1809843be jne      0x1809843c5
+0x1809843c0 call     0x180361bf0
+0x1809843c5 cmp      byte ptr [rip + 0x46f65d6], 0
+0x1809843cc jne      0x1809843e1
+0x1809843ce lea      rcx, [rip + 0x4484b83]
+0x1809843d5 call     0x180361910
+0x1809843da mov      byte ptr [rip + 0x46f65c1], 1
+0x1809843e1 mov      rcx, qword ptr [rip + 0x4484b70]
+0x1809843e8 cmp      dword ptr [rcx + 0xe4], 0
+0x1809843ef jne      0x1809843f6
+0x1809843f1 call     0x180361bf0
+0x1809843f6 mov      rcx, qword ptr [rip + 0x4484b5b]
+0x1809843fd call     0x180361710
+0x180984402 mov      rcx, qword ptr [rax]
+0x180984405 test     rcx, rcx
+0x180984408 je       0x18098666f
+0x18098440e mov      rcx, qword ptr [rcx + 0x228]
+0x180984415 test     rcx, rcx
+0x180984418 je       0x18098666f
+0x18098441e mov      r9, qword ptr [rip + 0x44e8233]
+0x180984425 xor      r8d, r8d
+0x180984428 mov      rdx, rbx
+0x18098442b call     0x182003b60
+0x180984430 jmp      0x18098650f
+0x180984435 mov      rax, qword ptr [r15 + 0x190]
+0x18098443c test     rax, rax
+0x18098443f je       0x18098666f
+0x180984445 mov      rcx, qword ptr [rax + 0x60]
+0x180984449 test     rcx, rcx
+0x18098444c je       0x18098666f
+0x180984452 xor      r9d, r9d
+0x180984455 movzx    r8d, bx
+0x180984459 mov      rdx, rdi
+0x18098445c call     0x180ae3890 ; Albion.PhotonClient.dll:det.f
+0x180984461 jmp      0x18098650f
+0x180984466 xor      r8d, r8d
+0x180984469 mov      rdx, rdi
+0x18098446c mov      rcx, r15
+0x18098446f call     0x18097b3b0 ; Albion.PhotonClient.dll:ci7.cp
+0x180984474 jmp      0x18098650f
+0x180984479 cmp      byte ptr [rip + 0x46f66c3], 0
+0x180984480 jne      0x1809844c5
+0x180984482 lea      rcx, [rip + 0x44884f7]
+0x180984489 call     0x180361910
+0x18098448e lea      rcx, [rip + 0x446c883]
+0x180984495 call     0x180361910
+0x18098449a lea      rcx, [rip + 0x44ebf87]
+0x1809844a1 call     0x180361910
+0x1809844a6 lea      rcx, [rip + 0x4484aab]
+0x1809844ad call     0x180361910
+0x1809844b2 lea      rcx, [rip + 0x444fe87]
+0x1809844b9 call     0x180361910
+0x1809844be mov      byte ptr [rip + 0x46f667e], 1
+0x1809844c5 mov      rdx, qword ptr [rip + 0x444fe74]
+0x1809844cc mov      rcx, rdi
+0x1809844cf call     0x182003eb0
+0x1809844d4 mov      rdi, rax
+0x1809844d7 mov      rcx, qword ptr [rip + 0x44884a2]
+0x1809844de cmp      dword ptr [rcx + 0xe4], 0
+0x1809844e5 jne      0x1809844ec
+0x1809844e7 call     0x180361bf0
+0x1809844ec xor      ecx, ecx
+0x1809844ee call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x1809844f3 mov      rbx, rax
+0x1809844f6 test     rdi, rdi
+0x1809844f9 je       0x18098666f
+0x1809844ff mov      r14, qword ptr [rdi + 0x10]
+0x180984503 mov      rsi, qword ptr [rdi + 0x18]
+0x180984507 mov      rdi, qword ptr [rdi + 0x20]
+0x18098450b mov      rcx, qword ptr [rip + 0x446c806]
+0x180984512 call     0x180361b10
+0x180984517 mov      r12, rax
+0x18098451a xor      r13d, r13d
+0x18098451d mov      qword ptr [rsp + 0x28], r13
+0x180984522 mov      qword ptr [rsp + 0x20], rdi
+0x180984527 mov      r9, rsi
+0x18098452a mov      r8, r14
+0x18098452d mov      rdx, rbx
+0x180984530 mov      rcx, rax
+0x180984533 call     0x180a9a550 ; Albion.PhotonClient.dll:c80..ctor | Albion.PhotonClient.dll:dbt..ctor
+0x180984538 mov      rcx, qword ptr [rip + 0x4484a19]
+0x18098453f cmp      dword ptr [rcx + 0xe4], r13d
+0x180984546 jne      0x18098454d
+0x180984548 call     0x180361bf0
+0x18098454d cmp      byte ptr [rip + 0x46f644e], r13b
+0x180984554 jne      0x180984569
+0x180984556 lea      rcx, [rip + 0x44849fb]
+0x18098455d call     0x180361910
+0x180984562 mov      byte ptr [rip + 0x46f6439], 1
+0x180984569 mov      rcx, qword ptr [rip + 0x44849e8]
+0x180984570 cmp      dword ptr [rcx + 0xe4], r13d
+0x180984577 jne      0x18098457e
+0x180984579 call     0x180361bf0
+0x18098457e mov      rcx, qword ptr [rip + 0x44849d3]
+0x180984585 call     0x180361710
+0x18098458a mov      rcx, qword ptr [rax]
+0x18098458d test     rcx, rcx
+0x180984590 je       0x18098666f
+0x180984596 mov      rcx, qword ptr [rcx + 0x228]
+0x18098459d test     rcx, rcx
+0x1809845a0 je       0x18098666f
+0x1809845a6 mov      r9, qword ptr [rip + 0x44ebe7b]
+0x1809845ad xor      r8d, r8d
+0x1809845b0 mov      rdx, r12
+0x1809845b3 call     0x182003b60
+0x1809845b8 mov      rdi, qword ptr [rsp + 0x110]
+0x1809845c0 jmp      0x180986512
+0x1809845c5 cmp      byte ptr [rip + 0x46f6578], 0
+0x1809845cc jne      0x180984611
+0x1809845ce lea      rcx, [rip + 0x44883ab]
+0x1809845d5 call     0x180361910
+0x1809845da lea      rcx, [rip + 0x446f337]
+0x1809845e1 call     0x180361910
+0x1809845e6 lea      rcx, [rip + 0x44f0573]
+0x1809845ed call     0x180361910
+0x1809845f2 lea      rcx, [rip + 0x448495f]
+0x1809845f9 call     0x180361910
+0x1809845fe lea      rcx, [rip + 0x444fbe3]
+0x180984605 call     0x180361910
+0x18098460a mov      byte ptr [rip + 0x46f6533], 1
+0x180984611 mov      rdx, qword ptr [rip + 0x444fbd0]
+0x180984618 mov      rcx, rdi
+0x18098461b call     0x182003eb0
+0x180984620 mov      rdi, rax
+0x180984623 mov      rcx, qword ptr [rip + 0x4488356]
+0x18098462a cmp      dword ptr [rcx + 0xe4], 0
+0x180984631 jne      0x180984638
+0x180984633 call     0x180361bf0
+0x180984638 xor      ecx, ecx
+0x18098463a call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x18098463f mov      rbx, rax
+0x180984642 test     rdi, rdi
+0x180984645 je       0x18098666f
+0x18098464b mov      rsi, qword ptr [rdi + 0x10]
+0x18098464f mov      rdi, qword ptr [rdi + 0x18]
+0x180984653 mov      rcx, qword ptr [rip + 0x446f2be]
+0x18098465a call     0x180361b10
+0x18098465f mov      r14, rax
+0x180984662 xor      r13d, r13d
+0x180984665 mov      qword ptr [rsp + 0x20], r13
+0x18098466a mov      r9, rdi
+0x18098466d mov      r8, rsi
+0x180984670 mov      rdx, rbx
+0x180984673 mov      rcx, rax
+0x180984676 call     0x180a9a9b0 ; Albion.PhotonClient.dll:c8z..ctor
+0x18098467b mov      rcx, qword ptr [rip + 0x44848d6]
+0x180984682 cmp      dword ptr [rcx + 0xe4], r13d
+0x180984689 jne      0x180984690
+0x18098468b call     0x180361bf0
+0x180984690 cmp      byte ptr [rip + 0x46f630b], r13b
+0x180984697 jne      0x1809846ac
+0x180984699 lea      rcx, [rip + 0x44848b8]
+0x1809846a0 call     0x180361910
+0x1809846a5 mov      byte ptr [rip + 0x46f62f6], 1
+0x1809846ac mov      rcx, qword ptr [rip + 0x44848a5]
+0x1809846b3 cmp      dword ptr [rcx + 0xe4], r13d
+0x1809846ba jne      0x1809846c1
+0x1809846bc call     0x180361bf0
+0x1809846c1 mov      rcx, qword ptr [rip + 0x4484890]
+0x1809846c8 call     0x180361710
+0x1809846cd mov      rcx, qword ptr [rax]
+0x1809846d0 test     rcx, rcx
+0x1809846d3 je       0x18098666f
+0x1809846d9 mov      rcx, qword ptr [rcx + 0x228]
+0x1809846e0 test     rcx, rcx
+0x1809846e3 je       0x18098666f
+0x1809846e9 mov      r9, qword ptr [rip + 0x44f0470]
+0x1809846f0 xor      r8d, r8d
+0x1809846f3 mov      rdx, r14
+0x1809846f6 call     0x182003b60
+0x1809846fb mov      rdi, qword ptr [rsp + 0x110]
+0x180984703 jmp      0x180986512
+0x180984708 mov      rcx, qword ptr [r15 + 0x190]
+0x18098470f test     rcx, rcx
+0x180984712 je       0x18098666f
+0x180984718 xor      r8d, r8d
+0x18098471b mov      rdx, rdi
+0x18098471e call     0x180a5d3a0 ; Albion.PhotonClient.dll:c3d.da
+0x180984723 jmp      0x18098650f
+0x180984728 cmp      byte ptr [rip + 0x46f6400], 0
+0x18098472f jne      0x18098475c
+0x180984731 lea      rcx, [rip + 0x44f7cc0]
+0x180984738 call     0x180361910
+0x18098473d lea      rcx, [rip + 0x4459294]
+0x180984744 call     0x180361910
+0x180984749 lea      rcx, [rip + 0x44b7788]
+0x180984750 call     0x180361910
+0x180984755 mov      byte ptr [rip + 0x46f63d3], 1
+0x18098475c mov      rdx, qword ptr [rip + 0x4459275]
+0x180984763 mov      rcx, rdi
+0x180984766 call     0x182003eb0
+0x18098476b mov      rbx, rax
+0x18098476e mov      rcx, qword ptr [rip + 0x44b7763]
+0x180984775 call     0x180361b10
+0x18098477a mov      rsi, rax
+0x18098477d xor      r8d, r8d
+0x180984780 mov      rdx, rbx
+0x180984783 mov      rcx, rax
+0x180984786 call     0x1809345c0 ; Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:d..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:fxv..ctor | Assembly-CSharp.dll:ggn..ctor | Assembly-CSharp.dll:gj2..ctor | Assembly-CSharp.dll:gki..ctor | Assembly-CSharp.dll:gpt..ctor | Assembly-CSharp.dll:gqb..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Albion.Common.dll:
+0x18098478b mov      rcx, qword ptr [r15 + 0x228]
+0x180984792 test     rcx, rcx
+0x180984795 je       0x180986681
+0x18098479b mov      r9, qword ptr [rip + 0x44f7c56]
+0x1809847a2 xor      r8d, r8d
+0x1809847a5 mov      rdx, rsi
+0x1809847a8 call     0x182003b60
+0x1809847ad jmp      0x18098650f
+0x1809847b2 xor      r8d, r8d
+0x1809847b5 mov      rdx, rdi
+0x1809847b8 mov      rcx, r15
+0x1809847bb call     0x18097b810 ; Albion.PhotonClient.dll:ci7.cq
+0x1809847c0 jmp      0x18098650f
+0x1809847c5 cmp      byte ptr [rip + 0x46f6384], 0
+0x1809847cc jne      0x1809847f9
+0x1809847ce lea      rcx, [rip + 0x4463d2b]
+0x1809847d5 call     0x180361910
+0x1809847da lea      rcx, [rip + 0x44de94f]
+0x1809847e1 call     0x180361910
+0x1809847e6 lea      rcx, [rip + 0x44406e3]
+0x1809847ed call     0x180361910
+0x1809847f2 mov      byte ptr [rip + 0x46f6357], 1
+0x1809847f9 mov      rdx, qword ptr [rip + 0x44406d0]
+0x180984800 mov      rcx, rdi
+0x180984803 call     0x182003eb0
+0x180984808 test     rax, rax
+0x18098480b je       0x180986681
+0x180984811 mov      rbx, qword ptr [rax + 0x18]
+0x180984815 mov      rcx, qword ptr [rip + 0x4463ce4]
+0x18098481c call     0x180361b10
+0x180984821 mov      rsi, rax
+0x180984824 xor      r8d, r8d
+0x180984827 mov      rdx, rbx
+0x18098482a mov      rcx, rax
+0x18098482d call     0x1809345c0 ; Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:d..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:fxv..ctor | Assembly-CSharp.dll:ggn..ctor | Assembly-CSharp.dll:gj2..ctor | Assembly-CSharp.dll:gki..ctor | Assembly-CSharp.dll:gpt..ctor | Assembly-CSharp.dll:gqb..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Albion.Common.dll:
+0x180984832 mov      rcx, qword ptr [r15 + 0x228]
+0x180984839 test     rcx, rcx
+0x18098483c je       0x180986681
+0x180984842 mov      r9, qword ptr [rip + 0x44de8e7]
+0x180984849 xor      r8d, r8d
+0x18098484c mov      rdx, rsi
+0x18098484f call     0x182003b60
+0x180984854 jmp      0x18098650f
+0x180984859 cmp      byte ptr [rip + 0x46f62ce], 0
+0x180984860 jne      0x180984881
+0x180984862 lea      rcx, [rip + 0x445f887]
+0x180984869 call     0x180361910
+0x18098486e lea      rcx, [rip + 0x44863bb]
+0x180984875 call     0x180361910
+0x18098487a mov      byte ptr [rip + 0x46f62ad], 1
+0x180984881 mov      rdx, qword ptr [rip + 0x445f868]
+0x180984888 mov      rcx, rdi
+0x18098488b call     0x182003eb0
+0x180984890 mov      rbx, rax
+0x180984893 mov      rcx, qword ptr [rip + 0x4486396]
+0x18098489a cmp      dword ptr [rcx + 0xe4], 0
+0x1809848a1 jne      0x1809848a8
+0x1809848a3 call     0x180361bf0
+0x1809848a8 cmp      byte ptr [rip + 0x46f6239], 0
+0x1809848af jne      0x1809848c4
+0x1809848b1 lea      rcx, [rip + 0x4486378]
+0x1809848b8 call     0x180361910
+0x1809848bd mov      byte ptr [rip + 0x46f6224], 1
+0x1809848c4 mov      rcx, qword ptr [rip + 0x4486365]
+0x1809848cb cmp      dword ptr [rcx + 0xe4], 0
+0x1809848d2 jne      0x1809848d9
+0x1809848d4 call     0x180361bf0
+0x1809848d9 mov      rcx, qword ptr [rip + 0x4486350]
+0x1809848e0 call     0x180361710
+0x1809848e5 mov      rax, qword ptr [rax]
+0x1809848e8 test     rax, rax
+0x1809848eb je       0x180986681
+0x1809848f1 mov      rax, qword ptr [rax + 0x68]
+0x1809848f5 test     rbx, rbx
+0x1809848f8 je       0x180986681
+0x1809848fe movss    xmm0, dword ptr [rbx + 0x10]
+0x180984903 movss    xmm1, dword ptr [rbx + 0x14]
+0x180984908 test     rax, rax
+0x18098490b je       0x180986681
+0x180984911 movss    dword ptr [rax + 0x3ac], xmm0
+0x180984919 movss    dword ptr [rax + 0x3b0], xmm1
+0x180984921 jmp      0x18098650f
+0x180984926 cmp      byte ptr [rip + 0x46f6200], 0
+0x18098492d jne      0x18098495a
+0x18098492f lea      rcx, [rip + 0x445f912]
+0x180984936 call     0x180361910
+0x18098493b lea      rcx, [rip + 0x44862ee]
+0x180984942 call     0x180361910
+0x180984947 lea      rcx, [rip + 0x44878e2]
+0x18098494e call     0x180361910
+0x180984953 mov      byte ptr [rip + 0x46f61d3], 1
+0x18098495a mov      rdx, qword ptr [rip + 0x445f8e7]
+0x180984961 mov      rcx, rdi
+0x180984964 call     0x182003eb0
+0x180984969 mov      rcx, qword ptr [rip + 0x44862c0]
+0x180984970 cmp      dword ptr [rcx + 0xe4], 0
+0x180984977 jne      0x18098497e
+0x180984979 call     0x180361bf0
+0x18098497e cmp      byte ptr [rip + 0x46f6163], 0
+0x180984985 jne      0x18098499a
+0x180984987 lea      rcx, [rip + 0x44862a2]
+0x18098498e call     0x180361910
+0x180984993 mov      byte ptr [rip + 0x46f614e], 1
+0x18098499a mov      rcx, qword ptr [rip + 0x448628f]
+0x1809849a1 cmp      dword ptr [rcx + 0xe4], 0
+0x1809849a8 jne      0x1809849af
+0x1809849aa call     0x180361bf0
+0x1809849af mov      rcx, qword ptr [rip + 0x448627a]
+0x1809849b6 call     0x180361710
+0x1809849bb mov      rcx, qword ptr [rax]
+0x1809849be test     rcx, rcx
+0x1809849c1 je       0x180986681
+0x1809849c7 mov      byte ptr [rcx + 0x8b], 1
+0x1809849ce mov      rcx, qword ptr [rip + 0x448785b]
+0x1809849d5 call     0x180361b10
+0x1809849da mov      rbx, rax
+0x1809849dd xor      edx, edx
+0x1809849df mov      rcx, rax
+0x1809849e2 call     0x180ab1c10 ; Albion.PhotonClient.dll:cje..ctor
+0x1809849e7 mov      qword ptr [r15 + 0x70], rbx
+0x1809849eb lea      rcx, [r15 + 0x70]
+0x1809849ef mov      rdx, rbx
+0x1809849f2 call     0x180360c40
+0x1809849f7 jmp      0x18098650f
+0x1809849fc cmp      byte ptr [rip + 0x46f6131], 0
+0x180984a03 jne      0x180984a30
+0x180984a05 lea      rcx, [rip + 0x441309c]
+0x180984a0c call     0x180361910
+0x180984a11 lea      rcx, [rip + 0x441f4b8]
+0x180984a18 call     0x180361910
+0x180984a1d lea      rcx, [rip + 0x44b8e8c]
+0x180984a24 call     0x180361910
+0x180984a29 mov      byte ptr [rip + 0x46f6104], 1
+0x180984a30 mov      rdx, qword ptr [rip + 0x441f499]
+0x180984a37 mov      rcx, rdi
+0x180984a3a call     0x182003eb0
+0x180984a3f test     rax, rax
+0x180984a42 je       0x18098666f
+0x180984a48 movsx    ebx, word ptr [rax + 0x18]
+0x180984a4c mov      rdi, qword ptr [rax + 0x20]
+0x180984a50 mov      rcx, qword ptr [rip + 0x44b8e59]
+0x180984a57 call     0x180361b10
+0x180984a5c mov      rsi, rax
+0x180984a5f mov      edx, ebx
+0x180984a61 xor      r9d, r9d
+0x180984a64 mov      r8, rdi
+0x180984a67 mov      rcx, rax
+0x180984a6a call     0x180a99960 ; Albion.PhotonClient.dll:c6a..ctor | Albion.PhotonClient.dll:c6b..ctor | Albion.PhotonClient.dll:c6m..ctor | Albion.PhotonClient.dll:db1..ctor
+0x180984a6f mov      rcx, qword ptr [r15 + 0x228]
+0x180984a76 test     rcx, rcx
+0x180984a79 je       0x18098666f
+0x180984a7f mov      r9, qword ptr [rip + 0x4413022]
+0x180984a86 xor      r8d, r8d
+0x180984a89 mov      rdx, rsi
+0x180984a8c call     0x182003b60
+0x180984a91 mov      rdi, qword ptr [rsp + 0x110]
+0x180984a99 jmp      0x18098650f
+0x180984a9e cmp      byte ptr [rip + 0x46f6090], 0
+0x180984aa5 jne      0x180984ade
+0x180984aa7 lea      rcx, [rip + 0x44d62c2]
+0x180984aae call     0x180361910
+0x180984ab3 lea      rcx, [rip + 0x4413d5e]
+0x180984aba call     0x180361910
+0x180984abf lea      rcx, [rip + 0x441f562]
+0x180984ac6 call     0x180361910
+0x180984acb lea      rcx, [rip + 0x44b9606]
+0x180984ad2 call     0x180361910
+0x180984ad7 mov      byte ptr [rip + 0x46f6057], 1
+0x180984ade mov      rdx, qword ptr [rip + 0x441f543]
+0x180984ae5 mov      rcx, rdi
+0x180984ae8 call     0x182003eb0
+0x180984aed mov      rdi, rax
+0x180984af0 test     rax, rax
+0x180984af3 je       0x18098666f
+0x180984af9 movzx    r14d, word ptr [rax + 0x18]
+0x180984afe movzx    r12d, byte ptr [rax + 0x1a]
+0x180984b03 mov      rbx, qword ptr [rax + 0x20]
+0x180984b07 mov      rcx, qword ptr [rip + 0x44d6262]
+0x180984b0e cmp      dword ptr [rcx + 0xe4], 0
+0x180984b15 jne      0x180984b1c
+0x180984b17 call     0x180361bf0
+0x180984b1c xor      edx, edx
+0x180984b1e mov      rcx, rbx
+0x180984b21 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180984b26 mov      rbx, rax
+0x180984b29 movzx    edi, byte ptr [rdi + 0x28]
+0x180984b2d mov      rcx, qword ptr [rip + 0x44b95a4]
+0x180984b34 call     0x180361b10
+0x180984b39 mov      rsi, rax
+0x180984b3c xor      r13d, r13d
+0x180984b3f mov      qword ptr [rsp + 0x28], r13
+0x180984b44 mov      byte ptr [rsp + 0x20], dil
+0x180984b49 mov      r9, rbx
+0x180984b4c movzx    r8d, r12b
+0x180984b50 movzx    edx, r14w
+0x180984b54 mov      rcx, rax
+0x180984b57 call     0x180a9a4a0 ; Albion.PhotonClient.dll:c7t..ctor | Albion.PhotonClient.dll:db7..ctor
+0x180984b5c mov      rcx, qword ptr [r15 + 0x228]
+0x180984b63 test     rcx, rcx
+0x180984b66 je       0x18098666f
+0x180984b6c mov      r9, qword ptr [rip + 0x4413ca5]
+0x180984b73 xor      r8d, r8d
+0x180984b76 mov      rdx, rsi
+0x180984b79 call     0x182003b60
+0x180984b7e mov      rdi, qword ptr [rsp + 0x110]
+0x180984b86 jmp      0x180986512
+0x180984b8b mov      rax, qword ptr [r15 + 0x190]
+0x180984b92 test     rax, rax
+0x180984b95 je       0x18098666f
+0x180984b9b mov      rcx, qword ptr [rax + 0x50]
+0x180984b9f test     rcx, rcx
+0x180984ba2 je       0x18098666f
+0x180984ba8 xor      r8d, r8d
+0x180984bab mov      rdx, rdi
+0x180984bae call     0x180a40e20 ; Albion.PhotonClient.dll:c2n.a
+0x180984bb3 jmp      0x18098650f
+0x180984bb8 mov      rax, qword ptr [r15 + 0x190]
+0x180984bbf test     rax, rax
+0x180984bc2 je       0x18098666f
+0x180984bc8 mov      rcx, qword ptr [rax + 0x50]
+0x180984bcc test     rcx, rcx
+0x180984bcf je       0x18098666f
+0x180984bd5 xor      r8d, r8d
+0x180984bd8 mov      rdx, rdi
+0x180984bdb call     0x180a43060 ; Albion.PhotonClient.dll:c2n.b
+0x180984be0 jmp      0x18098650f
+0x180984be5 mov      rax, qword ptr [r15 + 0x190]
+0x180984bec test     rax, rax
+0x180984bef je       0x18098666f
+0x180984bf5 mov      rcx, qword ptr [rax + 0x148]
+0x180984bfc test     rcx, rcx
+0x180984bff je       0x18098666f
+0x180984c05 xor      r8d, r8d
+0x180984c08 mov      rdx, rdi
+0x180984c0b call     0x180ac6110 ; Albion.PhotonClient.dll:dd7.r
+0x180984c10 jmp      0x18098650f
+0x180984c15 mov      rax, qword ptr [r15 + 0x190]
+0x180984c1c test     rax, rax
+0x180984c1f je       0x18098666f
+0x180984c25 mov      rcx, qword ptr [rax + 0x148]
+0x180984c2c test     rcx, rcx
+0x180984c2f je       0x18098666f
+0x180984c35 xor      r8d, r8d
+0x180984c38 mov      rdx, rdi
+0x180984c3b call     0x180ac51c0 ; Albion.PhotonClient.dll:dd7.q
+0x180984c40 jmp      0x18098650f
+0x180984c45 mov      rax, qword ptr [r15 + 0x190]
+0x180984c4c test     rax, rax
+0x180984c4f je       0x18098666f
+0x180984c55 mov      rcx, qword ptr [rax + 0x148]
+0x180984c5c test     rcx, rcx
+0x180984c5f je       0x18098666f
+0x180984c65 xor      r8d, r8d
+0x180984c68 mov      rdx, rdi
+0x180984c6b call     0x180ac67f0 ; Albion.PhotonClient.dll:dd7.s
+0x180984c70 jmp      0x18098650f
+0x180984c75 xor      r8d, r8d
+0x180984c78 mov      rdx, rdi
+0x180984c7b mov      rcx, r15
+0x180984c7e call     0x18097be40 ; Albion.PhotonClient.dll:ci7.cw
+0x180984c83 jmp      0x18098650f
+0x180984c88 mov      rax, qword ptr [r15 + 0x190]
+0x180984c8f test     rax, rax
+0x180984c92 je       0x18098666f
+0x180984c98 mov      rcx, qword ptr [rax + 0x108]
+0x180984c9f test     rcx, rcx
+0x180984ca2 je       0x18098666f
+0x180984ca8 xor      r8d, r8d
+0x180984cab mov      rdx, rdi
+0x180984cae call     0x180a874d0 ; Albion.PhotonClient.dll:c3k.f
+0x180984cb3 jmp      0x18098650f
+0x180984cb8 mov      rax, qword ptr [r15 + 0x190]
+0x180984cbf test     rax, rax
+0x180984cc2 je       0x18098666f
+0x180984cc8 mov      rcx, qword ptr [rax + 0x108]
+0x180984ccf test     rcx, rcx
+0x180984cd2 je       0x18098666f
+0x180984cd8 xor      r8d, r8d
+0x180984cdb mov      rdx, rdi
+0x180984cde call     0x180a893f0 ; Albion.PhotonClient.dll:c3k.g
+0x180984ce3 jmp      0x18098650f
+0x180984ce8 mov      rax, qword ptr [r15 + 0x190]
+0x180984cef test     rax, rax
+0x180984cf2 je       0x18098666f
+0x180984cf8 mov      rcx, qword ptr [rax + 0x108]
+0x180984cff test     rcx, rcx
+0x180984d02 je       0x18098666f
+0x180984d08 xor      r8d, r8d
+0x180984d0b mov      rdx, rdi
+0x180984d0e call     0x180a8a6c0 ; Albion.PhotonClient.dll:c3k.h
+0x180984d13 jmp      0x18098650f
+0x180984d18 mov      rax, qword ptr [r15 + 0x190]
+0x180984d1f test     rax, rax
+0x180984d22 je       0x18098666f
+0x180984d28 mov      rcx, qword ptr [rax + 0x108]
+0x180984d2f test     rcx, rcx
+0x180984d32 je       0x18098666f
+0x180984d38 xor      r8d, r8d
+0x180984d3b mov      rdx, rdi
+0x180984d3e call     0x180a8af80 ; Albion.PhotonClient.dll:c3k.i
+0x180984d43 jmp      0x18098650f
+0x180984d48 mov      rax, qword ptr [r15 + 0x190]
+0x180984d4f test     rax, rax
+0x180984d52 je       0x18098666f
+0x180984d58 mov      rcx, qword ptr [rax + 0x108]
+0x180984d5f test     rcx, rcx
+0x180984d62 je       0x18098666f
+0x180984d68 xor      r8d, r8d
+0x180984d6b mov      rdx, rdi
+0x180984d6e call     0x180a8b2c0 ; Albion.PhotonClient.dll:c3k.j
+0x180984d73 jmp      0x18098650f
+0x180984d78 mov      rcx, qword ptr [r15 + 0x190]
+0x180984d7f test     rcx, rcx
+0x180984d82 je       0x18098666f
+0x180984d88 xor      r8d, r8d
+0x180984d8b mov      rdx, rdi
+0x180984d8e call     0x180a59180 ; Albion.PhotonClient.dll:c3d.c3
+0x180984d93 jmp      0x18098650f
+0x180984d98 cmp      byte ptr [rip + 0x46f5da9], 0
+0x180984d9f jne      0x180984dcc
+0x180984da1 lea      rcx, [rip + 0x4464d58]
+0x180984da8 call     0x180361910
+0x180984dad lea      rcx, [rip + 0x44e091c]
+0x180984db4 call     0x180361910
+0x180984db9 lea      rcx, [rip + 0x443fa60]
+0x180984dc0 call     0x180361910
+0x180984dc5 mov      byte ptr [rip + 0x46f5d7c], 1
+0x180984dcc mov      rdx, qword ptr [rip + 0x443fa4d]
+0x180984dd3 mov      rcx, rdi
+0x180984dd6 call     0x182003eb0
+0x180984ddb mov      rsi, rax
+0x180984dde mov      rcx, qword ptr [rip + 0x4464d1b]
+0x180984de5 call     0x180361b10
+0x180984dea mov      rbx, rax
+0x180984ded xor      edx, edx
+0x180984def mov      rcx, rax
+0x180984df2 call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x180984df7 test     rsi, rsi
+0x180984dfa je       0x18098666f
+0x180984e00 mov      rdx, qword ptr [rsi + 0x10]
+0x180984e04 test     rbx, rbx
+0x180984e07 je       0x18098666f
+0x180984e0d mov      qword ptr [rbx + 0x18], rdx
+0x180984e11 lea      rcx, [rbx + 0x18]
+0x180984e15 call     0x180360c40
+0x180984e1a mov      eax, dword ptr [rsi + 0x18]
+0x180984e1d mov      dword ptr [rbx + 0x20], eax
+0x180984e20 mov      rcx, qword ptr [r15 + 0x228]
+0x180984e27 test     rcx, rcx
+0x180984e2a je       0x18098666f
+0x180984e30 mov      r9, qword ptr [rip + 0x44e0899]
+0x180984e37 xor      r8d, r8d
+0x180984e3a mov      rdx, rbx
+0x180984e3d call     0x182003b60
+0x180984e42 jmp      0x18098650f
+0x180984e47 mov      rax, qword ptr [r15 + 0x190]
+0x180984e4e test     rax, rax
+0x180984e51 je       0x18098650f
+0x180984e57 mov      rcx, qword ptr [rax + 0x110]
+0x180984e5e test     rcx, rcx
+0x180984e61 je       0x18098666f
+0x180984e67 xor      r8d, r8d
+0x180984e6a mov      rdx, rdi
+0x180984e6d call     0x180adb910 ; Albion.PhotonClient.dll:dea.b
+0x180984e72 jmp      0x18098650f
+0x180984e77 mov      rax, qword ptr [r15 + 0x190]
+0x180984e7e test     rax, rax
+0x180984e81 je       0x180986681
+0x180984e87 mov      rcx, qword ptr [rax + 0x180]
+0x180984e8e test     rcx, rcx
+0x180984e91 je       0x180986681
+0x180984e97 xor      r8d, r8d
+0x180984e9a mov      rdx, rdi
+0x180984e9d call     0x180a98660 ; Albion.PhotonClient.dll:c4a.p
+0x180984ea2 jmp      0x18098650f
+0x180984ea7 mov      rax, qword ptr [r15 + 0x190]
+0x180984eae test     rax, rax
+0x180984eb1 je       0x18098666f
+0x180984eb7 mov      rcx, qword ptr [rax + 0x88]
+0x180984ebe test     rcx, rcx
+0x180984ec1 je       0x18098666f
+0x180984ec7 xor      r9d, r9d
+0x180984eca movzx    r8d, bx
+0x180984ece mov      rdx, rdi
+0x180984ed1 call     0x180ad4850 ; Albion.PhotonClient.dll:ddv.u
+0x180984ed6 jmp      0x18098650f
+0x180984edb mov      rcx, qword ptr [r15 + 0x1d8]
+0x180984ee2 test     rcx, rcx
+0x180984ee5 je       0x180986681
+0x180984eeb xor      r8d, r8d
+0x180984eee mov      rdx, rdi
+0x180984ef1 call     0x180a963b0 ; Albion.PhotonClient.dll:c37.c
+0x180984ef6 jmp      0x18098650f
+0x180984efb mov      rax, qword ptr [r15 + 0x190]
+0x180984f02 test     rax, rax
+0x180984f05 je       0x18098650f
+0x180984f0b mov      rcx, qword ptr [rax + 0x118]
+0x180984f12 test     rcx, rcx
+0x180984f15 je       0x18098666f
+0x180984f1b xor      r8d, r8d
+0x180984f1e mov      rdx, rdi
+0x180984f21 call     0x180a4d830 ; Albion.PhotonClient.dll:c22.l
+0x180984f26 jmp      0x18098650f
+0x180984f2b mov      rax, qword ptr [r15 + 0x190]
+0x180984f32 test     rax, rax
+0x180984f35 je       0x18098650f
+0x180984f3b mov      rcx, qword ptr [rax + 0x118]
+0x180984f42 test     rcx, rcx
+0x180984f45 je       0x18098666f
+0x180984f4b xor      r8d, r8d
+0x180984f4e mov      rdx, rdi
+0x180984f51 call     0x180a4b770 ; Albion.PhotonClient.dll:c22.k
+0x180984f56 jmp      0x18098650f
+0x180984f5b xor      r8d, r8d
+0x180984f5e mov      rdx, rdi
+0x180984f61 mov      rcx, r15
+0x180984f64 call     0x18097c130 ; Albion.PhotonClient.dll:ci7.cx
+0x180984f69 jmp      0x18098650f
+0x180984f6e mov      rcx, qword ptr [rip + 0x44c8ba3]
+0x180984f75 cmp      dword ptr [rcx + 0xe4], 0
+0x180984f7c jne      0x180984f83
+0x180984f7e call     0x180361bf0
+0x180984f83 xor      edx, edx
+0x180984f85 mov      rcx, rdi
+0x180984f88 call     0x180b28c60 ; Albion.PhotonClient.dll:dhb.a
+0x180984f8d jmp      0x18098650f
+0x180984f92 cmp      byte ptr [rip + 0x46f5b8d], 0
+0x180984f99 jne      0x180984fd2
+0x180984f9b lea      rcx, [rip + 0x44d85c6]
+0x180984fa2 call     0x180361910
+0x180984fa7 lea      rcx, [rip + 0x44197ca]
+0x180984fae call     0x180361910
+0x180984fb3 lea      rcx, [rip + 0x441fc86]
+0x180984fba call     0x180361910
+0x180984fbf lea      rcx, [rip + 0x44bce32]
+0x180984fc6 call     0x180361910
+0x180984fcb mov      byte ptr [rip + 0x46f5b54], 1
+0x180984fd2 cmp      qword ptr [r15 + 0x190], 0
+0x180984fda je       0x18098650f
+0x180984fe0 mov      rdx, qword ptr [rip + 0x441fc59]
+0x180984fe7 mov      rcx, rdi
+0x180984fea call     0x182003eb0
+0x180984fef mov      rbx, rax
+0x180984ff2 mov      rcx, qword ptr [r15 + 0x190]
+0x180984ff9 test     rcx, rcx
+0x180984ffc je       0x18098666f
+0x180985002 mov      rcx, qword ptr [rcx + 0x98]
+0x180985009 test     rax, rax
+0x18098500c je       0x18098666f
+0x180985012 test     rcx, rcx
+0x180985015 je       0x18098666f
+0x18098501b xor      r9d, r9d
+0x18098501e movzx    r8d, byte ptr [rax + 0x12]
+0x180985023 movzx    edx, word ptr [rax + 0x10]
+0x180985027 call     0x180ab6a50 ; Albion.PhotonClient.dll:cjk.b
+0x18098502c cmp      byte ptr [rbx + 0x12], 0
+0x180985030 je       0x180985052
+0x180985032 mov      rcx, qword ptr [r15 + 0x240]
+0x180985039 test     rcx, rcx
+0x18098503c je       0x18098666f
+0x180985042 movsx    edx, word ptr [rbx + 0x10]
+0x180985046 mov      r8, qword ptr [rip + 0x44d851b]
+0x18098504d call     0x182477010
+0x180985052 movsx    ebx, word ptr [rbx + 0x10]
+0x180985056 mov      rcx, qword ptr [rip + 0x44bcd9b]
+0x18098505d call     0x180361b10
+0x180985062 mov      rsi, rax
+0x180985065 mov      edx, ebx
+0x180985067 xor      r8d, r8d
+0x18098506a mov      rcx, rax
+0x18098506d call     0x18072b480 ; Albion.Common.dll:bpy..ctor | Albion.PhotonClient.dll:cf5..ctor | Albion.PhotonClient.dll:cf6..ctor | Albion.PhotonClient.dll:c4f..ctor | Albion.PhotonClient.dll:c4g..ctor | Albion.PhotonClient.dll:c4h..ctor | Albion.PhotonClient.dll:c4j..ctor | Albion.PhotonClient.dll:c4m..ctor | Albion.PhotonClient.dll:c4o..ctor | Albion.PhotonClient.dll:c5a..ctor | Albion.PhotonClient.dll:c5g..ctor | Albion.PhotonClient.dll:c5h..ctor | Albion.PhotonClient.dll:c6d..ctor | Albion.PhotonClient.dll:c6z..ctor | Albion.PhotonClient.dll:c7r..ctor | Albion.PhotonClient.dll:c72..ctor | Albion.PhotonClient.dll:c8v..c
+0x180985072 mov      rcx, qword ptr [r15 + 0x228]
+0x180985079 test     rcx, rcx
+0x18098507c je       0x18098666f
+0x180985082 mov      r9, qword ptr [rip + 0x44196ef]
+0x180985089 xor      r8d, r8d
+0x18098508c mov      rdx, rsi
+0x18098508f call     0x182003b60
+0x180985094 jmp      0x18098650f
+0x180985099 cmp      byte ptr [rip + 0x46f5a85], 0
+0x1809850a0 jne      0x1809850cd
+0x1809850a2 lea      rcx, [rip + 0x4462697]
+0x1809850a9 call     0x180361910
+0x1809850ae lea      rcx, [rip + 0x44dc9ab]
+0x1809850b5 call     0x180361910
+0x1809850ba lea      rcx, [rip + 0x443ad77]
+0x1809850c1 call     0x180361910
+0x1809850c6 mov      byte ptr [rip + 0x46f5a58], 1
+0x1809850cd cmp      qword ptr [r15 + 0x190], 0
+0x1809850d5 je       0x18098650f
+0x1809850db mov      rdx, qword ptr [rip + 0x443ad56]
+0x1809850e2 mov      rcx, rdi
+0x1809850e5 call     0x182003eb0
+0x1809850ea xor      r13d, r13d
+0x1809850ed mov      esi, r13d
+0x1809850f0 mov      r14d, r13d
+0x1809850f3 test     rax, rax
+0x1809850f6 je       0x180986681
+0x1809850fc mov      rcx, qword ptr [r15 + 0x50]
+0x180985100 test     rcx, rcx
+0x180985103 je       0x180986681
+0x180985109 mov      rcx, qword ptr [rcx + 0xa0]
+0x180985110 cmp      byte ptr [rax + 0x10], sil
+0x180985114 jne      0x18098512f
+0x180985116 test     rcx, rcx
+0x180985119 je       0x180986681
+0x18098511f xor      r8d, r8d
+0x180985122 mov      edx, dword ptr [rax + 0x14]
+0x180985125 call     0x180579d90 ; Albion.Common.dll:bbg.abo
+0x18098512a mov      rsi, rax
+0x18098512d jmp      0x180985146
+0x18098512f test     rcx, rcx
+0x180985132 je       0x180986681
+0x180985138 xor      r8d, r8d
+0x18098513b mov      edx, dword ptr [rax + 0x14]
+0x18098513e call     0x1805732a0 ; Albion.Common.dll:bbc.abp | Albion.Common.dll:bbf.abo | Albion.Common.dll:bbg.abp
+0x180985143 mov      r14, rax
+0x180985146 mov      rcx, qword ptr [rip + 0x44625f3]
+0x18098514d call     0x180361b10
+0x180985152 mov      rbx, rax
+0x180985155 xor      r9d, r9d
+0x180985158 mov      r8, r14
+0x18098515b mov      rdx, rsi
+0x18098515e mov      rcx, rax
+0x180985161 call     0x180a98fe0 ; Assembly-CSharp.dll:gco..ctor | Assembly-CSharp.dll:a..ctor | Albion.PhotonClient.dll:c4p..ctor | Albion.PhotonClient.dll:c4w..ctor | Albion.PhotonClient.dll:c7j..ctor | Albion.PhotonClient.dll:c76..ctor | Albion.PhotonClient.dll:dag..ctor
+0x180985166 mov      rcx, qword ptr [r15 + 0x228]
+0x18098516d test     rcx, rcx
+0x180985170 je       0x180986681
+0x180985176 mov      r9, qword ptr [rip + 0x44dc8e3]
+0x18098517d xor      r8d, r8d
+0x180985180 mov      rdx, rbx
+0x180985183 call     0x182003b60
+0x180985188 jmp      0x180986512
+0x18098518d cmp      byte ptr [rip + 0x46f59b2], 0
+0x180985194 jne      0x1809851a9
+0x180985196 lea      rcx, [rip + 0x44478bb]
+0x18098519d call     0x180361910
+0x1809851a2 mov      byte ptr [rip + 0x46f599d], 1
+0x1809851a9 mov      rdx, qword ptr [rip + 0x44478a8]
+0x1809851b0 mov      rcx, rdi
+0x1809851b3 call     0x182003eb0
+0x1809851b8 mov      rcx, qword ptr [r15 + 0x1d0]
+0x1809851bf test     rcx, rcx
+0x1809851c2 je       0x18098666f
+0x1809851c8 xor      r8d, r8d
+0x1809851cb mov      rdx, rax
+0x1809851ce call     0x180b0ea30 ; Albion.PhotonClient.dll:df8.c
+0x1809851d3 jmp      0x18098650f
+0x1809851d8 cmp      byte ptr [rip + 0x46f5958], 0
+0x1809851df jne      0x180985218
+0x1809851e1 lea      rcx, [rip + 0x44d5b88]
+0x1809851e8 call     0x180361910
+0x1809851ed lea      rcx, [rip + 0x446b024]
+0x1809851f4 call     0x180361910
+0x1809851f9 lea      rcx, [rip + 0x44ea0b0]
+0x180985200 call     0x180361910
+0x180985205 lea      rcx, [rip + 0x44499e4]
+0x18098520c call     0x180361910
+0x180985211 mov      byte ptr [rip + 0x46f591f], 1
+0x180985218 mov      rdx, qword ptr [rip + 0x44499d1]
+0x18098521f mov      rcx, rdi
+0x180985222 call     0x182003eb0
+0x180985227 mov      rdi, rax
+0x18098522a test     rax, rax
+0x18098522d je       0x18098666f
+0x180985233 movzx    r14d, word ptr [rax + 0x18]
+0x180985238 movzx    r12d, byte ptr [rax + 0x1a]
+0x18098523d mov      rbx, qword ptr [rax + 0x20]
+0x180985241 mov      rcx, qword ptr [rip + 0x44d5b28]
+0x180985248 cmp      dword ptr [rcx + 0xe4], 0
+0x18098524f jne      0x180985256
+0x180985251 call     0x180361bf0
+0x180985256 xor      edx, edx
+0x180985258 mov      rcx, rbx
+0x18098525b call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180985260 mov      rbx, rax
+0x180985263 movzx    edi, byte ptr [rdi + 0x28]
+0x180985267 mov      rcx, qword ptr [rip + 0x446afaa]
+0x18098526e call     0x180361b10
+0x180985273 mov      rsi, rax
+0x180985276 xor      r13d, r13d
+0x180985279 mov      qword ptr [rsp + 0x28], r13
+0x18098527e mov      byte ptr [rsp + 0x20], dil
+0x180985283 mov      r9, rbx
+0x180985286 movzx    r8d, r12b
+0x18098528a movzx    edx, r14w
+0x18098528e mov      rcx, rax
+0x180985291 call     0x180a9a4a0 ; Albion.PhotonClient.dll:c7t..ctor | Albion.PhotonClient.dll:db7..ctor
+0x180985296 mov      rcx, qword ptr [r15 + 0x228]
+0x18098529d test     rcx, rcx
+0x1809852a0 je       0x18098666f
+0x1809852a6 mov      r9, qword ptr [rip + 0x44ea003]
+0x1809852ad xor      r8d, r8d
+0x1809852b0 mov      rdx, rsi
+0x1809852b3 call     0x182003b60
+0x1809852b8 mov      rdi, qword ptr [rsp + 0x110]
+0x1809852c0 jmp      0x180986512
+0x1809852c5 cmp      byte ptr [rip + 0x46f5867], 0
+0x1809852cc jne      0x1809852e1
+0x1809852ce lea      rcx, [rip + 0x44555e3]
+0x1809852d5 call     0x180361910
+0x1809852da mov      byte ptr [rip + 0x46f5852], 1
+0x1809852e1 mov      rax, qword ptr [rip + 0x44555d0]
+0x1809852e8 cmp      dword ptr [rax + 0xe4], 0
+0x1809852ef jne      0x180985300
+0x1809852f1 mov      rcx, rax
+0x1809852f4 call     0x180361bf0
+0x1809852f9 mov      rax, qword ptr [rip + 0x44555b8]
+0x180985300 mov      rax, qword ptr [rax + 0xb8]
+0x180985307 mov      byte ptr [rax + 8], 1
+0x18098530b jmp      0x18098650f
+0x180985310 mov      rcx, qword ptr [rip + 0x4485919]
+0x180985317 cmp      dword ptr [rcx + 0xe4], 0
+0x18098531e jne      0x180985325
+0x180985320 call     0x180361bf0
+0x180985325 xor      ecx, ecx
+0x180985327 call     0x180956650
+0x18098532c test     rax, rax
+0x18098532f je       0x180986681
+0x180985335 xor      r8d, r8d
+0x180985338 mov      rdx, rdi
+0x18098533b mov      rcx, rax
+0x18098533e call     0x180971ee0 ; Albion.PhotonClient.dll:ciy.at
+0x180985343 jmp      0x18098650f
+0x180985348 cmp      byte ptr [rip + 0x46f57da], 0
+0x18098534f jne      0x180985370
+0x180985351 lea      rcx, [rip + 0x441ef80]
+0x180985358 call     0x180361910
+0x18098535d lea      rcx, [rip + 0x44858cc]
+0x180985364 call     0x180361910
+0x180985369 mov      byte ptr [rip + 0x46f57b9], 1
+0x180985370 cmp      qword ptr [r15 + 0x190], 0
+0x180985378 je       0x18098650f
+0x18098537e mov      rdx, qword ptr [rip + 0x441ef53]
+0x180985385 mov      rcx, rdi
+0x180985388 call     0x182003eb0
+0x18098538d mov      rbx, rax
+0x180985390 mov      rcx, qword ptr [rip + 0x4485899]
+0x180985397 cmp      dword ptr [rcx + 0xe4], 0
+0x18098539e jne      0x1809853a5
+0x1809853a0 call     0x180361bf0
+0x1809853a5 xor      ecx, ecx
+0x1809853a7 call     0x180956650
+0x1809853ac test     rbx, rbx
+0x1809853af je       0x180986681
+0x1809853b5 test     rax, rax
+0x1809853b8 je       0x180986681
+0x1809853be xor      r9d, r9d
+0x1809853c1 mov      r8, qword ptr [rbx + 0x18]
+0x1809853c5 mov      rdx, qword ptr [rbx + 0x10]
+0x1809853c9 mov      rcx, rax
+0x1809853cc call     0x18096f540 ; Albion.PhotonClient.dll:ciy.a
+0x1809853d1 jmp      0x18098650f
+0x1809853d6 mov      rcx, qword ptr [rip + 0x4485853]
+0x1809853dd cmp      dword ptr [rcx + 0xe4], 0
+0x1809853e4 jne      0x1809853eb
+0x1809853e6 call     0x180361bf0
+0x1809853eb xor      ecx, ecx
+0x1809853ed call     0x180956650
+0x1809853f2 test     rax, rax
+0x1809853f5 je       0x18098666f
+0x1809853fb xor      r8d, r8d
+0x1809853fe mov      rdx, rdi
+0x180985401 mov      rcx, rax
+0x180985404 call     0x1809717e0 ; Albion.PhotonClient.dll:ciy.ar
+0x180985409 jmp      0x18098650f
+0x18098540e mov      rcx, qword ptr [rip + 0x448581b]
+0x180985415 cmp      dword ptr [rcx + 0xe4], 0
+0x18098541c jne      0x180985423
+0x18098541e call     0x180361bf0
+0x180985423 xor      ecx, ecx
+0x180985425 call     0x180956650
+0x18098542a test     rax, rax
+0x18098542d je       0x18098666f
+0x180985433 xor      r8d, r8d
+0x180985436 mov      rdx, rdi
+0x180985439 mov      rcx, rax
+0x18098543c call     0x18096fee0 ; Albion.PhotonClient.dll:ciy.a
+0x180985441 jmp      0x18098650f
+0x180985446 mov      rcx, qword ptr [rip + 0x44857e3]
+0x18098544d cmp      dword ptr [rcx + 0xe4], 0
+0x180985454 jne      0x18098545b
+0x180985456 call     0x180361bf0
+0x18098545b xor      ecx, ecx
+0x18098545d call     0x180956650
+0x180985462 test     rax, rax
+0x180985465 je       0x18098666f
+0x18098546b xor      r8d, r8d
+0x18098546e mov      rdx, rdi
+0x180985471 mov      rcx, rax
+0x180985474 call     0x180971230 ; Albion.PhotonClient.dll:ciy.am
+0x180985479 jmp      0x18098650f
+0x18098547e mov      rax, qword ptr [r15 + 0x190]
+0x180985485 test     rax, rax
+0x180985488 je       0x18098666f
+0x18098548e mov      rcx, qword ptr [rax + 0x90]
+0x180985495 test     rcx, rcx
+0x180985498 je       0x18098666f
+0x18098549e xor      r9d, r9d
+0x1809854a1 movzx    r8d, bx
+0x1809854a5 mov      rdx, rdi
+0x1809854a8 call     0x180b09ce0 ; Albion.PhotonClient.dll:dfp.l
+0x1809854ad jmp      0x18098650f
+0x1809854b2 cmp      byte ptr [rip + 0x46f56ad], 0
+0x1809854b9 jne      0x1809854ce
+0x1809854bb lea      rcx, [rip + 0x4448f1e]
+0x1809854c2 call     0x180361910
+0x1809854c7 mov      byte ptr [rip + 0x46f5698], 1
+0x1809854ce mov      rdx, qword ptr [rip + 0x4448f0b]
+0x1809854d5 mov      rcx, rdi
+0x1809854d8 call     0x182003eb0
+0x1809854dd mov      rbx, rax
+0x1809854e0 mov      rcx, qword ptr [r15 + 0x190]
+0x1809854e7 test     rcx, rcx
+0x1809854ea je       0x18098666f
+0x1809854f0 mov      rcx, qword ptr [rcx + 0x88]
+0x1809854f7 test     rcx, rcx
+0x1809854fa je       0x18098666f
+0x180985500 xor      edx, edx
+0x180985502 call     0x180855aa0 ; Albion.Common.dll:ch.b | Albion.Common.dll:da.c | Albion.Common.dll:a5e.i | Albion.Common.dll:cdl.c | mscorlib.dll:System.Runtime.Remoting.Identity.get_IsConnected | mscorlib.dll:System.Runtime.Remoting.Messaging.CallContextSecurityData.get_HasInfo | mscorlib.dll:System.Runtime.Remoting.Messaging.CallContextRemotingData.get_HasInfo | Albion.PhotonClient.dll:ddv.aa | UnityEngine.Physics2DModule.dll:DrawerGroup.get_isValid
+0x180985507 mov      rcx, qword ptr [r15 + 0x190]
+0x18098550e test     rcx, rcx
+0x180985511 je       0x18098666f
+0x180985517 test     al, al
+0x180985519 jne      0x180985538
+0x18098551b mov      rcx, qword ptr [rcx + 0x70]
+0x18098551f test     rcx, rcx
+0x180985522 je       0x18098666f
+0x180985528 xor      r8d, r8d
+0x18098552b mov      rdx, rbx
+0x18098552e call     0x180b1f8a0 ; Albion.PhotonClient.dll:dg9.r
+0x180985533 jmp      0x18098650f
+0x180985538 mov      rcx, qword ptr [rcx + 0x88]
+0x18098553f test     rcx, rcx
+0x180985542 je       0x18098666f
+0x180985548 xor      r8d, r8d
+0x18098554b mov      rdx, rbx
+0x18098554e call     0x180ad4c10 ; Albion.PhotonClient.dll:ddv.u
+0x180985553 jmp      0x18098650f
+0x180985558 cmp      byte ptr [rip + 0x46f55ef], 0
+0x18098555f jne      0x18098558c
+0x180985561 lea      rcx, [rip + 0x44663d0]
+0x180985568 call     0x180361910
+0x18098556d lea      rcx, [rip + 0x44e29ac]
+0x180985574 call     0x180361910
+0x180985579 lea      rcx, [rip + 0x4440550]
+0x180985580 call     0x180361910
+0x180985585 mov      byte ptr [rip + 0x46f55c2], 1
+0x18098558c mov      rdx, qword ptr [rip + 0x444053d]
+0x180985593 mov      rcx, rdi
+0x180985596 call     0x182003eb0
+0x18098559b mov      rsi, qword ptr [r15 + 0x228]
+0x1809855a2 test     rax, rax
+0x1809855a5 je       0x180986681
+0x1809855ab mov      rdi, qword ptr [rax + 0x10]
+0x1809855af mov      rbx, qword ptr [rax + 0x18]
+0x1809855b3 mov      rcx, qword ptr [rip + 0x446637e]
+0x1809855ba call     0x180361b10
+0x1809855bf mov      r14, rax
+0x1809855c2 xor      r9d, r9d
+0x1809855c5 mov      r8, rbx
+0x1809855c8 mov      rdx, rdi
+0x1809855cb mov      rcx, rax
+0x1809855ce call     0x180a999a0 ; Albion.PhotonClient.dll:c6c..ctor | Albion.PhotonClient.dll:c9c..ctor | Albion.PhotonClient.dll:dcv..ctor | Albion.PhotonClient.dll:dcw..ctor
+0x1809855d3 test     rsi, rsi
+0x1809855d6 je       0x180986681
+0x1809855dc mov      r9, qword ptr [rip + 0x44e293d]
+0x1809855e3 jmp      0x18098380c
+0x1809855e8 mov      rcx, qword ptr [r15 + 0x190]
+0x1809855ef test     rcx, rcx
+0x1809855f2 je       0x18098650f
+0x1809855f8 xor      r8d, r8d
+0x1809855fb mov      rdx, rdi
+0x1809855fe call     0x180a5a620 ; Albion.PhotonClient.dll:c3d.c7
+0x180985603 jmp      0x18098650f
+0x180985608 mov      rax, qword ptr [r15 + 0x190]
+0x18098560f test     rax, rax
+0x180985612 je       0x180986681
+0x180985618 mov      rcx, qword ptr [rax + 0x160]
+0x18098561f test     rcx, rcx
+0x180985622 je       0x180986681
+0x180985628 xor      r8d, r8d
+0x18098562b mov      rdx, rdi
+0x18098562e call     0x180ae8e90 ; Albion.PhotonClient.dll:dex.aa
+0x180985633 jmp      0x18098650f
+0x180985638 mov      rax, qword ptr [r15 + 0x190]
+0x18098563f test     rax, rax
+0x180985642 je       0x180986681
+0x180985648 mov      rcx, qword ptr [rax + 0x160]
+0x18098564f test     rcx, rcx
+0x180985652 je       0x180986681
+0x180985658 xor      r8d, r8d
+0x18098565b mov      rdx, rdi
+0x18098565e call     0x180aeb6e0 ; Albion.PhotonClient.dll:dex.z
+0x180985663 jmp      0x18098650f
+0x180985668 cmp      byte ptr [rip + 0x46f54cf], 0
+0x18098566f jne      0x180985684
+0x180985671 lea      rcx, [rip + 0x4439240]
+0x180985678 call     0x180361910
+0x18098567d mov      byte ptr [rip + 0x46f54ba], 1
+0x180985684 mov      rdx, qword ptr [rip + 0x443922d]
+0x18098568b mov      rcx, rdi
+0x18098568e call     0x182003eb0
+0x180985693 cmp      qword ptr [r15 + 0x190], 0
+0x18098569b je       0x18098650f
+0x1809856a1 mov      rcx, qword ptr [r15 + 0x190]
+0x1809856a8 test     rax, rax
+0x1809856ab je       0x180986681
+0x1809856b1 mov      rdx, qword ptr [rax + 0x10]
+0x1809856b5 mov      qword ptr [rcx + 0x308], rdx
+0x1809856bc add      rcx, 0x308
+0x1809856c3 call     0x180360c40
+0x1809856c8 jmp      0x18098650f
+0x1809856cd mov      rax, qword ptr [r15 + 0x190]
+0x1809856d4 test     rax, rax
+0x1809856d7 je       0x180986681
+0x1809856dd mov      rcx, qword ptr [rax + 0x160]
+0x1809856e4 test     rcx, rcx
+0x1809856e7 je       0x180986681
+0x1809856ed xor      r8d, r8d
+0x1809856f0 mov      rdx, rdi
+0x1809856f3 call     0x180ae99b0 ; Albion.PhotonClient.dll:dex.ag
+0x1809856f8 jmp      0x18098650f
+0x1809856fd mov      rax, qword ptr [r15 + 0x190]
+0x180985704 test     rax, rax
+0x180985707 je       0x180986681
+0x18098570d mov      rcx, qword ptr [rax + 0x160]
+0x180985714 test     rcx, rcx
+0x180985717 je       0x180986681
+0x18098571d xor      r8d, r8d
+0x180985720 mov      rdx, rdi
+0x180985723 call     0x180ae9b10 ; Albion.PhotonClient.dll:dex.ah
+0x180985728 jmp      0x18098650f
+0x18098572d mov      rax, qword ptr [r15 + 0x190]
+0x180985734 test     rax, rax
+0x180985737 je       0x180986681
+0x18098573d mov      rcx, qword ptr [rax + 0x160]
+0x180985744 test     rcx, rcx
+0x180985747 je       0x180986681
+0x18098574d xor      r8d, r8d
+0x180985750 mov      rdx, rdi
+0x180985753 call     0x180ae9bf0 ; Albion.PhotonClient.dll:dex.ai
+0x180985758 jmp      0x18098650f
+0x18098575d mov      rax, qword ptr [r15 + 0x190]
+0x180985764 test     rax, rax
+0x180985767 je       0x180986681
+0x18098576d mov      rcx, qword ptr [rax + 0x160]
+0x180985774 test     rcx, rcx
+0x180985777 je       0x180986681
+0x18098577d xor      r8d, r8d
+0x180985780 mov      rdx, rdi
+0x180985783 call     0x180ae9700 ; Albion.PhotonClient.dll:dex.af
+0x180985788 jmp      0x18098650f
+0x18098578d mov      rax, qword ptr [r15 + 0x190]
+0x180985794 test     rax, rax
+0x180985797 je       0x180986681
+0x18098579d mov      rcx, qword ptr [rax + 0x160]
+0x1809857a4 test     rcx, rcx
+0x1809857a7 je       0x180986681
+0x1809857ad xor      r8d, r8d
+0x1809857b0 mov      rdx, rdi
+0x1809857b3 call     0x180ae9640 ; Albion.PhotonClient.dll:dex.ae
+0x1809857b8 jmp      0x18098650f
+0x1809857bd mov      rcx, qword ptr [r15 + 0x190]
+0x1809857c4 test     rcx, rcx
+0x1809857c7 je       0x18098666f
+0x1809857cd xor      r8d, r8d
+0x1809857d0 mov      rdx, rdi
+0x1809857d3 call     0x180a5a060 ; Albion.PhotonClient.dll:c3d.c4
+0x1809857d8 jmp      0x18098650f
+0x1809857dd mov      rcx, qword ptr [r15 + 0x190]
+0x1809857e4 test     rcx, rcx
+0x1809857e7 je       0x18098650f
+0x1809857ed xor      r8d, r8d
+0x1809857f0 mov      rdx, rdi
+0x1809857f3 call     0x180a5aac0 ; Albion.PhotonClient.dll:c3d.c8
+0x1809857f8 jmp      0x18098650f
+0x1809857fd cmp      byte ptr [rip + 0x46f531f], 0
+0x180985804 jne      0x180985825
+0x180985806 lea      rcx, [rip + 0x446562b]
+0x18098580d call     0x180361910
+0x180985812 lea      rcx, [rip + 0x44e1437]
+0x180985819 call     0x180361910
+0x18098581e mov      byte ptr [rip + 0x46f52fe], 1
+0x180985825 mov      rcx, qword ptr [r15 + 0x190]
+0x18098582c test     rcx, rcx
+0x18098582f je       0x18098666f
+0x180985835 xor      r8d, r8d
+0x180985838 mov      rdx, rdi
+0x18098583b call     0x180a5d5b0 ; Albion.PhotonClient.dll:c3d.dc
+0x180985840 mov      rbx, qword ptr [r15 + 0x228]
+0x180985847 mov      rcx, qword ptr [rip + 0x44655ea]
+0x18098584e call     0x180361b10
+0x180985853 mov      rsi, rax
+0x180985856 xor      edx, edx
+0x180985858 mov      rcx, rax
+0x18098585b call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x180985860 test     rbx, rbx
+0x180985863 je       0x18098666f
+0x180985869 mov      r9, qword ptr [rip + 0x44e13e0]
+0x180985870 xor      r8d, r8d
+0x180985873 mov      rdx, rsi
+0x180985876 mov      rcx, rbx
+0x180985879 call     0x182003b60
+0x18098587e jmp      0x18098650f
+0x180985883 mov      rcx, qword ptr [r15 + 0x190]
+0x18098588a test     rcx, rcx
+0x18098588d je       0x180986681
+0x180985893 xor      r9d, r9d
+0x180985896 movzx    r8d, bx
+0x18098589a mov      rdx, rdi
+0x18098589d call     0x180a5ad60 ; Albion.PhotonClient.dll:c3d.cl
+0x1809858a2 jmp      0x18098650f
+0x1809858a7 mov      rcx, qword ptr [r15 + 0x190]
+0x1809858ae test     rcx, rcx
+0x1809858b1 je       0x180986681
+0x1809858b7 xor      r8d, r8d
+0x1809858ba mov      rdx, rdi
+0x1809858bd call     0x180a5a1d0 ; Albion.PhotonClient.dll:c3d.c5
+0x1809858c2 jmp      0x18098650f
+0x1809858c7 mov      rcx, qword ptr [r15 + 0x190]
+0x1809858ce test     rcx, rcx
+0x1809858d1 je       0x180986681
+0x1809858d7 xor      r8d, r8d
+0x1809858da mov      rdx, rdi
+0x1809858dd call     0x180a5a3b0 ; Albion.PhotonClient.dll:c3d.c6
+0x1809858e2 jmp      0x18098650f
+0x1809858e7 mov      rax, qword ptr [r15 + 0x190]
+0x1809858ee test     rax, rax
+0x1809858f1 je       0x180986681
+0x1809858f7 mov      rcx, qword ptr [rax + 0x170]
+0x1809858fe test     rcx, rcx
+0x180985901 je       0x180986681
+0x180985907 xor      r8d, r8d
+0x18098590a mov      rdx, rdi
+0x18098590d call     0x180ab9430 ; Albion.PhotonClient.dll:cjp.c
+0x180985912 jmp      0x18098650f
+0x180985917 mov      rax, qword ptr [r15 + 0x190]
+0x18098591e test     rax, rax
+0x180985921 je       0x180986681
+0x180985927 mov      rcx, qword ptr [rax + 0x170]
+0x18098592e test     rcx, rcx
+0x180985931 je       0x180986681
+0x180985937 xor      r8d, r8d
+0x18098593a mov      rdx, rdi
+0x18098593d call     0x180ab8160 ; Albion.PhotonClient.dll:cjp.a
+0x180985942 jmp      0x18098650f
+0x180985947 mov      rax, qword ptr [r15 + 0x190]
+0x18098594e test     rax, rax
+0x180985951 je       0x180986681
+0x180985957 mov      rcx, qword ptr [rax + 0x170]
+0x18098595e test     rcx, rcx
+0x180985961 je       0x180986681
+0x180985967 xor      r8d, r8d
+0x18098596a mov      rdx, rdi
+0x18098596d call     0x180ab8b30 ; Albion.PhotonClient.dll:cjp.b
+0x180985972 jmp      0x18098650f
+0x180985977 cmp      byte ptr [rip + 0x46f51bf], 0
+0x18098597e jne      0x18098599f
+0x180985980 lea      rcx, [rip + 0x44ddba1]
+0x180985987 call     0x180361910
+0x18098598c lea      rcx, [rip + 0x4449665]
+0x180985993 call     0x180361910
+0x180985998 mov      byte ptr [rip + 0x46f519e], 1
+0x18098599f mov      rdx, qword ptr [rip + 0x4449652]
+0x1809859a6 mov      rcx, rdi
+0x1809859a9 call     0x182003eb0
+0x1809859ae mov      rcx, qword ptr [r15 + 0x2b0]
+0x1809859b5 test     rcx, rcx
+0x1809859b8 je       0x18098650f
+0x1809859be test     rax, rax
+0x1809859c1 je       0x180986681
+0x1809859c7 mov      r8, qword ptr [rip + 0x44ddb5a]
+0x1809859ce mov      rdx, qword ptr [rax + 0x18]
+0x1809859d2 call     0x182919670
+0x1809859d7 jmp      0x18098650f
+0x1809859dc mov      rcx, qword ptr [rip + 0x44c2a05]
+0x1809859e3 cmp      dword ptr [rcx + 0xe4], 0
+0x1809859ea jne      0x1809859f1
+0x1809859ec call     0x180361bf0
+0x1809859f1 xor      r8d, r8d
+0x1809859f4 movzx    edx, bx
+0x1809859f7 mov      rcx, rdi
+0x1809859fa call     0x180ae7f40 ; Albion.PhotonClient.dll:dew.a
+0x1809859ff jmp      0x18098650f
+0x180985a04 cmp      byte ptr [rip + 0x46f511d], 0
+0x180985a0b jne      0x180985a38
+0x180985a0d lea      rcx, [rip + 0x4419824]
+0x180985a14 call     0x180361910
+0x180985a19 lea      rcx, [rip + 0x4422340]
+0x180985a20 call     0x180361910
+0x180985a25 lea      rcx, [rip + 0x44bc93c]
+0x180985a2c call     0x180361910
+0x180985a31 mov      byte ptr [rip + 0x46f50f0], 1
+0x180985a38 cmp      qword ptr [r15 + 0x190], 0
+0x180985a40 je       0x18098650f
+0x180985a46 mov      rdx, qword ptr [rip + 0x4422313]
+0x180985a4d mov      rcx, rdi
+0x180985a50 call     0x182003eb0
+0x180985a55 mov      rsi, rax
+0x180985a58 mov      rcx, qword ptr [r15 + 0x190]
+0x180985a5f test     rcx, rcx
+0x180985a62 je       0x180986681
+0x180985a68 mov      rcx, qword ptr [rcx + 0x98]
+0x180985a6f test     rcx, rcx
+0x180985a72 je       0x180986681
+0x180985a78 xor      r8d, r8d
+0x180985a7b mov      rdx, rax
+0x180985a7e call     0x180ab5970 ; Albion.PhotonClient.dll:cjk.b
+0x180985a83 mov      rcx, qword ptr [rip + 0x44bc8de]
+0x180985a8a call     0x180361b10
+0x180985a8f mov      rbx, rax
+0x180985a92 xor      r8d, r8d
+0x180985a95 mov      rdx, rsi
+0x180985a98 mov      rcx, rax
+0x180985a9b call     0x180abeca0 ; Albion.PhotonClient.dll:dcp..ctor
+0x180985aa0 mov      rcx, qword ptr [r15 + 0x228]
+0x180985aa7 test     rcx, rcx
+0x180985aaa je       0x180986681
+0x180985ab0 mov      r9, qword ptr [rip + 0x4419781]
+0x180985ab7 xor      r8d, r8d
+0x180985aba mov      rdx, rbx
+0x180985abd call     0x182003b60
+0x180985ac2 jmp      0x18098650f
+0x180985ac7 mov      rax, qword ptr [r15 + 0x190]
+0x180985ace test     rax, rax
+0x180985ad1 je       0x180986681
+0x180985ad7 mov      rcx, qword ptr [rax + 0x1a0]
+0x180985ade test     rcx, rcx
+0x180985ae1 je       0x180986681
+0x180985ae7 xor      r8d, r8d
+0x180985aea mov      rdx, rdi
+0x180985aed call     0x180ae6ae0 ; Albion.PhotonClient.dll:dev.c
+0x180985af2 jmp      0x18098650f
+0x180985af7 mov      rax, qword ptr [r15 + 0x190]
+0x180985afe test     rax, rax
+0x180985b01 je       0x180986681
+0x180985b07 mov      rcx, qword ptr [rax + 0x180]
+0x180985b0e test     rcx, rcx
+0x180985b11 je       0x180986681
+0x180985b17 xor      r8d, r8d
+0x180985b1a mov      rdx, rdi
+0x180985b1d call     0x180a98800 ; Albion.PhotonClient.dll:c4a.q
+0x180985b22 jmp      0x18098650f
+0x180985b27 cmp      byte ptr [rip + 0x46f5002], 0
+0x180985b2e jne      0x180985b5b
+0x180985b30 lea      rcx, [rip + 0x4415d41]
+0x180985b37 call     0x180361910
+0x180985b3c lea      rcx, [rip + 0x4461f65]
+0x180985b43 call     0x180361910
+0x180985b48 lea      rcx, [rip + 0x44ba371]
+0x180985b4f call     0x180361910
+0x180985b54 mov      byte ptr [rip + 0x46f4fd5], 1
+0x180985b5b mov      rdx, qword ptr [rip + 0x4461f46]
+0x180985b62 mov      rcx, rdi
+0x180985b65 call     0x182003eb0
+0x180985b6a mov      rbx, rax
+0x180985b6d mov      rcx, qword ptr [rip + 0x44ba34c]
+0x180985b74 call     0x180361b10
+0x180985b79 mov      rsi, rax
+0x180985b7c xor      r8d, r8d
+0x180985b7f mov      rdx, rbx
+0x180985b82 mov      rcx, rax
+0x180985b85 call     0x1809345c0 ; Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:d..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:fxv..ctor | Assembly-CSharp.dll:ggn..ctor | Assembly-CSharp.dll:gj2..ctor | Assembly-CSharp.dll:gki..ctor | Assembly-CSharp.dll:gpt..ctor | Assembly-CSharp.dll:gqb..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Albion.Common.dll:
+0x180985b8a mov      rcx, qword ptr [r15 + 0x228]
+0x180985b91 test     rcx, rcx
+0x180985b94 je       0x180986681
+0x180985b9a mov      r9, qword ptr [rip + 0x4415cd7]
+0x180985ba1 xor      r8d, r8d
+0x180985ba4 mov      rdx, rsi
+0x180985ba7 call     0x182003b60
+0x180985bac jmp      0x18098650f
+0x180985bb1 cmp      byte ptr [rip + 0x46f4f6f], 0
+0x180985bb8 jne      0x180985bcd
+0x180985bba lea      rcx, [rip + 0x44216ff]
+0x180985bc1 call     0x180361910
+0x180985bc6 mov      byte ptr [rip + 0x46f4f5a], 1
+0x180985bcd cmp      qword ptr [r15 + 0x190], 0
+0x180985bd5 je       0x18098650f
+0x180985bdb mov      rdx, qword ptr [rip + 0x44216de]
+0x180985be2 mov      rcx, rdi
+0x180985be5 call     0x182003eb0
+0x180985bea mov      rcx, qword ptr [r15 + 0x190]
+0x180985bf1 test     rax, rax
+0x180985bf4 je       0x18098666f
+0x180985bfa mov      edx, dword ptr [rax + 0x10]
+0x180985bfd test     rcx, rcx
+0x180985c00 je       0x18098666f
+0x180985c06 mov      dword ptr [rcx + 0x2ac], edx
+0x180985c0c jmp      0x18098650f
+0x180985c11 mov      rax, qword ptr [r15 + 0x190]
+0x180985c18 test     rax, rax
+0x180985c1b je       0x18098650f
+0x180985c21 jmp      0x180983cc8
+0x180985c26 mov      rax, qword ptr [r15 + 0x190]
+0x180985c2d test     rax, rax
+0x180985c30 je       0x18098650f
+0x180985c36 mov      rcx, qword ptr [rax + 0x1c0]
+0x180985c3d test     rcx, rcx
+0x180985c40 je       0x18098666f
+0x180985c46 xor      r9d, r9d
+0x180985c49 movzx    r8d, bx
+0x180985c4d mov      rdx, rdi
+0x180985c50 call     0x180af0930 ; Albion.PhotonClient.dll:dfc.q
+0x180985c55 jmp      0x18098650f
+0x180985c5a cmp      byte ptr [rip + 0x46f4ed5], 0
+0x180985c61 jne      0x180985c8e
+0x180985c63 lea      rcx, [rip + 0x44120ee]
+0x180985c6a call     0x180361910
+0x180985c6f lea      rcx, [rip + 0x4460992]
+0x180985c76 call     0x180361910
+0x180985c7b lea      rcx, [rip + 0x44b7d86]
+0x180985c82 call     0x180361910
+0x180985c87 mov      byte ptr [rip + 0x46f4ea8], 1
+0x180985c8e mov      rdx, qword ptr [rip + 0x4460973]
+0x180985c95 mov      rcx, rdi
+0x180985c98 call     0x182003eb0
+0x180985c9d test     rax, rax
+0x180985ca0 je       0x18098666f
+0x180985ca6 movzx    r14d, word ptr [rax + 0x18]
+0x180985cab mov      rsi, qword ptr [rax + 0x20]
+0x180985caf movzx    edi, byte ptr [rax + 0x28]
+0x180985cb3 movzx    ebx, byte ptr [rax + 0x29]
+0x180985cb7 mov      rcx, qword ptr [rip + 0x44b7d4a]
+0x180985cbe call     0x180361b10
+0x180985cc3 mov      r12, rax
+0x180985cc6 xor      r13d, r13d
+0x180985cc9 mov      qword ptr [rsp + 0x28], r13
+0x180985cce mov      byte ptr [rsp + 0x20], bl
+0x180985cd2 movzx    r9d, dil
+0x180985cd6 mov      r8, rsi
+0x180985cd9 movzx    edx, r14w
+0x180985cdd mov      rcx, rax
+0x180985ce0 call     0x180a9b2c0 ; Albion.PhotonClient.dll:db2..ctor
+0x180985ce5 mov      rcx, qword ptr [r15 + 0x228]
+0x180985cec test     rcx, rcx
+0x180985cef je       0x18098666f
+0x180985cf5 mov      r9, qword ptr [rip + 0x441205c]
+0x180985cfc xor      r8d, r8d
+0x180985cff mov      rdx, r12
+0x180985d02 call     0x182003b60
+0x180985d07 mov      rdi, qword ptr [rsp + 0x110]
+0x180985d0f jmp      0x180986512
+0x180985d14 xor      r8d, r8d
+0x180985d17 mov      rdx, rdi
+0x180985d1a mov      rcx, r15
+0x180985d1d call     0x180979350 ; Albion.PhotonClient.dll:ci7.c3
+0x180985d22 jmp      0x18098650f
+0x180985d27 mov      rax, qword ptr [r15 + 0x190]
+0x180985d2e test     rax, rax
+0x180985d31 je       0x18098666f
+0x180985d37 mov      rcx, qword ptr [rax + 0x178]
+0x180985d3e test     rcx, rcx
+0x180985d41 je       0x18098666f
+0x180985d47 xor      r9d, r9d
+0x180985d4a movzx    r8d, bx
+0x180985d4e mov      rdx, rdi
+0x180985d51 call     0x180a454c0 ; Albion.PhotonClient.dll:c2w.c
+0x180985d56 jmp      0x18098650f
+0x180985d5b mov      rcx, qword ptr [rip + 0x4484ece]
+0x180985d62 cmp      dword ptr [rcx + 0xe4], 0
+0x180985d69 jne      0x180985d70
+0x180985d6b call     0x180361bf0
+0x180985d70 xor      ecx, ecx
+0x180985d72 call     0x180956650
+0x180985d77 test     rax, rax
+0x180985d7a je       0x18098666f
+0x180985d80 xor      r8d, r8d
+0x180985d83 mov      rdx, rdi
+0x180985d86 mov      rcx, rax
+0x180985d89 call     0x180971c90 ; Albion.PhotonClient.dll:ciy.as
+0x180985d8e jmp      0x18098650f
+0x180985d93 cmp      byte ptr [rip + 0x46f4d92], 0
+0x180985d9a jne      0x180985dc7
+0x180985d9c lea      rcx, [rip + 0x4468795]
+0x180985da3 call     0x180361910
+0x180985da8 lea      rcx, [rip + 0x44e65f9]
+0x180985daf call     0x180361910
+0x180985db4 lea      rcx, [rip + 0x444ad1d]
+0x180985dbb call     0x180361910
+0x180985dc0 mov      byte ptr [rip + 0x46f4d65], 1
+0x180985dc7 mov      rdx, qword ptr [rip + 0x444ad0a]
+0x180985dce mov      rcx, rdi
+0x180985dd1 call     0x182003eb0
+0x180985dd6 mov      rcx, qword ptr [r15 + 0x190]
+0x180985ddd test     rax, rax
+0x180985de0 je       0x18098666f
+0x180985de6 mov      edx, dword ptr [rax + 0x10]
+0x180985de9 test     rcx, rcx
+0x180985dec je       0x18098666f
+0x180985df2 mov      dword ptr [rcx + 0x390], edx
+0x180985df8 mov      rcx, qword ptr [r15 + 0x190]
+0x180985dff mov      edx, dword ptr [rax + 0x14]
+0x180985e02 test     rcx, rcx
+0x180985e05 je       0x18098666f
+0x180985e0b mov      dword ptr [rcx + 0x394], edx
+0x180985e11 mov      rbx, qword ptr [r15 + 0x228]
+0x180985e18 mov      rcx, qword ptr [rip + 0x4468719]
+0x180985e1f call     0x180361b10
+0x180985e24 mov      rsi, rax
+0x180985e27 xor      edx, edx
+0x180985e29 mov      rcx, rax
+0x180985e2c call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x180985e31 test     rbx, rbx
+0x180985e34 je       0x18098666f
+0x180985e3a mov      r9, qword ptr [rip + 0x44e6567]
+0x180985e41 xor      r8d, r8d
+0x180985e44 mov      rdx, rsi
+0x180985e47 mov      rcx, rbx
+0x180985e4a call     0x182003b60
+0x180985e4f jmp      0x18098650f
+0x180985e54 cmp      byte ptr [rip + 0x46f4cf8], 0
+0x180985e5b jne      0x180985e70
+0x180985e5d lea      rcx, [rip + 0x444b07c]
+0x180985e64 call     0x180361910
+0x180985e69 mov      byte ptr [rip + 0x46f4ce3], 1
+0x180985e70 mov      rdx, qword ptr [rip + 0x444b069]
+0x180985e77 mov      rcx, rdi
+0x180985e7a call     0x182003eb0
+0x180985e7f test     rax, rax
+0x180985e82 je       0x18098666f
+0x180985e88 mov      rdx, qword ptr [rax + 0x10]
+0x180985e8c mov      qword ptr [r15 + 0x2d8], rdx
+0x180985e93 lea      rcx, [r15 + 0x2d8]
+0x180985e9a call     0x180360c40
+0x180985e9f jmp      0x18098650f
+0x180985ea4 xor      r8d, r8d
+0x180985ea7 mov      rdx, rdi
+0x180985eaa mov      rcx, r15
+0x180985ead call     0x180977970 ; Albion.PhotonClient.dll:ci7.a9
+0x180985eb2 jmp      0x18098650f
+0x180985eb7 xor      r8d, r8d
+0x180985eba mov      rdx, rdi
+0x180985ebd mov      rcx, r15
+0x180985ec0 call     0x180976f40 ; Albion.PhotonClient.dll:ci7.a8
+0x180985ec5 jmp      0x18098650f
+0x180985eca mov      rax, qword ptr [r15 + 0x190]
+0x180985ed1 test     rax, rax
+0x180985ed4 je       0x180986681
+0x180985eda mov      rcx, qword ptr [rax + 0x188]
+0x180985ee1 test     rcx, rcx
+0x180985ee4 je       0x180986681
+0x180985eea xor      r8d, r8d
+0x180985eed mov      rdx, rdi
+0x180985ef0 call     0x180ad5e90 ; Albion.PhotonClient.dll:ddy.n
+0x180985ef5 jmp      0x18098650f
+0x180985efa mov      rbx, qword ptr [r15 + 0x1a0]
+0x180985f01 test     rbx, rbx
+0x180985f04 je       0x18098650f
+0x180985f0a mov      r9, qword ptr [rip + 0x44c017f]
+0x180985f11 mov      r10, qword ptr [rbx]
+0x180985f14 xor      r13d, r13d
+0x180985f17 movzx    ecx, r13w
+0x180985f1b movzx    edx, word ptr [r10 + 0x12e]
+0x180985f23 cmp      r13w, dx
+0x180985f27 jae      0x180985f44
+0x180985f29 mov      r8, qword ptr [r10 + 0xb0]
+0x180985f30 movzx    eax, cx
+0x180985f33 add      rax, rax
+0x180985f36 cmp      qword ptr [r8 + rax*8], r9
+0x180985f3a je       0x180985f6a
+0x180985f3c inc      cx
+0x180985f3f cmp      cx, dx
+0x180985f42 jb       0x180985f30
+0x180985f44 mov      r8d, 0xb
+0x180985f4a mov      rdx, r9
+0x180985f4d mov      rcx, rbx
+0x180985f50 call     0x18035ea20
+0x180985f55 mov      r9, qword ptr [rax]
+0x180985f58 mov      r8, qword ptr [rax + 8]
+0x180985f5c mov      rdx, rdi
+0x180985f5f mov      rcx, rbx
+0x180985f62 call     r9
+0x180985f65 jmp      0x180986512
+0x180985f6a movzx    ecx, cx
+0x180985f6d add      rcx, rcx
+0x180985f70 mov      eax, dword ptr [r8 + rcx*8 + 8]
+0x180985f75 add      eax, 0xb
+0x180985f78 cdqe     
+0x180985f7a shl      rax, 4
+0x180985f7e add      rax, 0x138
+0x180985f84 add      rax, r10
+0x180985f87 jmp      0x180985f55
+0x180985f89 mov      rax, qword ptr [r15 + 0x190]
+0x180985f90 test     rax, rax
+0x180985f93 je       0x18098650f
+0x180985f99 mov      rcx, qword ptr [rax + 0x188]
+0x180985fa0 test     rcx, rcx
+0x180985fa3 je       0x18098666f
+0x180985fa9 xor      edx, edx
+0x180985fab call     0x180ad59a0 ; Albion.PhotonClient.dll:ddy.ac
+0x180985fb0 jmp      0x18098650f
+0x180985fb5 cmp      byte ptr [rip + 0x46f4ba8], 0
+0x180985fbc jne      0x180985fdd
+0x180985fbe lea      rcx, [rip + 0x44869bb]
+0x180985fc5 call     0x180361910
+0x180985fca lea      rcx, [rip + 0x445de67]
+0x180985fd1 call     0x180361910
+0x180985fd6 mov      byte ptr [rip + 0x46f4b87], 1
+0x180985fdd mov      rdx, qword ptr [rip + 0x445de54]
+0x180985fe4 mov      rcx, rdi
+0x180985fe7 call     0x182003eb0
+0x180985fec mov      rbx, rax
+0x180985fef test     rax, rax
+0x180985ff2 je       0x18098650f
+0x180985ff8 xor      r13d, r13d
+0x180985ffb mov      qword ptr [rsp + 0x50], r13
+0x180986000 xor      r8d, r8d
+0x180986003 mov      rdx, qword ptr [rax + 0x20]
+0x180986007 lea      rcx, [rsp + 0x50]
+0x18098600c call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x180986011 mov      qword ptr [rsp + 0x58], r13
+0x180986016 xor      r8d, r8d
+0x180986019 mov      rdx, qword ptr [rbx + 0x18]
+0x18098601d lea      rcx, [rsp + 0x58]
+0x180986022 call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x180986027 mov      qword ptr [rsp + 0x60], r13
+0x18098602c xor      r8d, r8d
+0x18098602f mov      rdx, qword ptr [rbx + 0x28]
+0x180986033 lea      rcx, [rsp + 0x60]
+0x180986038 call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x18098603d mov      rsi, qword ptr [rbx + 0x10]
+0x180986041 mov      r14, qword ptr [rbx + 0x18]
+0x180986045 mov      r12, qword ptr [rbx + 0x20]
+0x180986049 mov      rax, qword ptr [rbx + 0x28]
+0x18098604d mov      qword ptr [rsp + 0x60], rax
+0x180986052 mov      rbx, qword ptr [rbx + 0x30]
+0x180986056 mov      rcx, qword ptr [rip + 0x4486923]
+0x18098605d cmp      dword ptr [rcx + 0xe4], r13d
+0x180986064 jne      0x180986070
+0x180986066 call     0x180361bf0
+0x18098606b mov      rax, qword ptr [rsp + 0x60]
+0x180986070 mov      qword ptr [rsp + 0x28], r13
+0x180986075 mov      qword ptr [rsp + 0x20], rbx
+0x18098607a mov      r9, rax
+0x18098607d mov      r8, r12
+0x180986080 mov      rdx, r14
+0x180986083 mov      rcx, rsi
+0x180986086 call     0x1808b2690 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.a
+0x18098608b jmp      0x180986512
+0x180986090 cmp      byte ptr [rip + 0x46f4ace], 0
+0x180986097 jne      0x1809860b8
+0x180986099 lea      rcx, [rip + 0x44868e0]
+0x1809860a0 call     0x180361910
+0x1809860a5 lea      rcx, [rip + 0x446223c]
+0x1809860ac call     0x180361910
+0x1809860b1 mov      byte ptr [rip + 0x46f4aad], 1
+0x1809860b8 mov      rdx, qword ptr [rip + 0x4462229]
+0x1809860bf mov      rcx, rdi
+0x1809860c2 call     0x182003eb0
+0x1809860c7 test     rax, rax
+0x1809860ca je       0x18098650f
+0x1809860d0 mov      rbx, qword ptr [rax + 0x10]
+0x1809860d4 mov      rsi, qword ptr [rax + 0x18]
+0x1809860d8 mov      rcx, qword ptr [rip + 0x44868a1]
+0x1809860df cmp      dword ptr [rcx + 0xe4], 0
+0x1809860e6 jne      0x1809860ed
+0x1809860e8 call     0x180361bf0
+0x1809860ed xor      r8d, r8d
+0x1809860f0 mov      rdx, rsi
+0x1809860f3 mov      rcx, rbx
+0x1809860f6 call     0x1808b2070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.a
+0x1809860fb jmp      0x18098650f
+0x180986100 xor      r8d, r8d
+0x180986103 mov      rdx, rdi
+0x180986106 mov      rcx, r15
+0x180986109 call     0x18097a5e0 ; Albion.PhotonClient.dll:ci7.c8
+0x18098610e jmp      0x18098650f
+0x180986113 mov      rax, qword ptr [r15 + 0x190]
+0x18098611a test     rax, rax
+0x18098611d je       0x18098650f
+0x180986123 mov      rcx, qword ptr [rax + 0x1d8]
+0x18098612a test     rcx, rcx
+0x18098612d je       0x18098666f
+0x180986133 xor      r9d, r9d
+0x180986136 movzx    r8d, bx
+0x18098613a mov      rdx, rdi
+0x18098613d call     0x180acc600 ; Albion.PhotonClient.dll:ddn.e
+0x180986142 jmp      0x18098650f
+0x180986147 mov      rax, qword ptr [r15 + 0x190]
+0x18098614e test     rax, rax
+0x180986151 je       0x180986681
+0x180986157 mov      rcx, qword ptr [rax + 0x160]
+0x18098615e test     rcx, rcx
+0x180986161 je       0x180986681
+0x180986167 xor      r8d, r8d
+0x18098616a mov      rdx, rdi
+0x18098616d call     0x180ae93a0 ; Albion.PhotonClient.dll:dex.ab
+0x180986172 jmp      0x18098650f
+0x180986177 mov      rax, qword ptr [r15 + 0x190]
+0x18098617e test     rax, rax
+0x180986181 je       0x180986681
+0x180986187 mov      rcx, qword ptr [rax + 0x160]
+0x18098618e test     rcx, rcx
+0x180986191 je       0x180986681
+0x180986197 xor      r8d, r8d
+0x18098619a mov      rdx, rdi
+0x18098619d call     0x180ae9450 ; Albion.PhotonClient.dll:dex.ac
+0x1809861a2 jmp      0x18098650f
+0x1809861a7 mov      rax, qword ptr [r15 + 0x190]
+0x1809861ae test     rax, rax
+0x1809861b1 je       0x18098650f
+0x1809861b7 mov      rcx, qword ptr [rax + 0x168]
+0x1809861be test     rcx, rcx
+0x1809861c1 je       0x18098666f
+0x1809861c7 xor      r9d, r9d
+0x1809861ca movzx    r8d, bx
+0x1809861ce mov      rdx, rdi
+0x1809861d1 call     0x180ad91b0 ; Albion.PhotonClient.dll:de1.l
+0x1809861d6 jmp      0x18098650f
+0x1809861db mov      rax, qword ptr [r15 + 0x190]
+0x1809861e2 test     rax, rax
+0x1809861e5 je       0x180986681
+0x1809861eb mov      rcx, qword ptr [rax + 0x160]
+0x1809861f2 test     rcx, rcx
+0x1809861f5 je       0x180986681
+0x1809861fb xor      r8d, r8d
+0x1809861fe mov      rdx, rdi
+0x180986201 call     0x180ae9590 ; Albion.PhotonClient.dll:dex.ad
+0x180986206 jmp      0x18098650f
+0x18098620b mov      rax, qword ptr [r15 + 0x190]
+0x180986212 test     rax, rax
+0x180986215 je       0x18098650f
+0x18098621b mov      rcx, qword ptr [rax + 0xa0]
+0x180986222 test     rcx, rcx
+0x180986225 je       0x18098666f
+0x18098622b xor      edx, edx
+0x18098622d call     0x180acf930 ; Albion.PhotonClient.dll:ddq.e
+0x180986232 jmp      0x18098650f
+0x180986237 mov      rax, qword ptr [r15 + 0x190]
+0x18098623e test     rax, rax
+0x180986241 je       0x180986681
+0x180986247 mov      rcx, qword ptr [rax + 0x1e0]
+0x18098624e test     rcx, rcx
+0x180986251 je       0x18098650f
+0x180986257 xor      r8d, r8d
+0x18098625a mov      rdx, rdi
+0x18098625d call     0x180af4400 ; Albion.PhotonClient.dll:dfe.h
+0x180986262 jmp      0x18098650f
+0x180986267 mov      rcx, qword ptr [r15 + 0x190]
+0x18098626e test     rcx, rcx
+0x180986271 je       0x180986681
+0x180986277 xor      r8d, r8d
+0x18098627a mov      rdx, rdi
+0x18098627d call     0x180a5d5c0 ; Albion.PhotonClient.dll:c3d.dd
+0x180986282 jmp      0x18098650f
+0x180986287 mov      rax, qword ptr [r15 + 0x190]
+0x18098628e test     rax, rax
+0x180986291 je       0x18098650f
+0x180986297 mov      rcx, qword ptr [rax + 0x198]
+0x18098629e test     rcx, rcx
+0x1809862a1 je       0x18098666f
+0x1809862a7 xor      r9d, r9d
+0x1809862aa movzx    r8d, bx
+0x1809862ae mov      rdx, rdi
+0x1809862b1 call     0x180af65d0 ; Albion.PhotonClient.dll:dfg.m
+0x1809862b6 jmp      0x18098650f
+0x1809862bb mov      rcx, qword ptr [r15 + 0x170]
+0x1809862c2 test     rcx, rcx
+0x1809862c5 je       0x18098666f
+0x1809862cb mov      r9, qword ptr [rcx]
+0x1809862ce mov      rax, qword ptr [r9 + 0x178]
+0x1809862d5 mov      r9, qword ptr [r9 + 0x180]
+0x1809862dc movzx    r8d, bx
+0x1809862e0 mov      rdx, rdi
+0x1809862e3 call     rax
+0x1809862e5 jmp      0x18098650f
+0x1809862ea mov      rax, qword ptr [r15 + 0x190]
+0x1809862f1 test     rax, rax
+0x1809862f4 je       0x180986681
+0x1809862fa mov      rcx, qword ptr [rax + 0x1e8]
+0x180986301 test     rcx, rcx
+0x180986304 je       0x18098650f
+0x18098630a xor      r8d, r8d
+0x18098630d mov      rdx, rdi
+0x180986310 call     0x180aef870 ; Albion.PhotonClient.dll:df5.a
+0x180986315 jmp      0x18098650f
+0x18098631a mov      rax, qword ptr [r15 + 0x190]
+0x180986321 test     rax, rax
+0x180986324 je       0x180986681
+0x18098632a mov      rcx, qword ptr [rax + 0x1e8]
+0x180986331 test     rcx, rcx
+0x180986334 je       0x18098650f
+0x18098633a xor      r8d, r8d
+0x18098633d mov      rdx, rdi
+0x180986340 call     0x180aefc80 ; Albion.PhotonClient.dll:df5.b
+0x180986345 jmp      0x18098650f
+0x18098634a mov      rax, qword ptr [r15 + 0x190]
+0x180986351 test     rax, rax
+0x180986354 je       0x180986681
+0x18098635a mov      rcx, qword ptr [rax + 0x1e8]
+0x180986361 test     rcx, rcx
+0x180986364 je       0x18098650f
+0x18098636a xor      r8d, r8d
+0x18098636d mov      rdx, rdi
+0x180986370 call     0x180af0090 ; Albion.PhotonClient.dll:df5.c
+0x180986375 jmp      0x18098650f
+0x18098637a mov      rax, qword ptr [r15 + 0x190]
+0x180986381 test     rax, rax
+0x180986384 je       0x180986681
+0x18098638a mov      rcx, qword ptr [rax + 0x1e8]
+0x180986391 test     rcx, rcx
+0x180986394 je       0x18098650f
+0x18098639a xor      r8d, r8d
+0x18098639d mov      rdx, rdi
+0x1809863a0 call     0x180af0110 ; Albion.PhotonClient.dll:df5.d
+0x1809863a5 jmp      0x18098650f
+0x1809863aa mov      rax, qword ptr [r15 + 0x190]
+0x1809863b1 test     rax, rax
+0x1809863b4 je       0x180986681
+0x1809863ba mov      rcx, qword ptr [rax + 0x1e8]
+0x1809863c1 test     rcx, rcx
+0x1809863c4 je       0x18098650f
+0x1809863ca xor      r8d, r8d
+0x1809863cd mov      rdx, rdi
+0x1809863d0 call     0x180af02d0 ; Albion.PhotonClient.dll:df5.e
+0x1809863d5 jmp      0x18098650f
+0x1809863da mov      rax, qword ptr [r15 + 0x190]
+0x1809863e1 test     rax, rax
+0x1809863e4 je       0x180986681
+0x1809863ea mov      rcx, qword ptr [rax + 0x1e8]
+0x1809863f1 test     rcx, rcx
+0x1809863f4 je       0x18098650f
+0x1809863fa xor      r8d, r8d
+0x1809863fd mov      rdx, rdi
+0x180986400 call     0x180af0430 ; Albion.PhotonClient.dll:df5.f
+0x180986405 jmp      0x18098650f
+0x18098640a mov      rcx, qword ptr [rip + 0x448481f]
+0x180986411 cmp      dword ptr [rcx + 0xe4], 0
+0x180986418 jne      0x18098641f
+0x18098641a call     0x180361bf0
+0x18098641f cmp      byte ptr [rip + 0x46f46c2], 0
+0x180986426 jne      0x18098643b
+0x180986428 lea      rcx, [rip + 0x4484801]
+0x18098642f call     0x180361910
+0x180986434 mov      byte ptr [rip + 0x46f46ad], 1
+0x18098643b mov      rcx, qword ptr [rip + 0x44847ee]
+0x180986442 cmp      dword ptr [rcx + 0xe4], 0
+0x180986449 jne      0x180986450
+0x18098644b call     0x180361bf0
+0x180986450 mov      rcx, qword ptr [rip + 0x44847d9]
+0x180986457 call     0x180361710
+0x18098645c mov      rcx, qword ptr [rax]
+0x18098645f test     rcx, rcx
+0x180986462 je       0x18098650f
+0x180986468 xor      r9d, r9d
+0x18098646b movzx    r8d, word ptr [rsp + 0x118]
+0x180986474 mov      rdx, rdi
+0x180986477 call     0x180970aa0 ; Albion.PhotonClient.dll:ciy.am
+0x18098647c jmp      0x18098650f
+0x180986481 mov      rcx, qword ptr [rip + 0x44847a8]
+0x180986488 cmp      dword ptr [rcx + 0xe4], 0
+0x18098648f jne      0x180986496
+0x180986491 call     0x180361bf0
+0x180986496 xor      ecx, ecx
+0x180986498 call     0x180956650
+0x18098649d test     rax, rax
+0x1809864a0 je       0x18098650f
+0x1809864a2 mov      rcx, qword ptr [rax + 0x68]
+0x1809864a6 test     rcx, rcx
+0x1809864a9 je       0x18098650f
+0x1809864ab mov      r9, qword ptr [rcx]
+0x1809864ae mov      rax, qword ptr [r9 + 0x238]
+0x1809864b5 mov      r9, qword ptr [r9 + 0x240]
+0x1809864bc movzx    r8d, word ptr [rsp + 0x118]
+0x1809864c5 mov      rdx, rdi
+0x1809864c8 call     rax
+0x1809864ca jmp      0x18098650f
+0x1809864cc xor      edx, edx
+0x1809864ce lea      rcx, [rsp + 0x118]
+0x1809864d6 call     0x18316b280 ; mscorlib.dll:System.Int16.ToString
+0x1809864db xor      r8d, r8d
+0x1809864de mov      rdx, rax
+0x1809864e1 mov      rcx, qword ptr [rip + 0x447c420]
+0x1809864e8 call     0x182fbdcf0 ; mscorlib.dll:System.String.Concat
+0x1809864ed mov      rbx, rax
+0x1809864f0 mov      rcx, qword ptr [rip + 0x44eb5d9]
+0x1809864f7 cmp      dword ptr [rcx + 0xe4], 0
+0x1809864fe jne      0x180986505
+0x180986500 call     0x180361bf0
+0x180986505 xor      edx, edx
+0x180986507 mov      rcx, rbx
+0x18098650a call     0x1804f7650 ; Albion.Common.dll:e.b
+0x18098650f xor      r13d, r13d
+0x180986512 mov      rdx, qword ptr [r15 + 0x208]
+0x180986519 test     rdx, rdx
+0x18098651c je       0x180986681
+0x180986522 mov      r8, qword ptr [rip + 0x4413e27]
+0x180986529 lea      rcx, [rsp + 0x60]
+0x18098652e call     0x182ebe0d0
+0x180986533 movups   xmm0, xmmword ptr [rsp + 0x60]
+0x180986538 movups   xmmword ptr [rsp + 0x88], xmm0
+0x180986540 movsd    xmm1, qword ptr [rsp + 0x70]
+0x180986546 movsd    qword ptr [rsp + 0x98], xmm1
+0x18098654f mov      qword ptr [rsp + 0x60], r13
+0x180986554 lea      rbx, [rsp + 0x88]
+0x18098655c mov      qword ptr [rsp + 0x68], rbx
+0x180986561 mov      rdx, qword ptr [rip + 0x44bc8f0]
+0x180986568 lea      rcx, [rsp + 0x88]
+0x180986570 call     0x182c88610
+0x180986575 test     al, al
+0x180986577 je       0x180986620
+0x18098657d mov      rsi, qword ptr [rsp + 0x98]
+0x180986585 movzx    r14d, word ptr [rsp + 0x118]
+0x18098658e test     rsi, rsi
+0x180986591 je       0x180986675
+0x180986597 mov      r9, qword ptr [rip + 0x448243a]
+0x18098659e mov      r10, qword ptr [rsi]
+0x1809865a1 movzx    ecx, r13w
+0x1809865a5 movzx    edx, word ptr [r10 + 0x12e]
+0x1809865ad cmp      r13w, dx
+0x1809865b1 jae      0x1809865d4
+0x1809865b3 mov      r8, qword ptr [r10 + 0xb0]
+0x1809865ba nop      word ptr [rax + rax]
+0x1809865c0 movzx    eax, cx
+0x1809865c3 add      rax, rax
+0x1809865c6 cmp      qword ptr [r8 + rax*8], r9
+0x1809865ca je       0x180986600
+0x1809865cc inc      cx
+0x1809865cf cmp      cx, dx
+0x1809865d2 jb       0x1809865c0
+0x1809865d4 mov      r8d, 1
+0x1809865da mov      rdx, r9
+0x1809865dd mov      rcx, rsi
+0x1809865e0 call     0x18035ea20
+0x1809865e5 mov      r9, rax
+0x1809865e8 mov      rax, qword ptr [r9]
+0x1809865eb mov      r9, qword ptr [r9 + 8]
+0x1809865ef movzx    r8d, r14w
+0x1809865f3 mov      rdx, rdi
+0x1809865f6 mov      rcx, rsi
+0x1809865f9 call     rax
+0x1809865fb jmp      0x180986561
+0x180986600 movzx    ecx, cx
+0x180986603 add      rcx, rcx
+0x180986606 mov      ecx, dword ptr [r8 + rcx*8 + 8]
+0x18098660b inc      ecx
+0x18098660d movsxd   r9, ecx
+0x180986610 shl      r9, 4
+0x180986614 add      r9, 0x138
+0x18098661b add      r9, r10
+0x18098661e jmp      0x1809865e8
+0x180986620 mov      rdx, qword ptr [rip + 0x44bc6d9]
+0x180986627 mov      rcx, rbx
+0x18098662a call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x18098662f jmp      0x18098664c
+0x180986631 mov      rdx, qword ptr [rip + 0x44bc6c8]
+0x180986638 mov      rcx, qword ptr [rsp + 0x68]
+0x18098663d call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180986642 mov      rcx, qword ptr [rsp + 0x60]
+0x180986647 test     rcx, rcx
+0x18098664a jne      0x18098667b
+0x18098664c movaps   xmm6, xmmword ptr [rsp + 0xb0]
+0x180986654 movaps   xmm7, xmmword ptr [rsp + 0xa0]
+0x18098665c add      rsp, 0xc0
+0x180986663 pop      r15
+0x180986665 pop      r14
+0x180986667 pop      r13
+0x180986669 pop      r12
+0x18098666b pop      rdi
+0x18098666c pop      rsi
+0x18098666d pop      rbx
+0x18098666e ret      
+0x18098666f call     0x180361b60
+0x180986674 nop      
+0x180986675 call     0x180361b60
+0x18098667a nop      
+0x18098667b call     0x18035da00
+0x180986680 int3     
+0x180986681 call     0x180361b60
+0x180986686 int3     
+0x180986687 nop      
+0x180986688 mov      cl, 0x36
+0x18098668a cwde     
+0x18098668b add      dl, dh
+0x18098668d cwde     
+0x18098668f add      byte ptr [rdx], cl
+0x180986691 cwde     
+0x180986693 add      ah, cl
+0x180986695 cwde     
+0x180986697 add      byte ptr [rcx - 0x44ff679c], al

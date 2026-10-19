@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>The Albion Online Data Project</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="b8sVq2dgQloxxwsKxeO-1NQGeoElHY0m-GteFAZ2dHYUD7H9-9qTv6p6IsFGyQT5BF2hLtirgO0V8aNZ1IDy0w" />
+    
+
+    <link rel="stylesheet" href="/assets/application-08158799e0f4164467942c927a14ef2ea4207f80211b836caa15605136442d91.css" data-turbo-track="reload" />
+    <script type="importmap" data-turbo-track="reload">{
+  "imports": {
+    "application": "/assets/application-9e1154a9835fd6ac66eee96463825408bda9baf33d35b033c97932472354ccd4.js",
+    "@hotwired/turbo-rails": "/assets/turbo.min-b86d83036ff04169e5bf3ebbc82e0ad528456259e47091b448f41a3cadabdb40.js",
+    "@hotwired/stimulus": "/assets/stimulus.min-dd364f16ec9504dfb72672295637a1c8838773b01c0b441bd41008124c407894.js",
+    "@hotwired/stimulus-loading": "/assets/stimulus-loading-3576ce92b149ad5d6959438c6f291e2426c86df3b874c525b30faad51b0d96b3.js",
+    "controllers/application": "/assets/controllers/application-368d98631bccbf2349e0d4f8269afb3fe9625118341966de054759d96ea86c7e.js",
+    "controllers/faq_search_controller": "/assets/controllers/faq_search_controller-366fdcbf8c44d6b4a2f8b0958d305ffe4381a4ead20c0895f1ff4482dc4a7560.js",
+    "controllers/hello_controller": "/assets/controllers/hello_controller-549135e8e7c683a538c3d6d517339ba470fcfb79d62f738a0a089ba41851a554.js",
+    "controllers/image_modal_controller": "/assets/controllers/image_modal_controller-ac993e7be1dbefac36b3daf88fc4df0f60f23ae1203e7e0d2e86cdc0e66df40b.js",
+    "controllers": "/assets/controllers/index-2db729dddcc5b979110e98de4b6720f83f91a123172e87281d5a58410fc43806.js",
+    "controllers/nav_controller": "/assets/controllers/nav_controller-50e61d33796c87c4ac37f2c02c6b4ae9fdaae87b869cbf8a758ddda2c9cfd551.js",
+    "controllers/stats_chart_controller": "/assets/controllers/stats_chart_controller-111fec46aac570c8bfb0c5bfe145c2f919b19594f775bd0046e9b4224b8c0a9b.js"
+  }
+}</script>
+<link rel="modulepreload" href="/assets/application-9e1154a9835fd6ac66eee96463825408bda9baf33d35b033c97932472354ccd4.js">
+<link rel="modulepreload" href="/assets/turbo.min-b86d83036ff04169e5bf3ebbc82e0ad528456259e47091b448f41a3cadabdb40.js">
+<link rel="modulepreload" href="/assets/stimulus.min-dd364f16ec9504dfb72672295637a1c8838773b01c0b441bd41008124c407894.js">
+<link rel="modulepreload" href="/assets/stimulus-loading-3576ce92b149ad5d6959438c6f291e2426c86df3b874c525b30faad51b0d96b3.js">
+<link rel="modulepreload" href="/assets/controllers/application-368d98631bccbf2349e0d4f8269afb3fe9625118341966de054759d96ea86c7e.js">
+<link rel="modulepreload" href="/assets/controllers/faq_search_controller-366fdcbf8c44d6b4a2f8b0958d305ffe4381a4ead20c0895f1ff4482dc4a7560.js">
+<link rel="modulepreload" href="/assets/controllers/hello_controller-549135e8e7c683a538c3d6d517339ba470fcfb79d62f738a0a089ba41851a554.js">
+<link rel="modulepreload" href="/assets/controllers/image_modal_controller-ac993e7be1dbefac36b3daf88fc4df0f60f23ae1203e7e0d2e86cdc0e66df40b.js">
+<link rel="modulepreload" href="/assets/controllers/index-2db729dddcc5b979110e98de4b6720f83f91a123172e87281d5a58410fc43806.js">
+<link rel="modulepreload" href="/assets/controllers/nav_controller-50e61d33796c87c4ac37f2c02c6b4ae9fdaae87b869cbf8a758ddda2c9cfd551.js">
+<link rel="modulepreload" href="/assets/controllers/stats_chart_controller-111fec46aac570c8bfb0c5bfe145c2f919b19594f775bd0046e9b4224b8c0a9b.js">
+<script type="module">import "application"</script>
+    
+  </head>
+
+  <body>
+    <div class="page developer-page">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <h1 class="site-title"><a href="/">The Albion Online Data Project</a></h1>
+      <p class="site-tagline">Realtime market and gold data for Albion Online</p>
+      <div class="site-nav-wrapper" data-controller="nav">
+  <button class="nav-hamburger"
+          data-action="click->nav#toggle"
+          data-nav-target="button"
+          aria-label="Open navigation"
+          aria-expanded="false">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div class="nav-backdrop"
+       data-nav-target="backdrop"
+       data-action="click->nav#close"></div>
+
+  <nav class="site-nav" data-nav-target="menu">
+    <a data-action="click-&gt;nav#close" href="/">Home</a>
+    <a data-action="click-&gt;nav#close" href="/client">Client</a>
+    <a data-action="click-&gt;nav#close" href="/client-faq">Client FAQ</a>
+    <a data-action="click-&gt;nav#close" href="/identifier">Identifier</a>
+    <a data-action="click-&gt;nav#close" href="/api">API</a>
+    <a data-action="click-&gt;nav#close" href="/3rd-party-tools">3rd Party Tools</a>
+    <a data-action="click-&gt;nav#close" href="/items">Items</a>
+    <a class="active" data-action="click-&gt;nav#close" href="/developer">Developer</a>
+    <a data-action="click-&gt;nav#close" href="/donate">Donate</a>
+  </nav>
+</div>
+
+    </div>
+  </header>
+
+  <div class="disclaimer banner">
+    <p><strong>These tools are not affiliated with Albion Online or Sandbox Interactive GmbH.</strong></p>
+  </div>
+
+  <main class="main-content">
+    <h2 class="page-title">Developer Information</h2>
+    <p class="lead">If you're building something to consume the data published by the Albion Data Project, here are some things you will need to know.</p>
+
+    <section class="content-section">
+      <h2>NATS Connection Strings</h2>
+      <ul class="code-list">
+        <li>Americas: <code>nats://public:thenewalbiondata@nats.albion-online-data.com:4222</code></li>
+        <li>Asia: <code>nats://public:thenewalbiondata@nats.albion-online-data.com:24222</code></li>
+        <li>Europe: <code>nats://public:thenewalbiondata@nats.albion-online-data.com:34222</code></li>
+      </ul>
+    </section>
+
+    <section class="content-section">
+      <h2>NATS Topics</h2>
+      <ul>
+        <li><code>goldprices.ingest</code> — all gold prices from data clients (including duplicates)</li>
+        <li><code>marketorders.ingest</code> — all orders from data clients (including duplicates)</li>
+        <li><code>markethistories.ingest</code> — all histories from data clients (including duplicates)</li>
+        <li><code>goldprices.deduped</code> — deduped gold prices</li>
+        <li><code>marketorders.deduped</code> — deduped market orders</li>
+        <li><code>markethistories.deduped</code> — deduped market histories</li>
+        <li><code>festivities.deduped</code> — activity schedules confirmed by multiple clients</li>
+      </ul>
+      <p>Data message structure: <a href="https://github.com/ao-data/albiondata-client/tree/master/lib" target="_blank" rel="noopener">albiondata-client/lib</a></p>
+
+      <aside>
+        <p><strong>Duplicate messages</strong></p>
+        <ul>
+          <li>Data is deduplicated over a 5-minute window. As a subscriber you should only get the same message once every 5 minutes.</li>
+          <li>New subscribers may have missed previous messages.</li>
+          <li>For market orders: track the last time an order was seen; after not seeing it for X hours, remove it as probably completed.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="content-section">
+      <h2>Festivities</h2>
+      <p>Confirmed activity schedules are available from <code>/api/v2/stats/festivities</code> on each regional API host.</p>
+      <p>StartTime and EndTime are in C# ticks (see <a href="#timestamps">Timestamps</a> above).</p>
+      <p>The snapshot expires at the earliest EndTime in its event list. Until another snapshot is confirmed, the endpoint returns 404.</p>
+    </section>
+
+    <section class="content-section" id="timestamps">
+      <h2>Timestamps</h2>
+      <p>Note: Timestamps on Market History data and Bandit Event are in <strong>ticks</strong>. To convert ticks to epoch (a more common time format), use:</p>
+      <p><code>(ticks - 621355968000000000) / 10000000</code></p>
+      <p>Example: <code>(638181504000000000 - 621355968000000000) / 10000000</code> → <code>1682553600</code>. Use <a href="https://www.unixtimestamp.com/" target="_blank" rel="noopener">unixtimestamp.com</a> to convert <code>1682553600</code> to a human-readable format (e.g. <code>2023-04-27 00:00:00 UTC</code>). This should be enough to convert timestamps in your language of choice.</p>
+    </section>
+
+    <section class="content-section">
+      <h2>Bandit Event</h2>
+      <p>Message schema: <code>{"EventTime"=>639057896373527168, "Phase"=>1}</code></p>
+      <ul>
+        <li><strong>Phase 1</strong> — the event has not started yet. <code>EventTime</code> is when the event <strong>starts</strong>.</li>
+        <li><strong>Phase 2</strong> — <code>EventTime</code> is when the event <strong>escalates</strong>.</li>
+        <li><strong>Phase 3</strong> — <code>EventTime</code> is when the event <strong>ends</strong>.</li>
+      </ul>
+      <p><code>EventTime</code> is in C# ticks (see <a href="#timestamps">Timestamps</a> above for conversion).</p>
+    </section>
+
+    <section class="content-section">
+      <h2>Database Table Exports</h2>
+      <p>Daily table dumps are available at:</p>
+      <ul>
+        <li>West / Americas — <a href="https://www.albion-online-data.com/database/" target="_blank" rel="noopener">albion-online-data.com/database/</a></li>
+        <li>East / Asia — <a href="https://www.albion-online-data.com/database-east/" target="_blank" rel="noopener">albion-online-data.com/database-east/</a></li>
+        <li>Europe — <a href="https://www.albion-online-data.com/database-europe/" target="_blank" rel="noopener">albion-online-data.com/database-europe/</a></li>
+      </ul>
+    </section>
+
+    <section class="content-section">
+      <h2>Albion Data Projects</h2>
+      <ul class="project-list">
+        <li><a href="https://github.com/ao-data/albiondata-client" target="_blank" rel="noopener">albiondata-client</a> — The client everyone runs to capture data.</li>
+        <li><a href="https://github.com/ao-data/albiondata-server-rails" target="_blank" rel="noopener">albiondata-server-rails</a> — The backend server.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><a href="/">The Albion Online Data Project</a></p>
+  </footer>
+</div>
+
+  </body>
+</html>

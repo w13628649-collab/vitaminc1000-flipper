@@ -1,0 +1,48 @@
+0x180b5f390 cmp      r8w, 1
+0x180b5f395 je       0x180b5f442
+0x180b5f39b mov      qword ptr [rsp + 8], rbx
+0x180b5f3a0 push     rdi
+0x180b5f3a1 sub      rsp, 0x20
+0x180b5f3a5 mov      rdi, rdx
+0x180b5f3a8 mov      rbx, rcx
+0x180b5f3ab mov      eax, 0x191
+0x180b5f3b0 cmp      r8w, ax
+0x180b5f3b4 jne      0x180b5f3c8
+0x180b5f3b6 xor      r8d, r8d
+0x180b5f3b9 mov      rbx, qword ptr [rsp + 0x30]
+0x180b5f3be add      rsp, 0x20
+0x180b5f3c2 pop      rdi
+0x180b5f3c3 jmp      0x180b5fbe0 ; Albion.PhotonClient.dll:clw.x8
+0x180b5f3c8 mov      eax, 0x213
+0x180b5f3cd cmp      r8w, ax
+0x180b5f3d1 jne      0x180b5f430
+0x180b5f3d3 cmp      byte ptr [rip + 0x451c6f4], 0
+0x180b5f3da jne      0x180b5f3ef
+0x180b5f3dc lea      rcx, [rip + 0x4249ac5]
+0x180b5f3e3 call     0x180361910
+0x180b5f3e8 mov      byte ptr [rip + 0x451c6df], 1
+0x180b5f3ef mov      rdx, qword ptr [rip + 0x4249ab2]
+0x180b5f3f6 mov      rcx, rdi
+0x180b5f3f9 call     0x182003eb0
+0x180b5f3fe test     rdi, rdi
+0x180b5f401 je       0x180b5f438
+0x180b5f403 test     rax, rax
+0x180b5f406 je       0x180b5f443
+0x180b5f408 mov      ecx, dword ptr [rax + 0x18]
+0x180b5f40b xor      edx, edx
+0x180b5f40d mov      dword ptr [rbx + 0xa8], ecx
+0x180b5f413 mov      rcx, rbx
+0x180b5f416 mov      rax, qword ptr [rax + 0x20]
+0x180b5f41a mov      qword ptr [rbx + 0xa0], rax
+0x180b5f421 mov      rbx, qword ptr [rsp + 0x30]
+0x180b5f426 add      rsp, 0x20
+0x180b5f42a pop      rdi
+0x180b5f42b jmp      0x180b3e330 ; Albion.PhotonClient.dll:cl1.atn
+0x180b5f430 xor      r9d, r9d
+0x180b5f433 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180b5f438 mov      rbx, qword ptr [rsp + 0x30]
+0x180b5f43d add      rsp, 0x20
+0x180b5f441 pop      rdi
+0x180b5f442 ret      
+0x180b5f443 call     0x180361b60
+0x180b5f448 int3     

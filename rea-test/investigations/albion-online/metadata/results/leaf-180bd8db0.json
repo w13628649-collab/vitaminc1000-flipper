@@ -1,0 +1,116 @@
+{
+  "evidence_id": "AO-META-LEAF-180bd8db0",
+  "function_va": "0x180bd8db0",
+  "file_offset": 12415920,
+  "byte_length": 61,
+  "bytes_sha256": "d73a6a258ac6909bc66e44c1a2c3cde5e065fa3d3761a996eb68fd9a92bb596d",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "symbols": [
+    {
+      "type_index": 19513,
+      "type": "cp0",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 135912,
+      "name": "aer",
+      "token": "0x600186f",
+      "native_va": "0x180bd8db0",
+      "native_rva": "0xbd8db0",
+      "native_file_offset": 12415920,
+      "pointer_slot_file_offset": 79866464
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x180bd8db0",
+      "file_offset": 12415920,
+      "bytes": "48895c2408",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 8], rbx"
+    },
+    {
+      "va": "0x180bd8db5",
+      "file_offset": 12415925,
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "rdi"
+    },
+    {
+      "va": "0x180bd8db6",
+      "file_offset": 12415926,
+      "bytes": "4883ec20",
+      "mnemonic": "sub",
+      "operands": "rsp, 0x20"
+    },
+    {
+      "va": "0x180bd8dba",
+      "file_offset": 12415930,
+      "bytes": "803dd2314a0400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x44a31d2], 0"
+    },
+    {
+      "va": "0x180bd8dc1",
+      "file_offset": 12415937,
+      "bytes": "488bfa",
+      "mnemonic": "mov",
+      "operands": "rdi, rdx"
+    },
+    {
+      "va": "0x180bd8dc4",
+      "file_offset": 12415940,
+      "bytes": "488bd9",
+      "mnemonic": "mov",
+      "operands": "rbx, rcx"
+    },
+    {
+      "va": "0x180bd8dc7",
+      "file_offset": 12415943,
+      "bytes": "752b",
+      "mnemonic": "jne",
+      "operands": "0x180bd8df4"
+    },
+    {
+      "va": "0x180bd8dc9",
+      "file_offset": 12415945,
+      "bytes": "488d0d88012304",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4230188]"
+    },
+    {
+      "va": "0x180bd8dd0",
+      "file_offset": 12415952,
+      "bytes": "e83b8b78ff",
+      "mnemonic": "call",
+      "operands": "0x180361910"
+    },
+    {
+      "va": "0x180bd8dd5",
+      "file_offset": 12415957,
+      "bytes": "488d0ddc1c2704",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4271cdc]"
+    },
+    {
+      "va": "0x180bd8ddc",
+      "file_offset": 12415964,
+      "bytes": "e82f8b78ff",
+      "mnemonic": "call",
+      "operands": "0x180361910"
+    },
+    {
+      "va": "0x180bd8de1",
+      "file_offset": 12415969,
+      "bytes": "488d0dd8202704",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x42720d8]"
+    },
+    {
+      "va": "0x180bd8de8",
+      "file_offset": 12415976,
+      "bytes": "e8238b78ff",
+      "mnemonic": "call",
+      "operands": "0x180361910"
+    }
+  ],
+  "limitations": "Metadata-named code pointer with no PE unwind record. Maximum64 bytes bounded by next named method, stop at first RET/JMP; leaf function membership remains inference. No runtime observation."
+}

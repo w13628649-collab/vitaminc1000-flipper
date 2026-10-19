@@ -1,0 +1,104 @@
+0x1809ebb00 push     rbx
+0x1809ebb02 sub      rsp, 0x30
+0x1809ebb06 cmp      byte ptr [rip + 0x468f3a9], 0
+0x1809ebb0d mov      rbx, rdx
+0x1809ebb10 jne      0x1809ebb6d
+0x1809ebb12 lea      rcx, [rip + 0x43faba7]
+0x1809ebb19 call     0x180361910
+0x1809ebb1e lea      rcx, [rip + 0x4474303]
+0x1809ebb25 call     0x180361910
+0x1809ebb2a lea      rcx, [rip + 0x441d427]
+0x1809ebb31 call     0x180361910
+0x1809ebb36 lea      rcx, [rip + 0x43e21eb]
+0x1809ebb3d call     0x180361910
+0x1809ebb42 lea      rcx, [rip + 0x441f0e7]
+0x1809ebb49 call     0x180361910
+0x1809ebb4e lea      rcx, [rip + 0x44241f3]
+0x1809ebb55 call     0x180361910
+0x1809ebb5a lea      rcx, [rip + 0x4428797]
+0x1809ebb61 call     0x180361910
+0x1809ebb66 mov      byte ptr [rip + 0x468f349], 1
+0x1809ebb6d mov      rdx, qword ptr [rip + 0x43e21b4]
+0x1809ebb74 mov      rcx, rbx
+0x1809ebb77 call     0x182003eb0
+0x1809ebb7c mov      rcx, qword ptr [rip + 0x441f0ad]
+0x1809ebb83 mov      rbx, rax
+0x1809ebb86 cmp      dword ptr [rcx + 0xe4], 0
+0x1809ebb8d jne      0x1809ebb94
+0x1809ebb8f call     0x180361bf0
+0x1809ebb94 cmp      byte ptr [rip + 0x468ef4d], 0
+0x1809ebb9b jne      0x1809ebbb0
+0x1809ebb9d lea      rcx, [rip + 0x441f08c]
+0x1809ebba4 call     0x180361910
+0x1809ebba9 mov      byte ptr [rip + 0x468ef38], 1
+0x1809ebbb0 mov      rcx, qword ptr [rip + 0x441f079]
+0x1809ebbb7 cmp      dword ptr [rcx + 0xe4], 0
+0x1809ebbbe jne      0x1809ebbc5
+0x1809ebbc0 call     0x180361bf0
+0x1809ebbc5 mov      rcx, qword ptr [rip + 0x441f064]
+0x1809ebbcc mov      qword ptr [rsp + 0x40], rbp
+0x1809ebbd1 call     0x180361710
+0x1809ebbd6 test     rbx, rbx
+0x1809ebbd9 je       0x1809ebceb
+0x1809ebbdf mov      rcx, qword ptr [rax]
+0x1809ebbe2 test     rcx, rcx
+0x1809ebbe5 je       0x1809ebceb
+0x1809ebbeb mov      rdx, qword ptr [rbx + 0x20]
+0x1809ebbef xor      r8d, r8d
+0x1809ebbf2 call     0x18096f090 ; Albion.PhotonClient.dll:ciy.a
+0x1809ebbf7 mov      rdx, qword ptr [rip + 0x44286fa]
+0x1809ebbfe mov      rcx, rax
+0x1809ebc01 call     0x180360c60
+0x1809ebc06 test     rax, rax
+0x1809ebc09 je       0x1809ebce0
+0x1809ebc0f mov      rdx, qword ptr [rip + 0x4424132]
+0x1809ebc16 xor      ecx, ecx
+0x1809ebc18 mov      qword ptr [rsp + 0x48], rsi
+0x1809ebc1d mov      r8, rax
+0x1809ebc20 mov      qword ptr [rsp + 0x50], rdi
+0x1809ebc25 call     0x180001ee0
+0x1809ebc2a mov      rdi, qword ptr [rbx + 0x28]
+0x1809ebc2e mov      rsi, rax
+0x1809ebc31 mov      rcx, qword ptr [rip + 0x43faa88]
+0x1809ebc38 mov      rbx, qword ptr [rbx + 0x30]
+0x1809ebc3c call     0x180361b10
+0x1809ebc41 mov      r9, rbx
+0x1809ebc44 mov      qword ptr [rsp + 0x20], 0
+0x1809ebc4d mov      r8, rdi
+0x1809ebc50 mov      rdx, rsi
+0x1809ebc53 mov      rcx, rax
+0x1809ebc56 mov      rbp, rax
+0x1809ebc59 call     0x180a98f50 ; Albion.PhotonClient.dll:c4k..ctor
+0x1809ebc5e mov      rcx, qword ptr [rip + 0x441d2f3]
+0x1809ebc65 mov      rdi, qword ptr [rsp + 0x50]
+0x1809ebc6a mov      rsi, qword ptr [rsp + 0x48]
+0x1809ebc6f cmp      dword ptr [rcx + 0xe4], 0
+0x1809ebc76 jne      0x1809ebc7d
+0x1809ebc78 call     0x180361bf0
+0x1809ebc7d cmp      byte ptr [rip + 0x468ed1e], 0
+0x1809ebc84 jne      0x1809ebc99
+0x1809ebc86 lea      rcx, [rip + 0x441d2cb]
+0x1809ebc8d call     0x180361910
+0x1809ebc92 mov      byte ptr [rip + 0x468ed09], 1
+0x1809ebc99 mov      rcx, qword ptr [rip + 0x441d2b8]
+0x1809ebca0 cmp      dword ptr [rcx + 0xe4], 0
+0x1809ebca7 jne      0x1809ebcae
+0x1809ebca9 call     0x180361bf0
+0x1809ebcae mov      rcx, qword ptr [rip + 0x441d2a3]
+0x1809ebcb5 call     0x180361710
+0x1809ebcba mov      rcx, qword ptr [rax]
+0x1809ebcbd test     rcx, rcx
+0x1809ebcc0 je       0x1809ebceb
+0x1809ebcc2 mov      rcx, qword ptr [rcx + 0x228]
+0x1809ebcc9 test     rcx, rcx
+0x1809ebccc je       0x1809ebceb
+0x1809ebcce mov      r9, qword ptr [rip + 0x4474153]
+0x1809ebcd5 xor      r8d, r8d
+0x1809ebcd8 mov      rdx, rbp
+0x1809ebcdb call     0x182003b60
+0x1809ebce0 mov      rbp, qword ptr [rsp + 0x40]
+0x1809ebce5 add      rsp, 0x30
+0x1809ebce9 pop      rbx
+0x1809ebcea ret      
+0x1809ebceb call     0x180361b60
+0x1809ebcf0 int3     

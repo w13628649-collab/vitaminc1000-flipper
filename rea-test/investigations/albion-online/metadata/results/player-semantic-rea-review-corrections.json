@@ -1,0 +1,55 @@
+{
+  "kind": "derived REA review corrections; original AO-META and REA evidence unchanged",
+  "created_utc": "2026-10-13T10:51:29.534697+00:00",
+  "original_semantics": "results/player-semantic-mapping.json",
+  "original_semantic_evidence_id": "AO-META-PLAYER-SEMANTICS-001",
+  "original_semantic_file_sha256": "7add9561f3cacdfd712d4b284f32dfc4e38c4948f8ab2013cd820ec8b86528a8",
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "corrections": [
+    {
+      "topic": "姓名保存字段+0x358",
+      "affected_event": 29,
+      "parameter_key": 1,
+      "refinement": "key1是显示名来源。正常分支把传入串存+0x358并把名称处理结果存+0x360；特殊匹配分支先调用0x1809700e0，并把返回值存+0x358后继续处理+0x360。不能声称+0x358在所有分支都保留未经加工的网络姓名。",
+      "source": "../native/evidence/character_name_setter.json",
+      "evidence_id": "ev_e6913f7f59d91e7c49745ea72241e03b2f13b76e860498d2bf120b3fd623a34a",
+      "source_sha256": "b5632d10bf7ad792a8e1efcb8bec937c8550a497c3e309f11a39fcdda1d4bbba"
+    },
+    {
+      "topic": "NewCharacter坐标解码源与目标",
+      "affected_event": 29,
+      "parameter_keys": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "refinement": "if atd+0x90(key16)!=null，从key16复制两个4byte片段，经e0.a→BitConverter.ToSingle→Vector2写key14(+0x80)；随后把转换后的片段写入key17(+0x98)缓冲，再经e0.a/ToSingle重建key15(+0x88)。因此此路径中key16是输入源、key17是中间缓冲目的地，不能描述成两种独立输入payload。未恢复e0.a算法、网络物理布局和14/15各自业务含义。",
+      "source": "../native/evidence/new_character_state_application.json",
+      "evidence_id": "ev_905c916ab1b812d7bb7d64cca4d302e59fe5290bcce60f9fc90f597acbe37fb3",
+      "source_sha256": "e5e832ade71eaf518876b09b677e9fba01fb10f39c7a675f3524fed9da01b9a1"
+    }
+  ],
+  "additive_observations": [
+    {
+      "topic": "第二对象索引数组",
+      "observation": "NewCharacter key43与CharacterEquipmentChanged key7均调用0x180bdab90；第二对象索引数组同类关系可确认，skin用途仍只是假设。",
+      "evidence_ids": [
+        "ev_905c916ab1b812d7bb7d64cca4d302e59fe5290bcce60f9fc90f597acbe37fb3",
+        "ev_c29961641b5e48548c4f096918dd40095a62c188c27b676dd6bdd5ac36e2b728"
+      ]
+    },
+    {
+      "topic": "伪代码与高pcode覆盖",
+      "observation": "人物状态应用和队伍标记函数native_value_flow.truncated=true，各omitted_operations_lower_bound=1；不能声称高pcode def-use完全。",
+      "evidence_ids": [
+        "ev_905c916ab1b812d7bb7d64cca4d302e59fe5290bcce60f9fc90f597acbe37fb3",
+        "ev_a2e8f7a470169f9315f5f94e1ae1b18763fb01a06b5ab2ea88c78e3ee72f5325"
+      ]
+    }
+  ],
+  "limitations": [
+    "只读取已有REA结果与AO-META结果；没有目标运行或服务器包样本。",
+    "派生审阅修正不替代原始Evidence，也不是额外的REA MCP Evidence。"
+  ]
+}

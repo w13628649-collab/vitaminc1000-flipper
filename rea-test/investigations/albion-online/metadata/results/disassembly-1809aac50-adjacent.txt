@@ -1,0 +1,91 @@
+0x1809aac50 mov      qword ptr [rsp + 0x10], rbp
+0x1809aac55 mov      qword ptr [rsp + 0x18], rsi
+0x1809aac5a push     rdi
+0x1809aac5b sub      rsp, 0x20
+0x1809aac5f cmp      byte ptr [rip + 0x46cff60], 0
+0x1809aac66 movzx    esi, r8w
+0x1809aac6a mov      rbp, rdx
+0x1809aac6d mov      rdi, rcx
+0x1809aac70 jne      0x1809aaca9
+0x1809aac72 lea      rcx, [rip + 0x4440f7f]
+0x1809aac79 call     0x180361910
+0x1809aac7e lea      rcx, [rip + 0x44bd7fb]
+0x1809aac85 call     0x180361910
+0x1809aac8a lea      rcx, [rip + 0x445e2c7]
+0x1809aac91 call     0x180361910
+0x1809aac96 lea      rcx, [rip + 0x4477aab]
+0x1809aac9d call     0x180361910
+0x1809aaca2 mov      byte ptr [rip + 0x46cff1d], 1
+0x1809aaca9 cmp      qword ptr [rdi + 0x510], 0
+0x1809aacb1 je       0x1809aacd8
+0x1809aacb3 mov      rcx, qword ptr [rdi + 0x510]
+0x1809aacba xor      r9d, r9d
+0x1809aacbd movzx    r8d, si
+0x1809aacc1 mov      rdx, rbp
+0x1809aacc4 mov      rbp, qword ptr [rsp + 0x38]
+0x1809aacc9 mov      rsi, qword ptr [rsp + 0x40]
+0x1809aacce add      rsp, 0x20
+0x1809aacd2 pop      rdi
+0x1809aacd3 jmp      0x180c010c0 ; Albion.PhotonClient.dll:cs8.l
+0x1809aacd8 mov      rcx, qword ptr [rip + 0x4477a69]
+0x1809aacdf mov      qword ptr [rsp + 0x30], rbx
+0x1809aace4 call     0x180361b10
+0x1809aace9 xor      r8d, r8d
+0x1809aacec mov      rdx, rdi
+0x1809aacef mov      rcx, rax
+0x1809aacf2 mov      rbx, rax
+0x1809aacf5 call     0x180429830 ; Assembly-CSharp.dll:djs..ctor | Assembly-CSharp.dll:djw..ctor | Assembly-CSharp.dll:dmc..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:dmi..ctor | Assembly-CSharp.dll:dml..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:b..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:dsg..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dl
+0x1809aacfa lea      rcx, [rdi + 0x510]
+0x1809aad01 mov      qword ptr [rdi + 0x510], rbx
+0x1809aad08 mov      rdx, rbx
+0x1809aad0b call     0x180360c40
+0x1809aad10 mov      rcx, qword ptr [rdi + 0x510]
+0x1809aad17 test     rcx, rcx
+0x1809aad1a je       0x1809aade6
+0x1809aad20 xor      r9d, r9d
+0x1809aad23 movzx    r8d, si
+0x1809aad27 mov      rdx, rbp
+0x1809aad2a call     0x180c010c0 ; Albion.PhotonClient.dll:cs8.l
+0x1809aad2f mov      eax, 0x104
+0x1809aad34 cmp      si, ax
+0x1809aad37 jne      0x1809aadd1
+0x1809aad3d mov      rcx, qword ptr [rip + 0x445e214]
+0x1809aad44 cmp      dword ptr [rcx + 0xe4], 0
+0x1809aad4b jne      0x1809aad52
+0x1809aad4d call     0x180361bf0
+0x1809aad52 cmp      byte ptr [rip + 0x46cfc49], 0
+0x1809aad59 jne      0x1809aad6e
+0x1809aad5b lea      rcx, [rip + 0x445e1f6]
+0x1809aad62 call     0x180361910
+0x1809aad67 mov      byte ptr [rip + 0x46cfc34], 1
+0x1809aad6e mov      rcx, qword ptr [rip + 0x445e1e3]
+0x1809aad75 cmp      dword ptr [rcx + 0xe4], 0
+0x1809aad7c jne      0x1809aad83
+0x1809aad7e call     0x180361bf0
+0x1809aad83 mov      rcx, qword ptr [rip + 0x445e1ce]
+0x1809aad8a call     0x180361710
+0x1809aad8f mov      rcx, qword ptr [rax]
+0x1809aad92 test     rcx, rcx
+0x1809aad95 je       0x1809aade6
+0x1809aad97 mov      rbx, qword ptr [rcx + 0x228]
+0x1809aad9e mov      rcx, qword ptr [rip + 0x4440e53]
+0x1809aada5 call     0x180361b10
+0x1809aadaa xor      edx, edx
+0x1809aadac mov      rcx, rax
+0x1809aadaf mov      rdi, rax
+0x1809aadb2 call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x1809aadb7 test     rbx, rbx
+0x1809aadba je       0x1809aade6
+0x1809aadbc mov      r9, qword ptr [rip + 0x44bd6bd]
+0x1809aadc3 xor      r8d, r8d
+0x1809aadc6 mov      rdx, rdi
+0x1809aadc9 mov      rcx, rbx
+0x1809aadcc call     0x182003b60
+0x1809aadd1 mov      rbx, qword ptr [rsp + 0x30]
+0x1809aadd6 mov      rbp, qword ptr [rsp + 0x38]
+0x1809aaddb mov      rsi, qword ptr [rsp + 0x40]
+0x1809aade0 add      rsp, 0x20
+0x1809aade4 pop      rdi
+0x1809aade5 ret      
+0x1809aade6 call     0x180361b60
+0x1809aadeb int3     

@@ -1,0 +1,157 @@
+{
+  "evidence_id": "AO-META-DISASM-18084b3a0-adjacent",
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "requested_va": "0x18084b3a0",
+  "function_va": "0x18084b3a0",
+  "end_exclusive_va": "0x18084b3cd",
+  "file_offset": 8690080,
+  "byte_length": 45,
+  "function_sha256": "cf2bed718df434381c725bcc8351ce9c22b8869130f8c44c5187c004778e2e43",
+  "capstone_version": "5.0.7",
+  "symbols": [
+    {
+      "type_index": 10704,
+      "type": "<>c",
+      "image": "Albion.Common.dll",
+      "method_index": 76164,
+      "name": "a",
+      "token": "0x60007ba",
+      "native_va": "0x18084b3a0",
+      "native_rva": "0x84b3a0",
+      "native_file_offset": 8690080,
+      "pointer_slot_file_offset": 79584808
+    },
+    {
+      "type_index": 23585,
+      "type": "<>c",
+      "image": "UnityEngine.CoreModule.dll",
+      "method_index": 169547,
+      "name": "<GetCachedEnumData>b__2_5",
+      "token": "0x6000bc7",
+      "native_va": "0x18084b3a0",
+      "native_rva": "0x84b3a0",
+      "native_file_offset": 8690080,
+      "pointer_slot_file_offset": 84140192
+    },
+    {
+      "type_index": 26226,
+      "type": "<>c",
+      "image": "Unity.Postprocessing.Runtime.dll",
+      "method_index": 189356,
+      "name": "<OnEnable>b__3_1",
+      "token": "0x6000121",
+      "native_va": "0x18084b3a0",
+      "native_rva": "0x84b3a0",
+      "native_file_offset": 8690080,
+      "pointer_slot_file_offset": 84093040
+    },
+    {
+      "type_index": 27065,
+      "type": "<>c",
+      "image": "UnityEngine.PropertiesModule.dll",
+      "method_index": 193540,
+      "name": "<GetPropertyMembers>b__22_0",
+      "token": "0x6000288",
+      "native_va": "0x18084b3a0",
+      "native_rva": "0x84b3a0",
+      "native_file_offset": 8690080,
+      "pointer_slot_file_offset": 84197400
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x18084b3a0",
+      "file_offset": 8690080,
+      "bytes": "4883ec28",
+      "mnemonic": "sub",
+      "operands": "rsp, 0x28"
+    },
+    {
+      "va": "0x18084b3a4",
+      "file_offset": 8690084,
+      "bytes": "4c8bc2",
+      "mnemonic": "mov",
+      "operands": "r8, rdx"
+    },
+    {
+      "va": "0x18084b3a7",
+      "file_offset": 8690087,
+      "bytes": "4885d2",
+      "mnemonic": "test",
+      "operands": "rdx, rdx"
+    },
+    {
+      "va": "0x18084b3aa",
+      "file_offset": 8690090,
+      "bytes": "741b",
+      "mnemonic": "je",
+      "operands": "0x18084b3c7"
+    },
+    {
+      "va": "0x18084b3ac",
+      "file_offset": 8690092,
+      "bytes": "488b12",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rdx]"
+    },
+    {
+      "va": "0x18084b3af",
+      "file_offset": 8690095,
+      "bytes": "498bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, r8"
+    },
+    {
+      "va": "0x18084b3b2",
+      "file_offset": 8690098,
+      "bytes": "488b8228020000",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rdx + 0x228]"
+    },
+    {
+      "va": "0x18084b3b9",
+      "file_offset": 8690105,
+      "bytes": "488b9230020000",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rdx + 0x230]"
+    },
+    {
+      "va": "0x18084b3c0",
+      "file_offset": 8690112,
+      "bytes": "4883c428",
+      "mnemonic": "add",
+      "operands": "rsp, 0x28"
+    },
+    {
+      "va": "0x18084b3c4",
+      "file_offset": 8690116,
+      "bytes": "48ffe0",
+      "mnemonic": "jmp",
+      "operands": "rax"
+    },
+    {
+      "va": "0x18084b3c7",
+      "file_offset": 8690119,
+      "bytes": "e89467b1ff",
+      "mnemonic": "call",
+      "operands": "0x180361b60",
+      "target_va": "0x180361b60",
+      "target_symbols": []
+    },
+    {
+      "va": "0x18084b3cc",
+      "file_offset": 8690124,
+      "bytes": "cc",
+      "mnemonic": "int3",
+      "operands": ""
+    }
+  ],
+  "pdata_segments": [
+    {
+      "begin_va": "0x18084b3a0",
+      "end_exclusive_va": "0x18084b3cd",
+      "unwind_rva": "0x4916368"
+    }
+  ],
+  "limitations": "PE unwind function range and x64 instruction decode. With adjacent flag, contiguous unwind fragments before next named method are included as a candidate interval; fragment membership remains inference. Direct call labels from metadata pointer slots; overloaded/folded pointers may have multiple symbols. No control-flow reconstruction or runtime evidence."
+}

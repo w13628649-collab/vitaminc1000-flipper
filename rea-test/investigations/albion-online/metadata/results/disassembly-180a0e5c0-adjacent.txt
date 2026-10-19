@@ -1,0 +1,91 @@
+0x180a0e5c0 mov      qword ptr [rsp + 8], rbx
+0x180a0e5c5 push     rdi
+0x180a0e5c6 sub      rsp, 0x20
+0x180a0e5ca movsx    r9d, r8w
+0x180a0e5ce mov      rdi, rdx
+0x180a0e5d1 mov      rbx, rcx
+0x180a0e5d4 sub      r9d, 0x242
+0x180a0e5db je       0x180a0e6aa
+0x180a0e5e1 sub      r9d, 1
+0x180a0e5e5 je       0x180a0e653
+0x180a0e5e7 cmp      r9d, 1
+0x180a0e5eb je       0x180a0e5ff
+0x180a0e5ed xor      r9d, r9d
+0x180a0e5f0 mov      rbx, qword ptr [rsp + 0x30]
+0x180a0e5f5 add      rsp, 0x20
+0x180a0e5f9 pop      rdi
+0x180a0e5fa jmp      0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180a0e5ff cmp      byte ptr [rip + 0x466c92b], 0
+0x180a0e606 jne      0x180a0e61b
+0x180a0e608 lea      rcx, [rip + 0x4395611]
+0x180a0e60f call     0x180361910
+0x180a0e614 mov      byte ptr [rip + 0x466c916], 1
+0x180a0e61b mov      rdx, qword ptr [rip + 0x43955fe]
+0x180a0e622 mov      rcx, rdi
+0x180a0e625 call     0x182003eb0
+0x180a0e62a test     rax, rax
+0x180a0e62d je       0x180a0e6fc
+0x180a0e633 cmp      word ptr [rax + 0x18], 0
+0x180a0e638 je       0x180a0e69f
+0x180a0e63a movzx    edx, word ptr [rax + 0x18]
+0x180a0e63e xor      r8d, r8d
+0x180a0e641 mov      rcx, rbx
+0x180a0e644 mov      rbx, qword ptr [rsp + 0x30]
+0x180a0e649 add      rsp, 0x20
+0x180a0e64d pop      rdi
+0x180a0e64e jmp      0x180a0f580 ; Albion.PhotonClient.dll:czm.v
+0x180a0e653 xor      edx, edx
+0x180a0e655 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a0e65a test     rax, rax
+0x180a0e65d je       0x180a0e6fc
+0x180a0e663 xor      edx, edx
+0x180a0e665 mov      rcx, rax
+0x180a0e668 call     0x180bd1e00 ; Albion.PhotonClient.dll:cpx.awi
+0x180a0e66d test     al, al
+0x180a0e66f je       0x180a0e69f
+0x180a0e671 xor      edx, edx
+0x180a0e673 mov      rcx, rbx
+0x180a0e676 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a0e67b test     rax, rax
+0x180a0e67e je       0x180a0e6fc
+0x180a0e680 xor      edx, edx
+0x180a0e682 mov      rcx, rax
+0x180a0e685 call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x180a0e68a test     rax, rax
+0x180a0e68d je       0x180a0e6fc
+0x180a0e68f xor      r8d, r8d
+0x180a0e692 mov      edx, 2
+0x180a0e697 mov      rcx, rax
+0x180a0e69a call     0x1809b4240 ; Albion.PhotonClient.dll:ct7.f5
+0x180a0e69f mov      rbx, qword ptr [rsp + 0x30]
+0x180a0e6a4 add      rsp, 0x20
+0x180a0e6a8 pop      rdi
+0x180a0e6a9 ret      
+0x180a0e6aa xor      edx, edx
+0x180a0e6ac call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a0e6b1 test     rax, rax
+0x180a0e6b4 je       0x180a0e6fc
+0x180a0e6b6 xor      edx, edx
+0x180a0e6b8 mov      rcx, rax
+0x180a0e6bb call     0x180bd1e00 ; Albion.PhotonClient.dll:cpx.awi
+0x180a0e6c0 test     al, al
+0x180a0e6c2 je       0x180a0e69f
+0x180a0e6c4 xor      edx, edx
+0x180a0e6c6 mov      rcx, rbx
+0x180a0e6c9 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a0e6ce test     rax, rax
+0x180a0e6d1 je       0x180a0e6fc
+0x180a0e6d3 xor      edx, edx
+0x180a0e6d5 mov      rcx, rax
+0x180a0e6d8 call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x180a0e6dd test     rax, rax
+0x180a0e6e0 je       0x180a0e6fc
+0x180a0e6e2 xor      r8d, r8d
+0x180a0e6e5 mov      edx, 1
+0x180a0e6ea mov      rcx, rax
+0x180a0e6ed mov      rbx, qword ptr [rsp + 0x30]
+0x180a0e6f2 add      rsp, 0x20
+0x180a0e6f6 pop      rdi
+0x180a0e6f7 jmp      0x1809b4240 ; Albion.PhotonClient.dll:ct7.f5
+0x180a0e6fc call     0x180361b60
+0x180a0e701 int3     

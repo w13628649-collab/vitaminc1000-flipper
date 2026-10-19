@@ -1,0 +1,151 @@
+0x1809cc1e0 mov      qword ptr [rsp + 0x10], rbx
+0x1809cc1e5 mov      qword ptr [rsp + 0x18], rsi
+0x1809cc1ea push     rdi
+0x1809cc1eb sub      rsp, 0x20
+0x1809cc1ef cmp      byte ptr [rip + 0x46aec10], 0
+0x1809cc1f6 mov      rbx, rdx
+0x1809cc1f9 mov      rsi, rcx
+0x1809cc1fc jne      0x1809cc21d
+0x1809cc1fe lea      rcx, [rip + 0x448942b]
+0x1809cc205 call     0x180361910
+0x1809cc20a lea      rcx, [rip + 0x4416e67]
+0x1809cc211 call     0x180361910
+0x1809cc216 mov      byte ptr [rip + 0x46aebe9], 1
+0x1809cc21d mov      rdx, qword ptr [rip + 0x4416e54]
+0x1809cc224 mov      rcx, rbx
+0x1809cc227 call     0x182003eb0
+0x1809cc22c movzx    edx, byte ptr [rip + 0x46aebb3]
+0x1809cc233 mov      rdi, rax
+0x1809cc236 test     dl, dl
+0x1809cc238 jne      0x1809cc24e
+0x1809cc23a lea      rcx, [rip + 0x4458197]
+0x1809cc241 call     0x180361910
+0x1809cc246 mov      dl, 1
+0x1809cc248 mov      byte ptr [rip + 0x46aeb98], dl
+0x1809cc24e mov      r8, qword ptr [rsi + 0x10]
+0x1809cc252 mov      r9, qword ptr [rip + 0x445817f]
+0x1809cc259 test     r8, r8
+0x1809cc25c je       0x1809cc28b
+0x1809cc25e mov      r10, qword ptr [r8]
+0x1809cc261 movzx    eax, byte ptr [r9 + 0x130]
+0x1809cc269 cmp      byte ptr [r10 + 0x130], al
+0x1809cc270 jb       0x1809cc43d
+0x1809cc276 movzx    ecx, al
+0x1809cc279 mov      rax, qword ptr [r10 + 0xc8]
+0x1809cc280 cmp      qword ptr [rax + rcx*8 - 8], r9
+0x1809cc285 jne      0x1809cc43d
+0x1809cc28b test     rdi, rdi
+0x1809cc28e je       0x1809cc463
+0x1809cc294 test     r8, r8
+0x1809cc297 je       0x1809cc463
+0x1809cc29d mov      eax, dword ptr [rdi + 0x20]
+0x1809cc2a0 mov      dword ptr [r8 + 0x3d0], eax
+0x1809cc2a7 test     dl, dl
+0x1809cc2a9 jne      0x1809cc2be
+0x1809cc2ab lea      rcx, [rip + 0x4458126]
+0x1809cc2b2 call     0x180361910
+0x1809cc2b7 mov      byte ptr [rip + 0x46aeb28], 1
+0x1809cc2be mov      rbx, qword ptr [rsi + 0x10]
+0x1809cc2c2 mov      rdx, qword ptr [rip + 0x445810f]
+0x1809cc2c9 test     rbx, rbx
+0x1809cc2cc je       0x1809cc449
+0x1809cc2d2 mov      r8, qword ptr [rbx]
+0x1809cc2d5 movzx    eax, byte ptr [rdx + 0x130]
+0x1809cc2dc cmp      byte ptr [r8 + 0x130], al
+0x1809cc2e3 jb       0x1809cc48a
+0x1809cc2e9 movzx    ecx, al
+0x1809cc2ec mov      rax, qword ptr [r8 + 0xc8]
+0x1809cc2f3 cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x1809cc2f8 jne      0x1809cc48a
+0x1809cc2fe mov      rdx, qword ptr [rdi + 0x18]
+0x1809cc302 lea      rcx, [rsp + 0x30]
+0x1809cc307 xor      r8d, r8d
+0x1809cc30a mov      qword ptr [rsp + 0x30], 0
+0x1809cc313 call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x1809cc318 movzx    r9d, byte ptr [rip + 0x46aeac6]
+0x1809cc320 mov      rax, qword ptr [rsp + 0x30]
+0x1809cc325 mov      qword ptr [rbx + 0x3c8], rax
+0x1809cc32c test     r9b, r9b
+0x1809cc32f jne      0x1809cc347
+0x1809cc331 lea      rcx, [rip + 0x44580a0]
+0x1809cc338 call     0x180361910
+0x1809cc33d mov      r9b, 1
+0x1809cc340 mov      byte ptr [rip + 0x46aea9f], r9b
+0x1809cc347 mov      rcx, qword ptr [rsi + 0x10]
+0x1809cc34b mov      r8, qword ptr [rip + 0x4458086]
+0x1809cc352 test     rcx, rcx
+0x1809cc355 je       0x1809cc463
+0x1809cc35b mov      r10, qword ptr [rcx]
+0x1809cc35e movzx    eax, byte ptr [r8 + 0x130]
+0x1809cc366 cmp      byte ptr [r10 + 0x130], al
+0x1809cc36d jb       0x1809cc481
+0x1809cc373 movzx    edx, al
+0x1809cc376 mov      rax, qword ptr [r10 + 0xc8]
+0x1809cc37d cmp      qword ptr [rax + rdx*8 - 8], r8
+0x1809cc382 jne      0x1809cc481
+0x1809cc388 mov      rbx, qword ptr [rcx + 0x78]
+0x1809cc38c test     r9b, r9b
+0x1809cc38f jne      0x1809cc3ab
+0x1809cc391 lea      rcx, [rip + 0x4458040]
+0x1809cc398 call     0x180361910
+0x1809cc39d mov      r8, qword ptr [rip + 0x4458034]
+0x1809cc3a4 mov      byte ptr [rip + 0x46aea3b], 1
+0x1809cc3ab mov      r9, qword ptr [rsi + 0x10]
+0x1809cc3af test     r9, r9
+0x1809cc3b2 je       0x1809cc463
+0x1809cc3b8 mov      rdx, qword ptr [r9]
+0x1809cc3bb movzx    eax, byte ptr [r8 + 0x130]
+0x1809cc3c3 cmp      byte ptr [rdx + 0x130], al
+0x1809cc3c9 jb       0x1809cc475
+0x1809cc3cf movzx    ecx, al
+0x1809cc3d2 mov      rax, qword ptr [rdx + 0xc8]
+0x1809cc3d9 cmp      qword ptr [rax + rcx*8 - 8], r8
+0x1809cc3de jne      0x1809cc475
+0x1809cc3e4 xor      edx, edx
+0x1809cc3e6 mov      rcx, r9
+0x1809cc3e9 call     0x1809a5710 ; Albion.PhotonClient.dll:ctp.ars
+0x1809cc3ee mov      r8, qword ptr [rip + 0x448923b]
+0x1809cc3f5 test     rbx, rbx
+0x1809cc3f8 je       0x1809cc463
+0x1809cc3fa mov      r9, qword ptr [rbx]
+0x1809cc3fd movzx    ecx, byte ptr [r8 + 0x130]
+0x1809cc405 cmp      byte ptr [r9 + 0x130], cl
+0x1809cc40c jb       0x1809cc469
+0x1809cc40e movzx    edx, cl
+0x1809cc411 mov      rcx, qword ptr [r9 + 0xc8]
+0x1809cc418 cmp      qword ptr [rcx + rdx*8 - 8], r8
+0x1809cc41d jne      0x1809cc469
+0x1809cc41f xor      r8d, r8d
+0x1809cc422 movzx    edx, al
+0x1809cc425 mov      rcx, rbx
+0x1809cc428 call     0x1808f72c0 ; Albion.Common.dll:a4e.bq
+0x1809cc42d mov      rbx, qword ptr [rsp + 0x38]
+0x1809cc432 mov      rsi, qword ptr [rsp + 0x40]
+0x1809cc437 add      rsp, 0x20
+0x1809cc43b pop      rdi
+0x1809cc43c ret      
+0x1809cc43d mov      rdx, r9
+0x1809cc440 mov      rcx, r8
+0x1809cc443 call     0x180360c80
+0x1809cc448 int3     
+0x1809cc449 mov      rdx, qword ptr [rdi + 0x18]
+0x1809cc44d lea      rcx, [rsp + 0x30]
+0x1809cc452 xor      r8d, r8d
+0x1809cc455 mov      qword ptr [rsp + 0x30], 0
+0x1809cc45e call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x1809cc463 call     0x180361b60
+0x1809cc468 int3     
+0x1809cc469 mov      rdx, r8
+0x1809cc46c mov      rcx, rbx
+0x1809cc46f call     0x180360c80
+0x1809cc474 int3     
+0x1809cc475 mov      rdx, r8
+0x1809cc478 mov      rcx, r9
+0x1809cc47b call     0x180360c80
+0x1809cc480 int3     
+0x1809cc481 mov      rdx, r8
+0x1809cc484 call     0x180360c80
+0x1809cc489 int3     
+0x1809cc48a mov      rcx, rbx
+0x1809cc48d call     0x180360c80
+0x1809cc492 int3     

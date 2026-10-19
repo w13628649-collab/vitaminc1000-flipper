@@ -1,0 +1,103 @@
+0x180be9620 mov      qword ptr [rsp + 8], rbx
+0x180be9625 mov      qword ptr [rsp + 0x10], rsi
+0x180be962a push     rdi
+0x180be962b sub      rsp, 0x20
+0x180be962f cmp      byte ptr [rip + 0x44929e1], 0
+0x180be9636 movzx    ebx, r8w
+0x180be963a mov      rsi, rdx
+0x180be963d mov      rdi, rcx
+0x180be9640 jne      0x180be9655
+0x180be9642 lea      rcx, [rip + 0x41db32f]
+0x180be9649 call     0x180361910
+0x180be964e mov      byte ptr [rip + 0x44929c2], 1
+0x180be9655 mov      eax, 0x1cc
+0x180be965a cmp      bx, ax
+0x180be965d je       0x180be96f2
+0x180be9663 mov      eax, 0x1cd
+0x180be9668 cmp      bx, ax
+0x180be966b jne      0x180be96e2
+0x180be966d mov      rdx, qword ptr [rip + 0x41db304]
+0x180be9674 mov      rcx, rsi
+0x180be9677 call     0x182003eb0
+0x180be967c cmp      byte ptr [rip + 0x4492982], 0
+0x180be9683 jne      0x180be9698
+0x180be9685 lea      rcx, [rip + 0x4232ad4]
+0x180be968c call     0x180361910
+0x180be9691 mov      byte ptr [rip + 0x449296d], 1
+0x180be9698 mov      r8, qword ptr [rdi + 0x10]
+0x180be969c mov      rdx, qword ptr [rip + 0x4232abd]
+0x180be96a3 test     r8, r8
+0x180be96a6 je       0x180be97ca
+0x180be96ac mov      r9, qword ptr [r8]
+0x180be96af movzx    eax, byte ptr [rdx + 0x130]
+0x180be96b6 cmp      byte ptr [r9 + 0x130], al
+0x180be96bd jb       0x180be97d0
+0x180be96c3 movzx    ecx, al
+0x180be96c6 mov      rax, qword ptr [r9 + 0xc8]
+0x180be96cd cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180be96d2 jne      0x180be97d0
+0x180be96d8 xor      edx, edx
+0x180be96da mov      rcx, r8
+0x180be96dd call     0x180bc4f40 ; Albion.PhotonClient.dll:cpo.azm
+0x180be96e2 mov      rbx, qword ptr [rsp + 0x30]
+0x180be96e7 mov      rsi, qword ptr [rsp + 0x38]
+0x180be96ec add      rsp, 0x20
+0x180be96f0 pop      rdi
+0x180be96f1 ret      
+0x180be96f2 cmp      byte ptr [rip + 0x449290c], 0
+0x180be96f9 jne      0x180be970e
+0x180be96fb lea      rcx, [rip + 0x4232a5e]
+0x180be9702 call     0x180361910
+0x180be9707 mov      byte ptr [rip + 0x44928f7], 1
+0x180be970e mov      r9, qword ptr [rdi + 0x10]
+0x180be9712 mov      rdx, qword ptr [rip + 0x4232a47]
+0x180be9719 test     r9, r9
+0x180be971c je       0x180be97ca
+0x180be9722 mov      r8, qword ptr [r9]
+0x180be9725 movzx    eax, byte ptr [rdx + 0x130]
+0x180be972c cmp      byte ptr [r8 + 0x130], al
+0x180be9733 jb       0x180be97e2
+0x180be9739 movzx    ecx, al
+0x180be973c mov      rax, qword ptr [r8 + 0xc8]
+0x180be9743 cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180be9748 jne      0x180be97e2
+0x180be974e xor      r8d, r8d
+0x180be9751 xor      edx, edx
+0x180be9753 mov      rcx, r9
+0x180be9756 call     0x180bc5570 ; Albion.PhotonClient.dll:cpo.x8
+0x180be975b cmp      byte ptr [rip + 0x44928a3], 0
+0x180be9762 jne      0x180be9777
+0x180be9764 lea      rcx, [rip + 0x42329f5]
+0x180be976b call     0x180361910
+0x180be9770 mov      byte ptr [rip + 0x449288e], 1
+0x180be9777 mov      r9, qword ptr [rdi + 0x10]
+0x180be977b mov      rdx, qword ptr [rip + 0x42329de]
+0x180be9782 test     r9, r9
+0x180be9785 je       0x180be97ca
+0x180be9787 mov      r8, qword ptr [r9]
+0x180be978a movzx    eax, byte ptr [rdx + 0x130]
+0x180be9791 cmp      byte ptr [r8 + 0x130], al
+0x180be9798 jb       0x180be97d9
+0x180be979a movzx    ecx, al
+0x180be979d mov      rax, qword ptr [r8 + 0xc8]
+0x180be97a4 cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180be97a9 jne      0x180be97d9
+0x180be97ab xor      r8d, r8d
+0x180be97ae mov      edx, 0x1a
+0x180be97b3 mov      rcx, r9
+0x180be97b6 mov      rbx, qword ptr [rsp + 0x30]
+0x180be97bb mov      rsi, qword ptr [rsp + 0x38]
+0x180be97c0 add      rsp, 0x20
+0x180be97c4 pop      rdi
+0x180be97c5 jmp      0x180a13540 ; Albion.PhotonClient.dll:cpx.x8 | Albion.PhotonClient.dll:c0a.af
+0x180be97ca call     0x180361b60
+0x180be97cf int3     
+0x180be97d0 mov      rcx, r8
+0x180be97d3 call     0x180360c80
+0x180be97d8 int3     
+0x180be97d9 mov      rcx, r9
+0x180be97dc call     0x180360c80
+0x180be97e1 int3     
+0x180be97e2 mov      rcx, r9
+0x180be97e5 call     0x180360c80
+0x180be97ea int3     

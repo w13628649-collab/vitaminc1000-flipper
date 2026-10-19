@@ -1,0 +1,239 @@
+0x180a8dc00 push     rbp
+0x180a8dc02 push     rdi
+0x180a8dc03 push     r15
+0x180a8dc05 sub      rsp, 0x50
+0x180a8dc09 cmp      byte ptr [rip + 0x45ed607], 0
+0x180a8dc10 mov      rbp, rdx
+0x180a8dc13 mov      rdi, rcx
+0x180a8dc16 jne      0x180a8dc5b
+0x180a8dc18 lea      rcx, [rip + 0x43778a9]
+0x180a8dc1f call     0x180361910
+0x180a8dc24 lea      rcx, [rip + 0x43779fd]
+0x180a8dc2b call     0x180361910
+0x180a8dc30 lea      rcx, [rip + 0x4321339]
+0x180a8dc37 call     0x180361910
+0x180a8dc3c lea      rcx, [rip + 0x4321485]
+0x180a8dc43 call     0x180361910
+0x180a8dc48 lea      rcx, [rip + 0x4356ad1]
+0x180a8dc4f call     0x180361910
+0x180a8dc54 mov      byte ptr [rip + 0x45ed5bc], 1
+0x180a8dc5b xor      r15d, r15d
+0x180a8dc5e mov      qword ptr [rsp + 0x70], rbx
+0x180a8dc63 mov      qword ptr [rsp + 0x48], rsi
+0x180a8dc68 mov      qword ptr [rsp + 0x40], r14
+0x180a8dc6d mov      qword ptr [rsp + 0x88], r15
+0x180a8dc75 mov      qword ptr [rsp + 0x30], r15
+0x180a8dc7a mov      qword ptr [rsp + 0x78], r15
+0x180a8dc7f test     rbp, rbp
+0x180a8dc82 je       0x180a8dfd7
+0x180a8dc88 mov      rcx, qword ptr [rbp + 0x20]
+0x180a8dc8c test     rcx, rcx
+0x180a8dc8f je       0x180a8dfd7
+0x180a8dc95 xor      r9d, r9d
+0x180a8dc98 lea      r8, [rsp + 0x88]
+0x180a8dca0 mov      dl, 0xfd
+0x180a8dca2 call     0x1832ad8d0 ; Photon3Unity3D.dll:g7g.e
+0x180a8dca7 mov      rcx, qword ptr [rsp + 0x88]
+0x180a8dcaf movzx    r14d, r15w
+0x180a8dcb3 test     rcx, rcx
+0x180a8dcb6 je       0x180a8dce8
+0x180a8dcb8 mov      r8, qword ptr [rip + 0x46082b9]
+0x180a8dcbf mov      eax, r15d
+0x180a8dcc2 cmp      qword ptr [rcx], r8
+0x180a8dcc5 cmove    rax, rcx
+0x180a8dcc9 test     rax, rax
+0x180a8dccc je       0x180a8dce8
+0x180a8dcce mov      rdx, qword ptr [rcx]
+0x180a8dcd1 mov      rax, qword ptr [r8 + 0x40]
+0x180a8dcd5 cmp      qword ptr [rdx + 0x40], rax
+0x180a8dcd9 jne      0x180a8dfc5
+0x180a8dcdf call     0x180360e20
+0x180a8dce4 movzx    r14d, word ptr [rax]
+0x180a8dce8 mov      rax, qword ptr [rdi + 0x120]
+0x180a8dcef mov      esi, r15d
+0x180a8dcf2 mov      ecx, r15d
+0x180a8dcf5 test     rax, rax
+0x180a8dcf8 je       0x180a8dfd7
+0x180a8dcfe nop      
+0x180a8dd00 cmp      ecx, dword ptr [rax + 0x18]
+0x180a8dd03 jge      0x180a8ddd9
+0x180a8dd09 mov      rcx, qword ptr [rdi + 0x120]
+0x180a8dd10 test     rcx, rcx
+0x180a8dd13 je       0x180a8dfd7
+0x180a8dd19 mov      r8, qword ptr [rip + 0x43213a8]
+0x180a8dd20 mov      edx, esi
+0x180a8dd22 call     0x1821939c0
+0x180a8dd27 mov      rbx, rax
+0x180a8dd2a test     rax, rax
+0x180a8dd2d je       0x180a8dfd7
+0x180a8dd33 mov      r10, qword ptr [rax]
+0x180a8dd36 movzx    ecx, r15w
+0x180a8dd3a mov      r9, qword ptr [rip + 0x43569df]
+0x180a8dd41 movzx    edx, word ptr [r10 + 0x12e]
+0x180a8dd49 cmp      r15w, dx
+0x180a8dd4d jae      0x180a8dd74
+0x180a8dd4f mov      r8, qword ptr [r10 + 0xb0]
+0x180a8dd56 nop      word ptr [rax + rax]
+0x180a8dd60 movzx    eax, cx
+0x180a8dd63 add      rax, rax
+0x180a8dd66 cmp      qword ptr [r8 + rax*8], r9
+0x180a8dd6a je       0x180a8ddba
+0x180a8dd6c inc      cx
+0x180a8dd6f cmp      cx, dx
+0x180a8dd72 jb       0x180a8dd60
+0x180a8dd74 mov      r8d, 3
+0x180a8dd7a mov      rdx, r9
+0x180a8dd7d mov      rcx, rbx
+0x180a8dd80 call     0x18035ea20
+0x180a8dd85 mov      r10, qword ptr [rax]
+0x180a8dd88 movzx    r9d, r14w
+0x180a8dd8c mov      rax, qword ptr [rax + 8]
+0x180a8dd90 mov      r8, rbp
+0x180a8dd93 mov      rdx, rdi
+0x180a8dd96 mov      qword ptr [rsp + 0x20], rax
+0x180a8dd9b mov      rcx, rbx
+0x180a8dd9e call     r10
+0x180a8dda1 mov      rax, qword ptr [rdi + 0x120]
+0x180a8dda8 inc      esi
+0x180a8ddaa mov      ecx, esi
+0x180a8ddac test     rax, rax
+0x180a8ddaf jne      0x180a8dd00
+0x180a8ddb5 jmp      0x180a8dfd7
+0x180a8ddba movzx    ecx, cx
+0x180a8ddbd add      rcx, rcx
+0x180a8ddc0 mov      eax, dword ptr [r8 + rcx*8 + 8]
+0x180a8ddc5 add      eax, 3
+0x180a8ddc8 cdqe     
+0x180a8ddca shl      rax, 4
+0x180a8ddce add      rax, 0x138
+0x180a8ddd4 add      rax, r10
+0x180a8ddd7 jmp      0x180a8dd85
+0x180a8ddd9 mov      rcx, qword ptr [rbp + 0x20]
+0x180a8dddd test     rcx, rcx
+0x180a8dde0 je       0x180a8dfd7
+0x180a8dde6 xor      r9d, r9d
+0x180a8dde9 lea      r8, [rsp + 0x30]
+0x180a8ddee mov      dl, 0xff
+0x180a8ddf0 call     0x1832ad8d0 ; Photon3Unity3D.dll:g7g.e
+0x180a8ddf5 test     al, al
+0x180a8ddf7 je       0x180a8dedd
+0x180a8ddfd mov      rcx, qword ptr [rsp + 0x30]
+0x180a8de02 test     rcx, rcx
+0x180a8de05 je       0x180a8dedd
+0x180a8de0b mov      r8, qword ptr [rip + 0x4608176]
+0x180a8de12 mov      rax, r15
+0x180a8de15 cmp      qword ptr [rcx], r8
+0x180a8de18 cmove    rax, rcx
+0x180a8de1c test     rax, rax
+0x180a8de1f je       0x180a8dedd
+0x180a8de25 mov      rdx, qword ptr [rcx]
+0x180a8de28 mov      rax, qword ptr [r8 + 0x40]
+0x180a8de2c cmp      qword ptr [rdx + 0x40], rax
+0x180a8de30 jne      0x180a8dfce
+0x180a8de36 call     0x180360e20
+0x180a8de3b mov      rcx, qword ptr [rdi + 0x128]
+0x180a8de42 test     rcx, rcx
+0x180a8de45 je       0x180a8dfd7
+0x180a8de4b mov      ebx, dword ptr [rax]
+0x180a8de4d lea      r8, [rsp + 0x78]
+0x180a8de52 mov      r9, qword ptr [rip + 0x43777cf]
+0x180a8de59 mov      edx, ebx
+0x180a8de5b call     0x182afe1d0
+0x180a8de60 mov      rcx, qword ptr [rdi + 0x128]
+0x180a8de67 test     rcx, rcx
+0x180a8de6a je       0x180a8dfd7
+0x180a8de70 mov      r8, qword ptr [rip + 0x4377651]
+0x180a8de77 mov      edx, ebx
+0x180a8de79 call     0x182af6ad0
+0x180a8de7e mov      rcx, qword ptr [rsp + 0x78]
+0x180a8de83 test     rcx, rcx
+0x180a8de86 je       0x180a8dedd
+0x180a8de88 mov      qword ptr [rcx + 0x18], rbp
+0x180a8de8c mov      rdx, rbp
+0x180a8de8f add      rcx, 0x18
+0x180a8de93 call     0x180360c40
+0x180a8de98 mov      rdx, qword ptr [rsp + 0x78]
+0x180a8de9d test     rdx, rdx
+0x180a8dea0 je       0x180a8dfd7
+0x180a8dea6 mov      rcx, qword ptr [rdx + 0x10]
+0x180a8deaa test     rcx, rcx
+0x180a8dead je       0x180a8dfd7
+0x180a8deb3 mov      rax, qword ptr [rcx + 0x18]
+0x180a8deb7 mov      r8, qword ptr [rcx + 0x28]
+0x180a8debb mov      rcx, qword ptr [rcx + 0x40]
+0x180a8debf mov      rdx, qword ptr [rdx + 0x18]
+0x180a8dec3 call     rax
+0x180a8dec5 mov      r14, qword ptr [rsp + 0x40]
+0x180a8deca mov      rsi, qword ptr [rsp + 0x48]
+0x180a8decf mov      rbx, qword ptr [rsp + 0x70]
+0x180a8ded4 add      rsp, 0x50
+0x180a8ded8 pop      r15
+0x180a8deda pop      rdi
+0x180a8dedb pop      rbp
+0x180a8dedc ret      
+0x180a8dedd mov      rax, qword ptr [rdi + 0x120]
+0x180a8dee4 mov      esi, r15d
+0x180a8dee7 mov      ecx, r15d
+0x180a8deea test     rax, rax
+0x180a8deed je       0x180a8dfd7
+0x180a8def3 cmp      ecx, dword ptr [rax + 0x18]
+0x180a8def6 jge      0x180a8dec5
+0x180a8def8 mov      rcx, qword ptr [rdi + 0x120]
+0x180a8deff test     rcx, rcx
+0x180a8df02 je       0x180a8dfd7
+0x180a8df08 mov      r8, qword ptr [rip + 0x43211b9]
+0x180a8df0f mov      edx, esi
+0x180a8df11 call     0x1821939c0
+0x180a8df16 mov      rbx, rax
+0x180a8df19 test     rax, rax
+0x180a8df1c je       0x180a8dfd7
+0x180a8df22 mov      r10, qword ptr [rax]
+0x180a8df25 movzx    ecx, r15w
+0x180a8df29 mov      r9, qword ptr [rip + 0x43567f0]
+0x180a8df30 movzx    edx, word ptr [r10 + 0x12e]
+0x180a8df38 cmp      r15w, dx
+0x180a8df3c jae      0x180a8df64
+0x180a8df3e mov      r8, qword ptr [r10 + 0xb0]
+0x180a8df45 nop      word ptr [rax + rax]
+0x180a8df50 movzx    eax, cx
+0x180a8df53 add      rax, rax
+0x180a8df56 cmp      qword ptr [r8 + rax*8], r9
+0x180a8df5a je       0x180a8dfa6
+0x180a8df5c inc      cx
+0x180a8df5f cmp      cx, dx
+0x180a8df62 jb       0x180a8df50
+0x180a8df64 mov      r8d, 4
+0x180a8df6a mov      rdx, r9
+0x180a8df6d mov      rcx, rbx
+0x180a8df70 call     0x18035ea20
+0x180a8df75 mov      r10, qword ptr [rax]
+0x180a8df78 movzx    r9d, r14w
+0x180a8df7c mov      rax, qword ptr [rax + 8]
+0x180a8df80 mov      r8, rbp
+0x180a8df83 mov      rdx, rdi
+0x180a8df86 mov      qword ptr [rsp + 0x20], rax
+0x180a8df8b mov      rcx, rbx
+0x180a8df8e call     r10
+0x180a8df91 mov      rax, qword ptr [rdi + 0x120]
+0x180a8df98 inc      esi
+0x180a8df9a mov      ecx, esi
+0x180a8df9c test     rax, rax
+0x180a8df9f je       0x180a8dfd7
+0x180a8dfa1 jmp      0x180a8def3
+0x180a8dfa6 movzx    ecx, cx
+0x180a8dfa9 add      rcx, rcx
+0x180a8dfac mov      eax, dword ptr [r8 + rcx*8 + 8]
+0x180a8dfb1 add      eax, 4
+0x180a8dfb4 cdqe     
+0x180a8dfb6 shl      rax, 4
+0x180a8dfba add      rax, 0x138
+0x180a8dfc0 add      rax, r10
+0x180a8dfc3 jmp      0x180a8df75
+0x180a8dfc5 mov      rdx, r8
+0x180a8dfc8 call     0x180360c80
+0x180a8dfcd int3     
+0x180a8dfce mov      rdx, r8
+0x180a8dfd1 call     0x180360c80
+0x180a8dfd6 int3     
+0x180a8dfd7 call     0x180361b60
+0x180a8dfdc int3     

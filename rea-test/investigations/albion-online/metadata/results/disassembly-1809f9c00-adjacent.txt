@@ -1,0 +1,52 @@
+0x1809f9c00 mov      qword ptr [rsp + 8], rbx
+0x1809f9c05 push     rdi
+0x1809f9c06 sub      rsp, 0x20
+0x1809f9c0a cmp      byte ptr [rip + 0x46812ae], 0
+0x1809f9c11 mov      rdi, rdx
+0x1809f9c14 mov      rbx, rcx
+0x1809f9c17 jne      0x1809f9c44
+0x1809f9c19 lea      rcx, [rip + 0x4417b20]
+0x1809f9c20 call     0x180361910
+0x1809f9c25 lea      rcx, [rip + 0x43d6d54]
+0x1809f9c2c call     0x180361910
+0x1809f9c31 lea      rcx, [rip + 0x4477e98]
+0x1809f9c38 call     0x180361910
+0x1809f9c3d mov      byte ptr [rip + 0x468127b], 1
+0x1809f9c44 mov      rdx, qword ptr [rip + 0x43d6d35]
+0x1809f9c4b mov      rcx, rdi
+0x1809f9c4e call     0x182003eb0
+0x1809f9c53 mov      r9, rax
+0x1809f9c56 test     rax, rax
+0x1809f9c59 je       0x1809f9cc3
+0x1809f9c5b cmp      qword ptr [rax + 0x18], 0
+0x1809f9c60 je       0x1809f9ca9
+0x1809f9c62 cmp      qword ptr [rax + 0x20], 0
+0x1809f9c67 je       0x1809f9ca9
+0x1809f9c69 mov      rcx, qword ptr [rax + 0x20]
+0x1809f9c6d mov      rdx, qword ptr [rax + 0x18]
+0x1809f9c71 mov      ecx, dword ptr [rcx + 0x18]
+0x1809f9c74 cmp      dword ptr [rdx + 0x18], ecx
+0x1809f9c77 je       0x1809f9ca9
+0x1809f9c79 mov      rcx, qword ptr [rip + 0x4477e50]
+0x1809f9c80 cmp      dword ptr [rcx + 0xe4], 0
+0x1809f9c87 jne      0x1809f9c8e
+0x1809f9c89 call     0x180361bf0
+0x1809f9c8e mov      rdx, qword ptr [rip + 0x4417aab]
+0x1809f9c95 xor      r8d, r8d
+0x1809f9c98 xor      ecx, ecx
+0x1809f9c9a mov      rbx, qword ptr [rsp + 0x30]
+0x1809f9c9f add      rsp, 0x20
+0x1809f9ca3 pop      rdi
+0x1809f9ca4 jmp      0x1804f6870 ; Albion.Common.dll:e.a
+0x1809f9ca9 mov      rcx, qword ptr [rbx + 0x18]
+0x1809f9cad test     rcx, rcx
+0x1809f9cb0 je       0x1809f9cc3
+0x1809f9cb2 mov      rax, qword ptr [rcx + 0x18]
+0x1809f9cb6 mov      rdx, r9
+0x1809f9cb9 mov      r8, qword ptr [rcx + 0x28]
+0x1809f9cbd mov      rcx, qword ptr [rcx + 0x40]
+0x1809f9cc1 call     rax
+0x1809f9cc3 mov      rbx, qword ptr [rsp + 0x30]
+0x1809f9cc8 add      rsp, 0x20
+0x1809f9ccc pop      rdi
+0x1809f9ccd ret      

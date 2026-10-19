@@ -1,0 +1,82 @@
+{
+  "evidence_id": "AO-META-LEAF-1805b8da0",
+  "function_va": "0x1805b8da0",
+  "file_offset": 5993376,
+  "byte_length": 19,
+  "bytes_sha256": "2eab91e57211800b6f037e7f5c1fcbb4d21629c843f0f67c6a1b612fe50adb96",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "symbols": [
+    {
+      "type_index": 13220,
+      "type": "bcm",
+      "image": "Albion.Common.dll",
+      "method_index": 84734,
+      "name": "c2",
+      "token": "0x6002934",
+      "native_va": "0x1805b8da0",
+      "native_rva": "0x5b8da0",
+      "native_file_offset": 5993376,
+      "pointer_slot_file_offset": 79653368
+    },
+    {
+      "type_index": 13311,
+      "type": "bc9",
+      "image": "Albion.Common.dll",
+      "method_index": 86398,
+      "name": "e",
+      "token": "0x6002fb4",
+      "native_va": "0x1805b8da0",
+      "native_rva": "0x5b8da0",
+      "native_file_offset": 5993376,
+      "pointer_slot_file_offset": 79666680
+    },
+    {
+      "type_index": 14718,
+      "type": "b3o",
+      "image": "Albion.Common.dll",
+      "method_index": 99292,
+      "name": "fr",
+      "token": "0x6006212",
+      "native_va": "0x1805b8da0",
+      "native_rva": "0x5b8da0",
+      "native_file_offset": 5993376,
+      "pointer_slot_file_offset": 79769832
+    },
+    {
+      "type_index": 19513,
+      "type": "cp0",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 135916,
+      "name": "aev",
+      "token": "0x6001873",
+      "native_va": "0x1805b8da0",
+      "native_rva": "0x5b8da0",
+      "native_file_offset": 5993376,
+      "pointer_slot_file_offset": 79866496
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x1805b8da0",
+      "file_offset": 5993376,
+      "bytes": "48899130030000",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rcx + 0x330], rdx"
+    },
+    {
+      "va": "0x1805b8da7",
+      "file_offset": 5993383,
+      "bytes": "4881c130030000",
+      "mnemonic": "add",
+      "operands": "rcx, 0x330"
+    },
+    {
+      "va": "0x1805b8dae",
+      "file_offset": 5993390,
+      "bytes": "e98d7edaff",
+      "mnemonic": "jmp",
+      "operands": "0x180360c40"
+    }
+  ],
+  "limitations": "Metadata-named code pointer with no PE unwind record. Maximum64 bytes bounded by next named method, stop at first RET/JMP; leaf function membership remains inference. No runtime observation."
+}

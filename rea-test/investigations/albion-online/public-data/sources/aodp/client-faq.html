@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>The Albion Online Data Project</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="ryNXM3uX5g_GL6QyZd3Uukfn3Tx-MaH_g0cahTd_f84oVJ5ZQ2gEPnhSSNq_LKGTHcZ5wFI9HSVfloWbzlWbMg" />
+    
+
+    <link rel="stylesheet" href="/assets/application-08158799e0f4164467942c927a14ef2ea4207f80211b836caa15605136442d91.css" data-turbo-track="reload" />
+    <script type="importmap" data-turbo-track="reload">{
+  "imports": {
+    "application": "/assets/application-9e1154a9835fd6ac66eee96463825408bda9baf33d35b033c97932472354ccd4.js",
+    "@hotwired/turbo-rails": "/assets/turbo.min-b86d83036ff04169e5bf3ebbc82e0ad528456259e47091b448f41a3cadabdb40.js",
+    "@hotwired/stimulus": "/assets/stimulus.min-dd364f16ec9504dfb72672295637a1c8838773b01c0b441bd41008124c407894.js",
+    "@hotwired/stimulus-loading": "/assets/stimulus-loading-3576ce92b149ad5d6959438c6f291e2426c86df3b874c525b30faad51b0d96b3.js",
+    "controllers/application": "/assets/controllers/application-368d98631bccbf2349e0d4f8269afb3fe9625118341966de054759d96ea86c7e.js",
+    "controllers/faq_search_controller": "/assets/controllers/faq_search_controller-366fdcbf8c44d6b4a2f8b0958d305ffe4381a4ead20c0895f1ff4482dc4a7560.js",
+    "controllers/hello_controller": "/assets/controllers/hello_controller-549135e8e7c683a538c3d6d517339ba470fcfb79d62f738a0a089ba41851a554.js",
+    "controllers/image_modal_controller": "/assets/controllers/image_modal_controller-ac993e7be1dbefac36b3daf88fc4df0f60f23ae1203e7e0d2e86cdc0e66df40b.js",
+    "controllers": "/assets/controllers/index-2db729dddcc5b979110e98de4b6720f83f91a123172e87281d5a58410fc43806.js",
+    "controllers/nav_controller": "/assets/controllers/nav_controller-50e61d33796c87c4ac37f2c02c6b4ae9fdaae87b869cbf8a758ddda2c9cfd551.js",
+    "controllers/stats_chart_controller": "/assets/controllers/stats_chart_controller-111fec46aac570c8bfb0c5bfe145c2f919b19594f775bd0046e9b4224b8c0a9b.js"
+  }
+}</script>
+<link rel="modulepreload" href="/assets/application-9e1154a9835fd6ac66eee96463825408bda9baf33d35b033c97932472354ccd4.js">
+<link rel="modulepreload" href="/assets/turbo.min-b86d83036ff04169e5bf3ebbc82e0ad528456259e47091b448f41a3cadabdb40.js">
+<link rel="modulepreload" href="/assets/stimulus.min-dd364f16ec9504dfb72672295637a1c8838773b01c0b441bd41008124c407894.js">
+<link rel="modulepreload" href="/assets/stimulus-loading-3576ce92b149ad5d6959438c6f291e2426c86df3b874c525b30faad51b0d96b3.js">
+<link rel="modulepreload" href="/assets/controllers/application-368d98631bccbf2349e0d4f8269afb3fe9625118341966de054759d96ea86c7e.js">
+<link rel="modulepreload" href="/assets/controllers/faq_search_controller-366fdcbf8c44d6b4a2f8b0958d305ffe4381a4ead20c0895f1ff4482dc4a7560.js">
+<link rel="modulepreload" href="/assets/controllers/hello_controller-549135e8e7c683a538c3d6d517339ba470fcfb79d62f738a0a089ba41851a554.js">
+<link rel="modulepreload" href="/assets/controllers/image_modal_controller-ac993e7be1dbefac36b3daf88fc4df0f60f23ae1203e7e0d2e86cdc0e66df40b.js">
+<link rel="modulepreload" href="/assets/controllers/index-2db729dddcc5b979110e98de4b6720f83f91a123172e87281d5a58410fc43806.js">
+<link rel="modulepreload" href="/assets/controllers/nav_controller-50e61d33796c87c4ac37f2c02c6b4ae9fdaae87b869cbf8a758ddda2c9cfd551.js">
+<link rel="modulepreload" href="/assets/controllers/stats_chart_controller-111fec46aac570c8bfb0c5bfe145c2f919b19594f775bd0046e9b4224b8c0a9b.js">
+<script type="module">import "application"</script>
+    
+  </head>
+
+  <body>
+    <div class="page faq-page">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <h1 class="site-title"><a href="/">The Albion Online Data Project</a></h1>
+      <p class="site-tagline">Realtime market and gold data for Albion Online</p>
+      <div class="site-nav-wrapper" data-controller="nav">
+  <button class="nav-hamburger"
+          data-action="click->nav#toggle"
+          data-nav-target="button"
+          aria-label="Open navigation"
+          aria-expanded="false">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div class="nav-backdrop"
+       data-nav-target="backdrop"
+       data-action="click->nav#close"></div>
+
+  <nav class="site-nav" data-nav-target="menu">
+    <a data-action="click-&gt;nav#close" href="/">Home</a>
+    <a data-action="click-&gt;nav#close" href="/client">Client</a>
+    <a class="active" data-action="click-&gt;nav#close" href="/client-faq">Client FAQ</a>
+    <a data-action="click-&gt;nav#close" href="/identifier">Identifier</a>
+    <a data-action="click-&gt;nav#close" href="/api">API</a>
+    <a data-action="click-&gt;nav#close" href="/3rd-party-tools">3rd Party Tools</a>
+    <a data-action="click-&gt;nav#close" href="/items">Items</a>
+    <a data-action="click-&gt;nav#close" href="/developer">Developer</a>
+    <a data-action="click-&gt;nav#close" href="/donate">Donate</a>
+  </nav>
+</div>
+
+    </div>
+  </header>
+
+  <div class="disclaimer banner">
+    <p><strong>These tools are not affiliated with Albion Online or Sandbox Interactive GmbH.</strong></p>
+  </div>
+
+  <main class="main-content" data-controller="faq-search">
+    <h2 class="page-title">Client FAQ</h2>
+
+    <div class="faq-search">
+      <label for="faq-search-input" class="faq-search__label">Search client FAQ</label>
+      <input type="search" id="faq-search-input" class="faq-search__input" placeholder="e.g. 902, install, error, Discord…" autocomplete="off" data-faq-search-target="query" data-action="input->faq-search#filter">
+    </div>
+
+    <p class="faq-search__empty" hidden data-faq-search-target="empty">No questions match your search. Try different words.</p>
+
+    <section class="content-section faq-section" id="what-is-the-client" data-faq-search-target="section">
+      <h3><a href="#what-is-the-client">What is the Albion Data client?</a></h3>
+      <p>The Albion Data client is a small application you run while playing Albion Online. It monitors network traffic for the game, extracts market and gold price data, and uploads it to the project's servers. That data is then distributed to websites and tools that display or use it.</p>
+    </section>
+
+    <section class="content-section faq-section" id="install-and-run" data-faq-search-target="section">
+      <h3><a href="#install-and-run">How do I install and run the client?</a></h3>
+      <p>Download the latest release from <a href="https://github.com/ao-data/albiondata-client/releases" target="_blank" rel="noopener">GitHub</a>, extract it, and run the client while Albion Online is running. The client will upload market data from the markets you open in game. No configuration is required for basic use.</p>
+    </section>
+
+    <section class="content-section faq-section" id="client-disappears" data-faq-search-target="section">
+      <h3><a href="#client-disappears">Client immediately disappears when loading</a></h3>
+      <p>Running the client from the command line keeps the window open so you can see error messages.</p>
+      <ul class="client-platform-list">
+        <li><strong>Windows:</strong> Press <kbd>Win</kbd>+<kbd>R</kbd>, enter <code>"C:\Program Files\Albion Data Client\albiondata-client.exe"</code>, then view the output.</li>
+        <li><strong>MacOS:</strong> Open Terminal (<kbd>Cmd</kbd>+<kbd>Space</kbd>, type <code>terminal</code>), run <code>/path/to/albiondata-client</code>, then view the output.</li>
+        <li><strong>Linux:</strong> Open a terminal, run <code>/path/to/albiondata-client</code>, then view the output.</li>
+      </ul>
+    </section>
+
+    <section class="content-section faq-section" id="device-adapter-errors" data-faq-search-target="section">
+      <h3><a href="#device-adapter-errors">Client crashing — device/adapter errors</a></h3>
+      <p>Errors such as "No such device exists", "Error opening adapter: The system cannot find the device specified. (20)", or "You don't have permission to capture on that device" (Linux/MacOS) mean the client cannot attach to the network interface used by Albion Online.</p>
+      <p><strong>Fix:</strong> Tell the client which adapter to use with the <code>-l</code> (lowercase L) option and your adapter's physical (MAC) address.</p>
+      <ul class="client-platform-list">
+        <li><strong>Windows:</strong> Open a command prompt → run <code>ipconfig.exe /all</code> → find the adapter that gives you connectivity and note its <strong>Physical Address</strong>. Then start the client with <code>"C:\Program Files\Albion Data Client\albiondata-client.exe" -l "B4-2E-99-31-90-E2"</code> (use your address).</li>
+        <li><strong>MacOS:</strong> Open a terminal → run <code>ifconfig</code> → find the adapter and its physical address. Start the client with <code>/path/to/albiondata-client -l "14:7D:DA:DB:C6:29"</code> (use your address).</li>
+        <li><strong>Linux:</strong> Same as MacOS: <code>ifconfig</code>, find the physical address, then <code>/path/to/albiondata-client -l "7E-13-57-B4-C4-3B"</code> (use your address).</li>
+      </ul>
+      <p class="client-ref">Windows: the <strong>Physical Address</strong> appears in <code>ipconfig /all</code> output. Example:</p>
+      <figure class="client-figure">
+        <img alt="ipconfig /all output showing Physical Address for the network adapter" class="client-figure__img" src="/assets/client/ipconfig-568c3f883f6b196b86c23180066ffce8962cc083d40eb3343043bec55c51a94f.png" />
+        <figcaption class="client-figure__caption">Finding Physical Address in <code>ipconfig /all</code> (Windows)</figcaption>
+      </figure>
+      <p class="client-ref">MacOS and Linux: run <code>ifconfig</code> and find the physical (MAC) address for your active adapter. Examples:</p>
+      <div class="client-figures client-figures--two">
+        <figure class="client-figure">
+          <img alt="ifconfig output on MacOS showing physical address" class="client-figure__img" src="/assets/macos-ifconfig-093d6056d78c8841feece933fd1e30b927a901a570c044a2814f9348a2c84745.png" />
+          <figcaption class="client-figure__caption"><code>ifconfig</code> (MacOS)</figcaption>
+        </figure>
+        <figure class="client-figure">
+          <img alt="ifconfig output on Linux showing physical address" class="client-figure__img" src="/assets/linux-ifconfig-8643999388e1bd137fee0902e9302f2555fd989e47a6d52ebf0d84cb7bab0b39.png" />
+          <figcaption class="client-figure__caption"><code>ifconfig</code> (Linux)</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="content-section faq-section" id="macos-linux-sudo" data-faq-search-target="section">
+      <h3><a href="#macos-linux-sudo">MacOS / Linux: need sudo</a></h3>
+      <p>Running the client with <code>sudo</code> is the simplest option. To avoid full sudo, you can use a dedicated capture group (based on <a href="https://github.com/bettercap/bettercap/issues/783#issuecomment-1021912001" target="_blank" rel="noopener">this approach</a>). Replace <code>/path/to/albiondata-client</code> with the actual path to your client; <code>aod</code> = "Albion Online Data".</p>
+      <pre class="client-pre"><code># Add a capture group and add yourself to it
+sudo groupadd aod
+sudo usermod -a -G aod $USER
+
+# Change the group of the client and set permissions
+sudo chgrp aod /path/to/albiondata-client
+sudo chmod 750 /path/to/albiondata-client</code></pre>
+      <p class="client-ref">See also the <a href="https://github.com/regner/albiondata-client/issues/125" target="_blank" rel="noopener">original developer discussion</a>.</p>
+    </section>
+
+    <section class="content-section faq-section" id="data-not-visible" data-faq-search-target="section">
+      <h3><a href="#data-not-visible">Why don't I see the data I'm uploading?</a></h3>
+      <p>The client only uploads market orders that you actually load in game. If you need a specific item or city's prices, open that market in Albion Online and browse the orders. Once loaded, the client sends the data and it becomes visible in the feed and on sites that use our data.</p>
+    </section>
+
+    <section class="content-section faq-section" id="encryption" data-faq-search-target="section">
+      <h3><a href="#encryption">Encryption</a></h3>
+      <p>In January 2024, SBI made changes to market data. All accounts were receiving encrypted data making the AODP client unable to capture live market data. We worked with a community manager at SBI; they (SBI, not the community manager) decided to allow many accounts to receive unencrypted market data again. However, unencrypted data is based on some combination of variables that we are not aware of. We believe it involves multiple data points including the character/toon you are using, your overall account, the game server you're on, playtime, founder status, if you spent IRL money on gold (legally via their site), etc.</p>
+      <figure class="client-figure">
+        <img alt="Encrypted market data message shown in the client" class="client-figure__img" src="/assets/client-encryption-86e79976d43c653d42f257f18227080bab4bec5d4c97e997e7f3fa9ec8f856dc.png" />
+        <figcaption class="client-figure__caption">Encrypted data message</figcaption>
+      </figure>
+      <p>If you are getting the highlighted message in the image above, no, there is nothing we (AODP) can do. Please don't send a message in Discord, because you'll get the same answer as you see here. You can reach out to SBI; you may or may not have any luck with a support ticket, but expect no changes.</p>
+      <p>If "it worked 2 hours ago" and you changed characters/toons or which game server you're on and now "it doesn't work now", that's why.</p>
+      <p>If you are getting the highlighted message above, market history and gold history are still sent to the AODP server; only live market data is not sent.</p>
+    </section>
+
+    <section class="content-section faq-section" id="error-902" data-faq-search-target="section">
+      <h3><a href="#error-902">Client receives "HTTP Error while proving pow. returned 902"</a></h3>
+      <p>This means the POW either expired or doesn't exist.</p>
+      <p>This means your Albion Online Data client is taking too long to send data to our servers. This is slowed down on purpose because we ask your computer to do some math that our server already has the answer to. We needed to add this because bad actors/spammers were sending us bad data and this slowed them down. With that, we wanted to make sure we didn't eat up all CPU cycles on your machine, so we limit it to 25% CPU.</p>
+      <p>If you wish to bypass this and let your entire CPU be consumed while searching Albion Online markets, you can add the <code>-no-limit</code> parameter when running the Albion Online Data client manually. But… (read next section)</p>
+    </section>
+
+    <section class="content-section faq-section" id="error-403" data-faq-search-target="section">
+      <h3><a href="#error-403">Client receives "403 Forbidden" message</a></h3>
+      <p>This means you have requested POW and/or sent POW result with data very fast recently. The rate limits can be found <a href="https://github.com/ao-data/albiondata-gate/blob/main/config.rb">here</a>, in the REQUEST_LIMITS section. Note, everything is x2 because to send 1 successful chunk of data, your Albion Online Data client must request a POW then submit the POW result + data. So, for example, per_minute is 270*2, which means you can send 270 chunks of data per minute before being throttled.</p>
+    </section>
+
+    <section class="content-section faq-section" id="disable-autostart" data-faq-search-target="section">
+      <h3><a href="#disable-autostart">How do I disable the client starting with Windows?</a></h3>
+      <ol class="client-steps">
+        <li>Open <strong>Task Scheduler</strong>.</li>
+        <li>Click <strong>Task Scheduler Library</strong> in the left pane.</li>
+        <li>Find the task named <strong>Albion Data Client</strong>.</li>
+        <li>Right-click it and choose <strong>Disable</strong>.</li>
+      </ol>
+    </section>
+
+    <section class="content-section faq-section" id="is-it-allowed" data-faq-search-target="section">
+      <h3><a href="#is-it-allowed">Am I allowed to use the client?</a></h3>
+      <p>Yes. Sandbox Interactive (Albion Online) has stated that analyzing and viewing data in this way is acceptable. You must not modify, manipulate, or interfere with the game or our services. For the full statement, see the <a href="https://forum.albiononline.com/index.php/Thread/51604-Is-it-allowed-to-scan-your-internet-trafic-and-pick-up-logs/" target="_blank" rel="noopener">forum thread</a> and our <a href="/#is-this-allowed">Is This Allowed?</a> section on the home page.</p>
+    </section>
+
+    <section class="content-section faq-section" id="more-help" data-faq-search-target="section">
+      <h3><a href="#more-help">Where can I get more help?</a></h3>
+      <p>The best place to ask questions or report issues is the Albion Online Fansites Discord server, in <strong>#proj-albiondata</strong> or <strong>#developers</strong>. Invite link: <a href="https://discord.gg/TjWdq24" target="_blank" rel="noopener">discord.gg/TjWdq24</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><a href="/">The Albion Online Data Project</a></p>
+  </footer>
+</div>
+
+  </body>
+</html>

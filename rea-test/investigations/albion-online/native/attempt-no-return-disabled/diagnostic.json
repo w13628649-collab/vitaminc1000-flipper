@@ -1,0 +1,30 @@
+{
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "profile_digest": "e735fcd6ab90f3b111c6d760b0d78c8bc569abdcd8caaff0468855d8ebfd2fa1",
+  "run_id": "9ef7bb85-2675-4fe0-a0ec-36f9e79c5610",
+  "status": "provider_startup_timeout_and_owned_cleanup",
+  "operation": "binary_overview",
+  "elapsed_seconds": 1200.74,
+  "timeout_ms": 1200000,
+  "failure_message": "Ghidra startup deadline elapsed",
+  "initial_query_success": false,
+  "evidence_id": null,
+  "phases_observed": [
+    "DecompilerSwitchAnalyzer",
+    "ConstantPropagationAnalyzer",
+    "OperandReferenceAnalyzer",
+    "FidAnalyzer"
+  ],
+  "last_observed_stack": "FidAnalyzer -> ApplyFidEntriesCommand -> FidProgramSeeker.search",
+  "last_thread_elapsed_seconds": 1156.94,
+  "diagnostic_truncated": false,
+  "stdout_bytes": 28019,
+  "stderr_bytes": 1224,
+  "notes": [
+    "No game execution or live attach",
+    "Source-isolated REA commit d13c9f840d36a321a56917e75c48afcb8d72920e",
+    "Disabled only Non-Returning Functions - Discovered",
+    "18 pending function jobs remain held; no blind per-function import retry",
+    "Java 57960 absent after response"
+  ]
+}

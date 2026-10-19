@@ -1,0 +1,784 @@
+{
+  "recorded_at": "2026-10-13T17:24:08+08:00",
+  "workspace": "C:\\Users\\ludy\\Documents\\code\\rea-test",
+  "config_path": "C:\\Users\\ludy\\.codex\\config.toml",
+  "registration": {
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\ludy\\AppData\\Roaming\\npm\\node_modules\\rea-agents\\scripts\\rea.mjs",
+      "mcp"
+    ],
+    "startup_timeout_sec": 30,
+    "env": {
+      "GHIDRA_INSTALL_DIR": "C:\\tools\\ghidra_12.1.4_PUBLIC",
+      "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot"
+    }
+  },
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.14.0",
+  "doctor_healthy": true,
+  "scope_checks": [
+    {
+      "name": "node",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "22.22.0"
+    },
+    {
+      "name": "ghidra",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC"
+    },
+    {
+      "name": "ghidra-platform",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "win32"
+    },
+    {
+      "name": "ghidra-architecture",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "x64"
+    },
+    {
+      "name": "ghidra-installation",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\Ghidra\\application.properties"
+    },
+    {
+      "name": "ghidra-version",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "12.1.4"
+    },
+    {
+      "name": "ghidra-headless",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\support\\analyzeHeadless.bat"
+    },
+    {
+      "name": "ghidra-native_decompiler",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\Ghidra\\Features\\Decompiler\\os\\win_x86_64\\decompile.exe reports pe x86_64, which matches win32/x64"
+    },
+    {
+      "name": "ghidra-java",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "21.0.12.1; 64-bit; JDK; C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot; accepted a 64-bit full JDK 21 or newer"
+    },
+    {
+      "name": "ghidra-native_authority",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "Verified Windows native Job Object, private DACL, and reparse-safe handle controls; local NTFS only."
+    },
+    {
+      "name": "registration:codex",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "C:\\Users\\ludy\\.codex\\config.toml"
+    },
+    {
+      "name": "skill:identity",
+      "ok": true,
+      "classification": "healthy",
+      "detail": "Installed REA skill identity is aligned."
+    }
+  ],
+  "provider_inspections": [
+    {
+      "id": "ghidra",
+      "configured": true,
+      "available": true,
+      "providerVersion": "12.1.4",
+      "registrationEnvironment": {
+        "GHIDRA_INSTALL_DIR": "C:\\tools\\ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot"
+      },
+      "checks": [
+        {
+          "name": "configuration",
+          "ok": true,
+          "code": null,
+          "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "platform",
+          "ok": true,
+          "code": null,
+          "detail": "win32",
+          "remediation": null,
+          "classification": "unsupported_host"
+        },
+        {
+          "name": "architecture",
+          "ok": true,
+          "code": null,
+          "detail": "x64",
+          "remediation": null,
+          "classification": "unsupported_host"
+        },
+        {
+          "name": "installation",
+          "ok": true,
+          "code": null,
+          "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\Ghidra\\application.properties",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "version",
+          "ok": true,
+          "code": null,
+          "detail": "12.1.4",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "headless",
+          "ok": true,
+          "code": null,
+          "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\support\\analyzeHeadless.bat",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "native_decompiler",
+          "ok": true,
+          "code": null,
+          "detail": "C:\\tools\\ghidra_12.1.4_PUBLIC\\Ghidra\\Features\\Decompiler\\os\\win_x86_64\\decompile.exe reports pe x86_64, which matches win32/x64",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "java",
+          "ok": true,
+          "code": null,
+          "detail": "21.0.12.1; 64-bit; JDK; C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot; accepted a 64-bit full JDK 21 or newer",
+          "remediation": null,
+          "classification": "config_drift"
+        },
+        {
+          "name": "native_authority",
+          "ok": true,
+          "code": null,
+          "detail": "Verified Windows native Job Object, private DACL, and reparse-safe handle controls; local NTFS only.",
+          "remediation": null,
+          "classification": "unsupported_host"
+        }
+      ]
+    },
+    {
+      "id": "ida",
+      "configured": false,
+      "available": false,
+      "providerVersion": null,
+      "registrationEnvironment": {},
+      "checks": [
+        {
+          "name": "registration",
+          "ok": false,
+          "code": "not_configured",
+          "detail": "IDA MCP registration is not configured.",
+          "remediation": "Set REA_IDA_MCP_CONFIG to your upstream IDA MCP registration JSON; see docs/ida-provider.md.",
+          "classification": "missing_analysis_engine"
+        }
+      ]
+    }
+  ],
+  "cli_package_version": "6.4.0",
+  "skill": {
+    "installed_version": "37",
+    "installed_tool_count": 170,
+    "state": "aligned",
+    "remediation": null
+  },
+  "catalog_counts": {
+    "cli_commands": 127,
+    "mcp_tools": 170,
+    "mcp_prompts": 6
+  },
+  "catalog_digests": {
+    "tools_sha256": "25802f6de8c14ba736dc61ff1cbc7c5cd738fd74426aa01338f2dd03e0911166",
+    "prompts_sha256": "5296f0301566cadaf89243e774512011f11045af36d48405f76a3ff9a8947ac2",
+    "combined_sha256": "85d80276ecacf937bf3e803b7a31748ae1a8286f556fa5cf734eef768cc7d72a"
+  },
+  "mcp_initialization": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "tools": {
+        "listChanged": true
+      },
+      "completions": {},
+      "prompts": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "rea",
+      "version": "6.4.0"
+    },
+    "instructions": "REA provides reverse-engineering tools for local artifacts, native binaries, managed code, browser pages, and runtimes. Use the tool that directly answers the question; discover targets or inspect inventory only when needed. Tool results include inline Evidence and report their coverage and limitations."
+  },
+  "mcp_tool_count": 170,
+  "mcp_session_probe_is_error": false,
+  "mcp_process_exit_code": 0,
+  "active_agent_tools_exposed": false,
+  "active_agent_note": "No REA MCP tools were exposed to this Codex turn when recorded. Separate configured stdio launch succeeded; future turns must inspect their own tools.",
+  "native_target_analysis_verified": false,
+  "albion_native_investigation": {
+    "recorded_at": "2026-10-13T10:54:34.573722+00:00",
+    "scope": "Isolated user-selected Albion GameAssembly Ghidra investigation; original global environment fields remain the installation baseline",
+    "target_path": "C:\\Users\\ludy\\AppData\\Local\\AlbionOnline\\game\\GameAssembly.dll",
+    "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+    "global_installation_changed": false,
+    "codex_registration_changed": false,
+    "global_package_supports_REA_GHIDRA_DISABLED_ANALYZERS": false,
+    "global_setting_search_scope": "Installed global package *.js/*.mjs outside nested node_modules; no REA_GHIDRA_DISABLED_ANALYZERS implementation found",
+    "isolated_source": {
+      "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea",
+      "git_head": "d13c9f840d36a321a56917e75c48afcb8d72920e",
+      "tracked_worktree_clean_when_read": true,
+      "reported_package_version": "6.4.0",
+      "server_build_commit": null,
+      "commit_source": "git rev-parse HEAD; version field alone does not identify this revision",
+      "tracked_worktree_clean_when_read_note": "Earlier pre-extension observation; current source has the local patch listed below"
+    },
+    "launch": {
+      "driver": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\rea_session.py",
+      "driver_sha256": "7f73be6dd6267dde611fe13d88abca6ea586669a3d812b3a7dbc6dc5ee6cb472",
+      "command_from_global_registration": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea\\scripts\\rea.mjs",
+        "mcp"
+      ],
+      "registration_overridden_in_driver_memory_only": true,
+      "inherits_registration_environment": true,
+      "process_environment_overrides": {
+        "REA_GHIDRA_STARTUP_TIMEOUT_MS": "2400000",
+        "GHIDRA_HEADLESS_MAXMEM": "4G",
+        "REA_GHIDRA_DISABLED_ANALYZERS": "Non-Returning Functions - Discovered,Decompiler Switch Analysis,x86 Constant Reference Analyzer,Function ID"
+      },
+      "provider_id": "ghidra",
+      "concurrency_note": "Reuse active driver; do not launch duplicate imports",
+      "request_timeout_seconds": 2500
+    },
+    "observed_server_identity": {
+      "package": {
+        "name": "rea-agents",
+        "version": "6.4.0",
+        "root_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea",
+        "build_commit": null
+      },
+      "server": {
+        "name": "rea",
+        "version": "6.4.0",
+        "started_at": "2026-10-13T10:11:28.588Z",
+        "command_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea\\scripts\\rea.mjs"
+      },
+      "sdk": {
+        "server": "2.3.1",
+        "client_test": "2.3.1",
+        "core": "2.3.1"
+      },
+      "negotiated_protocol_version": "2025-06-18",
+      "client": {
+        "name": "albion-static-investigation",
+        "version": "1"
+      },
+      "skill": {
+        "name": "reverse-engineer-anything",
+        "expected_version": "41"
+      },
+      "catalog": {
+        "counts": {
+          "cli_commands": 142,
+          "mcp_tools": 191,
+          "mcp_prompts": 6
+        },
+        "digests": {
+          "tools_sha256": "a9326015c72fc6db879533d7c44b0bbbd8073bb1ee6cb5de2d5a4f01da8609a9",
+          "prompts_sha256": "5296f0301566cadaf89243e774512011f11045af36d48405f76a3ff9a8947ac2",
+          "combined_sha256": "e813e79844f3b746bfabfd5195fe9f47aee2e87e06ab7664c605feb0c9f1935a"
+        }
+      },
+      "protocol_features": {
+        "progress": true,
+        "cancellation": true,
+        "elicitation": false
+      },
+      "alignment": {
+        "state": "unknown",
+        "reasons": [],
+        "remediation": "Supply expected package, catalog, or registration identity to compare the live server."
+      }
+    },
+    "native_addon": {
+      "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea\\native\\windows\\build\\rea-windows-x64.node",
+      "manifest_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea\\native\\windows\\build\\manifest.json",
+      "provenance_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\vendor\\rea\\native\\windows\\build\\artifact-provenance.json",
+      "provenance": {
+        "origin": "installed npm rea-agents@6.4.0",
+        "npm_git_head": "a56f7bb668ab23fec8d33f7af353ac7ed2fe1895",
+        "runtime_source_commit": "d13c9f840d36a321a56917e75c48afcb8d72920e",
+        "native_sources_identical": false,
+        "compatibility_policy": "unchanged ABI1/NodeAPI8; use provider own validation and only features observed available; no bypass of native controls",
+        "artifact_sha256": "c4fd9f377e567bcf15ba3fec3e0b0ed965d82b765a2adcdac49e46f14524b6d5"
+      },
+      "manifest": {
+        "packageVersion": "6.4.0",
+        "platform": "win32",
+        "architecture": "x64",
+        "abiVersion": 1,
+        "nodeApiVersion": 8,
+        "artifact": "rea-windows-x64.node",
+        "artifactSha256": "c4fd9f377e567bcf15ba3fec3e0b0ed965d82b765a2adcdac49e46f14524b6d5"
+      },
+      "observed_sha256": "c4fd9f377e567bcf15ba3fec3e0b0ed965d82b765a2adcdac49e46f14524b6d5",
+      "hash_matches_manifest": true,
+      "native_sources_identical": false,
+      "compatibility_limit": "ABI1/NodeAPI8 manifest and provider validations; do not infer all runtime-source optional native features are implemented by reused artifact",
+      "capability_guards": "loader validates manifest/package version/hash/PE and addon inspection; optional protocolStdin/jobMemoryLimit only if observed supported; native controls not bypassed"
+    },
+    "analysis_profile": {
+      "name": "ghidra-default+disabled:Non-Returning Functions - Discovered,Decompiler Switch Analysis,x86 Constant Reference Analyzer,Function ID",
+      "digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "disabled_analyzers": [
+        "Non-Returning Functions - Discovered",
+        "Decompiler Switch Analysis",
+        "x86 Constant Reference Analyzer",
+        "Function ID"
+      ],
+      "application_stage": "ReaGhidraAnalysisOptions.java preScript before default auto-analysis",
+      "provider_binding": {
+        "provider": {
+          "id": "ghidra",
+          "name": "Ghidra",
+          "version": "12.1.4"
+        },
+        "parameters": {
+          "target_kind": "executable",
+          "target_format": "pe",
+          "executable_role": "shared-library",
+          "managed": false,
+          "native_aot_metadata": {
+            "contract_revision": "rtr-9.1-x64-pe-read-only-v3",
+            "source_bytes": 134217728,
+            "work_units": 67108864,
+            "working_memory_bytes": 67108864,
+            "report_bytes": 4194304
+          },
+          "architecture": "x86_64",
+          "available_architectures": [
+            "x86_64"
+          ],
+          "import_mode": "ephemeral-source-immutable",
+          "annotation_policy": "atomic-function-entry-metadata-v1",
+          "load_image_observations": "source-mappings-entry-context-v2",
+          "function_body_evidence": "complete-inclusive-ranges-v1",
+          "function_references": "complete-body-and-entry-reference-manager-v2",
+          "call_relationship_coverage": "resolved-call-reference-diagnostics-v1",
+          "string_inventory_evidence": "defined-data-coverage-v1",
+          "location_resolution": "explicit-address-exact-entry-symbol-first-v3",
+          "instruction_flow_evidence": "decoded-return-pcode-v1",
+          "instruction_references": "exact-address-incoming-v1",
+          "function_boundary_observations": "ghidra-terminal-call-limitations-v1",
+          "no_return_repair": "disabled-windows-p0",
+          "process_launch": "official-headless-script-v1",
+          "jump_table_evidence": "typed-case-default-blocks-v1",
+          "decompiler_jump_loads": true,
+          "loader": "auto-from-header",
+          "language_id": "auto-from-header",
+          "compiler_spec_id": "auto-default",
+          "analyzer_preset": "ghidra-default+disabled:Non-Returning Functions - Discovered,Decompiler Switch Analysis,x86 Constant Reference Analyzer,Function ID",
+          "analysis_options": {
+            "disabled_analyzers": [
+              "Non-Returning Functions - Discovered",
+              "Decompiler Switch Analysis",
+              "x86 Constant Reference Analyzer",
+              "Function ID"
+            ]
+          }
+        },
+        "digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+      },
+      "scope_note": "Fourth default auto-analysis with four disabled analyzers completed and 23 independent function queries succeeded; switch/xrefs/FID discoveries may remain reduced; runtime game data not observed. Seeded-noanalysis mode was not used."
+    },
+    "previous_attempt": {
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "status": "cancelled_by_stopping_owned_driver_after_repeated_stall",
+      "observed_stack": "FindNoReturnFunctionsAnalyzer.repairDamagedLocations -> ClearFlowAndRepairCmd",
+      "initial_query_success": false,
+      "next_profile": "ghidra-default+disabled:Non-Returning Functions - Discovered"
+    },
+    "status": {
+      "target_binding_verified": true,
+      "successful_function_analysis_observed": true,
+      "native_target_analysis_verified": true,
+      "state": "fourth_default_with_four_disabled_analyzers_success_24_evidence_23_functions_exported_closed",
+      "not_proof_of_success": [
+        "queued commands",
+        "successful open_binary",
+        "tool availability",
+        "presence of evidence-bundle file"
+      ],
+      "successful_evidence_count": 24,
+      "successful_function_count": 23,
+      "runtime_game_observed": false,
+      "evidence_bundle_exported": true,
+      "owned_session_closed": true,
+      "driver_running": false
+    },
+    "evidence_paths": {
+      "bound_session": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\bound-session.json",
+      "calls": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\calls.jsonl",
+      "queued_commands": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\commands.jsonl",
+      "results_directory": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence",
+      "bundle": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence-bundle.json",
+      "previous_attempt_diagnostic": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-default\\diagnostic.json",
+      "stderr": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\server-stderr.log",
+      "third_attempt_directory": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-one",
+      "third_attempt_diagnostic": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-one\\diagnostic.json",
+      "third_attempt_overview_error": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-one\\overview-error.json",
+      "close_target": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\close-target.json",
+      "pending_function_commands": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\pending-function-commands.jsonl",
+      "analysis_profile_sources": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\analysis-profile-sources\\NOTES.md",
+      "native_report": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\REPORT.md",
+      "runtime_capture": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-four\\manifest.json",
+      "seeded_mode_document": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\SEEDED-MODE.md",
+      "seeded_mode_patch": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\seeded-mode.patch",
+      "seeded_mode_provenance": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\seeded-mode-provenance.json",
+      "lifecycle_final": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\lifecycle-final.json",
+      "export_response": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\export-bundle.json",
+      "results_summary": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\results\\SUMMARY.json"
+    },
+    "supported_scope": "Windows Ghidra P0 read-only native x86/x64 PE; preserve host/provider availability boundaries",
+    "verification_note": "Read raw successful structuredContent Evidence profiles/IDs, exported bundle records/hash, close response and final lifecycle facts; saved runtime classes/logs. Only authorized isolated TS/runtime compile was performed by this reviewer, no tests or new REA/Ghidra session. Investigation owner performed actual target queries/export/close.",
+    "third_attempt": {
+      "attempt_number": 3,
+      "profile_name": "ghidra-default+disabled:Non-Returning Functions - Discovered",
+      "profile_digest": "e735fcd6ab90f3b111c6d760b0d78c8bc569abdcd8caaff0468855d8ebfd2fa1",
+      "disabled_analyzers": [
+        "Non-Returning Functions - Discovered"
+      ],
+      "startup_timeout_ms": 1200000,
+      "request_timeout_seconds": 1300,
+      "headless_maxmem": "4G",
+      "first_query": "binary_overview",
+      "underlying_operation": "list_documents",
+      "duration_seconds": 1200.74,
+      "status": "provider_timeout_owned_close_completed",
+      "error_code": "provider_timeout",
+      "error_category": "timeout",
+      "error_retryable": true,
+      "failure_kind": "timeout",
+      "failure_message": "Ghidra startup deadline elapsed",
+      "run_id": "9ef7bb85-2675-4fe0-a0ec-36f9e79c5610",
+      "successful_function_analysis_observed": false,
+      "owned_close_binary_is_error": false,
+      "driver_exec_session_id": 69825,
+      "driver_exit_code": 0,
+      "driver_exit_evidence_source": "Session owner execution record; this is not the Ghidra process ID or its diagnostic exit code",
+      "diagnostics_are_complete_original_error_payload": true,
+      "saved_directory": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-one"
+    },
+    "fourth_attempt": {
+      "attempt_number": 4,
+      "bound_server_started_at": "2026-10-13T10:11:28.588Z",
+      "startup_timeout_ms": 2400000,
+      "request_timeout_seconds": 2500,
+      "headless_maxmem": "4G",
+      "profile_name": "ghidra-default+disabled:Non-Returning Functions - Discovered,Decompiler Switch Analysis,x86 Constant Reference Analyzer,Function ID",
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "disabled_analyzers": [
+        "Non-Returning Functions - Discovered",
+        "Decompiler Switch Analysis",
+        "x86 Constant Reference Analyzer",
+        "Function ID"
+      ],
+      "status": "overview_and_23_function_queries_succeeded_exported_closed",
+      "overview_duration_seconds": 1914.01,
+      "overview_evidence_id": "ev_fc4c58853615b3102f902b6783f28b6e6a5698d11cfba0399335cb5f805a0e86",
+      "successful_evidence_count": 24,
+      "successful_function_count": 23,
+      "analysis_mode": "default",
+      "seeded_noanalysis_mode_used": false,
+      "successful_evidence": [
+        {
+          "label": "gameassembly-overview",
+          "operation": "binary_overview",
+          "evidence_id": "ev_fc4c58853615b3102f902b6783f28b6e6a5698d11cfba0399335cb5f805a0e86",
+          "duration_seconds": 1914.01,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\gameassembly-overview.json",
+          "analysis_profile_digest": "86bb5b15c4ca832d9ef4524828c5a11792857659dacad123858bc5c35a521aa4"
+        },
+        {
+          "label": "protocol-field-metadata-token-selector",
+          "operation": "analyze_function",
+          "evidence_id": "ev_8b515996b4f5c2c0db1f572420b0f4397a9ef2d06b89027aea28c320205bbb08",
+          "duration_seconds": 0.07,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\protocol-field-metadata-token-selector.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "photon-event-code-wrapper",
+          "operation": "analyze_function",
+          "evidence_id": "ev_b01227b0097253bf249ed53e19d8c29f07aa2df4ea54c15ce90636d2e8a6f29c",
+          "duration_seconds": 0.24,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-event-code-wrapper.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "photon-operation-code-wrapper",
+          "operation": "analyze_function",
+          "evidence_id": "ev_577005b78666fa424ba90d66f60699b2dfcd70f945faeda333b6a91bb4cc0e7e",
+          "duration_seconds": 0.14,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-operation-code-wrapper.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "cluster-map-info-response-handler",
+          "operation": "analyze_function",
+          "evidence_id": "ev_fa6bb27327d58d6be58cb7b58ad91541df1995056aa27601a65dfd57d744b96c",
+          "duration_seconds": 0.05,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\cluster-map-info-response-handler.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "photon-event-ingress",
+          "operation": "analyze_function",
+          "evidence_id": "ev_69c27a66bb638371ce82cf0a1a6606a85e68720fbcee137980a92d6a5d5754c8",
+          "duration_seconds": 0.13,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-event-ingress.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "photon-operation-response-ingress",
+          "operation": "analyze_function",
+          "evidence_id": "ev_63b88a60dd86d13f0eab1e35b651715eee6ab6e231b059512fc60b044419233e",
+          "duration_seconds": 0.25,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-operation-response-ingress.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "auction-dto-json-constructor",
+          "operation": "analyze_function",
+          "evidence_id": "ev_d5eba8610f42f8bad8341201880b2a098503b94a5ef7f1547e6de1c0b641fcc2",
+          "duration_seconds": 0.04,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\auction-dto-json-constructor.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "market-gui-on-offers-buy",
+          "operation": "analyze_function",
+          "evidence_id": "ev_78bf045a42f0cefcfaeb776949a25ede3c581fcca0810129f1560f722cc29785",
+          "duration_seconds": 0.18,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\market-gui-on-offers-buy.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "minimap-data-getter",
+          "operation": "analyze_function",
+          "evidence_id": "ev_bc1d176273996f02a7797325c105d6af339aa118c9f16e79d0d902b406ad5d14",
+          "duration_seconds": 0.26,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\minimap-data-getter.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "worldmap-region-mesh",
+          "operation": "analyze_function",
+          "evidence_id": "ev_35f8f41ad156a7f52ee6b16106e0b71dfce707a6b1ce9b55478e19a152958aa0",
+          "duration_seconds": 0.31,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\worldmap-region-mesh.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "photon-event-router",
+          "operation": "analyze_function",
+          "evidence_id": "ev_13c394eb5f8aab059323af5d95a83177413e5b29b72fd1f6638d829a269efe55",
+          "duration_seconds": 0.61,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-event-router.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+          "semantic_note": "Historical filename; selected Died event164 handler, not generic router"
+        },
+        {
+          "label": "photon-operation-response-router",
+          "operation": "analyze_function",
+          "evidence_id": "ev_51db60ff8be058f6eb7fc5e61dc843a366f73aa06c0311ec6f4bc3083a0ac7e5",
+          "duration_seconds": 0.73,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\photon-operation-response-router.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+          "semantic_note": "Historical filename; selected Join operation2 response handler, not generic router"
+        },
+        {
+          "label": "minimap-interest-area-position-updates",
+          "operation": "analyze_function",
+          "evidence_id": "ev_5297bf2d8ea7ce8c8ed7aa8908d17209596678f26bc978e2a8964d5bceb7ee3b",
+          "duration_seconds": 0.2,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\minimap-interest-area-position-updates.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "minimap-party-member-position-updates",
+          "operation": "analyze_function",
+          "evidence_id": "ev_a2e8f7a470169f9315f5f94e1ae1b18763fb01a06b5ab2ea88c78e3ee72f5325",
+          "duration_seconds": 1.54,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\minimap-party-member-position-updates.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "new-character-message-handler",
+          "operation": "analyze_function",
+          "evidence_id": "ev_1432a2360489cab337f425cde48c2fe3f515b2e1eb2919145f4d50970f6e5657",
+          "duration_seconds": 0.33,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\new-character-message-handler.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "auction-offers-response-parser",
+          "operation": "analyze_function",
+          "evidence_id": "ev_d852ad07d58d9aa6f03c8d4c591b3ac3015540e58fe6969bdbba33bacf5da7fc",
+          "duration_seconds": 0.28,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\auction-offers-response-parser.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "auction-requests-response-parser",
+          "operation": "analyze_function",
+          "evidence_id": "ev_86195ba6ed6c07b982a5701b9a0929720c6a2b007e4db6f70733c677ce2c699c",
+          "duration_seconds": 0.26,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\auction-requests-response-parser.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "protocol-reflection-field-order",
+          "operation": "analyze_function",
+          "evidence_id": "ev_f7bd866e632a4d64320a6a27f4c8dfeb542f441f9c1169f19edba050b0bd6327",
+          "duration_seconds": 1.14,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\protocol-reflection-field-order.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "new_character_state_application",
+          "operation": "analyze_function",
+          "evidence_id": "ev_905c916ab1b812d7bb7d64cca4d302e59fe5290bcce60f9fc90f597acbe37fb3",
+          "duration_seconds": 1.93,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\new_character_state_application.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "character_name_setter",
+          "operation": "analyze_function",
+          "evidence_id": "ev_e6913f7f59d91e7c49745ea72241e03b2f13b76e860498d2bf120b3fd623a34a",
+          "duration_seconds": 0.23,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\character_name_setter.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "equipment_indices_setter",
+          "operation": "analyze_function",
+          "evidence_id": "ev_7fb7b0995d7fc471f6c8a8c73f7b0626922f7f0018508a15e5c6d6e718f37c88",
+          "duration_seconds": 0.21,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\equipment_indices_setter.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "equipment_changed_handler",
+          "operation": "analyze_function",
+          "evidence_id": "ev_c29961641b5e48548c4f096918dd40095a62c188c27b676dd6bdd5ac36e2b728",
+          "duration_seconds": 0.26,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\equipment_changed_handler.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        },
+        {
+          "label": "health_update_handler",
+          "operation": "analyze_function",
+          "evidence_id": "ev_77566fb7d680d514d7c0ec8f57b221fba9e088470a46d63bcabf4a3d0778dff5",
+          "duration_seconds": 0.06,
+          "path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\evidence\\health_update_handler.json",
+          "analysis_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+        }
+      ],
+      "profile_digest_kind": "Ghidra provider profile; overview references it as upstream",
+      "overview_composed_profile_digest": "86bb5b15c4ca832d9ef4524828c5a11792857659dacad123858bc5c35a521aa4",
+      "overview_upstream_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "function_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643"
+    },
+    "retry_behavior": {
+      "startup_failure_resets_start_promise": true,
+      "next_query_after_successful_owned_cleanup_can_reimport": true,
+      "driver_continues_after_tool_error": true,
+      "cleanup_failure_preserves_resources_and_requires_owned_close": true,
+      "pending_function_command_count": 18,
+      "pending_function_commands_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\pending-function-commands.jsonl",
+      "active_queue_note": "Investigation owner exported 24 records and closed session; driver exited 0. Historical commands include overview, 23 function queries and finish; rerunning driver reimports and repeats, not resumes.",
+      "source_notes": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\analysis-profile-sources\\NOTES.md",
+      "future_read_priority": [
+        "evidence-bundle.json",
+        "results/SUMMARY.json",
+        "REPORT.md"
+      ],
+      "new_queries": "Prepare separate queue and output directory, record new session/profile; do not rerun historical driver as recovery"
+    },
+    "runtime_implementation": {
+      "node": "Fourth Node process started with pre-extension HEAD compiled runtime already loaded; current disk dist after compile is different and must not be called its loaded hash",
+      "java": "Ghidra postScript recompiled then-current locally edited Java bundle at 2026-10-13T10:43:19Z; actual bridge includes compatible seeded-mode extension but executed default branch",
+      "runtime_bridge_class_sha256": "f06399352cecd4b77307437542b353dcdae4474f9962edf03ecd6b5defe73c35",
+      "runtime_apply_seeds_class_sha256": "6d9424204f1238b9892656fb5cc5e9f67b7bfa39c462bae37b20541a03d79f72",
+      "runtime_profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "runtime_capture_manifest": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\attempt-profile-four\\manifest.json",
+      "seeded_noanalysis_mode_used": false,
+      "descriptor_capture": "Immutable bearer descriptor lease denied reading; no bypass or auth-token output; whitelisted summary derived from bound session and startup facts",
+      "runtime_profile_digest_kind": "Ghidra provider/upstream profile; overview composed profile is separately recorded"
+    },
+    "unused_seeded_mode_extension": {
+      "mode": "seeded-noanalysis",
+      "source_base_git_head": "d13c9f840d36a321a56917e75c48afcb8d72920e",
+      "local_uncommitted_patch": true,
+      "patch_path": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\seeded-mode.patch",
+      "patch_sha256": "2200c67fe93eb5b9479bdfabab515145e99a518fcba71ecb55323fe7f3a73b63",
+      "compile_exit_code": 0,
+      "mode_session_executed": false,
+      "java_compatible_default_branch_loaded_by_fourth_runtime": true,
+      "documentation": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\SEEDED-MODE.md",
+      "provenance": "C:\\Users\\ludy\\Documents\\code\\rea-test\\investigations\\albion-online\\native\\seeded-mode-provenance.json"
+    },
+    "final_lifecycle": {
+      "recorded_utc": "2026-10-13T10:48:43.492114+00:00",
+      "driver_exec_session_id": 8446,
+      "driver_exit_code": 0,
+      "export_response": "evidence/export-bundle.json",
+      "close_response": "evidence/close-target.json",
+      "bundle": {
+        "file": "evidence-bundle.json",
+        "bytes": 28998233,
+        "sha256": "e26c53944189137a041a7239d98dedf3535a9445d0320a9a9a9d58ab5ad30a5c",
+        "records_reported": 24
+      },
+      "owned_java_pid": 52304,
+      "owned_wrapper_pid": 48672,
+      "owned_processes_absent_after_close": true,
+      "runtime_directory": "C:/Users/ludy/AppData/Local/Temp/rea-ghidra-59893a1afd1af82e342cb1e72073036d",
+      "runtime_directory_absent_after_close": true,
+      "verification_source": "read-only PowerShell Get-Process and Test-Path after close; driver result exit 0",
+      "seeded_noanalysis_used": false,
+      "export_unknowns_reported": 0,
+      "bundle_records_observed": 24,
+      "bundle_bytes_observed": 28998233,
+      "bundle_sha256_observed": "e26c53944189137a041a7239d98dedf3535a9445d0320a9a9a9d58ab5ad30a5c",
+      "export_is_error": false,
+      "close_is_error": false,
+      "close_result": null,
+      "export_duration_seconds": 0.37,
+      "close_duration_seconds": 0.46
+    }
+  }
+}

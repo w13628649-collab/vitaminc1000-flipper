@@ -1,0 +1,4351 @@
+{
+  "evidence_id": "AO-META-PARAMETER-ORDER-001",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "metadata_sha256": "b0cffb9a6945366c0057390c2144edbfb7b9fb0b9a2f327ed8517e3051b7684b",
+  "observed_chain": [
+    "er..cctor 0x1808e5070 calls c0.a 0x18084da40",
+    "c0.a constructs type ancestry, reverses List<Type>",
+    "Type.GetFields BindingFlags 0x16 (DeclaredOnly|Instance|Public)",
+    "Fields with first attribute en (methodDef 76961) are omitted",
+    "Enumerable.OrderBy<FieldInfo,int>, selector methodDef 76164 VA 0x18084b3a0",
+    "Selector calls vtable offset 0x228 = base 0x138 + slot 15*16 = get_MetadataToken",
+    "One ce setter constructed per sorted FieldInfo",
+    "ci9.b<T> 0x182003eb0 uses byte keys starting at 0, increments once per ce setter; absent keys are skipped",
+    "ci9.b<T> operation response 0x182004220 reads subtype key 253 and similarly increments byte parameter keys"
+  ],
+  "selector_method_usage": {
+    "slot_va": "0x184db9570",
+    "slot_file_offset": 81490288,
+    "encoded": "0x60025309",
+    "kind": 3,
+    "index": 76164,
+    "method_definition": {
+      "index": 76164,
+      "type": "<>c",
+      "type_index": 10704,
+      "image": "Albion.Common.dll",
+      "method": "a",
+      "metadata_file_offset": 6592700
+    }
+  },
+  "vtable_basis": [
+    {
+      "type_index": 16864,
+      "type": "System.Reflection.FieldInfo",
+      "slot": 15,
+      "metadata_file_offset": 16978796,
+      "encoded": "0x600377b7",
+      "method_definition_index": 113627,
+      "method_name": "get_MetadataToken",
+      "method_slot": 15
+    },
+    {
+      "type_index": 15913,
+      "type": "System.Type",
+      "slot": 89,
+      "metadata_file_offset": 16941276,
+      "encoded": "0x1",
+      "method_definition_index": 107536,
+      "method_name": "GetFields",
+      "method_slot": 89
+    },
+    {
+      "type_index": 15913,
+      "type": "System.Type",
+      "slot": 117,
+      "metadata_file_offset": 16941388,
+      "encoded": "0x1",
+      "method_definition_index": 107566,
+      "method_name": "get_BaseType",
+      "method_slot": 117
+    }
+  ],
+  "disassembly_evidence_ids": [
+    "AO-META-DISASM-1808e5070-adjacent",
+    "AO-META-DISASM-18084da40-adjacent",
+    "AO-META-DISASM-18084bbe0-adjacent",
+    "AO-META-DISASM-18084b3a0-adjacent",
+    "AO-META-DISASM-182003eb0-adjacent",
+    "AO-META-DISASM-182004220-adjacent"
+  ],
+  "selected_schemas": [
+    {
+      "kind": "operation",
+      "code": 41,
+      "code_names": [
+        "ChangeCluster"
+      ],
+      "type_index": 11240,
+      "type": "qa",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "qa",
+          "declaring_type_index": 11240,
+          "field_index": 57520,
+          "field_name": "ee",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15189512,
+          "token": "0x4002412"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "qa",
+          "declaring_type_index": 11240,
+          "field_index": 57521,
+          "field_name": "ef",
+          "declared_type": "string",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15189524,
+          "token": "0x4002413"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "qa",
+          "declaring_type_index": 11240,
+          "field_index": 57522,
+          "field_name": "eg",
+          "declared_type": "int[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15189536,
+          "token": "0x4002414"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "qa",
+          "declaring_type_index": 11240,
+          "field_index": 57523,
+          "field_name": "eh",
+          "declared_type": "bool",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15189548,
+          "token": "0x4002415"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "qa",
+          "declaring_type_index": 11240,
+          "field_index": 57524,
+          "field_name": "ei",
+          "declared_type": "a7m",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15189560,
+          "token": "0x4002416"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 143,
+      "code_names": [
+        "GetCharacterEquipment"
+      ],
+      "type_index": 11356,
+      "type": "td",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "td",
+          "declaring_type_index": 11356,
+          "field_index": 57840,
+          "field_name": "md",
+          "declared_type": "System.Guid",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15193352,
+          "token": "0x4002552"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "td",
+          "declaring_type_index": 11356,
+          "field_index": 57841,
+          "field_name": "me",
+          "declared_type": "bool",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15193364,
+          "token": "0x4002553"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 197,
+      "code_names": [
+        "GetClusterMapInfo"
+      ],
+      "type_index": 11362,
+      "type": "tj",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "tj",
+          "declaring_type_index": 11362,
+          "field_index": 57854,
+          "field_name": "mr",
+          "declared_type": "string",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15193520,
+          "token": "0x4002560"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 546,
+      "code_names": [
+        "GetPartyMemberCluster"
+      ],
+      "type_index": 11419,
+      "type": "u4",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "u4",
+          "declaring_type_index": 11419,
+          "field_index": 57939,
+          "field_name": "o4",
+          "declared_type": "string",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15194540,
+          "token": "0x40025b5"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 141,
+      "code_names": [
+        "SubscribeToCluster"
+      ],
+      "type_index": 11652,
+      "type": "abl",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "abl",
+          "declaring_type_index": 11652,
+          "field_index": 58583,
+          "field_name": "agl",
+          "declared_type": "string[]",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15202268,
+          "token": "0x4002839"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 95,
+      "code_names": [
+        "AuctionGetItemAverageStats"
+      ],
+      "type_index": 11736,
+      "type": "adw",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "adw",
+          "declaring_type_index": 11736,
+          "field_index": 58810,
+          "field_name": "amw",
+          "declared_type": "long[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15204992,
+          "token": "0x400291c"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "adw",
+          "declaring_type_index": 11736,
+          "field_index": 58811,
+          "field_name": "amx",
+          "declared_type": "long[]",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15205004,
+          "token": "0x400291d"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "adw",
+          "declaring_type_index": 11736,
+          "field_index": 58812,
+          "field_name": "amy",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15205016,
+          "token": "0x400291e"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 96,
+      "code_names": [
+        "AuctionGetItemAverageValue"
+      ],
+      "type_index": 11737,
+      "type": "adx",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "adx",
+          "declaring_type_index": 11737,
+          "field_index": 58813,
+          "field_name": "amz",
+          "declared_type": "long",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15205028,
+          "token": "0x400291f"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 97,
+      "code_names": [
+        "AuctionGetLowestOfferPrices"
+      ],
+      "type_index": 11739,
+      "type": "adz",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "adz",
+          "declaring_type_index": 11739,
+          "field_index": 58814,
+          "field_name": "am0",
+          "declared_type": "short[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15205040,
+          "token": "0x4002920"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "adz",
+          "declaring_type_index": 11739,
+          "field_index": 58815,
+          "field_name": "am1",
+          "declared_type": "a7m[]",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15205052,
+          "token": "0x4002921"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 81,
+      "code_names": [
+        "AuctionGetOffers"
+      ],
+      "type_index": 11741,
+      "type": "ad1",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ad1",
+          "declaring_type_index": 11741,
+          "field_index": 58819,
+          "field_name": "am5",
+          "declared_type": "string[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15205100,
+          "token": "0x4002925"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ad1",
+          "declaring_type_index": 11741,
+          "field_index": 58820,
+          "field_name": "am6",
+          "declared_type": "bool",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15205112,
+          "token": "0x4002926"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 82,
+      "code_names": [
+        "AuctionGetRequests"
+      ],
+      "type_index": 11742,
+      "type": "ad2",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ad2",
+          "declaring_type_index": 11742,
+          "field_index": 58821,
+          "field_name": "am7",
+          "declared_type": "string[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15205124,
+          "token": "0x4002927"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ad2",
+          "declaring_type_index": 11742,
+          "field_index": 58822,
+          "field_name": "am8",
+          "declared_type": "bool",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15205136,
+          "token": "0x4002928"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 41,
+      "code_names": [
+        "ChangeCluster"
+      ],
+      "type_index": 11751,
+      "type": "aec",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58841,
+          "field_name": "anu",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15205364,
+          "token": "0x400293b"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58842,
+          "field_name": "anv",
+          "declared_type": "string",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15205376,
+          "token": "0x400293c"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58843,
+          "field_name": "anw",
+          "declared_type": "string",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15205388,
+          "token": "0x400293d"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58844,
+          "field_name": "anx",
+          "declared_type": "byte[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15205400,
+          "token": "0x400293e"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58845,
+          "field_name": "any",
+          "declared_type": "string",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15205412,
+          "token": "0x400293f"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58846,
+          "field_name": "anz",
+          "declared_type": "int",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15205424,
+          "token": "0x4002940"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58847,
+          "field_name": "an0",
+          "declared_type": "string[]",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15205436,
+          "token": "0x4002941"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58848,
+          "field_name": "an1",
+          "declared_type": "string[]",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15205448,
+          "token": "0x4002942"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58849,
+          "field_name": "an2",
+          "declared_type": "int[]",
+          "native_offset": "0x60",
+          "metadata_file_offset": 15205460,
+          "token": "0x4002943"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58850,
+          "field_name": "an3",
+          "declared_type": "bool",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15205472,
+          "token": "0x4002944"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58851,
+          "field_name": "an4",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15205484,
+          "token": "0x4002945"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58852,
+          "field_name": "an5",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15205496,
+          "token": "0x4002946"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "aec",
+          "declaring_type_index": 11751,
+          "field_index": 58853,
+          "field_name": "an6",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x80",
+          "metadata_file_offset": 15205508,
+          "token": "0x4002947"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 143,
+      "code_names": [
+        "GetCharacterEquipment"
+      ],
+      "type_index": 11782,
+      "type": "ae5",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ae5",
+          "declaring_type_index": 11782,
+          "field_index": 59043,
+          "field_name": "asz",
+          "declared_type": "System.Guid",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15207788,
+          "token": "0x4002a05"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ae5",
+          "declaring_type_index": 11782,
+          "field_index": 59044,
+          "field_name": "as0",
+          "declared_type": "long[]",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15207800,
+          "token": "0x4002a06"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ae5",
+          "declaring_type_index": 11782,
+          "field_index": 59045,
+          "field_name": "as1",
+          "declared_type": "byte[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15207812,
+          "token": "0x4002a07"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ae5",
+          "declaring_type_index": 11782,
+          "field_index": 59046,
+          "field_name": "as2",
+          "declared_type": "float",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15207824,
+          "token": "0x4002a08"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 40,
+      "code_names": [
+        "GetClusterData"
+      ],
+      "type_index": 11786,
+      "type": "ae9",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ae9",
+          "declaring_type_index": 11786,
+          "field_index": 59060,
+          "field_name": "atg",
+          "declared_type": "byte[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15207992,
+          "token": "0x4002a16"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 197,
+      "code_names": [
+        "GetClusterMapInfo"
+      ],
+      "type_index": 11788,
+      "type": "afb",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59062,
+          "field_name": "ati",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15208016,
+          "token": "0x4002a18"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59063,
+          "field_name": "atj",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15208028,
+          "token": "0x4002a19"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59064,
+          "field_name": "atk",
+          "declared_type": "int",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15208040,
+          "token": "0x4002a1a"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59065,
+          "field_name": "atl",
+          "declared_type": "string[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15208052,
+          "token": "0x4002a1b"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59066,
+          "field_name": "atm",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15208064,
+          "token": "0x4002a1c"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59067,
+          "field_name": "atn",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15208076,
+          "token": "0x4002a1d"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59068,
+          "field_name": "ato",
+          "declared_type": "string[]",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15208088,
+          "token": "0x4002a1e"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59069,
+          "field_name": "atp",
+          "declared_type": "string[]",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15208100,
+          "token": "0x4002a1f"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59070,
+          "field_name": "atq",
+          "declared_type": "byte[]",
+          "native_offset": "0x60",
+          "metadata_file_offset": 15208112,
+          "token": "0x4002a20"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59071,
+          "field_name": "atr",
+          "declared_type": "byte[]",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15208124,
+          "token": "0x4002a21"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59072,
+          "field_name": "ats",
+          "declared_type": "long[]",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15208136,
+          "token": "0x4002a22"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59073,
+          "field_name": "att",
+          "declared_type": "byte[]",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15208148,
+          "token": "0x4002a23"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59074,
+          "field_name": "atu",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x80",
+          "metadata_file_offset": 15208160,
+          "token": "0x4002a24"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59075,
+          "field_name": "atv",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x88",
+          "metadata_file_offset": 15208172,
+          "token": "0x4002a25"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59076,
+          "field_name": "atw",
+          "declared_type": "a7m[]",
+          "native_offset": "0x90",
+          "metadata_file_offset": 15208184,
+          "token": "0x4002a26"
+        },
+        {
+          "parameter_key": 15,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59077,
+          "field_name": "atx",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x98",
+          "metadata_file_offset": 15208196,
+          "token": "0x4002a27"
+        },
+        {
+          "parameter_key": 16,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59078,
+          "field_name": "aty",
+          "declared_type": "long[]",
+          "native_offset": "0xa0",
+          "metadata_file_offset": 15208208,
+          "token": "0x4002a28"
+        },
+        {
+          "parameter_key": 17,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59079,
+          "field_name": "atz",
+          "declared_type": "int[]",
+          "native_offset": "0xa8",
+          "metadata_file_offset": 15208220,
+          "token": "0x4002a29"
+        },
+        {
+          "parameter_key": 18,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59080,
+          "field_name": "at0",
+          "declared_type": "float[][]",
+          "native_offset": "0xb0",
+          "metadata_file_offset": 15208232,
+          "token": "0x4002a2a"
+        },
+        {
+          "parameter_key": 19,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59081,
+          "field_name": "at1",
+          "declared_type": "float[]",
+          "native_offset": "0xb8",
+          "metadata_file_offset": 15208244,
+          "token": "0x4002a2b"
+        },
+        {
+          "parameter_key": 20,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59082,
+          "field_name": "at2",
+          "declared_type": "long[]",
+          "native_offset": "0xc0",
+          "metadata_file_offset": 15208256,
+          "token": "0x4002a2c"
+        },
+        {
+          "parameter_key": 21,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59083,
+          "field_name": "at3",
+          "declared_type": "long[]",
+          "native_offset": "0xc8",
+          "metadata_file_offset": 15208268,
+          "token": "0x4002a2d"
+        },
+        {
+          "parameter_key": 22,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59084,
+          "field_name": "at4",
+          "declared_type": "long[]",
+          "native_offset": "0xd0",
+          "metadata_file_offset": 15208280,
+          "token": "0x4002a2e"
+        },
+        {
+          "parameter_key": 23,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59085,
+          "field_name": "at5",
+          "declared_type": "long[]",
+          "native_offset": "0xd8",
+          "metadata_file_offset": 15208292,
+          "token": "0x4002a2f"
+        },
+        {
+          "parameter_key": 24,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59086,
+          "field_name": "at6",
+          "declared_type": "long[]",
+          "native_offset": "0xe0",
+          "metadata_file_offset": 15208304,
+          "token": "0x4002a30"
+        },
+        {
+          "parameter_key": 25,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59087,
+          "field_name": "at7",
+          "declared_type": "string[]",
+          "native_offset": "0xe8",
+          "metadata_file_offset": 15208316,
+          "token": "0x4002a31"
+        },
+        {
+          "parameter_key": 26,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59088,
+          "field_name": "at8",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0xf0",
+          "metadata_file_offset": 15208328,
+          "token": "0x4002a32"
+        },
+        {
+          "parameter_key": 27,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59089,
+          "field_name": "at9",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0xf8",
+          "metadata_file_offset": 15208340,
+          "token": "0x4002a33"
+        },
+        {
+          "parameter_key": 28,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59090,
+          "field_name": "aua",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x100",
+          "metadata_file_offset": 15208352,
+          "token": "0x4002a34"
+        },
+        {
+          "parameter_key": 29,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59091,
+          "field_name": "aub",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x108",
+          "metadata_file_offset": 15208364,
+          "token": "0x4002a35"
+        },
+        {
+          "parameter_key": 30,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59092,
+          "field_name": "auc",
+          "declared_type": "bool[]",
+          "native_offset": "0x110",
+          "metadata_file_offset": 15208376,
+          "token": "0x4002a36"
+        },
+        {
+          "parameter_key": 31,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59093,
+          "field_name": "aud",
+          "declared_type": "Albion.Common.SimulationObjects.AccessRights.Preset[]",
+          "native_offset": "0x118",
+          "metadata_file_offset": 15208388,
+          "token": "0x4002a37"
+        },
+        {
+          "parameter_key": 32,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59094,
+          "field_name": "aue",
+          "declared_type": "bool[]",
+          "native_offset": "0x120",
+          "metadata_file_offset": 15208400,
+          "token": "0x4002a38"
+        },
+        {
+          "parameter_key": 33,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59095,
+          "field_name": "auf",
+          "declared_type": "long[]",
+          "native_offset": "0x128",
+          "metadata_file_offset": 15208412,
+          "token": "0x4002a39"
+        },
+        {
+          "parameter_key": 34,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59096,
+          "field_name": "aug",
+          "declared_type": "long[]",
+          "native_offset": "0x130",
+          "metadata_file_offset": 15208424,
+          "token": "0x4002a3a"
+        },
+        {
+          "parameter_key": 35,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59097,
+          "field_name": "auh",
+          "declared_type": "long[]",
+          "native_offset": "0x138",
+          "metadata_file_offset": 15208436,
+          "token": "0x4002a3b"
+        },
+        {
+          "parameter_key": 36,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59098,
+          "field_name": "aui",
+          "declared_type": "float[][]",
+          "native_offset": "0x140",
+          "metadata_file_offset": 15208448,
+          "token": "0x4002a3c"
+        },
+        {
+          "parameter_key": 37,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59099,
+          "field_name": "auj",
+          "declared_type": "float[][]",
+          "native_offset": "0x148",
+          "metadata_file_offset": 15208460,
+          "token": "0x4002a3d"
+        },
+        {
+          "parameter_key": 38,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59100,
+          "field_name": "auk",
+          "declared_type": "bool[]",
+          "native_offset": "0x150",
+          "metadata_file_offset": 15208472,
+          "token": "0x4002a3e"
+        },
+        {
+          "parameter_key": 39,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59101,
+          "field_name": "aul",
+          "declared_type": "long[]",
+          "native_offset": "0x158",
+          "metadata_file_offset": 15208484,
+          "token": "0x4002a3f"
+        },
+        {
+          "parameter_key": 40,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59102,
+          "field_name": "aum",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x160",
+          "metadata_file_offset": 15208496,
+          "token": "0x4002a40"
+        },
+        {
+          "parameter_key": 41,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59103,
+          "field_name": "aun",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x168",
+          "metadata_file_offset": 15208508,
+          "token": "0x4002a41"
+        },
+        {
+          "parameter_key": 42,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59104,
+          "field_name": "auo",
+          "declared_type": "long[]",
+          "native_offset": "0x170",
+          "metadata_file_offset": 15208520,
+          "token": "0x4002a42"
+        },
+        {
+          "parameter_key": 43,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59105,
+          "field_name": "aup",
+          "declared_type": "Albion.Common.Math.Vector2[]",
+          "native_offset": "0x178",
+          "metadata_file_offset": 15208532,
+          "token": "0x4002a43"
+        },
+        {
+          "parameter_key": 44,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59106,
+          "field_name": "auq",
+          "declared_type": "int[]",
+          "native_offset": "0x180",
+          "metadata_file_offset": 15208544,
+          "token": "0x4002a44"
+        },
+        {
+          "parameter_key": 45,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59107,
+          "field_name": "aur",
+          "declared_type": "int[]",
+          "native_offset": "0x188",
+          "metadata_file_offset": 15208556,
+          "token": "0x4002a45"
+        },
+        {
+          "parameter_key": 46,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59108,
+          "field_name": "aus",
+          "declared_type": "bool[]",
+          "native_offset": "0x190",
+          "metadata_file_offset": 15208568,
+          "token": "0x4002a46"
+        },
+        {
+          "parameter_key": 47,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59109,
+          "field_name": "aut",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x198",
+          "metadata_file_offset": 15208580,
+          "token": "0x4002a47"
+        },
+        {
+          "parameter_key": 48,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59110,
+          "field_name": "auu",
+          "declared_type": "string[]",
+          "native_offset": "0x1a0",
+          "metadata_file_offset": 15208592,
+          "token": "0x4002a48"
+        },
+        {
+          "parameter_key": 49,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59111,
+          "field_name": "auv",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x1a8",
+          "metadata_file_offset": 15208604,
+          "token": "0x4002a49"
+        },
+        {
+          "parameter_key": 50,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59112,
+          "field_name": "auw",
+          "declared_type": "string[]",
+          "native_offset": "0x1b0",
+          "metadata_file_offset": 15208616,
+          "token": "0x4002a4a"
+        },
+        {
+          "parameter_key": 51,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59113,
+          "field_name": "auy",
+          "declared_type": "int[]",
+          "native_offset": "0x1b8",
+          "metadata_file_offset": 15208628,
+          "token": "0x4002a4b"
+        },
+        {
+          "parameter_key": 52,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59114,
+          "field_name": "auz",
+          "declared_type": "int[]",
+          "native_offset": "0x1c0",
+          "metadata_file_offset": 15208640,
+          "token": "0x4002a4c"
+        },
+        {
+          "parameter_key": 53,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59115,
+          "field_name": "au0",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x1c8",
+          "metadata_file_offset": 15208652,
+          "token": "0x4002a4d"
+        },
+        {
+          "parameter_key": 54,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59116,
+          "field_name": "au1",
+          "declared_type": "bool[]",
+          "native_offset": "0x1d0",
+          "metadata_file_offset": 15208664,
+          "token": "0x4002a4e"
+        },
+        {
+          "parameter_key": 55,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59117,
+          "field_name": "au2",
+          "declared_type": "bool[]",
+          "native_offset": "0x1d8",
+          "metadata_file_offset": 15208676,
+          "token": "0x4002a4f"
+        },
+        {
+          "parameter_key": 56,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59118,
+          "field_name": "au3",
+          "declared_type": "a7m[]",
+          "native_offset": "0x1e0",
+          "metadata_file_offset": 15208688,
+          "token": "0x4002a50"
+        },
+        {
+          "parameter_key": 57,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59119,
+          "field_name": "au4",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x1e8",
+          "metadata_file_offset": 15208700,
+          "token": "0x4002a51"
+        },
+        {
+          "parameter_key": 58,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59120,
+          "field_name": "au5",
+          "declared_type": "bool[]",
+          "native_offset": "0x1f0",
+          "metadata_file_offset": 15208712,
+          "token": "0x4002a52"
+        },
+        {
+          "parameter_key": 59,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59121,
+          "field_name": "au6",
+          "declared_type": "long",
+          "native_offset": "0x1f8",
+          "metadata_file_offset": 15208724,
+          "token": "0x4002a53"
+        },
+        {
+          "parameter_key": 60,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59122,
+          "field_name": "au7",
+          "declared_type": "int",
+          "native_offset": "0x200",
+          "metadata_file_offset": 15208736,
+          "token": "0x4002a54"
+        },
+        {
+          "parameter_key": 61,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59123,
+          "field_name": "au8",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus",
+          "native_offset": "0x204",
+          "metadata_file_offset": 15208748,
+          "token": "0x4002a55"
+        },
+        {
+          "parameter_key": 62,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59124,
+          "field_name": "au9",
+          "declared_type": "Albion.Common.GameData.FactionWarfare.FactionFortressState",
+          "native_offset": "0x205",
+          "metadata_file_offset": 15208760,
+          "token": "0x4002a56"
+        },
+        {
+          "parameter_key": 63,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59125,
+          "field_name": "ava",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus",
+          "native_offset": "0x206",
+          "metadata_file_offset": 15208772,
+          "token": "0x4002a57"
+        },
+        {
+          "parameter_key": 64,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59126,
+          "field_name": "avb",
+          "declared_type": "bool",
+          "native_offset": "0x207",
+          "metadata_file_offset": 15208784,
+          "token": "0x4002a58"
+        },
+        {
+          "parameter_key": 65,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59127,
+          "field_name": "avc",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x208",
+          "metadata_file_offset": 15208796,
+          "token": "0x4002a59"
+        },
+        {
+          "parameter_key": 66,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59128,
+          "field_name": "avd",
+          "declared_type": "long[]",
+          "native_offset": "0x210",
+          "metadata_file_offset": 15208808,
+          "token": "0x4002a5a"
+        },
+        {
+          "parameter_key": 67,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59129,
+          "field_name": "ave",
+          "declared_type": "long[]",
+          "native_offset": "0x218",
+          "metadata_file_offset": 15208820,
+          "token": "0x4002a5b"
+        },
+        {
+          "parameter_key": 68,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59130,
+          "field_name": "avf",
+          "declared_type": "byte[]",
+          "native_offset": "0x220",
+          "metadata_file_offset": 15208832,
+          "token": "0x4002a5c"
+        },
+        {
+          "parameter_key": 69,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59131,
+          "field_name": "avg",
+          "declared_type": "byte[]",
+          "native_offset": "0x228",
+          "metadata_file_offset": 15208844,
+          "token": "0x4002a5d"
+        },
+        {
+          "parameter_key": 70,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59132,
+          "field_name": "avh",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x230",
+          "metadata_file_offset": 15208856,
+          "token": "0x4002a5e"
+        },
+        {
+          "parameter_key": 71,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59133,
+          "field_name": "avi",
+          "declared_type": "int[]",
+          "native_offset": "0x238",
+          "metadata_file_offset": 15208868,
+          "token": "0x4002a5f"
+        },
+        {
+          "parameter_key": 72,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59134,
+          "field_name": "avj",
+          "declared_type": "byte[]",
+          "native_offset": "0x240",
+          "metadata_file_offset": 15208880,
+          "token": "0x4002a60"
+        },
+        {
+          "parameter_key": 73,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59135,
+          "field_name": "avk",
+          "declared_type": "System.Guid",
+          "native_offset": "0x248",
+          "metadata_file_offset": 15208892,
+          "token": "0x4002a61"
+        },
+        {
+          "parameter_key": 74,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59136,
+          "field_name": "avl",
+          "declared_type": "System.Guid",
+          "native_offset": "0x258",
+          "metadata_file_offset": 15208904,
+          "token": "0x4002a62"
+        },
+        {
+          "parameter_key": 75,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59137,
+          "field_name": "avm",
+          "declared_type": "bool",
+          "native_offset": "0x268",
+          "metadata_file_offset": 15208916,
+          "token": "0x4002a63"
+        },
+        {
+          "parameter_key": 76,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59138,
+          "field_name": "avn",
+          "declared_type": "bool",
+          "native_offset": "0x269",
+          "metadata_file_offset": 15208928,
+          "token": "0x4002a64"
+        },
+        {
+          "parameter_key": 77,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59139,
+          "field_name": "avo",
+          "declared_type": "Albion.Common.GameData.LootChests.ChestState",
+          "native_offset": "0x26c",
+          "metadata_file_offset": 15208940,
+          "token": "0x4002a65"
+        },
+        {
+          "parameter_key": 78,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59140,
+          "field_name": "avp",
+          "declared_type": "string",
+          "native_offset": "0x270",
+          "metadata_file_offset": 15208952,
+          "token": "0x4002a66"
+        },
+        {
+          "parameter_key": 79,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59141,
+          "field_name": "avq",
+          "declared_type": "long[]",
+          "native_offset": "0x278",
+          "metadata_file_offset": 15208964,
+          "token": "0x4002a67"
+        },
+        {
+          "parameter_key": 80,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59142,
+          "field_name": "avr",
+          "declared_type": "Albion.Common.Math.Vector2[]",
+          "native_offset": "0x280",
+          "metadata_file_offset": 15208976,
+          "token": "0x4002a68"
+        },
+        {
+          "parameter_key": 81,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59143,
+          "field_name": "avs",
+          "declared_type": "a9u+FixedRotations[]",
+          "native_offset": "0x288",
+          "metadata_file_offset": 15208988,
+          "token": "0x4002a69"
+        },
+        {
+          "parameter_key": 82,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59144,
+          "field_name": "avt",
+          "declared_type": "int[]",
+          "native_offset": "0x290",
+          "metadata_file_offset": 15209000,
+          "token": "0x4002a6a"
+        },
+        {
+          "parameter_key": 83,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59145,
+          "field_name": "avu",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x298",
+          "metadata_file_offset": 15209012,
+          "token": "0x4002a6b"
+        },
+        {
+          "parameter_key": 84,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59146,
+          "field_name": "avv",
+          "declared_type": "byte[]",
+          "native_offset": "0x2a0",
+          "metadata_file_offset": 15209024,
+          "token": "0x4002a6c"
+        },
+        {
+          "parameter_key": 85,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59147,
+          "field_name": "avw",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x2a8",
+          "metadata_file_offset": 15209036,
+          "token": "0x4002a6d"
+        },
+        {
+          "parameter_key": 86,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59148,
+          "field_name": "avx",
+          "declared_type": "Albion.Common.Math.Vector2[]",
+          "native_offset": "0x2b0",
+          "metadata_file_offset": 15209048,
+          "token": "0x4002a6e"
+        },
+        {
+          "parameter_key": 87,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59149,
+          "field_name": "avy",
+          "declared_type": "long[]",
+          "native_offset": "0x2b8",
+          "metadata_file_offset": 15209060,
+          "token": "0x4002a6f"
+        },
+        {
+          "parameter_key": 88,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59150,
+          "field_name": "avz",
+          "declared_type": "float[]",
+          "native_offset": "0x2c0",
+          "metadata_file_offset": 15209072,
+          "token": "0x4002a70"
+        },
+        {
+          "parameter_key": 89,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59151,
+          "field_name": "av0",
+          "declared_type": "Albion.Common.Math.Vector2[]",
+          "native_offset": "0x2c8",
+          "metadata_file_offset": 15209084,
+          "token": "0x4002a71"
+        },
+        {
+          "parameter_key": 90,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59152,
+          "field_name": "av1",
+          "declared_type": "long[]",
+          "native_offset": "0x2d0",
+          "metadata_file_offset": 15209096,
+          "token": "0x4002a72"
+        },
+        {
+          "parameter_key": 91,
+          "declaring_type": "afb",
+          "declaring_type_index": 11788,
+          "field_index": 59153,
+          "field_name": "av2",
+          "declared_type": "bool[]",
+          "native_offset": "0x2d8",
+          "metadata_file_offset": 15209108,
+          "token": "0x4002a73"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 546,
+      "code_names": [
+        "GetPartyMemberCluster"
+      ],
+      "type_index": 11839,
+      "type": "agq",
+      "role_inferred_from_base_type": "operation_response",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "agq",
+          "declaring_type_index": 11839,
+          "field_index": 59474,
+          "field_name": "a4z",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15212960,
+          "token": "0x4002bb4"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 95,
+      "code_names": [
+        "AuctionGetItemAverageStats"
+      ],
+      "type_index": 11956,
+      "type": "ajx",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aj8",
+          "declaring_type_index": 11947,
+          "field_index": 60168,
+          "field_name": "bqs",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15221288,
+          "token": "0x4002e6a"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ajx",
+          "declaring_type_index": 11956,
+          "field_index": 60197,
+          "field_name": "bor",
+          "declared_type": "short",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15221636,
+          "token": "0x4002e87"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ajx",
+          "declaring_type_index": 11956,
+          "field_index": 60198,
+          "field_name": "bos",
+          "declared_type": "short",
+          "native_offset": "0x1a",
+          "metadata_file_offset": 15221648,
+          "token": "0x4002e88"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ajx",
+          "declaring_type_index": 11956,
+          "field_index": 60199,
+          "field_name": "bot",
+          "declared_type": "ajx+a",
+          "native_offset": "0x1c",
+          "metadata_file_offset": 15221660,
+          "token": "0x4002e89"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 96,
+      "code_names": [
+        "AuctionGetItemAverageValue"
+      ],
+      "type_index": 11957,
+      "type": "ajy",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aj8",
+          "declaring_type_index": 11947,
+          "field_index": 60168,
+          "field_name": "bqs",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15221288,
+          "token": "0x4002e6a"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ajy",
+          "declaring_type_index": 11957,
+          "field_index": 60204,
+          "field_name": "bou",
+          "declared_type": "short",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15221720,
+          "token": "0x4002e8e"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ajy",
+          "declaring_type_index": 11957,
+          "field_index": 60205,
+          "field_name": "bov",
+          "declared_type": "short",
+          "native_offset": "0x1a",
+          "metadata_file_offset": 15221732,
+          "token": "0x4002e8f"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ajy",
+          "declaring_type_index": 11957,
+          "field_index": 60206,
+          "field_name": "bow",
+          "declared_type": "ajx+a",
+          "native_offset": "0x1c",
+          "metadata_file_offset": 15221744,
+          "token": "0x4002e90"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 97,
+      "code_names": [
+        "AuctionGetLowestOfferPrices"
+      ],
+      "type_index": 11959,
+      "type": "aj0",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aj8",
+          "declaring_type_index": 11947,
+          "field_index": 60168,
+          "field_name": "bqs",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15221288,
+          "token": "0x4002e6a"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "aj0",
+          "declaring_type_index": 11959,
+          "field_index": 60210,
+          "field_name": "bo0",
+          "declared_type": "short[]",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15221792,
+          "token": "0x4002e94"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 81,
+      "code_names": [
+        "AuctionGetOffers"
+      ],
+      "type_index": 11961,
+      "type": "aj2",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aj8",
+          "declaring_type_index": 11947,
+          "field_index": 60168,
+          "field_name": "bqs",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15221288,
+          "token": "0x4002e6a"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60224,
+          "field_name": "bpe",
+          "declared_type": "string",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15221960,
+          "token": "0x4002ea2"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60225,
+          "field_name": "bpf",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15221972,
+          "token": "0x4002ea3"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60226,
+          "field_name": "bpg",
+          "declared_type": "string",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15221984,
+          "token": "0x4002ea4"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60227,
+          "field_name": "bph",
+          "declared_type": "string",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15221996,
+          "token": "0x4002ea5"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60228,
+          "field_name": "bpi",
+          "declared_type": "string",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15222008,
+          "token": "0x4002ea6"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60229,
+          "field_name": "bpj",
+          "declared_type": "cfb",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15222020,
+          "token": "0x4002ea7"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60230,
+          "field_name": "bpk",
+          "declared_type": "string",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15222032,
+          "token": "0x4002ea8"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60231,
+          "field_name": "bpl",
+          "declared_type": "short[]",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15222044,
+          "token": "0x4002ea9"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60232,
+          "field_name": "bpm",
+          "declared_type": "cfb",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15222056,
+          "token": "0x4002eaa"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60233,
+          "field_name": "bpn",
+          "declared_type": "string",
+          "native_offset": "0x60",
+          "metadata_file_offset": 15222068,
+          "token": "0x4002eab"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60234,
+          "field_name": "bpo",
+          "declared_type": "int",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15222080,
+          "token": "0x4002eac"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60235,
+          "field_name": "bpp",
+          "declared_type": "int",
+          "native_offset": "0x6c",
+          "metadata_file_offset": 15222092,
+          "token": "0x4002ead"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60236,
+          "field_name": "bpq",
+          "declared_type": "int",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15222104,
+          "token": "0x4002eae"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60237,
+          "field_name": "bpr",
+          "declared_type": "bool",
+          "native_offset": "0x74",
+          "metadata_file_offset": 15222116,
+          "token": "0x4002eaf"
+        },
+        {
+          "parameter_key": 15,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60238,
+          "field_name": "bps",
+          "declared_type": "cfc",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15222128,
+          "token": "0x4002eb0"
+        },
+        {
+          "parameter_key": 16,
+          "declaring_type": "aj2",
+          "declaring_type_index": 11961,
+          "field_index": 60239,
+          "field_name": "bpt",
+          "declared_type": "bool",
+          "native_offset": "0x7c",
+          "metadata_file_offset": 15222140,
+          "token": "0x4002eb1"
+        }
+      ]
+    },
+    {
+      "kind": "operation",
+      "code": 82,
+      "code_names": [
+        "AuctionGetRequests"
+      ],
+      "type_index": 11962,
+      "type": "aj3",
+      "role_inferred_from_base_type": "operation_request",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "aj8",
+          "declaring_type_index": 11947,
+          "field_index": 60168,
+          "field_name": "bqs",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15221288,
+          "token": "0x4002e6a"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60240,
+          "field_name": "bpu",
+          "declared_type": "string",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15222152,
+          "token": "0x4002eb2"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60241,
+          "field_name": "bpv",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15222164,
+          "token": "0x4002eb3"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60242,
+          "field_name": "bpw",
+          "declared_type": "string",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15222176,
+          "token": "0x4002eb4"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60243,
+          "field_name": "bpx",
+          "declared_type": "string",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15222188,
+          "token": "0x4002eb5"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60244,
+          "field_name": "bpy",
+          "declared_type": "string",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15222200,
+          "token": "0x4002eb6"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60245,
+          "field_name": "bpz",
+          "declared_type": "cfb",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15222212,
+          "token": "0x4002eb7"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60246,
+          "field_name": "bp0",
+          "declared_type": "string",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15222224,
+          "token": "0x4002eb8"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60247,
+          "field_name": "bp1",
+          "declared_type": "short[]",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15222236,
+          "token": "0x4002eb9"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60248,
+          "field_name": "bp2",
+          "declared_type": "string",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15222248,
+          "token": "0x4002eba"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60249,
+          "field_name": "bp3",
+          "declared_type": "cfb",
+          "native_offset": "0x60",
+          "metadata_file_offset": 15222260,
+          "token": "0x4002ebb"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60250,
+          "field_name": "bp4",
+          "declared_type": "cfc",
+          "native_offset": "0x64",
+          "metadata_file_offset": 15222272,
+          "token": "0x4002ebc"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60251,
+          "field_name": "bp5",
+          "declared_type": "int",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15222284,
+          "token": "0x4002ebd"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60252,
+          "field_name": "bp6",
+          "declared_type": "int",
+          "native_offset": "0x6c",
+          "metadata_file_offset": 15222296,
+          "token": "0x4002ebe"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "aj3",
+          "declaring_type_index": 11962,
+          "field_index": 60253,
+          "field_name": "bp7",
+          "declared_type": "bool",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15222308,
+          "token": "0x4002ebf"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 90,
+      "code_names": [
+        "CharacterEquipmentChanged"
+      ],
+      "type_index": 12029,
+      "type": "alv",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "avk",
+          "declaring_type_index": 11975,
+          "field_index": 60286,
+          "field_name": "ddn",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15222704,
+          "token": "0x4002ee0"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60517,
+          "field_name": "bw3",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15225476,
+          "token": "0x4002fc7"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60518,
+          "field_name": "bw4",
+          "declared_type": "int[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15225488,
+          "token": "0x4002fc8"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60519,
+          "field_name": "bw5",
+          "declared_type": "long",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15225500,
+          "token": "0x4002fc9"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60520,
+          "field_name": "bw6",
+          "declared_type": "int",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15225512,
+          "token": "0x4002fca"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60521,
+          "field_name": "bw7",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15225524,
+          "token": "0x4002fcb"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60522,
+          "field_name": "bw8",
+          "declared_type": "byte",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15225536,
+          "token": "0x4002fcc"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60523,
+          "field_name": "bw9",
+          "declared_type": "int[]",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15225548,
+          "token": "0x4002fcd"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60524,
+          "field_name": "bxa",
+          "declared_type": "bool",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15225560,
+          "token": "0x4002fce"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "alv",
+          "declaring_type_index": 12029,
+          "field_index": 60525,
+          "field_name": "bxb",
+          "declared_type": "bool",
+          "native_offset": "0x51",
+          "metadata_file_offset": 15225572,
+          "token": "0x4002fcf"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 106,
+      "code_names": [
+        "GuildMemberWorldUpdate"
+      ],
+      "type_index": 12178,
+      "type": "apz",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61185,
+          "field_name": "cfc",
+          "declared_type": "System.Guid",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15233492,
+          "token": "0x4003263"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61186,
+          "field_name": "cfd",
+          "declared_type": "System.Guid",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15233504,
+          "token": "0x4003264"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61187,
+          "field_name": "cfe",
+          "declared_type": "long",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15233516,
+          "token": "0x4003265"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61188,
+          "field_name": "cff",
+          "declared_type": "string",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15233528,
+          "token": "0x4003266"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61189,
+          "field_name": "cfg",
+          "declared_type": "int",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15233540,
+          "token": "0x4003267"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61190,
+          "field_name": "cfh",
+          "declared_type": "int",
+          "native_offset": "0x44",
+          "metadata_file_offset": 15233552,
+          "token": "0x4003268"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61191,
+          "field_name": "cfi",
+          "declared_type": "int",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15233564,
+          "token": "0x4003269"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61192,
+          "field_name": "cfj",
+          "declared_type": "int",
+          "native_offset": "0x4c",
+          "metadata_file_offset": 15233576,
+          "token": "0x400326a"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61193,
+          "field_name": "cfk",
+          "declared_type": "int",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15233588,
+          "token": "0x400326b"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61194,
+          "field_name": "cfl",
+          "declared_type": "float",
+          "native_offset": "0x54",
+          "metadata_file_offset": 15233600,
+          "token": "0x400326c"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61195,
+          "field_name": "cfm",
+          "declared_type": "float",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15233612,
+          "token": "0x400326d"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61196,
+          "field_name": "cfn",
+          "declared_type": "System.Guid",
+          "native_offset": "0x5c",
+          "metadata_file_offset": 15233624,
+          "token": "0x400326e"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61197,
+          "field_name": "cfo",
+          "declared_type": "string",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15233636,
+          "token": "0x400326f"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61198,
+          "field_name": "cfp",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15233648,
+          "token": "0x4003270"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "apz",
+          "declaring_type_index": 12178,
+          "field_index": 61199,
+          "field_name": "cfq",
+          "declared_type": "string",
+          "native_offset": "0x80",
+          "metadata_file_offset": 15233660,
+          "token": "0x4003271"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 104,
+      "code_names": [
+        "GuildPlayerUpdated"
+      ],
+      "type_index": 12180,
+      "type": "ap0",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61200,
+          "field_name": "cfr",
+          "declared_type": "System.Guid",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15233672,
+          "token": "0x4003272"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61201,
+          "field_name": "cfs",
+          "declared_type": "string",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15233684,
+          "token": "0x4003273"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61202,
+          "field_name": "cft",
+          "declared_type": "bool",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15233696,
+          "token": "0x4003274"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61203,
+          "field_name": "cfu",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15233708,
+          "token": "0x4003275"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61204,
+          "field_name": "cfv",
+          "declared_type": "byte",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15233720,
+          "token": "0x4003276"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61205,
+          "field_name": "cfw",
+          "declared_type": "int",
+          "native_offset": "0x3c",
+          "metadata_file_offset": 15233732,
+          "token": "0x4003277"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61206,
+          "field_name": "cfx",
+          "declared_type": "int",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15233744,
+          "token": "0x4003278"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61207,
+          "field_name": "cfy",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus",
+          "native_offset": "0x44",
+          "metadata_file_offset": 15233756,
+          "token": "0x4003279"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61208,
+          "field_name": "cfz",
+          "declared_type": "int",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15233768,
+          "token": "0x400327a"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "ap0",
+          "declaring_type_index": 12180,
+          "field_index": 61209,
+          "field_name": "cf0",
+          "declared_type": "byte",
+          "native_offset": "0x4c",
+          "metadata_file_offset": 15233780,
+          "token": "0x400327b"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 103,
+      "code_names": [
+        "GuildUpdate"
+      ],
+      "type_index": 12182,
+      "type": "ap1",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61216,
+          "field_name": "cf1",
+          "declared_type": "System.Guid",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15233864,
+          "token": "0x4003282"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61217,
+          "field_name": "cf2",
+          "declared_type": "System.Guid[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15233876,
+          "token": "0x4003283"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61218,
+          "field_name": "cf3",
+          "declared_type": "string[]",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15233888,
+          "token": "0x4003284"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61219,
+          "field_name": "cf4",
+          "declared_type": "bool[]",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15233900,
+          "token": "0x4003285"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61220,
+          "field_name": "cf5",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15233912,
+          "token": "0x4003286"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61221,
+          "field_name": "cf6",
+          "declared_type": "byte[]",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15233924,
+          "token": "0x4003287"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61222,
+          "field_name": "cf7",
+          "declared_type": "int[]",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15233936,
+          "token": "0x4003288"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61223,
+          "field_name": "cf8",
+          "declared_type": "int[]",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15233948,
+          "token": "0x4003289"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61224,
+          "field_name": "cf9",
+          "declared_type": "int[]",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15233960,
+          "token": "0x400328a"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61225,
+          "field_name": "cga",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus[]",
+          "native_offset": "0x60",
+          "metadata_file_offset": 15233972,
+          "token": "0x400328b"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61226,
+          "field_name": "cgb",
+          "declared_type": "byte",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15233984,
+          "token": "0x400328c"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61227,
+          "field_name": "cgc",
+          "declared_type": "long",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15233996,
+          "token": "0x400328d"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61228,
+          "field_name": "cgd",
+          "declared_type": "long",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15234008,
+          "token": "0x400328e"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61229,
+          "field_name": "cge",
+          "declared_type": "bool",
+          "native_offset": "0x80",
+          "metadata_file_offset": 15234020,
+          "token": "0x400328f"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61230,
+          "field_name": "cgf",
+          "declared_type": "long",
+          "native_offset": "0x88",
+          "metadata_file_offset": 15234032,
+          "token": "0x4003290"
+        },
+        {
+          "parameter_key": 15,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61231,
+          "field_name": "cgg",
+          "declared_type": "string",
+          "native_offset": "0x90",
+          "metadata_file_offset": 15234044,
+          "token": "0x4003291"
+        },
+        {
+          "parameter_key": 16,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61232,
+          "field_name": "cgh",
+          "declared_type": "string",
+          "native_offset": "0x98",
+          "metadata_file_offset": 15234056,
+          "token": "0x4003292"
+        },
+        {
+          "parameter_key": 17,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61233,
+          "field_name": "cgi",
+          "declared_type": "System.Guid",
+          "native_offset": "0xa0",
+          "metadata_file_offset": 15234068,
+          "token": "0x4003293"
+        },
+        {
+          "parameter_key": 18,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61234,
+          "field_name": "cgj",
+          "declared_type": "bool",
+          "native_offset": "0xb0",
+          "metadata_file_offset": 15234080,
+          "token": "0x4003294"
+        },
+        {
+          "parameter_key": 19,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61235,
+          "field_name": "cgk",
+          "declared_type": "System.Collections.Generic.Dictionary`2<int,long>",
+          "native_offset": "0xb8",
+          "metadata_file_offset": 15234092,
+          "token": "0x4003295"
+        },
+        {
+          "parameter_key": 20,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61236,
+          "field_name": "cgl",
+          "declared_type": "int",
+          "native_offset": "0xc0",
+          "metadata_file_offset": 15234104,
+          "token": "0x4003296"
+        },
+        {
+          "parameter_key": 21,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61237,
+          "field_name": "cgm",
+          "declared_type": "int",
+          "native_offset": "0xc4",
+          "metadata_file_offset": 15234116,
+          "token": "0x4003297"
+        },
+        {
+          "parameter_key": 22,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61238,
+          "field_name": "cgn",
+          "declared_type": "int",
+          "native_offset": "0xc8",
+          "metadata_file_offset": 15234128,
+          "token": "0x4003298"
+        },
+        {
+          "parameter_key": 23,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61239,
+          "field_name": "cgo",
+          "declared_type": "int",
+          "native_offset": "0xcc",
+          "metadata_file_offset": 15234140,
+          "token": "0x4003299"
+        },
+        {
+          "parameter_key": 24,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61240,
+          "field_name": "cgp",
+          "declared_type": "int",
+          "native_offset": "0xd0",
+          "metadata_file_offset": 15234152,
+          "token": "0x400329a"
+        },
+        {
+          "parameter_key": 25,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61241,
+          "field_name": "cgq",
+          "declared_type": "float",
+          "native_offset": "0xd4",
+          "metadata_file_offset": 15234164,
+          "token": "0x400329b"
+        },
+        {
+          "parameter_key": 26,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61242,
+          "field_name": "cgr",
+          "declared_type": "float",
+          "native_offset": "0xd8",
+          "metadata_file_offset": 15234176,
+          "token": "0x400329c"
+        },
+        {
+          "parameter_key": 27,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61243,
+          "field_name": "cgs",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0xe0",
+          "metadata_file_offset": 15234188,
+          "token": "0x400329d"
+        },
+        {
+          "parameter_key": 28,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61244,
+          "field_name": "cgt",
+          "declared_type": "string",
+          "native_offset": "0xe8",
+          "metadata_file_offset": 15234200,
+          "token": "0x400329e"
+        },
+        {
+          "parameter_key": 29,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61245,
+          "field_name": "cgu",
+          "declared_type": "long",
+          "native_offset": "0xf0",
+          "metadata_file_offset": 15234212,
+          "token": "0x400329f"
+        },
+        {
+          "parameter_key": 30,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61246,
+          "field_name": "cgv",
+          "declared_type": "int",
+          "native_offset": "0xf8",
+          "metadata_file_offset": 15234224,
+          "token": "0x40032a0"
+        },
+        {
+          "parameter_key": 31,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61247,
+          "field_name": "cgw",
+          "declared_type": "byte",
+          "native_offset": "0xfc",
+          "metadata_file_offset": 15234236,
+          "token": "0x40032a1"
+        },
+        {
+          "parameter_key": 32,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61248,
+          "field_name": "cgx",
+          "declared_type": "string",
+          "native_offset": "0x100",
+          "metadata_file_offset": 15234248,
+          "token": "0x40032a2"
+        },
+        {
+          "parameter_key": 33,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61249,
+          "field_name": "cgy",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x108",
+          "metadata_file_offset": 15234260,
+          "token": "0x40032a3"
+        },
+        {
+          "parameter_key": 34,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61250,
+          "field_name": "cgz",
+          "declared_type": "string",
+          "native_offset": "0x110",
+          "metadata_file_offset": 15234272,
+          "token": "0x40032a4"
+        },
+        {
+          "parameter_key": 35,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61251,
+          "field_name": "cg0",
+          "declared_type": "System.Guid",
+          "native_offset": "0x118",
+          "metadata_file_offset": 15234284,
+          "token": "0x40032a5"
+        },
+        {
+          "parameter_key": 36,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61252,
+          "field_name": "cg1",
+          "declared_type": "string",
+          "native_offset": "0x128",
+          "metadata_file_offset": 15234296,
+          "token": "0x40032a6"
+        },
+        {
+          "parameter_key": 37,
+          "declaring_type": "ap1",
+          "declaring_type_index": 12182,
+          "field_index": 61253,
+          "field_name": "cg2",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x130",
+          "metadata_file_offset": 15234308,
+          "token": "0x40032a7"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 6,
+      "code_names": [
+        "HealthUpdate"
+      ],
+      "type_index": 12190,
+      "type": "ap9",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "avk",
+          "declaring_type_index": 11975,
+          "field_index": 60286,
+          "field_name": "ddn",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15222704,
+          "token": "0x4002ee0"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61305,
+          "field_name": "ch5",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15234932,
+          "token": "0x40032db"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61306,
+          "field_name": "ch6",
+          "declared_type": "float",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15234944,
+          "token": "0x40032dc"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61307,
+          "field_name": "ch7",
+          "declared_type": "float",
+          "native_offset": "0x24",
+          "metadata_file_offset": 15234956,
+          "token": "0x40032dd"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61308,
+          "field_name": "ch8",
+          "declared_type": "byte",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15234968,
+          "token": "0x40032de"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61309,
+          "field_name": "ch9",
+          "declared_type": "byte",
+          "native_offset": "0x29",
+          "metadata_file_offset": 15234980,
+          "token": "0x40032df"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61310,
+          "field_name": "cia",
+          "declared_type": "long",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15234992,
+          "token": "0x40032e0"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61311,
+          "field_name": "cib",
+          "declared_type": "short",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15235004,
+          "token": "0x40032e1"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61312,
+          "field_name": "cic",
+          "declared_type": "bool",
+          "native_offset": "0x3a",
+          "metadata_file_offset": 15235016,
+          "token": "0x40032e2"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 7,
+      "code_names": [
+        "HealthUpdates"
+      ],
+      "type_index": 12191,
+      "type": "aqa",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "avk",
+          "declaring_type_index": 11975,
+          "field_index": 60286,
+          "field_name": "ddn",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15222704,
+          "token": "0x4002ee0"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61313,
+          "field_name": "cid",
+          "declared_type": "Albion.Common.Time.GameTimeStamp[]",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15235028,
+          "token": "0x40032e3"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61314,
+          "field_name": "cie",
+          "declared_type": "float[]",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15235040,
+          "token": "0x40032e4"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61315,
+          "field_name": "cif",
+          "declared_type": "float[]",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15235052,
+          "token": "0x40032e5"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61316,
+          "field_name": "cig",
+          "declared_type": "byte[]",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15235064,
+          "token": "0x40032e6"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61317,
+          "field_name": "cih",
+          "declared_type": "byte[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15235076,
+          "token": "0x40032e7"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61318,
+          "field_name": "cii",
+          "declared_type": "long[]",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15235088,
+          "token": "0x40032e8"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "aqa",
+          "declaring_type_index": 12191,
+          "field_index": 61319,
+          "field_name": "cij",
+          "declared_type": "short[]",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15235100,
+          "token": "0x40032e9"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 1,
+      "code_names": [
+        "Leave"
+      ],
+      "type_index": 12243,
+      "type": "arp",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "arp",
+          "declaring_type_index": 12243,
+          "field_index": 61501,
+          "field_name": "cnd",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15237284,
+          "token": "0x400339f"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 312,
+      "code_names": [
+        "MountHealthUpdate"
+      ],
+      "type_index": 12292,
+      "type": "as0",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "avk",
+          "declaring_type_index": 11975,
+          "field_index": 60286,
+          "field_name": "ddn",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15222704,
+          "token": "0x4002ee0"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61305,
+          "field_name": "ch5",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15234932,
+          "token": "0x40032db"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61306,
+          "field_name": "ch6",
+          "declared_type": "float",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15234944,
+          "token": "0x40032dc"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61307,
+          "field_name": "ch7",
+          "declared_type": "float",
+          "native_offset": "0x24",
+          "metadata_file_offset": 15234956,
+          "token": "0x40032dd"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61308,
+          "field_name": "ch8",
+          "declared_type": "byte",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15234968,
+          "token": "0x40032de"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61309,
+          "field_name": "ch9",
+          "declared_type": "byte",
+          "native_offset": "0x29",
+          "metadata_file_offset": 15234980,
+          "token": "0x40032df"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61310,
+          "field_name": "cia",
+          "declared_type": "long",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15234992,
+          "token": "0x40032e0"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61311,
+          "field_name": "cib",
+          "declared_type": "short",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15235004,
+          "token": "0x40032e1"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "ap9",
+          "declaring_type_index": 12190,
+          "field_index": 61312,
+          "field_name": "cic",
+          "declared_type": "bool",
+          "native_offset": "0x3a",
+          "metadata_file_offset": 15235016,
+          "token": "0x40032e2"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 3,
+      "code_names": [
+        "Move"
+      ],
+      "type_index": 12295,
+      "type": "as2",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "avk",
+          "declaring_type_index": 11975,
+          "field_index": 60286,
+          "field_name": "ddn",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15222704,
+          "token": "0x4002ee0"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61710,
+          "field_name": "csx",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15239792,
+          "token": "0x4003470"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61711,
+          "field_name": "csy",
+          "declared_type": "Albion.Common.Math.Vector2",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15239804,
+          "token": "0x4003471"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61712,
+          "field_name": "csz",
+          "declared_type": "float",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15239816,
+          "token": "0x4003472"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61713,
+          "field_name": "cs0",
+          "declared_type": "float",
+          "native_offset": "0x2c",
+          "metadata_file_offset": 15239828,
+          "token": "0x4003473"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61714,
+          "field_name": "cs1",
+          "declared_type": "Albion.Common.Math.Vector2",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15239840,
+          "token": "0x4003474"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61715,
+          "field_name": "cs2",
+          "declared_type": "long",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15239852,
+          "token": "0x4003475"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61716,
+          "field_name": "cs3",
+          "declared_type": "bool",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15239864,
+          "token": "0x4003476"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "as2",
+          "declaring_type_index": 12295,
+          "field_index": 61717,
+          "field_name": "cs4",
+          "declared_type": "byte[]",
+          "native_offset": "0x48",
+          "metadata_file_offset": 15239876,
+          "token": "0x4003477"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 29,
+      "code_names": [
+        "NewCharacter"
+      ],
+      "type_index": 12307,
+      "type": "atd",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61823,
+          "field_name": "cvx",
+          "declared_type": "long",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15241148,
+          "token": "0x40034e1"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61824,
+          "field_name": "cvy",
+          "declared_type": "string",
+          "native_offset": "0x18",
+          "metadata_file_offset": 15241160,
+          "token": "0x40034e2"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61825,
+          "field_name": "cvz",
+          "declared_type": "int",
+          "native_offset": "0x20",
+          "metadata_file_offset": 15241172,
+          "token": "0x40034e3"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61826,
+          "field_name": "cv0",
+          "declared_type": "int",
+          "native_offset": "0x24",
+          "metadata_file_offset": 15241184,
+          "token": "0x40034e4"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61827,
+          "field_name": "cv1",
+          "declared_type": "int",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15241196,
+          "token": "0x40034e5"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61828,
+          "field_name": "cv2",
+          "declared_type": "int[]",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15241208,
+          "token": "0x40034e6"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61829,
+          "field_name": "cv3",
+          "declared_type": "int[]",
+          "native_offset": "0x38",
+          "metadata_file_offset": 15241220,
+          "token": "0x40034e7"
+        },
+        {
+          "parameter_key": 7,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61830,
+          "field_name": "cv4",
+          "declared_type": "System.Guid",
+          "native_offset": "0x40",
+          "metadata_file_offset": 15241232,
+          "token": "0x40034e8"
+        },
+        {
+          "parameter_key": 8,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61831,
+          "field_name": "cv5",
+          "declared_type": "string",
+          "native_offset": "0x50",
+          "metadata_file_offset": 15241244,
+          "token": "0x40034e9"
+        },
+        {
+          "parameter_key": 9,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61832,
+          "field_name": "cv6",
+          "declared_type": "System.Guid",
+          "native_offset": "0x58",
+          "metadata_file_offset": 15241256,
+          "token": "0x40034ea"
+        },
+        {
+          "parameter_key": 10,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61833,
+          "field_name": "cv7",
+          "declared_type": "string",
+          "native_offset": "0x68",
+          "metadata_file_offset": 15241268,
+          "token": "0x40034eb"
+        },
+        {
+          "parameter_key": 11,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61834,
+          "field_name": "cv8",
+          "declared_type": "Albion.Common.GameData.FounderState",
+          "native_offset": "0x70",
+          "metadata_file_offset": 15241280,
+          "token": "0x40034ec"
+        },
+        {
+          "parameter_key": 12,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61835,
+          "field_name": "cv9",
+          "declared_type": "Albion.Common.GameData.FounderState",
+          "native_offset": "0x74",
+          "metadata_file_offset": 15241292,
+          "token": "0x40034ed"
+        },
+        {
+          "parameter_key": 13,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61836,
+          "field_name": "cwa",
+          "declared_type": "string",
+          "native_offset": "0x78",
+          "metadata_file_offset": 15241304,
+          "token": "0x40034ee"
+        },
+        {
+          "parameter_key": 14,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61837,
+          "field_name": "cwb",
+          "declared_type": "Albion.Common.Math.Vector2",
+          "native_offset": "0x80",
+          "metadata_file_offset": 15241316,
+          "token": "0x40034ef"
+        },
+        {
+          "parameter_key": 15,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61838,
+          "field_name": "cwc",
+          "declared_type": "Albion.Common.Math.Vector2",
+          "native_offset": "0x88",
+          "metadata_file_offset": 15241328,
+          "token": "0x40034f0"
+        },
+        {
+          "parameter_key": 16,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61839,
+          "field_name": "cwd",
+          "declared_type": "byte[]",
+          "native_offset": "0x90",
+          "metadata_file_offset": 15241340,
+          "token": "0x40034f1"
+        },
+        {
+          "parameter_key": 17,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61840,
+          "field_name": "cwe",
+          "declared_type": "byte[]",
+          "native_offset": "0x98",
+          "metadata_file_offset": 15241352,
+          "token": "0x40034f2"
+        },
+        {
+          "parameter_key": 18,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61841,
+          "field_name": "cwf",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0xa0",
+          "metadata_file_offset": 15241364,
+          "token": "0x40034f3"
+        },
+        {
+          "parameter_key": 19,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61842,
+          "field_name": "cwg",
+          "declared_type": "float",
+          "native_offset": "0xa8",
+          "metadata_file_offset": 15241376,
+          "token": "0x40034f4"
+        },
+        {
+          "parameter_key": 20,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61843,
+          "field_name": "cwh",
+          "declared_type": "float",
+          "native_offset": "0xac",
+          "metadata_file_offset": 15241388,
+          "token": "0x40034f5"
+        },
+        {
+          "parameter_key": 21,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61844,
+          "field_name": "cwi",
+          "declared_type": "long",
+          "native_offset": "0xb0",
+          "metadata_file_offset": 15241400,
+          "token": "0x40034f6"
+        },
+        {
+          "parameter_key": 22,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61845,
+          "field_name": "cwj",
+          "declared_type": "float",
+          "native_offset": "0xb8",
+          "metadata_file_offset": 15241412,
+          "token": "0x40034f7"
+        },
+        {
+          "parameter_key": 23,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61846,
+          "field_name": "cwk",
+          "declared_type": "float",
+          "native_offset": "0xbc",
+          "metadata_file_offset": 15241424,
+          "token": "0x40034f8"
+        },
+        {
+          "parameter_key": 24,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61847,
+          "field_name": "cwl",
+          "declared_type": "float",
+          "native_offset": "0xc0",
+          "metadata_file_offset": 15241436,
+          "token": "0x40034f9"
+        },
+        {
+          "parameter_key": 25,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61848,
+          "field_name": "cwm",
+          "declared_type": "float",
+          "native_offset": "0xc4",
+          "metadata_file_offset": 15241448,
+          "token": "0x40034fa"
+        },
+        {
+          "parameter_key": 26,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61849,
+          "field_name": "cwn",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0xc8",
+          "metadata_file_offset": 15241460,
+          "token": "0x40034fb"
+        },
+        {
+          "parameter_key": 27,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61850,
+          "field_name": "cwo",
+          "declared_type": "float",
+          "native_offset": "0xd0",
+          "metadata_file_offset": 15241472,
+          "token": "0x40034fc"
+        },
+        {
+          "parameter_key": 28,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61851,
+          "field_name": "cwp",
+          "declared_type": "float",
+          "native_offset": "0xd4",
+          "metadata_file_offset": 15241484,
+          "token": "0x40034fd"
+        },
+        {
+          "parameter_key": 29,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61852,
+          "field_name": "cwq",
+          "declared_type": "float",
+          "native_offset": "0xd8",
+          "metadata_file_offset": 15241496,
+          "token": "0x40034fe"
+        },
+        {
+          "parameter_key": 30,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61853,
+          "field_name": "cwr",
+          "declared_type": "float",
+          "native_offset": "0xdc",
+          "metadata_file_offset": 15241508,
+          "token": "0x40034ff"
+        },
+        {
+          "parameter_key": 31,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61854,
+          "field_name": "cws",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0xe0",
+          "metadata_file_offset": 15241520,
+          "token": "0x4003500"
+        },
+        {
+          "parameter_key": 32,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61855,
+          "field_name": "cwt",
+          "declared_type": "float",
+          "native_offset": "0xe8",
+          "metadata_file_offset": 15241532,
+          "token": "0x4003501"
+        },
+        {
+          "parameter_key": 33,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61856,
+          "field_name": "cwu",
+          "declared_type": "float",
+          "native_offset": "0xec",
+          "metadata_file_offset": 15241544,
+          "token": "0x4003502"
+        },
+        {
+          "parameter_key": 34,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61857,
+          "field_name": "cwv",
+          "declared_type": "float",
+          "native_offset": "0xf0",
+          "metadata_file_offset": 15241556,
+          "token": "0x4003503"
+        },
+        {
+          "parameter_key": 35,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61858,
+          "field_name": "cww",
+          "declared_type": "float",
+          "native_offset": "0xf4",
+          "metadata_file_offset": 15241568,
+          "token": "0x4003504"
+        },
+        {
+          "parameter_key": 36,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61859,
+          "field_name": "cwx",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0xf8",
+          "metadata_file_offset": 15241580,
+          "token": "0x4003505"
+        },
+        {
+          "parameter_key": 37,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61860,
+          "field_name": "cwy",
+          "declared_type": "float",
+          "native_offset": "0x100",
+          "metadata_file_offset": 15241592,
+          "token": "0x4003506"
+        },
+        {
+          "parameter_key": 38,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61861,
+          "field_name": "cwz",
+          "declared_type": "Albion.Common.Time.GameTimeStamp",
+          "native_offset": "0x108",
+          "metadata_file_offset": 15241604,
+          "token": "0x4003507"
+        },
+        {
+          "parameter_key": 39,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61862,
+          "field_name": "cw0",
+          "declared_type": "byte",
+          "native_offset": "0x110",
+          "metadata_file_offset": 15241616,
+          "token": "0x4003508"
+        },
+        {
+          "parameter_key": 40,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61863,
+          "field_name": "cw1",
+          "declared_type": "int[]",
+          "native_offset": "0x118",
+          "metadata_file_offset": 15241628,
+          "token": "0x4003509"
+        },
+        {
+          "parameter_key": 41,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61864,
+          "field_name": "cw2",
+          "declared_type": "long",
+          "native_offset": "0x120",
+          "metadata_file_offset": 15241640,
+          "token": "0x400350a"
+        },
+        {
+          "parameter_key": 42,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61865,
+          "field_name": "cw3",
+          "declared_type": "int",
+          "native_offset": "0x128",
+          "metadata_file_offset": 15241652,
+          "token": "0x400350b"
+        },
+        {
+          "parameter_key": 43,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61866,
+          "field_name": "cw4",
+          "declared_type": "int[]",
+          "native_offset": "0x130",
+          "metadata_file_offset": 15241664,
+          "token": "0x400350c"
+        },
+        {
+          "parameter_key": 44,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61867,
+          "field_name": "cw5",
+          "declared_type": "int",
+          "native_offset": "0x138",
+          "metadata_file_offset": 15241676,
+          "token": "0x400350d"
+        },
+        {
+          "parameter_key": 45,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61868,
+          "field_name": "cw6",
+          "declared_type": "int",
+          "native_offset": "0x13c",
+          "metadata_file_offset": 15241688,
+          "token": "0x400350e"
+        },
+        {
+          "parameter_key": 46,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61869,
+          "field_name": "cw7",
+          "declared_type": "int",
+          "native_offset": "0x140",
+          "metadata_file_offset": 15241700,
+          "token": "0x400350f"
+        },
+        {
+          "parameter_key": 47,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61870,
+          "field_name": "cw8",
+          "declared_type": "int",
+          "native_offset": "0x144",
+          "metadata_file_offset": 15241712,
+          "token": "0x4003510"
+        },
+        {
+          "parameter_key": 48,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61871,
+          "field_name": "cw9",
+          "declared_type": "int",
+          "native_offset": "0x148",
+          "metadata_file_offset": 15241724,
+          "token": "0x4003511"
+        },
+        {
+          "parameter_key": 49,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61872,
+          "field_name": "cxa",
+          "declared_type": "float",
+          "native_offset": "0x14c",
+          "metadata_file_offset": 15241736,
+          "token": "0x4003512"
+        },
+        {
+          "parameter_key": 50,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61873,
+          "field_name": "cxb",
+          "declared_type": "float",
+          "native_offset": "0x150",
+          "metadata_file_offset": 15241748,
+          "token": "0x4003513"
+        },
+        {
+          "parameter_key": 51,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61874,
+          "field_name": "cxc",
+          "declared_type": "string",
+          "native_offset": "0x158",
+          "metadata_file_offset": 15241760,
+          "token": "0x4003514"
+        },
+        {
+          "parameter_key": 52,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61875,
+          "field_name": "cxd",
+          "declared_type": "System.Guid",
+          "native_offset": "0x160",
+          "metadata_file_offset": 15241772,
+          "token": "0x4003515"
+        },
+        {
+          "parameter_key": 53,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61876,
+          "field_name": "cxe",
+          "declared_type": "byte",
+          "native_offset": "0x170",
+          "metadata_file_offset": 15241784,
+          "token": "0x4003516"
+        },
+        {
+          "parameter_key": 54,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61877,
+          "field_name": "cxf",
+          "declared_type": "atd+a",
+          "native_offset": "0x171",
+          "metadata_file_offset": 15241796,
+          "token": "0x4003517"
+        },
+        {
+          "parameter_key": 55,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61878,
+          "field_name": "cxg",
+          "declared_type": "int[]",
+          "native_offset": "0x178",
+          "metadata_file_offset": 15241808,
+          "token": "0x4003518"
+        },
+        {
+          "parameter_key": 56,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61879,
+          "field_name": "cxh",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus",
+          "native_offset": "0x180",
+          "metadata_file_offset": 15241820,
+          "token": "0x4003519"
+        },
+        {
+          "parameter_key": 57,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61880,
+          "field_name": "cxi",
+          "declared_type": "int",
+          "native_offset": "0x184",
+          "metadata_file_offset": 15241832,
+          "token": "0x400351a"
+        },
+        {
+          "parameter_key": 58,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61881,
+          "field_name": "cxj",
+          "declared_type": "bool",
+          "native_offset": "0x188",
+          "metadata_file_offset": 15241844,
+          "token": "0x400351b"
+        },
+        {
+          "parameter_key": 59,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61882,
+          "field_name": "cxk",
+          "declared_type": "int",
+          "native_offset": "0x18c",
+          "metadata_file_offset": 15241856,
+          "token": "0x400351c"
+        },
+        {
+          "parameter_key": 60,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61883,
+          "field_name": "cxl",
+          "declared_type": "float",
+          "native_offset": "0x190",
+          "metadata_file_offset": 15241868,
+          "token": "0x400351d"
+        },
+        {
+          "parameter_key": 61,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61884,
+          "field_name": "cxm",
+          "declared_type": "bool",
+          "native_offset": "0x194",
+          "metadata_file_offset": 15241880,
+          "token": "0x400351e"
+        },
+        {
+          "parameter_key": 62,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61885,
+          "field_name": "cxn",
+          "declared_type": "bool",
+          "native_offset": "0x195",
+          "metadata_file_offset": 15241892,
+          "token": "0x400351f"
+        },
+        {
+          "parameter_key": 63,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61886,
+          "field_name": "cxo",
+          "declared_type": "Albion.Common.GameData.EquipmentSlot",
+          "native_offset": "0x198",
+          "metadata_file_offset": 15241904,
+          "token": "0x4003520"
+        },
+        {
+          "parameter_key": 64,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61887,
+          "field_name": "cxp",
+          "declared_type": "string",
+          "native_offset": "0x1a0",
+          "metadata_file_offset": 15241916,
+          "token": "0x4003521"
+        },
+        {
+          "parameter_key": 65,
+          "declaring_type": "atd",
+          "declaring_type_index": 12307,
+          "field_index": 61888,
+          "field_name": "cxq",
+          "declared_type": "string",
+          "native_offset": "0x1a8",
+          "metadata_file_offset": 15241928,
+          "token": "0x4003522"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "code": 238,
+      "code_names": [
+        "PartyPlayerUpdated"
+      ],
+      "type_index": 12430,
+      "type": "awt",
+      "role_inferred_from_base_type": "event",
+      "parameters": [
+        {
+          "parameter_key": 0,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62726,
+          "field_name": "dkn",
+          "declared_type": "int",
+          "native_offset": "0x10",
+          "metadata_file_offset": 15251984,
+          "token": "0x4003868"
+        },
+        {
+          "parameter_key": 1,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62727,
+          "field_name": "dko",
+          "declared_type": "System.Guid",
+          "native_offset": "0x14",
+          "metadata_file_offset": 15251996,
+          "token": "0x4003869"
+        },
+        {
+          "parameter_key": 2,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62728,
+          "field_name": "dkp",
+          "declared_type": "string",
+          "native_offset": "0x28",
+          "metadata_file_offset": 15252008,
+          "token": "0x400386a"
+        },
+        {
+          "parameter_key": 3,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62729,
+          "field_name": "dkq",
+          "declared_type": "byte",
+          "native_offset": "0x30",
+          "metadata_file_offset": 15252020,
+          "token": "0x400386b"
+        },
+        {
+          "parameter_key": 4,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62730,
+          "field_name": "dkr",
+          "declared_type": "short",
+          "native_offset": "0x32",
+          "metadata_file_offset": 15252032,
+          "token": "0x400386c"
+        },
+        {
+          "parameter_key": 5,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62731,
+          "field_name": "dks",
+          "declared_type": "short",
+          "native_offset": "0x34",
+          "metadata_file_offset": 15252044,
+          "token": "0x400386d"
+        },
+        {
+          "parameter_key": 6,
+          "declaring_type": "awt",
+          "declaring_type_index": 12430,
+          "field_index": 62732,
+          "field_name": "dkt",
+          "declared_type": "Albion.Common.GameData.FlaggingStatus",
+          "native_offset": "0x36",
+          "metadata_file_offset": 15252056,
+          "token": "0x400386e"
+        }
+      ]
+    }
+  ],
+  "limitations": "Static derived parameter keys only. Types are destination CLR field types, not claims about Photon physical encoding. No packet capture or runtime confirmation. Attribute ordering is simple for selected inputs; generic reflection failures and conditional server omissions not executed. Request/response role inferred from base classes and field shapes, with traced market JSON/parser corroboration."
+}

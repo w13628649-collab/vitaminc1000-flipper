@@ -1,0 +1,21 @@
+0x1809f9eb0 mov      qword ptr [rsp + 8], rbx
+0x1809f9eb5 push     rdi
+0x1809f9eb6 sub      rsp, 0x20
+0x1809f9eba mov      rdi, rdx
+0x1809f9ebd movzx    ebx, r8w
+0x1809f9ec1 xor      edx, edx
+0x1809f9ec3 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809f9ec8 test     rax, rax
+0x1809f9ecb je       0x1809f9ef2
+0x1809f9ecd mov      rcx, qword ptr [rax + 0x4f8]
+0x1809f9ed4 test     rcx, rcx
+0x1809f9ed7 je       0x1809f9ef2
+0x1809f9ed9 xor      r9d, r9d
+0x1809f9edc movzx    r8d, bx
+0x1809f9ee0 mov      rdx, rdi
+0x1809f9ee3 mov      rbx, qword ptr [rsp + 0x30]
+0x1809f9ee8 add      rsp, 0x20
+0x1809f9eec pop      rdi
+0x1809f9eed jmp      0x180c04c90 ; Albion.PhotonClient.dll:ctd.k
+0x1809f9ef2 call     0x180361b60
+0x1809f9ef7 int3     

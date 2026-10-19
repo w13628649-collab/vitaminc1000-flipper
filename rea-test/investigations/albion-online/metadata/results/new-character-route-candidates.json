@@ -1,0 +1,61 @@
+{
+  "evidence_id": "AO-META-ROUTE-SCAN-001",
+  "methods_scanned": 291,
+  "candidates": [
+    {
+      "method": {
+        "nameIndex": 2231,
+        "declaringType": 20715,
+        "returnType": 43474,
+        "returnParameterToken": 134217728,
+        "parameterStart": 124284,
+        "genericContainerIndex": 65535,
+        "token": 100679959,
+        "flags": 134,
+        "iflags": 0,
+        "slot": 65535,
+        "parameterCount": 2,
+        "index": 146320,
+        "metadata_file_offset": 8837692,
+        "name": "k",
+        "parameters": [
+          {
+            "nameIndex": 96,
+            "token": 134233111,
+            "typeIndex": 55911,
+            "index": 124284,
+            "metadata_file_offset": 13780988,
+            "name": "A_0",
+            "type": "g7s"
+          },
+          {
+            "nameIndex": 2221,
+            "token": 134233112,
+            "typeIndex": 34223,
+            "index": 124285,
+            "metadata_file_offset": 13781000,
+            "name": "A_1",
+            "type": "short"
+          }
+        ],
+        "returnTypeName": "void",
+        "type": "df9",
+        "image": "Albion.PhotonClient.dll",
+        "native_va": "0x180b14d40",
+        "native_file_offset": 11612992,
+        "pointer_slot_file_offset": 79949728
+      },
+      "comparisons": [
+        {
+          "va": "0x180b1516e",
+          "file_offset": 11614062,
+          "bytes": "83f91d",
+          "mnemonic": "cmp",
+          "operands": "ecx, 0x1d"
+        }
+      ],
+      "disassembly_evidence_id": "AO-META-DISASM-180b14d40-adjacent"
+    }
+  ],
+  "limitations": "CMP/SUB immediate29 search in g7s/short methods only. Candidate comparisons do not establish event routing."
+}

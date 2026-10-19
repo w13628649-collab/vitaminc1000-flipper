@@ -1,0 +1,107 @@
+{
+  "evidence_id": "AO-META-DISASM-180bbf0d0-adjacent",
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "requested_va": "0x180bbf0d0",
+  "function_va": "0x180bbf0d0",
+  "end_exclusive_va": "0x180bbf0f5",
+  "file_offset": 12310224,
+  "byte_length": 37,
+  "function_sha256": "65c54e8e414bf721646615eab04f6e5dbe166f2e22e371dd55be164c3905aaa4",
+  "capstone_version": "5.0.7",
+  "symbols": [
+    {
+      "type_index": 19490,
+      "type": "cpo",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 135290,
+      "name": "ad9",
+      "token": "0x6001601",
+      "native_va": "0x180bbf0d0",
+      "native_rva": "0xbbf0d0",
+      "native_file_offset": 12310224,
+      "pointer_slot_file_offset": 79861488
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x180bbf0d0",
+      "file_offset": 12310224,
+      "bytes": "4883ec28",
+      "mnemonic": "sub",
+      "operands": "rsp, 0x28"
+    },
+    {
+      "va": "0x180bbf0d4",
+      "file_offset": 12310228,
+      "bytes": "488b8180000000",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rcx + 0x80]"
+    },
+    {
+      "va": "0x180bbf0db",
+      "file_offset": 12310235,
+      "bytes": "f30f114940",
+      "mnemonic": "movss",
+      "operands": "dword ptr [rcx + 0x40], xmm1"
+    },
+    {
+      "va": "0x180bbf0e0",
+      "file_offset": 12310240,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x180bbf0e3",
+      "file_offset": 12310243,
+      "bytes": "740a",
+      "mnemonic": "je",
+      "operands": "0x180bbf0ef"
+    },
+    {
+      "va": "0x180bbf0e5",
+      "file_offset": 12310245,
+      "bytes": "f30f114868",
+      "mnemonic": "movss",
+      "operands": "dword ptr [rax + 0x68], xmm1"
+    },
+    {
+      "va": "0x180bbf0ea",
+      "file_offset": 12310250,
+      "bytes": "4883c428",
+      "mnemonic": "add",
+      "operands": "rsp, 0x28"
+    },
+    {
+      "va": "0x180bbf0ee",
+      "file_offset": 12310254,
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    },
+    {
+      "va": "0x180bbf0ef",
+      "file_offset": 12310255,
+      "bytes": "e86c2a7aff",
+      "mnemonic": "call",
+      "operands": "0x180361b60",
+      "target_va": "0x180361b60",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180bbf0f4",
+      "file_offset": 12310260,
+      "bytes": "cc",
+      "mnemonic": "int3",
+      "operands": ""
+    }
+  ],
+  "pdata_segments": [
+    {
+      "begin_va": "0x180bbf0d0",
+      "end_exclusive_va": "0x180bbf0f5",
+      "unwind_rva": "0x4916368"
+    }
+  ],
+  "limitations": "PE unwind function range and x64 instruction decode. With adjacent flag, contiguous unwind fragments before next named method are included as a candidate interval; fragment membership remains inference. Direct call labels from metadata pointer slots; overloaded/folded pointers may have multiple symbols. No control-flow reconstruction or runtime evidence."
+}

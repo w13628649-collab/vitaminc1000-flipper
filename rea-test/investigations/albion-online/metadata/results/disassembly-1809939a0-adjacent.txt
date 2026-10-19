@@ -1,0 +1,64 @@
+0x1809939a0 mov      qword ptr [rsp + 8], rbx
+0x1809939a5 mov      qword ptr [rsp + 0x10], rsi
+0x1809939aa push     rdi
+0x1809939ab sub      rsp, 0x40
+0x1809939af cmp      byte ptr [rip + 0x46e720f], 0
+0x1809939b6 movzx    ebx, r8w
+0x1809939ba mov      rsi, rdx
+0x1809939bd mov      rdi, rcx
+0x1809939c0 jne      0x1809939ed
+0x1809939c2 lea      rcx, [rip + 0x44c3be7]
+0x1809939c9 call     0x180361910
+0x1809939ce lea      rcx, [rip + 0x44c3d33]
+0x1809939d5 call     0x180361910
+0x1809939da lea      rcx, [rip + 0x44510a7]
+0x1809939e1 call     0x180361910
+0x1809939e6 mov      byte ptr [rip + 0x46e71d8], 1
+0x1809939ed cmp      bx, 0x5e
+0x1809939f1 je       0x180993a14
+0x1809939f3 xor      r9d, r9d
+0x1809939f6 movzx    r8d, bx
+0x1809939fa mov      rdx, rsi
+0x1809939fd mov      rcx, rdi
+0x180993a00 mov      rbx, qword ptr [rsp + 0x50]
+0x180993a05 mov      rsi, qword ptr [rsp + 0x58]
+0x180993a0a add      rsp, 0x40
+0x180993a0e pop      rdi
+0x180993a0f jmp      0x180bca5a0 ; Albion.PhotonClient.dll:cpx.aei
+0x180993a14 mov      rdx, qword ptr [rip + 0x445106d]
+0x180993a1b mov      rcx, rsi
+0x180993a1e call     0x182003eb0
+0x180993a23 mov      rbx, rax
+0x180993a26 test     rax, rax
+0x180993a29 je       0x180993ab4
+0x180993a2f mov      rcx, qword ptr [rdi + 0x2c0]
+0x180993a36 test     rcx, rcx
+0x180993a39 je       0x180993ab4
+0x180993a3b mov      rdx, qword ptr [rip + 0x44c3cc6]
+0x180993a42 movss    xmm3, dword ptr [rax + 0x28]
+0x180993a47 movss    xmm2, dword ptr [rax + 0x24]
+0x180993a4c movss    xmm1, dword ptr [rax + 0x20]
+0x180993a51 mov      qword ptr [rsp + 0x20], rdx
+0x180993a56 call     0x1828f2880
+0x180993a5b mov      rdx, qword ptr [rbx + 0x30]
+0x180993a5f lea      rcx, [rsp + 0x30]
+0x180993a64 mov      rdi, qword ptr [rdi + 0x2c0]
+0x180993a6b xor      r8d, r8d
+0x180993a6e mov      qword ptr [rsp + 0x30], 0
+0x180993a77 call     0x1804d2e90 ; Assembly-CSharp.dll:a.c | Assembly-CSharp.dll:b.c | Assembly-CSharp.dll:d5t.c | Assembly-CSharp.dll:d7b.b | Assembly-CSharp.dll:eav.b | Assembly-CSharp.dll:ef7.e | Assembly-CSharp.dll:esp.i | Assembly-CSharp.dll:esr.i | Assembly-CSharp.dll:esu.q | Assembly-CSharp.dll:esz.c | Assembly-CSharp.dll:es3.q | Assembly-CSharp.dll:evk.b | Assembly-CSharp.dll:fjj.d | Assembly-CSharp.dll:fjl.c | Assembly-CSharp.dll:fjn.h | Assembly-CSharp.dll:fjp.c | Assembly-CSharp.dll:fjr.d | Assembly-CSharp.dll:fjt.b | Assembly-CSharp.dll:fka.d | Assembly-CSharp.dll:fkk.b | Assembly-CSharp.dll:fkm.c | Assembly-CSharp.
+0x180993a7c test     rdi, rdi
+0x180993a7f je       0x180993ab4
+0x180993a81 mov      rax, qword ptr [rip + 0x44c3b28]
+0x180993a88 mov      rcx, rdi
+0x180993a8b movss    xmm3, dword ptr [rbx + 0x20]
+0x180993a90 movss    xmm2, dword ptr [rbx + 0x2c]
+0x180993a95 mov      rdx, qword ptr [rsp + 0x30]
+0x180993a9a mov      qword ptr [rsp + 0x20], rax
+0x180993a9f call     0x1828f21d0
+0x180993aa4 mov      rbx, qword ptr [rsp + 0x50]
+0x180993aa9 mov      rsi, qword ptr [rsp + 0x58]
+0x180993aae add      rsp, 0x40
+0x180993ab2 pop      rdi
+0x180993ab3 ret      
+0x180993ab4 call     0x180361b60
+0x180993ab9 int3     

@@ -1,0 +1,64 @@
+0x180fb3840 mov      qword ptr [rsp + 8], rbx
+0x180fb3845 push     rdi
+0x180fb3846 sub      rsp, 0x20
+0x180fb384a cmp      byte ptr [rip + 0x40ca759], 0
+0x180fb3851 mov      rdi, rdx
+0x180fb3854 mov      rbx, rcx
+0x180fb3857 jne      0x180fb3884
+0x180fb3859 lea      rcx, [rip + 0x3e9efc8]
+0x180fb3860 call     0x180361910
+0x180fb3865 lea      rcx, [rip + 0x3dfee24]
+0x180fb386c call     0x180361910
+0x180fb3871 lea      rcx, [rip + 0x3ea8ce0]
+0x180fb3878 call     0x180361910
+0x180fb387d mov      byte ptr [rip + 0x40ca726], 1
+0x180fb3884 test     rdi, rdi
+0x180fb3887 je       0x180fb3933
+0x180fb388d mov      rcx, qword ptr [rbx + 0x30]
+0x180fb3891 test     rcx, rcx
+0x180fb3894 je       0x180fb3933
+0x180fb389a movzx    edx, byte ptr [rdi + 0x24]
+0x180fb389e xor      r8d, r8d
+0x180fb38a1 call     0x180fbdac0 ; Assembly-CSharp.dll:AlbionGui.MarketPlace.MarketPlaceGui.SetFooterNextButtonEnabled
+0x180fb38a6 cmp      dword ptr [rdi + 0x20], 0
+0x180fb38aa je       0x180fb38c0
+0x180fb38ac xor      edx, edx
+0x180fb38ae mov      rcx, rbx
+0x180fb38b1 mov      rbx, qword ptr [rsp + 0x30]
+0x180fb38b6 add      rsp, 0x20
+0x180fb38ba pop      rdi
+0x180fb38bb jmp      0x180fb4070 ; Assembly-CSharp.dll:AlbionGui.MarketPlace.MarketPlaceBuyView.UpdateEntryListView
+0x180fb38c0 mov      rcx, qword ptr [rbx + 0x58]
+0x180fb38c4 test     rcx, rcx
+0x180fb38c7 je       0x180fb3933
+0x180fb38c9 xor      r8d, r8d
+0x180fb38cc mov      dl, 1
+0x180fb38ce call     0x183a3ecc0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.SetActive
+0x180fb38d3 mov      rcx, qword ptr [rip + 0x3ea8c7e]
+0x180fb38da mov      rdi, qword ptr [rbx + 0x60]
+0x180fb38de cmp      dword ptr [rcx + 0xe4], 0
+0x180fb38e5 jne      0x180fb38ec
+0x180fb38e7 call     0x180361bf0
+0x180fb38ec mov      rcx, qword ptr [rip + 0x3dfed9d]
+0x180fb38f3 xor      edx, edx
+0x180fb38f5 call     0x18051eae0 ; Albion.Common.dll:a8c.f
+0x180fb38fa test     rdi, rdi
+0x180fb38fd je       0x180fb3933
+0x180fb38ff xor      r8d, r8d
+0x180fb3902 mov      rdx, rax
+0x180fb3905 mov      rcx, rdi
+0x180fb3908 call     0x1819426a0 ; Assembly-CSharp.dll:UILabel.set_text
+0x180fb390d mov      rcx, qword ptr [rbx + 0x50]
+0x180fb3911 test     rcx, rcx
+0x180fb3914 je       0x180fb3933
+0x180fb3916 mov      rcx, qword ptr [rcx + 0x18]
+0x180fb391a test     rcx, rcx
+0x180fb391d je       0x180fb3933
+0x180fb391f xor      r8d, r8d
+0x180fb3922 xor      edx, edx
+0x180fb3924 mov      rbx, qword ptr [rsp + 0x30]
+0x180fb3929 add      rsp, 0x20
+0x180fb392d pop      rdi
+0x180fb392e jmp      0x183a3ecc0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.SetActive
+0x180fb3933 call     0x180361b60
+0x180fb3938 int3     

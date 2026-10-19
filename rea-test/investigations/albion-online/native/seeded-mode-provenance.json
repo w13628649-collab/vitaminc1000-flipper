@@ -1,0 +1,176 @@
+{
+  "recorded_utc": "2026-10-13T10:44:49.979362+00:00",
+  "base_git_head": "d13c9f840d36a321a56917e75c48afcb8d72920e",
+  "local_uncommitted_source_extension": true,
+  "mode": "seeded-noanalysis",
+  "supported_target": "win32 native x86_64 PE with managed=false and at least one committed function seed",
+  "patch": {
+    "path": "seeded-mode.patch",
+    "bytes": 25020,
+    "sha256": "2200c67fe93eb5b9479bdfabab515145e99a518fcba71ecb55323fe7f3a73b63"
+  },
+  "source_diff_stat": " bridge/ghidra/ReaGhidraApplySeeds.java | 21 +++++++++++++++---\n bridge/ghidra/ReaGhidraBridge.java     | 32 +++++++++++++++++++++++++++-\n src/config/environment.ts              |  1 +\n src/config/parseConfig.ts              |  3 +++\n src/config/types.ts                    |  1 +\n src/ghidra/GhidraAnalysisSeeds.ts      |  4 +++-\n src/ghidra/GhidraClient.ts             |  3 +++\n src/ghidra/GhidraClientTypes.ts        |  1 +\n src/ghidra/GhidraLauncher.ts           | 13 ++++++++++++\n src/ghidra/GhidraProvider.ts           | 24 +++++++++++++++++++++\n src/ghidra/GhidraProviderClient.ts     | 39 ++++++++++++++++++++++++++++++++--\n src/ghidra/GhidraSessionValues.ts      | 18 +++++++++++++++-\n 12 files changed, 152 insertions(+), 8 deletions(-)\n",
+  "compile": {
+    "command": "npm.cmd run compile",
+    "exit_code": 0,
+    "typescript_and_runtime_bundle": true,
+    "java_scripts_compiled": false,
+    "warnings": [
+      "INEFFECTIVE_DYNAMIC_IMPORT: composition/binary",
+      "INEFFECTIVE_DYNAMIC_IMPORT: dotnet/ManagedStaticProvider"
+    ],
+    "java_scope_note": "npm compile compiles TS/bundle only; separate fourth Ghidra runtime later compiled then-current compatible Java, default branch only"
+  },
+  "not_run": [
+    "tests",
+    "seeded-noanalysis REA/Ghidra session",
+    "doctor",
+    "runtime API samples",
+    "final complete Java source snapshot compile"
+  ],
+  "active_driver_commands_or_seed_files_modified": false,
+  "native_addon_rebuilt": false,
+  "native_addon_provenance": "vendor/rea/native/windows/build/artifact-provenance.json",
+  "files": [
+    {
+      "path": "bridge/ghidra/ReaGhidraApplySeeds.java",
+      "bytes": 7943,
+      "sha256": "32c3b832c17d7552081a4919fd16cae2d7b3fbcfdb7cb7372b0fc3e75cb560d3",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "bridge/ghidra/ReaGhidraBridge.java",
+      "bytes": 188894,
+      "sha256": "045fddfa853ce8b528ef1e3e6038af0093c39963fdd64292f877269d21b75138",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/config/environment.ts",
+      "bytes": 3416,
+      "sha256": "a92cabaf13bc2d56e8c23de917221d9c641d6f4dd26971c601752ea981b2a2bf",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/config/parseConfig.ts",
+      "bytes": 4255,
+      "sha256": "f05a47aa85d2b1cb32e49efc4397d9e1f09205629ec788d962312175b783039c",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/config/types.ts",
+      "bytes": 1347,
+      "sha256": "7eeef9097f03d7cbce1353e09bf826c226ae7373057cf2f7944c26cf1dbc45ee",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraAnalysisSeeds.ts",
+      "bytes": 10622,
+      "sha256": "095c41d8fced49a9b9da6619995b4027018875644e939a5c7dd7731369410bf4",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraClient.ts",
+      "bytes": 33772,
+      "sha256": "acc5328e39e51de55d94f6b4fe45f1c50e89e93f9b1c3bd53221c30bf31121ff",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraClientTypes.ts",
+      "bytes": 1977,
+      "sha256": "f1042932dc730978940bae913bd489f3b488858ae66c6ea8dec72eca9aa67a04",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraLauncher.ts",
+      "bytes": 29274,
+      "sha256": "d01d2af031851217f87847235ad5f2f77515d4d20fd4c61b8f50cc66e71da174",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraProvider.ts",
+      "bytes": 12360,
+      "sha256": "c154ebd5a508daf96902fcd322e39835436c0562e49adf4f9a143aee79c7560c",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraProviderClient.ts",
+      "bytes": 39394,
+      "sha256": "54eef09ab81604a18a6b2f2cb41ff8a4531cff5ebb90f0d93babc4c29d20dae5",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "src/ghidra/GhidraSessionValues.ts",
+      "bytes": 5365,
+      "sha256": "fb7aea4c45d0faf54d546c8a9c62ee589bd3f7f8da0fa71802fd1467ec2c52f6",
+      "tracked_source_diff": true
+    },
+    {
+      "path": "dist/mcp/main.js",
+      "bytes": 188,
+      "sha256": "e4208d7f34735bea60c4384f30943d1dd8e0666a6c26b9532b4b43ced49caa50",
+      "tracked_source_diff": false
+    },
+    {
+      "path": "dist/cli-runtime/cli.js",
+      "bytes": 1492715,
+      "sha256": "d79dc3bf5af0190608a761837fea528fe99b255a933f6fdc208c370fb803ff64",
+      "tracked_source_diff": false
+    },
+    {
+      "path": "scripts/rea.mjs",
+      "bytes": 4385,
+      "sha256": "526105418604cc6e5a202a6275b700814e27450bfaffd45e7510530ba669de8d",
+      "tracked_source_diff": false
+    },
+    {
+      "path": "native/windows/build/rea-windows-x64.node",
+      "bytes": 848252,
+      "sha256": "c4fd9f377e567bcf15ba3fec3e0b0ed965d82b765a2adcdac49e46f14524b6d5",
+      "tracked_source_diff": false
+    }
+  ],
+  "java_api_static_inspection": {
+    "method": "javap declarations and release source ZIP read; no target code executed",
+    "ghidra_version": "12.1.4",
+    "exit_code": 0,
+    "path": "seeded-mode-java-api.txt",
+    "sha256": "d705f20fc2ae415c7074d86a48b0d45fe052a856a4620feff1e6a32cd72226e2",
+    "api_present": [
+      "DisassembleCommand(Address,AddressSetView,boolean)",
+      "enableCodeAnalysis(boolean)",
+      "applyTo(Program,TaskMonitor)",
+      "HeadlessScript.isHeadlessAnalysisEnabled()",
+      "Program.getDefaultPointerSize()",
+      "Program.getExecutableFormat()",
+      "Language.getProcessor()"
+    ]
+  },
+  "updated_utc": "2026-10-13T10:54:34.953807+00:00",
+  "fourth_default_runtime": {
+    "seeded_mode_enabled": false,
+    "noanalysis_argument_used": false,
+    "node_loaded_before_extension": true,
+    "java_compatible_extension_compiled_by_actual_postscript": true,
+    "java_branch_executed": "default",
+    "java_compiled_utc": "2026-10-13T10:43:19Z",
+    "bridge_class_sha256": "f06399352cecd4b77307437542b353dcdae4474f9962edf03ecd6b5defe73c35",
+    "apply_seeds_class_sha256": "6d9424204f1238b9892656fb5cc5e9f67b7bfa39c462bae37b20541a03d79f72",
+    "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+    "overview_composed_profile_digest": "86bb5b15c4ca832d9ef4524828c5a11792857659dacad123858bc5c35a521aa4",
+    "evidence_records_exported": 24,
+    "capture_manifest": "attempt-profile-four/manifest.json",
+    "final_source_snapshot_matches_actual_compile_input_proven": false,
+    "source_boundary_note": "Final existing-function entry-decode guard was appended after actual class compilation; current-final-source cannot be identified as exact compile input"
+  },
+  "diff_peer_review": {
+    "reviewer": "albion_metadata",
+    "method": "Read 12-file final diff only; no edits/compile/tests",
+    "blocking_issue_found": false,
+    "observations": [
+      "mode/profile/descriptor/handshake identity and default-mode isolation preserved",
+      "strict seed mode/classification counts and SHA/total checks preserved; failure closes client",
+      "new-mode disassembly explicitly disables incremental analysis; existing-function entry decoding does not guarantee full body"
+    ],
+    "limitation": "Seeded runtime and final complete Java compilation unverified"
+  }
+}

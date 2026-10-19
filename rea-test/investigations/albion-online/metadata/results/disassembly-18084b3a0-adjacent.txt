@@ -1,0 +1,12 @@
+0x18084b3a0 sub      rsp, 0x28
+0x18084b3a4 mov      r8, rdx
+0x18084b3a7 test     rdx, rdx
+0x18084b3aa je       0x18084b3c7
+0x18084b3ac mov      rdx, qword ptr [rdx]
+0x18084b3af mov      rcx, r8
+0x18084b3b2 mov      rax, qword ptr [rdx + 0x228]
+0x18084b3b9 mov      rdx, qword ptr [rdx + 0x230]
+0x18084b3c0 add      rsp, 0x28
+0x18084b3c4 jmp      rax
+0x18084b3c7 call     0x180361b60
+0x18084b3cc int3     

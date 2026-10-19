@@ -1,0 +1,49 @@
+0x181edb0f0 mov      qword ptr [rsp + 8], rbx
+0x181edb0f5 mov      qword ptr [rsp + 0x10], rsi
+0x181edb0fa push     rdi
+0x181edb0fb sub      rsp, 0x20
+0x181edb0ff cmp      qword ptr [rdx + 0x38], 0
+0x181edb104 mov      rdi, rdx
+0x181edb107 mov      rsi, rcx
+0x181edb10a jne      0x181edb114
+0x181edb10c mov      rcx, rdx
+0x181edb10f call     0x18035f180
+0x181edb114 mov      rcx, qword ptr [rip + 0x31baf05]
+0x181edb11b mov      rbx, qword ptr [rdi + 0x38]
+0x181edb11f cmp      dword ptr [rcx + 0xe4], 0
+0x181edb126 mov      rbx, qword ptr [rbx]
+0x181edb129 jne      0x181edb130
+0x181edb12b call     0x180361bf0
+0x181edb130 xor      edx, edx
+0x181edb132 mov      rcx, rbx
+0x181edb135 call     0x183196310 ; mscorlib.dll:System.Type.GetTypeFromHandle
+0x181edb13a xor      r9d, r9d
+0x181edb13d mov      r8, rax
+0x181edb140 xor      edx, edx
+0x181edb142 mov      rcx, rsi
+0x181edb145 call     0x182f5acc0 ; JsonFx.Json.dll:JsonFx.Json.JsonReader.Deserialize
+0x181edb14a mov      rcx, qword ptr [rdi + 0x38]
+0x181edb14e mov      rsi, rax
+0x181edb151 mov      rbx, qword ptr [rcx + 8]
+0x181edb155 test     byte ptr [rbx + 0x135], 1
+0x181edb15c jne      0x181edb169
+0x181edb15e mov      rcx, rbx
+0x181edb161 call     0x18035f100
+0x181edb166 mov      rbx, rax
+0x181edb169 test     rsi, rsi
+0x181edb16c jne      0x181edb180
+0x181edb16e xor      eax, eax
+0x181edb170 mov      rbx, qword ptr [rsp + 0x30]
+0x181edb175 mov      rsi, qword ptr [rsp + 0x38]
+0x181edb17a add      rsp, 0x20
+0x181edb17e pop      rdi
+0x181edb17f ret      
+0x181edb180 mov      rdx, rbx
+0x181edb183 mov      rcx, rsi
+0x181edb186 call     0x180360c60
+0x181edb18b test     rax, rax
+0x181edb18e jne      0x181edb170
+0x181edb190 mov      rdx, rbx
+0x181edb193 mov      rcx, rsi
+0x181edb196 call     0x180360c80
+0x181edb19b int3     

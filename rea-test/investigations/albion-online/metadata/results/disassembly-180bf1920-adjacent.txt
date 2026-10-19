@@ -1,0 +1,54 @@
+0x180bf1920 mov      qword ptr [rsp + 8], rbx
+0x180bf1925 push     rdi
+0x180bf1926 sub      rsp, 0x40
+0x180bf192a cmp      byte ptr [rip + 0x448a70f], 0
+0x180bf1931 mov      rbx, rdx
+0x180bf1934 mov      rdi, rcx
+0x180bf1937 jne      0x180bf194c
+0x180bf1939 lea      rcx, [rip + 0x41ee878]
+0x180bf1940 call     0x180361910
+0x180bf1945 mov      byte ptr [rip + 0x448a6f4], 1
+0x180bf194c mov      rdx, qword ptr [rip + 0x41ee865]
+0x180bf1953 mov      rcx, rbx
+0x180bf1956 call     0x182003eb0
+0x180bf195b cmp      byte ptr [rip + 0x448a6a3], 0
+0x180bf1962 mov      rbx, rax
+0x180bf1965 jne      0x180bf197a
+0x180bf1967 lea      rcx, [rip + 0x422a7f2]
+0x180bf196e call     0x180361910
+0x180bf1973 mov      byte ptr [rip + 0x448a68b], 1
+0x180bf197a mov      r10, qword ptr [rdi + 0x10]
+0x180bf197e mov      rdx, qword ptr [rip + 0x422a7db]
+0x180bf1985 test     r10, r10
+0x180bf1988 je       0x180bf19ae
+0x180bf198a mov      r8, qword ptr [r10]
+0x180bf198d movzx    eax, byte ptr [rdx + 0x130]
+0x180bf1994 cmp      byte ptr [r8 + 0x130], al
+0x180bf199b jb       0x180bf19f2
+0x180bf199d movzx    ecx, al
+0x180bf19a0 mov      rax, qword ptr [r8 + 0xc8]
+0x180bf19a7 cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180bf19ac jne      0x180bf19f2
+0x180bf19ae test     rbx, rbx
+0x180bf19b1 je       0x180bf19fb
+0x180bf19b3 mov      rdx, qword ptr [rbx + 0x18]
+0x180bf19b7 test     r10, r10
+0x180bf19ba je       0x180bf19fb
+0x180bf19bc mov      rax, qword ptr [rbx + 0x38]
+0x180bf19c0 mov      rcx, r10
+0x180bf19c3 mov      r9, qword ptr [rbx + 0x30]
+0x180bf19c7 mov      r8, qword ptr [rbx + 0x28]
+0x180bf19cb mov      qword ptr [rsp + 0x30], 0
+0x180bf19d4 mov      qword ptr [rsp + 0x28], rdx
+0x180bf19d9 mov      rdx, qword ptr [rbx + 0x20]
+0x180bf19dd mov      qword ptr [rsp + 0x20], rax
+0x180bf19e2 call     0x180bcaec0 ; Albion.PhotonClient.dll:cpx.af
+0x180bf19e7 mov      rbx, qword ptr [rsp + 0x50]
+0x180bf19ec add      rsp, 0x40
+0x180bf19f0 pop      rdi
+0x180bf19f1 ret      
+0x180bf19f2 mov      rcx, r10
+0x180bf19f5 call     0x180360c80
+0x180bf19fa int3     
+0x180bf19fb call     0x180361b60
+0x180bf1a00 int3     

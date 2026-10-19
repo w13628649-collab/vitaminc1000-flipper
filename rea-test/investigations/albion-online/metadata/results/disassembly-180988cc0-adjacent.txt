@@ -1,0 +1,63 @@
+0x180988cc0 mov      qword ptr [rsp + 0x10], rbx
+0x180988cc5 mov      qword ptr [rsp + 0x18], rbp
+0x180988cca mov      qword ptr [rsp + 0x20], rsi
+0x180988ccf push     rdi
+0x180988cd0 sub      rsp, 0x20
+0x180988cd4 cmp      byte ptr [rip + 0x46f1e97], 0
+0x180988cdb mov      rbp, rdx
+0x180988cde mov      rdi, rcx
+0x180988ce1 jne      0x180988cf6
+0x180988ce3 lea      rcx, [rip + 0x4464756]
+0x180988cea call     0x180361910
+0x180988cef mov      byte ptr [rip + 0x46f1e7c], 1
+0x180988cf6 mov      rcx, qword ptr [rip + 0x4464743]
+0x180988cfd mov      qword ptr [rsp + 0x30], r14
+0x180988d02 call     0x180361b10
+0x180988d07 xor      edx, edx
+0x180988d09 mov      rcx, rax
+0x180988d0c mov      rsi, rax
+0x180988d0f call     0x182fd5ec0 ; mscorlib.dll:System.Text.StringBuilder..ctor
+0x180988d14 xor      ebx, ebx
+0x180988d16 mov      eax, ebx
+0x180988d18 test     rdi, rdi
+0x180988d1b je       0x180988d9f
+0x180988d21 cmp      eax, dword ptr [rdi + 0x10]
+0x180988d24 jge      0x180988d6a
+0x180988d26 xor      r8d, r8d
+0x180988d29 mov      edx, ebx
+0x180988d2b mov      rcx, rdi
+0x180988d2e call     0x182fc87c0 ; mscorlib.dll:System.String.get_Chars
+0x180988d33 movzx    r14d, ax
+0x180988d37 test     rbp, rbp
+0x180988d3a je       0x180988d9f
+0x180988d3c mov      eax, ebx
+0x180988d3e xor      r8d, r8d
+0x180988d41 cdq      
+0x180988d42 mov      rcx, rbp
+0x180988d45 idiv     dword ptr [rbp + 0x10]
+0x180988d48 call     0x182fc87c0 ; mscorlib.dll:System.String.get_Chars
+0x180988d4d test     rsi, rsi
+0x180988d50 je       0x180988d9f
+0x180988d52 xor      ax, r14w
+0x180988d56 xor      r8d, r8d
+0x180988d59 movzx    edx, ax
+0x180988d5c mov      rcx, rsi
+0x180988d5f call     0x182fd30a0 ; mscorlib.dll:System.Text.StringBuilder.Append
+0x180988d64 inc      ebx
+0x180988d66 mov      eax, ebx
+0x180988d68 jmp      0x180988d21
+0x180988d6a test     rsi, rsi
+0x180988d6d je       0x180988d9f
+0x180988d6f mov      rdx, qword ptr [rsi]
+0x180988d72 mov      rcx, rsi
+0x180988d75 mov      rax, qword ptr [rdx + 0x168]
+0x180988d7c mov      rdx, qword ptr [rdx + 0x170]
+0x180988d83 mov      r14, qword ptr [rsp + 0x30]
+0x180988d88 mov      rbx, qword ptr [rsp + 0x38]
+0x180988d8d mov      rbp, qword ptr [rsp + 0x40]
+0x180988d92 mov      rsi, qword ptr [rsp + 0x48]
+0x180988d97 add      rsp, 0x20
+0x180988d9b pop      rdi
+0x180988d9c jmp      rax
+0x180988d9f call     0x180361b60
+0x180988da4 int3     

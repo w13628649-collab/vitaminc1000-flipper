@@ -1,0 +1,59 @@
+0x180a3eee0 mov      qword ptr [rsp + 8], rbx
+0x180a3eee5 mov      qword ptr [rsp + 0x10], rsi
+0x180a3eeea push     rdi
+0x180a3eeeb sub      rsp, 0x20
+0x180a3eeef cmp      byte ptr [rip + 0x463c1c3], 0
+0x180a3eef6 movzx    ebx, r8w
+0x180a3eefa mov      rsi, rdx
+0x180a3eefd mov      rdi, rcx
+0x180a3ef00 jne      0x180a3ef15
+0x180a3ef02 lea      rcx, [rip + 0x439b8ff]
+0x180a3ef09 call     0x180361910
+0x180a3ef0e mov      byte ptr [rip + 0x463c1a4], 1
+0x180a3ef15 cmp      bx, 0x1f
+0x180a3ef19 jne      0x180a3efc1
+0x180a3ef1f mov      rdx, qword ptr [rip + 0x439b8e2]
+0x180a3ef26 mov      rcx, rsi
+0x180a3ef29 call     0x182003eb0
+0x180a3ef2e cmp      byte ptr [rip + 0x463c185], 0
+0x180a3ef35 mov      rbx, rax
+0x180a3ef38 jne      0x180a3ef4d
+0x180a3ef3a lea      rcx, [rip + 0x441be2f]
+0x180a3ef41 call     0x180361910
+0x180a3ef46 mov      byte ptr [rip + 0x463c16d], 1
+0x180a3ef4d mov      byte ptr [rsp + 0x40], 0
+0x180a3ef52 test     rbx, rbx
+0x180a3ef55 je       0x180a3efd1
+0x180a3ef57 movzx    ecx, word ptr [rbx + 0x1a]
+0x180a3ef5b mov      word ptr [rdi + 0x52], cx
+0x180a3ef5f movzx    eax, byte ptr [rbx + 0x1c]
+0x180a3ef63 mov      byte ptr [rdi + 0x50], al
+0x180a3ef66 mov      rcx, qword ptr [rip + 0x441be03]
+0x180a3ef6d mov      rsi, qword ptr [rbx + 0x38]
+0x180a3ef71 cmp      dword ptr [rcx + 0xe4], 0
+0x180a3ef78 jne      0x180a3ef7f
+0x180a3ef7a call     0x180361bf0
+0x180a3ef7f xor      edx, edx
+0x180a3ef81 mov      rcx, rsi
+0x180a3ef84 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180a3ef89 mov      qword ptr [rdi + 0x68], rax
+0x180a3ef8d lea      rcx, [rdi + 0x60]
+0x180a3ef91 mov      rdx, qword ptr [rbx + 0x30]
+0x180a3ef95 mov      qword ptr [rdi + 0x60], rdx
+0x180a3ef99 call     0x180360c40
+0x180a3ef9e xor      r9d, r9d
+0x180a3efa1 lea      r8, [rsp + 0x40]
+0x180a3efa6 mov      rdx, rbx
+0x180a3efa9 mov      rcx, rdi
+0x180a3efac call     0x180a19fa0 ; Albion.PhotonClient.dll:c10.af
+0x180a3efb1 movzx    edx, byte ptr [rsp + 0x40]
+0x180a3efb6 xor      r8d, r8d
+0x180a3efb9 mov      rcx, rdi
+0x180a3efbc call     0x180a1a310 ; Albion.PhotonClient.dll:c10.aja
+0x180a3efc1 mov      rbx, qword ptr [rsp + 0x30]
+0x180a3efc6 mov      rsi, qword ptr [rsp + 0x38]
+0x180a3efcb add      rsp, 0x20
+0x180a3efcf pop      rdi
+0x180a3efd0 ret      
+0x180a3efd1 call     0x180361b60
+0x180a3efd6 int3     

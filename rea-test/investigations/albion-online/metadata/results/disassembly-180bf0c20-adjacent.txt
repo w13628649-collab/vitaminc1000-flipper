@@ -1,0 +1,49 @@
+0x180bf0c20 push     rbx
+0x180bf0c22 sub      rsp, 0x20
+0x180bf0c26 movsx    r9d, r8w
+0x180bf0c2a mov      rbx, rcx
+0x180bf0c2d sub      r9d, 0x1b2
+0x180bf0c34 je       0x180bf0cbf
+0x180bf0c3a sub      r9d, 1
+0x180bf0c3e je       0x180bf0cb2
+0x180bf0c40 cmp      r9d, 1
+0x180bf0c44 je       0x180bf0c53
+0x180bf0c46 xor      r9d, r9d
+0x180bf0c49 add      rsp, 0x20
+0x180bf0c4d pop      rbx
+0x180bf0c4e jmp      0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180bf0c53 cmp      byte ptr [rip + 0x448b3ab], 0
+0x180bf0c5a jne      0x180bf0c6f
+0x180bf0c5c lea      rcx, [rip + 0x422b4fd]
+0x180bf0c63 call     0x180361910
+0x180bf0c68 mov      byte ptr [rip + 0x448b396], 1
+0x180bf0c6f mov      r8, qword ptr [rbx + 0x10]
+0x180bf0c73 mov      rdx, qword ptr [rip + 0x422b4e6]
+0x180bf0c7a test     r8, r8
+0x180bf0c7d je       0x180bf0cd5
+0x180bf0c7f mov      r9, qword ptr [r8]
+0x180bf0c82 movzx    eax, byte ptr [rdx + 0x130]
+0x180bf0c89 cmp      byte ptr [r9 + 0x130], al
+0x180bf0c90 jb       0x180bf0ccc
+0x180bf0c92 movzx    ecx, al
+0x180bf0c95 mov      rax, qword ptr [r9 + 0xc8]
+0x180bf0c9c cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180bf0ca1 jne      0x180bf0ccc
+0x180bf0ca3 xor      edx, edx
+0x180bf0ca5 mov      rcx, r8
+0x180bf0ca8 add      rsp, 0x20
+0x180bf0cac pop      rbx
+0x180bf0cad jmp      0x180bc4f40 ; Albion.PhotonClient.dll:cpo.azm
+0x180bf0cb2 xor      r8d, r8d
+0x180bf0cb5 add      rsp, 0x20
+0x180bf0cb9 pop      rbx
+0x180bf0cba jmp      0x180bf0f90 ; Albion.PhotonClient.dll:csj.w
+0x180bf0cbf xor      r8d, r8d
+0x180bf0cc2 add      rsp, 0x20
+0x180bf0cc6 pop      rbx
+0x180bf0cc7 jmp      0x180bf0d80 ; Albion.PhotonClient.dll:csj.u
+0x180bf0ccc mov      rcx, r8
+0x180bf0ccf call     0x180360c80
+0x180bf0cd4 int3     
+0x180bf0cd5 call     0x180361b60
+0x180bf0cda int3     

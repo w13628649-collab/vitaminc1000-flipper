@@ -1,0 +1,59 @@
+0x1809a2430 mov      qword ptr [rsp + 0x10], rbx
+0x1809a2435 push     rdi
+0x1809a2436 sub      rsp, 0x30
+0x1809a243a cmp      byte ptr [rip + 0x46d8789], 0
+0x1809a2441 mov      rbx, rdx
+0x1809a2444 mov      rdi, rcx
+0x1809a2447 jne      0x1809a2474
+0x1809a2449 lea      rcx, [rip + 0x44055c0]
+0x1809a2450 call     0x180361910
+0x1809a2455 lea      rcx, [rip + 0x44d9374]
+0x1809a245c call     0x180361910
+0x1809a2461 lea      rcx, [rip + 0x4400cf8]
+0x1809a2468 call     0x180361910
+0x1809a246d mov      byte ptr [rip + 0x46d8756], 1
+0x1809a2474 mov      rdx, qword ptr [rip + 0x4400ce5]
+0x1809a247b mov      rcx, rbx
+0x1809a247e call     0x182003eb0
+0x1809a2483 mov      rbx, rax
+0x1809a2486 test     rax, rax
+0x1809a2489 je       0x1809a251a
+0x1809a248f mov      rcx, qword ptr [rip + 0x440557a]
+0x1809a2496 mov      qword ptr [rsp + 0x40], rsi
+0x1809a249b movzx    esi, byte ptr [rax + 0x10]
+0x1809a249f cmp      dword ptr [rcx + 0xe4], 0
+0x1809a24a6 jne      0x1809a24ad
+0x1809a24a8 call     0x180361bf0
+0x1809a24ad xor      edx, edx
+0x1809a24af movzx    ecx, sil
+0x1809a24b3 call     0x1805b2080 ; Albion.Common.dll:bcj.a
+0x1809a24b8 mov      rsi, qword ptr [rsp + 0x40]
+0x1809a24bd test     eax, eax
+0x1809a24bf js       0x1809a250f
+0x1809a24c1 mov      rdx, qword ptr [rdi + 0x588]
+0x1809a24c8 test     rdx, rdx
+0x1809a24cb je       0x1809a251a
+0x1809a24cd mov      rcx, qword ptr [rbx + 0x28]
+0x1809a24d1 cmp      eax, dword ptr [rdx + 0x18]
+0x1809a24d4 jae      0x1809a2520
+0x1809a24d6 cdqe     
+0x1809a24d8 mov      qword ptr [rdx + rax*8 + 0x20], rcx
+0x1809a24dd mov      rcx, qword ptr [rdi + 0x438]
+0x1809a24e4 mov      rax, qword ptr [rbx + 0x20]
+0x1809a24e8 test     rcx, rcx
+0x1809a24eb je       0x1809a251a
+0x1809a24ed mov      rdx, qword ptr [rip + 0x44d92dc]
+0x1809a24f4 mov      r9, qword ptr [rbx + 0x18]
+0x1809a24f8 mov      r8, qword ptr [rbx + 0x28]
+0x1809a24fc mov      qword ptr [rsp + 0x28], rdx
+0x1809a2501 movzx    edx, byte ptr [rbx + 0x10]
+0x1809a2505 mov      qword ptr [rsp + 0x20], rax
+0x1809a250a call     0x18292a990
+0x1809a250f mov      rbx, qword ptr [rsp + 0x48]
+0x1809a2514 add      rsp, 0x30
+0x1809a2518 pop      rdi
+0x1809a2519 ret      
+0x1809a251a call     0x180361b60
+0x1809a251f int3     
+0x1809a2520 call     0x180361b50
+0x1809a2525 int3     

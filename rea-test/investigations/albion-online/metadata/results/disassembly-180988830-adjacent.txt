@@ -1,0 +1,184 @@
+0x180988830 mov      qword ptr [rsp + 0x10], rbx
+0x180988835 mov      qword ptr [rsp + 0x18], rsi
+0x18098883a push     rdi
+0x18098883b push     r14
+0x18098883d push     r15
+0x18098883f sub      rsp, 0x40
+0x180988843 mov      r14, rcx
+0x180988846 cmp      byte ptr [rip + 0x46f232a], 0
+0x18098884d jne      0x18098889e
+0x18098884f lea      rcx, [rip + 0x441441a]
+0x180988856 call     0x180361910
+0x18098885b lea      rcx, [rip + 0x446f1b6]
+0x180988862 call     0x180361910
+0x180988867 lea      rcx, [rip + 0x44c468a]
+0x18098886e call     0x180361910
+0x180988873 lea      rcx, [rip + 0x44cccce]
+0x18098887a call     0x180361910
+0x18098887f lea      rcx, [rip + 0x44e23a2]
+0x180988886 call     0x180361910
+0x18098888b lea      rcx, [rip + 0x4480826]
+0x180988892 call     0x180361910
+0x180988897 mov      byte ptr [rip + 0x46f22d9], 1
+0x18098889e xor      ebx, ebx
+0x1809888a0 mov      qword ptr [rsp + 0x60], rbx
+0x1809888a5 mov      esi, ebx
+0x1809888a7 test     r14, r14
+0x1809888aa je       0x180988b18
+0x1809888b0 mov      rcx, qword ptr [r14 + 0x18]
+0x1809888b4 test     rcx, rcx
+0x1809888b7 je       0x180988b13
+0x1809888bd xor      r9d, r9d
+0x1809888c0 lea      r8, [rsp + 0x60]
+0x1809888c5 mov      dl, 0xfc
+0x1809888c7 call     0x1832ad8d0 ; Photon3Unity3D.dll:g7g.e
+0x1809888cc mov      rdx, qword ptr [rsp + 0x60]
+0x1809888d1 test     rdx, rdx
+0x1809888d4 je       0x180988947
+0x1809888d6 mov      ecx, ebx
+0x1809888d8 mov      rax, qword ptr [rip + 0x470d699]
+0x1809888df cmp      qword ptr [rdx], rax
+0x1809888e2 cmove    rcx, rdx
+0x1809888e6 test     rcx, rcx
+0x1809888e9 je       0x180988947
+0x1809888eb mov      rcx, qword ptr [rip + 0x44807c6]
+0x1809888f2 call     0x180361710
+0x1809888f7 mov      rdi, qword ptr [rax + 0x10]
+0x1809888fb mov      rcx, qword ptr [rsp + 0x60]
+0x180988900 test     rdi, rdi
+0x180988903 je       0x180988ad7
+0x180988909 mov      rsi, qword ptr [rip + 0x4414360]
+0x180988910 mov      r9, qword ptr [rip + 0x446f101]
+0x180988917 test     rcx, rcx
+0x18098891a je       0x180988ad2
+0x180988920 mov      rdx, qword ptr [rcx]
+0x180988923 mov      rax, qword ptr [r9 + 0x40]
+0x180988927 cmp      qword ptr [rdx + 0x40], rax
+0x18098892b jne      0x180988aca
+0x180988931 call     0x180360e20
+0x180988936 mov      r8, rsi
+0x180988939 movzx    edx, word ptr [rax]
+0x18098893c mov      rcx, rdi
+0x18098893f call     0x182ae46d0
+0x180988944 mov      rsi, rax
+0x180988947 mov      rcx, qword ptr [rip + 0x470d6d2]
+0x18098894e cmp      dword ptr [rcx + 0xe4], 0
+0x180988955 jne      0x18098895c
+0x180988957 call     0x180361bf0
+0x18098895c xor      r8d, r8d
+0x18098895f xor      edx, edx
+0x180988961 mov      rcx, rsi
+0x180988964 call     0x180852d00 ; Albion.Common.dll:c4.s | Albion.Common.dll:a7m.m | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.g | mscorlib.dll:System.TimeSpan.op_Equality | mscorlib.dll:System.Type.op_Equality | mscorlib.dll:System.RuntimeType.op_Equality | mscorlib.dll:System.IntPtr.op_Equality | mscorlib.dll:System.Object.Equals | mscorlib.dll:System.Object.ReferenceEquals | mscorlib.dll:System.UIntPtr.op_Equality | mscorlib.dll:System.Runtime.InteropServices.GCHandle.op_Equality | System.Xml.dll:System.Xml.Ref.Equal | Unity.InputSystem.dll:UnityEngine.InputSystem.LowLevel.InputEventPtr.op_Equality | System.Data.dl
+0x180988969 test     al, al
+0x18098896b jne      0x180988ab0
+0x180988971 mov      rcx, qword ptr [rip + 0x4480740]
+0x180988978 call     0x180361710
+0x18098897d mov      r15, qword ptr [rax + 0x38]
+0x180988981 mov      edx, 1
+0x180988986 mov      rcx, qword ptr [rip + 0x44ccbbb]
+0x18098898d call     0x180360cc0
+0x180988992 mov      rdi, rax
+0x180988995 test     rax, rax
+0x180988998 je       0x180988b0d
+0x18098899e test     rsi, rsi
+0x1809889a1 je       0x1809889bb
+0x1809889a3 mov      rdx, qword ptr [rax]
+0x1809889a6 mov      rdx, qword ptr [rdx + 0x40]
+0x1809889aa mov      rcx, rsi
+0x1809889ad call     0x180360c60
+0x1809889b2 test     rax, rax
+0x1809889b5 je       0x180988ab9
+0x1809889bb cmp      dword ptr [rdi + 0x18], 0
+0x1809889bf jbe      0x180988add
+0x1809889c5 mov      qword ptr [rdi + 0x20], rsi
+0x1809889c9 lea      rcx, [rdi + 0x20]
+0x1809889cd mov      rdx, rsi
+0x1809889d0 call     0x180360c40
+0x1809889d5 test     r15, r15
+0x1809889d8 je       0x180988b08
+0x1809889de mov      r8, qword ptr [r15]
+0x1809889e1 mov      rax, qword ptr [r8 + 0x3d8]
+0x1809889e8 mov      r8, qword ptr [r8 + 0x3e0]
+0x1809889ef mov      rdx, rdi
+0x1809889f2 mov      rcx, r15
+0x1809889f5 call     rax
+0x1809889f7 mov      rsi, rax
+0x1809889fa mov      edx, 1
+0x1809889ff mov      rcx, qword ptr [rip + 0x44c44f2]
+0x180988a06 call     0x180360cc0
+0x180988a0b mov      rdi, rax
+0x180988a0e test     rax, rax
+0x180988a11 je       0x180988b03
+0x180988a17 mov      rdx, qword ptr [rax]
+0x180988a1a mov      rdx, qword ptr [rdx + 0x40]
+0x180988a1e mov      rcx, r14
+0x180988a21 call     0x180360c60
+0x180988a26 test     rax, rax
+0x180988a29 je       0x180988ae2
+0x180988a2f cmp      dword ptr [rdi + 0x18], 0
+0x180988a33 jbe      0x180988af1
+0x180988a39 mov      qword ptr [rdi + 0x20], r14
+0x180988a3d lea      rcx, [rdi + 0x20]
+0x180988a41 mov      rdx, r14
+0x180988a44 call     0x180360c40
+0x180988a49 test     rsi, rsi
+0x180988a4c je       0x180988afe
+0x180988a52 xor      r9d, r9d
+0x180988a55 mov      r8, rdi
+0x180988a58 xor      edx, edx
+0x180988a5a mov      rcx, rsi
+0x180988a5d call     0x18309b550 ; mscorlib.dll:System.Reflection.MethodBase.Invoke
+0x180988a62 mov      r8, rax
+0x180988a65 mov      rdx, qword ptr [rip + 0x44e21bc]
+0x180988a6c test     rax, rax
+0x180988a6f je       0x180988a98
+0x180988a71 mov      r9, qword ptr [rax]
+0x180988a74 movzx    eax, byte ptr [rdx + 0x130]
+0x180988a7b cmp      byte ptr [r9 + 0x130], al
+0x180988a82 jb       0x180988af6
+0x180988a84 movzx    ecx, al
+0x180988a87 mov      rax, qword ptr [r9 + 0xc8]
+0x180988a8e cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180988a93 jne      0x180988af6
+0x180988a95 mov      rbx, r8
+0x180988a98 jmp      0x180988ab4
+0x180988a9a xor      eax, eax
+0x180988a9c mov      rbx, qword ptr [rsp + 0x68]
+0x180988aa1 mov      rsi, qword ptr [rsp + 0x70]
+0x180988aa6 add      rsp, 0x40
+0x180988aaa pop      r15
+0x180988aac pop      r14
+0x180988aae pop      rdi
+0x180988aaf ret      
+0x180988ab0 jmp      0x180988ab4
+0x180988ab2 xor      ebx, ebx
+0x180988ab4 mov      rax, rbx
+0x180988ab7 jmp      0x180988a9c
+0x180988ab9 call     0x180361530
+0x180988abe nop      
+0x180988abf xor      edx, edx
+0x180988ac1 mov      rcx, rax
+0x180988ac4 call     0x180361b20
+0x180988ac9 nop      
+0x180988aca mov      rdx, r9
+0x180988acd call     0x180360c80
+0x180988ad2 call     0x180361b60
+0x180988ad7 call     0x180361b60
+0x180988adc nop      
+0x180988add call     0x180361b50
+0x180988ae2 call     0x180361530
+0x180988ae7 xor      edx, edx
+0x180988ae9 mov      rcx, rax
+0x180988aec call     0x180361b20
+0x180988af1 call     0x180361b50
+0x180988af6 mov      rcx, r8
+0x180988af9 call     0x180360c80
+0x180988afe call     0x180361b60
+0x180988b03 call     0x180361b60
+0x180988b08 call     0x180361b60
+0x180988b0d call     0x180361b60
+0x180988b12 nop      
+0x180988b13 call     0x180361b60
+0x180988b18 call     0x180361b60
+0x180988b1d int3     
+0x180988b1e int3     

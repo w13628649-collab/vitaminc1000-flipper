@@ -1,0 +1,98 @@
+0x18165db60 push     rbx
+0x18165db62 sub      rsp, 0x20
+0x18165db66 cmp      byte ptr [rip + 0x3a23747], 0
+0x18165db6d mov      rbx, rcx
+0x18165db70 jne      0x18165db85
+0x18165db72 lea      rcx, [rip + 0x373ca6f]
+0x18165db79 call     0x180361910
+0x18165db7e mov      byte ptr [rip + 0x3a2372f], 1
+0x18165db85 movzx    edx, byte ptr [rip + 0x3a1e868]
+0x18165db8c test     dl, dl
+0x18165db8e jne      0x18165dba4
+0x18165db90 lea      rcx, [rip + 0x380b0c9]
+0x18165db97 call     0x180361910
+0x18165db9c mov      dl, 1
+0x18165db9e mov      byte ptr [rip + 0x3a1e850], dl
+0x18165dba4 mov      rcx, qword ptr [rip + 0x380b0b5]
+0x18165dbab mov      rax, qword ptr [rcx + 0xb8]
+0x18165dbb2 cmp      qword ptr [rax], 0
+0x18165dbb6 je       0x18165dcf1
+0x18165dbbc test     dl, dl
+0x18165dbbe jne      0x18165dbda
+0x18165dbc0 lea      rcx, [rip + 0x380b099]
+0x18165dbc7 call     0x180361910
+0x18165dbcc mov      rcx, qword ptr [rip + 0x380b08d]
+0x18165dbd3 mov      byte ptr [rip + 0x3a1e81a], 1
+0x18165dbda mov      rax, qword ptr [rcx + 0xb8]
+0x18165dbe1 mov      rcx, qword ptr [rax]
+0x18165dbe4 test     rcx, rcx
+0x18165dbe7 je       0x18165dd0d
+0x18165dbed mov      qword ptr [rsp + 0x30], rdi
+0x18165dbf2 mov      rdi, qword ptr [rcx + 0x18]
+0x18165dbf6 mov      rcx, qword ptr [rip + 0x373c9eb]
+0x18165dbfd cmp      dword ptr [rcx + 0xe4], 0
+0x18165dc04 jne      0x18165dc0b
+0x18165dc06 call     0x180361bf0
+0x18165dc0b xor      r8d, r8d
+0x18165dc0e xor      edx, edx
+0x18165dc10 mov      rcx, rdi
+0x18165dc13 call     0x183a45c90 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Inequality
+0x18165dc18 mov      rdi, qword ptr [rsp + 0x30]
+0x18165dc1d test     al, al
+0x18165dc1f je       0x18165dcf1
+0x18165dc25 cmp      byte ptr [rip + 0x3a1e7c8], 0
+0x18165dc2c jne      0x18165dc41
+0x18165dc2e lea      rcx, [rip + 0x380b02b]
+0x18165dc35 call     0x180361910
+0x18165dc3a mov      byte ptr [rip + 0x3a1e7b3], 1
+0x18165dc41 mov      rax, qword ptr [rip + 0x380b018]
+0x18165dc48 mov      rcx, qword ptr [rax + 0xb8]
+0x18165dc4f mov      rax, qword ptr [rcx]
+0x18165dc52 test     rax, rax
+0x18165dc55 je       0x18165dd0d
+0x18165dc5b mov      rcx, qword ptr [rax + 0x18]
+0x18165dc5f test     rcx, rcx
+0x18165dc62 je       0x18165dd0d
+0x18165dc68 xor      edx, edx
+0x18165dc6a call     0x1819d03d0 ; Assembly-CSharp.dll:LocalPlayerCharacterView.get_LocalPlayerCharacter
+0x18165dc6f test     rax, rax
+0x18165dc72 je       0x18165dcf1
+0x18165dc74 cmp      byte ptr [rip + 0x3a1e779], 0
+0x18165dc7b jne      0x18165dc90
+0x18165dc7d lea      rcx, [rip + 0x380afdc]
+0x18165dc84 call     0x180361910
+0x18165dc89 mov      byte ptr [rip + 0x3a1e764], 1
+0x18165dc90 mov      rax, qword ptr [rip + 0x380afc9]
+0x18165dc97 mov      rcx, qword ptr [rax + 0xb8]
+0x18165dc9e mov      rax, qword ptr [rcx]
+0x18165dca1 test     rax, rax
+0x18165dca4 je       0x18165dd0d
+0x18165dca6 mov      rcx, qword ptr [rax + 0x18]
+0x18165dcaa test     rcx, rcx
+0x18165dcad je       0x18165dd0d
+0x18165dcaf xor      edx, edx
+0x18165dcb1 call     0x1819d03d0 ; Assembly-CSharp.dll:LocalPlayerCharacterView.get_LocalPlayerCharacter
+0x18165dcb6 test     rax, rax
+0x18165dcb9 je       0x18165dd0d
+0x18165dcbb mov      rdx, qword ptr [rax]
+0x18165dcbe mov      rcx, rax
+0x18165dcc1 mov      r8, qword ptr [rdx + 0x628]
+0x18165dcc8 mov      rdx, qword ptr [rdx + 0x630]
+0x18165dccf call     r8
+0x18165dcd2 mov      r8, qword ptr [rbx]
+0x18165dcd5 mov      rdx, rax
+0x18165dcd8 mov      rcx, rbx
+0x18165dcdb mov      r9, qword ptr [r8 + 0x178]
+0x18165dce2 mov      r8, qword ptr [r8 + 0x180]
+0x18165dce9 add      rsp, 0x20
+0x18165dced pop      rbx
+0x18165dcee jmp      r9
+0x18165dcf1 mov      rdx, qword ptr [rbx]
+0x18165dcf4 mov      rcx, rbx
+0x18165dcf7 mov      rax, qword ptr [rdx + 0x198]
+0x18165dcfe mov      rdx, qword ptr [rdx + 0x1a0]
+0x18165dd05 add      rsp, 0x20
+0x18165dd09 pop      rbx
+0x18165dd0a jmp      rax
+0x18165dd0d call     0x180361b60
+0x18165dd12 int3     

@@ -1,0 +1,127 @@
+0x18145ae00 mov      rax, rsp
+0x18145ae03 mov      qword ptr [rax + 8], rbx
+0x18145ae07 mov      qword ptr [rax + 0x10], rsi
+0x18145ae0b mov      qword ptr [rax + 0x18], rdi
+0x18145ae0f push     r14
+0x18145ae11 sub      rsp, 0xa0
+0x18145ae18 movaps   xmmword ptr [rax - 0x18], xmm6
+0x18145ae1c mov      r14, rcx
+0x18145ae1f cmp      byte ptr [rip + 0x3c255e4], 0
+0x18145ae26 jne      0x18145ae8f
+0x18145ae28 lea      rcx, [rip + 0x39b6f39]
+0x18145ae2f call     0x180361910
+0x18145ae34 lea      rcx, [rip + 0x39b749d]
+0x18145ae3b call     0x180361910
+0x18145ae40 lea      rcx, [rip + 0x3985cf1]
+0x18145ae47 call     0x180361910
+0x18145ae4c lea      rcx, [rip + 0x3985e45]
+0x18145ae53 call     0x180361910
+0x18145ae58 lea      rcx, [rip + 0x3985f99]
+0x18145ae5f call     0x180361910
+0x18145ae64 lea      rcx, [rip + 0x3975f75]
+0x18145ae6b call     0x180361910
+0x18145ae70 lea      rcx, [rip + 0x39807b1]
+0x18145ae77 call     0x180361910
+0x18145ae7c lea      rcx, [rip + 0x39afdad]
+0x18145ae83 call     0x180361910
+0x18145ae88 mov      byte ptr [rip + 0x3c2557b], 1
+0x18145ae8f mov      rdx, qword ptr [r14 + 0x58]
+0x18145ae93 test     rdx, rdx
+0x18145ae96 je       0x18145b05e
+0x18145ae9c mov      r8, qword ptr [rip + 0x39b6ec5]
+0x18145aea3 lea      rcx, [rsp + 0x60]
+0x18145aea8 call     0x182a48ea0
+0x18145aead movups   xmm0, xmmword ptr [rsp + 0x60]
+0x18145aeb2 movups   xmmword ptr [rsp + 0x38], xmm0
+0x18145aeb7 movups   xmm1, xmmword ptr [rsp + 0x70]
+0x18145aebc movups   xmmword ptr [rsp + 0x48], xmm1
+0x18145aec1 movsd    xmm0, qword ptr [rsp + 0x80]
+0x18145aeca movsd    qword ptr [rsp + 0x58], xmm0
+0x18145aed0 mov      qword ptr [rsp + 0x28], 0
+0x18145aed9 lea      rbx, [rsp + 0x38]
+0x18145aede mov      qword ptr [rsp + 0x30], rbx
+0x18145aee3 mov      rdx, qword ptr [rip + 0x3985dae]
+0x18145aeea lea      rcx, [rsp + 0x38]
+0x18145aeef call     0x182cbd010
+0x18145aef4 test     al, al
+0x18145aef6 je       0x18145affc
+0x18145aefc movups   xmm6, xmmword ptr [rsp + 0x48]
+0x18145af01 mov      rcx, qword ptr [rip + 0x39afd28]
+0x18145af08 cmp      dword ptr [rcx + 0xe4], 0
+0x18145af0f jne      0x18145af16
+0x18145af11 call     0x180361bf0
+0x18145af16 cmp      byte ptr [rip + 0x3c1fbcb], 0
+0x18145af1d jne      0x18145af32
+0x18145af1f lea      rcx, [rip + 0x39afd0a]
+0x18145af26 call     0x180361910
+0x18145af2b mov      byte ptr [rip + 0x3c1fbb6], 1
+0x18145af32 mov      rcx, qword ptr [rip + 0x39afcf7]
+0x18145af39 cmp      dword ptr [rcx + 0xe4], 0
+0x18145af40 jne      0x18145af47
+0x18145af42 call     0x180361bf0
+0x18145af47 mov      rcx, qword ptr [rip + 0x39afce2]
+0x18145af4e call     0x180361710
+0x18145af53 mov      rcx, qword ptr [rax]
+0x18145af56 test     rcx, rcx
+0x18145af59 je       0x18145b052
+0x18145af5f xor      r8d, r8d
+0x18145af62 movq     rdx, xmm6
+0x18145af67 call     0x18096f090 ; Albion.PhotonClient.dll:ciy.a
+0x18145af6c mov      rdi, rax
+0x18145af6f test     rax, rax
+0x18145af72 je       0x18145aee3
+0x18145af78 mov      r9, qword ptr [rax]
+0x18145af7b mov      r8, qword ptr [rip + 0x39806a6]
+0x18145af82 movzx    eax, byte ptr [r8 + 0x130]
+0x18145af8a cmp      byte ptr [r9 + 0x130], al
+0x18145af91 jb       0x18145aee3
+0x18145af97 movzx    ecx, al
+0x18145af9a mov      rax, qword ptr [r9 + 0xc8]
+0x18145afa1 cmp      qword ptr [rax + rcx*8 - 8], r8
+0x18145afa6 jne      0x18145aee3
+0x18145afac mov      rcx, qword ptr [r14 + 0x58]
+0x18145afb0 test     rcx, rcx
+0x18145afb3 je       0x18145b04d
+0x18145afb9 mov      r8, qword ptr [rip + 0x39b7318]
+0x18145afc0 movq     rdx, xmm6
+0x18145afc5 call     0x182b2fa50
+0x18145afca mov      rsi, rax
+0x18145afcd mov      rdx, qword ptr [rdi]
+0x18145afd0 mov      r8, qword ptr [rdx + 0x268]
+0x18145afd7 mov      rdx, qword ptr [rdx + 0x270]
+0x18145afde mov      rcx, rdi
+0x18145afe1 call     r8
+0x18145afe4 test     rsi, rsi
+0x18145afe7 je       0x18145b047
+0x18145afe9 xor      r8d, r8d
+0x18145afec mov      rdx, rax
+0x18145afef mov      rcx, rsi
+0x18145aff2 call     0x18132f150 ; Assembly-CSharp.dll:MapLabel.SetPosition
+0x18145aff7 jmp      0x18145aee3
+0x18145affc mov      rdx, qword ptr [rip + 0x3985b35]
+0x18145b003 mov      rcx, rbx
+0x18145b006 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x18145b00b jmp      0x18145b028
+0x18145b00d mov      rdx, qword ptr [rip + 0x3985b24]
+0x18145b014 mov      rcx, qword ptr [rsp + 0x30]
+0x18145b019 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x18145b01e mov      rcx, qword ptr [rsp + 0x28]
+0x18145b023 test     rcx, rcx
+0x18145b026 jne      0x18145b058
+0x18145b028 lea      r11, [rsp + 0xa0]
+0x18145b030 mov      rbx, qword ptr [r11 + 0x10]
+0x18145b034 mov      rsi, qword ptr [r11 + 0x18]
+0x18145b038 mov      rdi, qword ptr [r11 + 0x20]
+0x18145b03c movaps   xmm6, xmmword ptr [r11 - 0x10]
+0x18145b041 mov      rsp, r11
+0x18145b044 pop      r14
+0x18145b046 ret      
+0x18145b047 call     0x180361b60
+0x18145b04c nop      
+0x18145b04d call     0x180361b60
+0x18145b052 call     0x180361b60
+0x18145b057 nop      
+0x18145b058 call     0x18035da00
+0x18145b05d int3     
+0x18145b05e call     0x180361b60
+0x18145b063 int3     

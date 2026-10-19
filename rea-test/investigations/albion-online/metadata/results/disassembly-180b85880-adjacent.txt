@@ -1,0 +1,33 @@
+0x180b85880 mov      qword ptr [rsp + 8], rbx
+0x180b85885 mov      qword ptr [rsp + 0x10], rsi
+0x180b8588a push     rdi
+0x180b8588b sub      rsp, 0x20
+0x180b8588f cmp      byte ptr [rip + 0x44f63d2], 0
+0x180b85896 movzx    edi, r8w
+0x180b8589a mov      rsi, rdx
+0x180b8589d mov      rbx, rcx
+0x180b858a0 jne      0x180b858b5
+0x180b858a2 lea      rcx, [rip + 0x4230c57]
+0x180b858a9 call     0x180361910
+0x180b858ae mov      byte ptr [rip + 0x44f63b3], 1
+0x180b858b5 mov      rcx, qword ptr [rbx + 0xa0]
+0x180b858bc test     rcx, rcx
+0x180b858bf je       0x180b858fa
+0x180b858c1 mov      r9, qword ptr [rip + 0x4230c38]
+0x180b858c8 movzx    r8d, di
+0x180b858cc mov      rdx, rsi
+0x180b858cf call     0x182966b40
+0x180b858d4 test     al, al
+0x180b858d6 jne      0x180b858ea
+0x180b858d8 xor      r9d, r9d
+0x180b858db movzx    r8d, di
+0x180b858df mov      rdx, rsi
+0x180b858e2 mov      rcx, rbx
+0x180b858e5 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180b858ea mov      rbx, qword ptr [rsp + 0x30]
+0x180b858ef mov      rsi, qword ptr [rsp + 0x38]
+0x180b858f4 add      rsp, 0x20
+0x180b858f8 pop      rdi
+0x180b858f9 ret      
+0x180b858fa call     0x180361b60
+0x180b858ff int3     

@@ -1,0 +1,84 @@
+{
+  "evidence_id": "AO-META-LEAF-180b311a0",
+  "function_va": "0x180b311a0",
+  "file_offset": 11728800,
+  "byte_length": 19,
+  "bytes_sha256": "f9443ead93b0b95de7a8e51f2b540fa33b544e66928f30fe92fb9e93f36b1060",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "symbols": [
+    {
+      "type_index": 19229,
+      "type": "cjw",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 131109,
+      "name": "am",
+      "token": "0x60005ac",
+      "native_va": "0x180b311a0",
+      "native_rva": "0xb311a0",
+      "native_file_offset": 11728800,
+      "pointer_slot_file_offset": 79828040
+    },
+    {
+      "type_index": 19231,
+      "type": "cl1",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 131139,
+      "name": "am",
+      "token": "0x60005ca",
+      "native_va": "0x180b311a0",
+      "native_rva": "0xb311a0",
+      "native_file_offset": 11728800,
+      "pointer_slot_file_offset": 79828280
+    },
+    {
+      "type_index": 19490,
+      "type": "cpo",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 135287,
+      "name": "am",
+      "token": "0x60015fe",
+      "native_va": "0x180b311a0",
+      "native_rva": "0xb311a0",
+      "native_file_offset": 11728800,
+      "pointer_slot_file_offset": 79861464
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x180b311a0",
+      "file_offset": 11728800,
+      "bytes": "f30f104148",
+      "mnemonic": "movss",
+      "operands": "xmm0, dword ptr [rcx + 0x48]"
+    },
+    {
+      "va": "0x180b311a5",
+      "file_offset": 11728805,
+      "bytes": "f30f104944",
+      "mnemonic": "movss",
+      "operands": "xmm1, dword ptr [rcx + 0x44]"
+    },
+    {
+      "va": "0x180b311aa",
+      "file_offset": 11728810,
+      "bytes": "0f14c8",
+      "mnemonic": "unpcklps",
+      "operands": "xmm1, xmm0"
+    },
+    {
+      "va": "0x180b311ad",
+      "file_offset": 11728813,
+      "bytes": "66480f7ec8",
+      "mnemonic": "movq",
+      "operands": "rax, xmm1"
+    },
+    {
+      "va": "0x180b311b2",
+      "file_offset": 11728818,
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    }
+  ],
+  "limitations": "Metadata-named code pointer with no PE unwind record. Maximum64 bytes bounded by next named method, stop at first RET/JMP; leaf function membership remains inference. No runtime observation."
+}

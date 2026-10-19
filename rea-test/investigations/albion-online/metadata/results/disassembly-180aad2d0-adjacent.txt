@@ -1,0 +1,164 @@
+0x180aad2d0 push     rbx
+0x180aad2d2 push     rdi
+0x180aad2d3 push     r13
+0x180aad2d5 sub      rsp, 0x30
+0x180aad2d9 cmp      byte ptr [rip + 0x45ce1b9], 0
+0x180aad2e0 movzx    ebx, r8w
+0x180aad2e4 mov      rdi, rdx
+0x180aad2e7 mov      r13, rcx
+0x180aad2ea jne      0x180aad323
+0x180aad2ec lea      rcx, [rip + 0x43be7fd]
+0x180aad2f3 call     0x180361910
+0x180aad2f8 lea      rcx, [rip + 0x432ab61]
+0x180aad2ff call     0x180361910
+0x180aad304 lea      rcx, [rip + 0x432d7ad]
+0x180aad30b call     0x180361910
+0x180aad310 lea      rcx, [rip + 0x432d8f9]
+0x180aad317 call     0x180361910
+0x180aad31c mov      byte ptr [rip + 0x45ce176], 1
+0x180aad323 cmp      bx, 0x28
+0x180aad327 je       0x180aad542
+0x180aad32d mov      qword ptr [rsp + 0x50], rbp
+0x180aad332 mov      qword ptr [rsp + 0x58], rsi
+0x180aad337 mov      qword ptr [rsp + 0x60], r12
+0x180aad33c mov      qword ptr [rsp + 0x28], r14
+0x180aad341 mov      qword ptr [rsp + 0x20], r15
+0x180aad346 cmp      bx, 0x26
+0x180aad34a je       0x180aad498
+0x180aad350 cmp      bx, 0x27
+0x180aad354 jne      0x180aad520
+0x180aad35a mov      rdx, qword ptr [rip + 0x432d8af]
+0x180aad361 mov      rcx, rdi
+0x180aad364 call     0x182003eb0
+0x180aad369 xor      r15d, r15d
+0x180aad36c mov      rsi, rax
+0x180aad36f mov      edi, r15d
+0x180aad372 mov      ecx, r15d
+0x180aad375 test     rax, rax
+0x180aad378 je       0x180aad56d
+0x180aad37e mov      r12d, 0x20
+0x180aad384 mov      ebp, r15d
+0x180aad387 mov      r14d, r12d
+0x180aad38a nop      word ptr [rax + rax]
+0x180aad390 mov      rax, qword ptr [rsi + 0x10]
+0x180aad394 test     rax, rax
+0x180aad397 je       0x180aad56d
+0x180aad39d cmp      ecx, dword ptr [rax + 0x18]
+0x180aad3a0 jge      0x180aad520
+0x180aad3a6 mov      rcx, qword ptr [rip + 0x43be743]
+0x180aad3ad call     0x180361b10
+0x180aad3b2 xor      edx, edx
+0x180aad3b4 mov      rcx, rax
+0x180aad3b7 mov      rbx, rax
+0x180aad3ba call     0x1808d5640 ; Albion.Common.dll:akg..ctor | Albion.Common.dll:avk..ctor | Albion.Common.dll:akh..ctor | Albion.Common.dll:aki..ctor | Albion.Common.dll:any..ctor | Albion.Common.dll:akj..ctor | Albion.Common.dll:akk..ctor | Albion.Common.dll:akl..ctor | Albion.Common.dll:akm..ctor | Albion.Common.dll:akn..ctor | Albion.Common.dll:ako..ctor | Albion.Common.dll:akp..ctor | Albion.Common.dll:akq..ctor | Albion.Common.dll:akr..ctor | Albion.Common.dll:aks..ctor | Albion.Common.dll:akt..ctor | Albion.Common.dll:aku..ctor | Albion.Common.dll:akv..ctor | Albion.Common.dll:akw..ctor | Albion.Common.dll:aky..ctor | 
+0x180aad3bf mov      rax, qword ptr [rsi + 0x10]
+0x180aad3c3 test     rax, rax
+0x180aad3c6 je       0x180aad56d
+0x180aad3cc cmp      edi, dword ptr [rax + 0x18]
+0x180aad3cf jae      0x180aad567
+0x180aad3d5 test     rbx, rbx
+0x180aad3d8 je       0x180aad56d
+0x180aad3de mov      rax, qword ptr [r14 + rax]
+0x180aad3e2 mov      qword ptr [rbx + 0x10], rax
+0x180aad3e6 mov      qword ptr [rbx + 0x18], r15
+0x180aad3ea mov      rax, qword ptr [rsi + 0x28]
+0x180aad3ee test     rax, rax
+0x180aad3f1 je       0x180aad56d
+0x180aad3f7 cmp      edi, dword ptr [rax + 0x18]
+0x180aad3fa jae      0x180aad567
+0x180aad400 movss    xmm0, dword ptr [r14 + rax + 4]
+0x180aad407 mov      eax, dword ptr [r14 + rax]
+0x180aad40b movss    dword ptr [rbx + 0x48], xmm0
+0x180aad410 mov      dword ptr [rbx + 0x44], eax
+0x180aad413 mov      dword ptr [rbx + 0x4c], r15d
+0x180aad417 mov      rax, qword ptr [rsi + 0x18]
+0x180aad41b test     rax, rax
+0x180aad41e je       0x180aad56d
+0x180aad424 cmp      edi, dword ptr [rax + 0x18]
+0x180aad427 jae      0x180aad567
+0x180aad42d movzx    eax, byte ptr [rax + rbp + 0x20]
+0x180aad432 mov      byte ptr [rbx + 0x3c], al
+0x180aad435 mov      rax, qword ptr [rsi + 0x20]
+0x180aad439 test     rax, rax
+0x180aad43c je       0x180aad56d
+0x180aad442 cmp      edi, dword ptr [rax + 0x18]
+0x180aad445 jae      0x180aad567
+0x180aad44b movzx    eax, byte ptr [rax + rbp + 0x20]
+0x180aad450 mov      byte ptr [rbx + 0x40], al
+0x180aad453 mov      rax, qword ptr [rsi + 0x30]
+0x180aad457 test     rax, rax
+0x180aad45a je       0x180aad56d
+0x180aad460 cmp      edi, dword ptr [rax + 0x18]
+0x180aad463 jae      0x180aad567
+0x180aad469 movzx    eax, word ptr [r12 + rax]
+0x180aad46e xor      r8d, r8d
+0x180aad471 mov      rdx, rbx
+0x180aad474 mov      word ptr [rbx + 0x50], ax
+0x180aad478 mov      rcx, r13
+0x180aad47b mov      byte ptr [rbx + 0x52], r15b
+0x180aad47f call     0x180aa10d0 ; Albion.PhotonClient.dll:cjb.a
+0x180aad484 inc      edi
+0x180aad486 inc      rbp
+0x180aad489 add      r14, 8
+0x180aad48d mov      ecx, edi
+0x180aad48f add      r12, 2
+0x180aad493 jmp      0x180aad390
+0x180aad498 mov      rdx, qword ptr [rip + 0x432d619]
+0x180aad49f mov      rcx, rdi
+0x180aad4a2 call     0x182003eb0
+0x180aad4a7 mov      rcx, qword ptr [rip + 0x43be642]
+0x180aad4ae mov      rdi, rax
+0x180aad4b1 call     0x180361b10
+0x180aad4b6 xor      edx, edx
+0x180aad4b8 mov      rcx, rax
+0x180aad4bb mov      rbx, rax
+0x180aad4be call     0x1808d5640 ; Albion.Common.dll:akg..ctor | Albion.Common.dll:avk..ctor | Albion.Common.dll:akh..ctor | Albion.Common.dll:aki..ctor | Albion.Common.dll:any..ctor | Albion.Common.dll:akj..ctor | Albion.Common.dll:akk..ctor | Albion.Common.dll:akl..ctor | Albion.Common.dll:akm..ctor | Albion.Common.dll:akn..ctor | Albion.Common.dll:ako..ctor | Albion.Common.dll:akp..ctor | Albion.Common.dll:akq..ctor | Albion.Common.dll:akr..ctor | Albion.Common.dll:aks..ctor | Albion.Common.dll:akt..ctor | Albion.Common.dll:aku..ctor | Albion.Common.dll:akv..ctor | Albion.Common.dll:akw..ctor | Albion.Common.dll:aky..ctor | 
+0x180aad4c3 test     rdi, rdi
+0x180aad4c6 je       0x180aad56d
+0x180aad4cc test     rbx, rbx
+0x180aad4cf je       0x180aad56d
+0x180aad4d5 mov      rcx, qword ptr [rdi + 0x10]
+0x180aad4d9 xor      r15d, r15d
+0x180aad4dc mov      qword ptr [rbx + 0x10], rcx
+0x180aad4e0 xor      r8d, r8d
+0x180aad4e3 mov      qword ptr [rbx + 0x18], r15
+0x180aad4e7 mov      rdx, rbx
+0x180aad4ea mov      eax, dword ptr [rdi + 0x1c]
+0x180aad4ed mov      rcx, r13
+0x180aad4f0 movss    xmm0, dword ptr [rdi + 0x20]
+0x180aad4f5 movss    dword ptr [rbx + 0x48], xmm0
+0x180aad4fa mov      dword ptr [rbx + 0x44], eax
+0x180aad4fd mov      dword ptr [rbx + 0x4c], r15d
+0x180aad501 movzx    eax, byte ptr [rdi + 0x18]
+0x180aad505 mov      byte ptr [rbx + 0x3c], al
+0x180aad508 movzx    eax, byte ptr [rdi + 0x19]
+0x180aad50c mov      byte ptr [rbx + 0x40], al
+0x180aad50f movzx    eax, word ptr [rdi + 0x24]
+0x180aad513 mov      word ptr [rbx + 0x50], ax
+0x180aad517 mov      byte ptr [rbx + 0x52], r15b
+0x180aad51b call     0x180aa10d0 ; Albion.PhotonClient.dll:cjb.a
+0x180aad520 mov      r14, qword ptr [rsp + 0x28]
+0x180aad525 mov      r12, qword ptr [rsp + 0x60]
+0x180aad52a mov      rsi, qword ptr [rsp + 0x58]
+0x180aad52f mov      rbp, qword ptr [rsp + 0x50]
+0x180aad534 mov      r15, qword ptr [rsp + 0x20]
+0x180aad539 add      rsp, 0x30
+0x180aad53d pop      r13
+0x180aad53f pop      rdi
+0x180aad540 pop      rbx
+0x180aad541 ret      
+0x180aad542 mov      rdx, qword ptr [rip + 0x432a917]
+0x180aad549 mov      rcx, rdi
+0x180aad54c call     0x182003eb0
+0x180aad551 xor      r8d, r8d
+0x180aad554 mov      rdx, rax
+0x180aad557 mov      rcx, r13
+0x180aad55a add      rsp, 0x30
+0x180aad55e pop      r13
+0x180aad560 pop      rdi
+0x180aad561 pop      rbx
+0x180aad562 jmp      0x180aa10d0 ; Albion.PhotonClient.dll:cjb.a
+0x180aad567 call     0x180361b50
+0x180aad56c int3     
+0x180aad56d call     0x180361b60
+0x180aad572 int3     

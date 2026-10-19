@@ -1,0 +1,37 @@
+0x181e9a800 mov      qword ptr [rsp + 8], rbx
+0x181e9a805 push     rdi
+0x181e9a806 sub      rsp, 0x40
+0x181e9a80a cmp      qword ptr [rdx + 0x38], 0
+0x181e9a80f mov      rbx, rdx
+0x181e9a812 mov      rdi, rcx
+0x181e9a815 jne      0x181e9a81f
+0x181e9a817 mov      rcx, rdx
+0x181e9a81a call     0x18035f180
+0x181e9a81f test     rdi, rdi
+0x181e9a822 je       0x181e9a869
+0x181e9a824 mov      r8, qword ptr [rbx + 0x38]
+0x181e9a828 lea      rcx, [rsp + 0x20]
+0x181e9a82d xorps    xmm0, xmm0
+0x181e9a830 mov      rdx, rdi
+0x181e9a833 movups   xmmword ptr [rsp + 0x20], xmm0
+0x181e9a838 mov      r8, qword ptr [r8 + 0x10]
+0x181e9a83c call     0x182665c50
+0x181e9a841 mov      rdx, qword ptr [rbx + 0x38]
+0x181e9a845 lea      rcx, [rsp + 0x30]
+0x181e9a84a movaps   xmm0, xmmword ptr [rsp + 0x20]
+0x181e9a84f movdqa   xmmword ptr [rsp + 0x30], xmm0
+0x181e9a855 mov      rdx, qword ptr [rdx + 0x18]
+0x181e9a859 call     0x182665b60
+0x181e9a85e mov      rbx, qword ptr [rsp + 0x50]
+0x181e9a863 add      rsp, 0x40
+0x181e9a867 pop      rdi
+0x181e9a868 ret      
+0x181e9a869 lea      rcx, [rip + 0x2f69e78]
+0x181e9a870 call     0x180361930
+0x181e9a875 mov      rcx, rax
+0x181e9a878 xor      edx, edx
+0x181e9a87a call     0x1832fc420 ; System.Core.dll:System.Linq.Error.ArgumentNull
+0x181e9a87f mov      rdx, rbx
+0x181e9a882 mov      rcx, rax
+0x181e9a885 call     0x180361b20
+0x181e9a88a int3     

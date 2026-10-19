@@ -1,0 +1,73 @@
+0x180acfe30 mov      qword ptr [rsp + 8], rbx
+0x180acfe35 mov      qword ptr [rsp + 0x10], rsi
+0x180acfe3a push     rdi
+0x180acfe3b sub      rsp, 0x20
+0x180acfe3f cmp      byte ptr [rip + 0x45ab759], 0
+0x180acfe46 movzx    edi, r8w
+0x180acfe4a mov      rsi, rdx
+0x180acfe4d mov      rbx, rcx
+0x180acfe50 jne      0x180acfe65
+0x180acfe52 lea      rcx, [rip + 0x42d9aef]
+0x180acfe59 call     0x180361910
+0x180acfe5e mov      byte ptr [rip + 0x45ab73a], 1
+0x180acfe65 mov      eax, 0x2a2
+0x180acfe6a cmp      di, ax
+0x180acfe6d jne      0x180acfec9
+0x180acfe6f mov      rdx, qword ptr [rip + 0x42d9ad2]
+0x180acfe76 mov      rcx, rsi
+0x180acfe79 call     0x182003eb0
+0x180acfe7e test     rax, rax
+0x180acfe81 je       0x180acff33
+0x180acfe87 mov      rcx, qword ptr [rbx + 0x70]
+0x180acfe8b movzx    eax, byte ptr [rax + 0x18]
+0x180acfe8f mov      byte ptr [rbx + 0x68], al
+0x180acfe92 test     rcx, rcx
+0x180acfe95 je       0x180acff33
+0x180acfe9b xor      edx, edx
+0x180acfe9d call     0x1807467c0 ; Albion.Common.dll:bk.c
+0x180acfea2 test     eax, eax
+0x180acfea4 jle      0x180acff23
+0x180acfea6 mov      rcx, qword ptr [rbx + 0x70]
+0x180acfeaa test     rcx, rcx
+0x180acfead je       0x180acff33
+0x180acfeb3 xor      edx, edx
+0x180acfeb5 mov      rbx, qword ptr [rsp + 0x30]
+0x180acfeba mov      rsi, qword ptr [rsp + 0x38]
+0x180acfebf add      rsp, 0x20
+0x180acfec3 pop      rdi
+0x180acfec4 jmp      0x180746130 ; Albion.Common.dll:bk.Invoke
+0x180acfec9 mov      eax, 0x2a3
+0x180acfece cmp      di, ax
+0x180acfed1 jne      0x180acff11
+0x180acfed3 cmp      byte ptr [rbx + 0x68], 0
+0x180acfed7 jne      0x180acff23
+0x180acfed9 mov      rcx, qword ptr [rbx + 0x78]
+0x180acfedd test     rcx, rcx
+0x180acfee0 je       0x180acff33
+0x180acfee2 xor      edx, edx
+0x180acfee4 call     0x1807467c0 ; Albion.Common.dll:bk.c
+0x180acfee9 test     eax, eax
+0x180acfeeb jle      0x180acfefd
+0x180acfeed mov      rcx, qword ptr [rbx + 0x78]
+0x180acfef1 test     rcx, rcx
+0x180acfef4 je       0x180acff33
+0x180acfef6 xor      edx, edx
+0x180acfef8 call     0x180746130 ; Albion.Common.dll:bk.Invoke
+0x180acfefd mov      byte ptr [rbx + 0x68], 1
+0x180acff01 mov      rbx, qword ptr [rsp + 0x30]
+0x180acff06 mov      rsi, qword ptr [rsp + 0x38]
+0x180acff0b add      rsp, 0x20
+0x180acff0f pop      rdi
+0x180acff10 ret      
+0x180acff11 xor      r9d, r9d
+0x180acff14 movzx    r8d, di
+0x180acff18 mov      rdx, rsi
+0x180acff1b mov      rcx, rbx
+0x180acff1e call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180acff23 mov      rbx, qword ptr [rsp + 0x30]
+0x180acff28 mov      rsi, qword ptr [rsp + 0x38]
+0x180acff2d add      rsp, 0x20
+0x180acff31 pop      rdi
+0x180acff32 ret      
+0x180acff33 call     0x180361b60
+0x180acff38 int3     

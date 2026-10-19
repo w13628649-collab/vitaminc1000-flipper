@@ -1,0 +1,53 @@
+0x180a095a0 push     rbx
+0x180a095a2 sub      rsp, 0x20
+0x180a095a6 mov      rbx, rcx
+0x180a095a9 cmp      r8w, 0x4d
+0x180a095ae jne      0x180a095c3
+0x180a095b0 xor      r8d, r8d
+0x180a095b3 add      rsp, 0x20
+0x180a095b7 pop      rbx
+0x180a095b8 jmp      0x180a09bd0 ; Albion.PhotonClient.dll:cyz.v
+0x180a095bd add      rsp, 0x20
+0x180a095c1 pop      rbx
+0x180a095c2 ret      
+0x180a095c3 cmp      r8w, 0x4e
+0x180a095c8 jne      0x180a095bd
+0x180a095ca cmp      byte ptr [rip + 0x4671927], 0
+0x180a095d1 jne      0x180a095e6
+0x180a095d3 lea      rcx, [rip + 0x441dd76]
+0x180a095da call     0x180361910
+0x180a095df mov      byte ptr [rip + 0x4671912], 1
+0x180a095e6 xor      edx, edx
+0x180a095e8 mov      rcx, rbx
+0x180a095eb call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a095f0 test     rax, rax
+0x180a095f3 je       0x180a09658
+0x180a095f5 xor      edx, edx
+0x180a095f7 mov      rcx, rax
+0x180a095fa call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x180a095ff mov      rcx, rax
+0x180a09602 test     rax, rax
+0x180a09605 je       0x180a0963a
+0x180a09607 mov      r9, qword ptr [rax]
+0x180a0960a mov      r8, qword ptr [rip + 0x441dd3f]
+0x180a09611 movzx    eax, byte ptr [r8 + 0x130]
+0x180a09619 cmp      byte ptr [r9 + 0x130], al
+0x180a09620 jb       0x180a0963a
+0x180a09622 movzx    edx, al
+0x180a09625 mov      rax, qword ptr [r9 + 0xc8]
+0x180a0962c cmp      qword ptr [rax + rdx*8 - 8], r8
+0x180a09631 jne      0x180a0963a
+0x180a09633 xor      edx, edx
+0x180a09635 call     0x1809c6b50 ; Albion.PhotonClient.dll:cuq.f5 | Albion.PhotonClient.dll:cuq.OnLeave
+0x180a0963a xor      edx, edx
+0x180a0963c mov      rcx, rbx
+0x180a0963f call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a09644 test     rax, rax
+0x180a09647 je       0x180a09658
+0x180a09649 xor      edx, edx
+0x180a0964b mov      rcx, rax
+0x180a0964e add      rsp, 0x20
+0x180a09652 pop      rbx
+0x180a09653 jmp      0x180bc4f40 ; Albion.PhotonClient.dll:cpo.azm
+0x180a09658 call     0x180361b60
+0x180a0965d int3     

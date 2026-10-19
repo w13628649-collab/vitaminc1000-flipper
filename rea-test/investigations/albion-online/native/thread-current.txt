@@ -1,0 +1,246 @@
+﻿57960:
+2026-10-13 17:54:37
+Full thread dump OpenJDK 64-Bit Server VM (21.0.12.1+1-LTS mixed mode):
+
+Threads class SMR info:
+_java_thread_list=0x00000276941d1c10, length=21, elements={
+0x00000276ec6e8ee0, 0x00000276fe601fc0, 0x00000276fe5eaaf0, 0x00000276fe5f77d0,
+0x00000276fe5f8230, 0x00000276fe5f06a0, 0x00000276fe5f4da0, 0x00000276fe60da10,
+0x00000276fe6118c0, 0x00000276fe7b2470, 0x00000276fe7f6710, 0x00000276fea3d470,
+0x00000276fea41500, 0x00000276fea71430, 0x0000027693c004a0, 0x0000027693dae770,
+0x000002769475da30, 0x00000276947227e0, 0x0000027694722150, 0x0000027694721ac0,
+0x0000027694722e70
+}
+
+"main" #1 [52208] prio=5 os_prio=0 cpu=222343.75ms elapsed=233.92s tid=0x00000276ec6e8ee0 nid=52208 runnable  [0x000000f409ffe000]
+   java.lang.Thread.State: RUNNABLE
+	at java.io.RandomAccessFile.readBytes0(java.base@21.0.12.1/Native Method)
+	at java.io.RandomAccessFile.readBytes(java.base@21.0.12.1/RandomAccessFile.java:400)
+	at java.io.RandomAccessFile.read(java.base@21.0.12.1/RandomAccessFile.java:434)
+	at java.io.RandomAccessFile.readFully(java.base@21.0.12.1/RandomAccessFile.java:498)
+	at java.io.RandomAccessFile.readFully(java.base@21.0.12.1/RandomAccessFile.java:474)
+	at db.buffers.LocalBufferFile.get(LocalBufferFile.java:667)
+	- locked <0x00000006c0a191d8> (a db.buffers.LocalBufferFile)
+	at db.buffers.BufferMgr.loadCachedNode(BufferMgr.java:916)
+	at db.buffers.BufferMgr.getBufferNode(BufferMgr.java:835)
+	at db.buffers.BufferMgr.getBuffer(BufferMgr.java:968)
+	- locked <0x00000006c0a19148> (a db.buffers.BufferMgr)
+	at db.NodeMgr.getLongKeyNode(NodeMgr.java:257)
+	at db.LongKeyInteriorNode.getLeafNode(LongKeyInteriorNode.java:414)
+	at db.LongKeyInteriorNode.getLeafNode(LongKeyInteriorNode.java:416)
+	at db.Table.getRecord(Table.java:701)
+	- locked <0x00000006c3a50498> (a db.DBHandle)
+	at ghidra.program.database.references.ToAdapterV1.getRefList(ToAdapterV1.java:76)
+	at ghidra.program.database.references.ReferenceDBManager.getToRefs(ReferenceDBManager.java:1642)
+	at ghidra.program.database.references.ReferenceDBManager.getReferencesTo(ReferenceDBManager.java:1332)
+	at ghidra.app.plugin.core.disassembler.EntryPointAnalyzer.fixDummyFunctionBodies(EntryPointAnalyzer.java:209)
+	at ghidra.app.plugin.core.disassembler.EntryPointAnalyzer.added(EntryPointAnalyzer.java:133)
+	at ghidra.app.plugin.core.analysis.AnalysisScheduler.runAnalyzer(AnalysisScheduler.java:186)
+	at ghidra.app.plugin.core.analysis.AnalysisTask.applyTo(AnalysisTask.java:37)
+	at ghidra.app.plugin.core.analysis.AnalysisTask.applyTo(AnalysisTask.java:24)
+	at ghidra.app.plugin.core.analysis.AutoAnalysisManager$AnalysisTaskWrapper.run(AutoAnalysisManager.java:660)
+	at ghidra.app.plugin.core.analysis.AutoAnalysisManager.startAnalysis(AutoAnalysisManager.java:760)
+	at ghidra.app.plugin.core.analysis.AutoAnalysisManager.startAnalysis(AutoAnalysisManager.java:639)
+	at ghidra.app.plugin.core.analysis.AutoAnalysisManager.startAnalysis(AutoAnalysisManager.java:604)
+	at ghidra.app.util.headless.HeadlessAnalyzer.analyzeProgram(HeadlessAnalyzer.java:1052)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processFileWithImport(HeadlessAnalyzer.java:1591)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithLoader(HeadlessAnalyzer.java:1751)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithImport(HeadlessAnalyzer.java:1692)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithImport(HeadlessAnalyzer.java:1776)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processLocal(HeadlessAnalyzer.java:452)
+	at ghidra.app.util.headless.AnalyzeHeadless.launch(AnalyzeHeadless.java:199)
+	at ghidra.GhidraLauncher.launch(GhidraLauncher.java:81)
+	at ghidra.Ghidra.main(Ghidra.java:54)
+
+"Reference Handler" #9 [14328] daemon prio=10 os_prio=2 cpu=3359.38ms elapsed=233.89s tid=0x00000276fe601fc0 nid=14328 waiting on condition  [0x000000f40a7ff000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.ref.Reference.waitForReferencePendingList(java.base@21.0.12.1/Native Method)
+	at java.lang.ref.Reference.processPendingReferences(java.base@21.0.12.1/Reference.java:246)
+	at java.lang.ref.Reference$ReferenceHandler.run(java.base@21.0.12.1/Reference.java:208)
+
+"Finalizer" #10 [59928] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=233.89s tid=0x00000276fe5eaaf0 nid=59928 in Object.wait()  [0x000000f40a8ff000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x00000006c042b6c8> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at java.lang.ref.NativeReferenceQueue.await(java.base@21.0.12.1/NativeReferenceQueue.java:48)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.12.1/ReferenceQueue.java:158)
+	at java.lang.ref.NativeReferenceQueue.remove(java.base@21.0.12.1/NativeReferenceQueue.java:89)
+	- locked <0x00000006c042b6c8> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.ref.Finalizer$FinalizerThread.run(java.base@21.0.12.1/Finalizer.java:173)
+
+"Signal Dispatcher" #11 [52016] daemon prio=9 os_prio=2 cpu=0.00ms elapsed=233.89s tid=0x00000276fe5f77d0 nid=52016 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Attach Listener" #12 [57404] daemon prio=5 os_prio=2 cpu=0.00ms elapsed=233.89s tid=0x00000276fe5f8230 nid=57404 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #13 [29944] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=233.89s tid=0x00000276fe5f06a0 nid=29944 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #14 [14560] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=233.89s tid=0x00000276fe5f4da0 nid=14560 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #15 [11152] daemon prio=9 os_prio=2 cpu=24625.00ms elapsed=233.89s tid=0x00000276fe60da10 nid=11152 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #16 [56552] daemon prio=9 os_prio=2 cpu=2406.25ms elapsed=233.89s tid=0x00000276fe6118c0 nid=56552 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"Common-Cleaner" #17 [15396] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=233.87s tid=0x00000276fe7b2470 nid=15396 waiting on condition  [0x000000f40afff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000006c042bb08> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.12.1/LockSupport.java:269)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1886)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.12.1/ReferenceQueue.java:71)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.12.1/ReferenceQueue.java:143)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.12.1/ReferenceQueue.java:218)
+	at jdk.internal.ref.CleanerImpl.run(java.base@21.0.12.1/CleanerImpl.java:140)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+	at jdk.internal.misc.InnocuousThread.run(java.base@21.0.12.1/InnocuousThread.java:186)
+
+"Notification Thread" #18 [1920] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=233.85s tid=0x00000276fe7f6710 nid=1920 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Java2D Disposer" #19 [6060] daemon prio=10 os_prio=2 cpu=0.00ms elapsed=233.81s tid=0x00000276fea3d470 nid=6060 waiting on condition  [0x000000f40b1fe000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000006c042c040> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.12.1/LockSupport.java:371)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:519)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.12.1/ForkJoinPool.java:3780)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.12.1/ForkJoinPool.java:3725)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1746)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.12.1/ReferenceQueue.java:67)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.12.1/ReferenceQueue.java:158)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.12.1/ReferenceQueue.java:234)
+	at sun.java2d.Disposer.run(java.desktop@21.0.12.1/Disposer.java:145)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"AWT-Windows" #21 [60144] daemon prio=6 os_prio=0 cpu=15.62ms elapsed=233.80s tid=0x00000276fea41500 nid=60144 runnable  [0x000000f40b3ff000]
+   java.lang.Thread.State: RUNNABLE
+	at sun.awt.windows.WToolkit.eventLoop(java.desktop@21.0.12.1/Native Method)
+	at sun.awt.windows.WToolkit.run(java.desktop@21.0.12.1/WToolkit.java:360)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"Swing-Shell" #24 [46068] daemon prio=10 os_prio=2 cpu=0.00ms elapsed=233.79s tid=0x00000276fea71430 nid=46068 waiting on condition  [0x000000f40b7ff000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000006c042c310> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.12.1/LockSupport.java:371)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:519)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.12.1/ForkJoinPool.java:3780)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.12.1/ForkJoinPool.java:3725)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1746)
+	at java.util.concurrent.LinkedBlockingQueue.take(java.base@21.0.12.1/LinkedBlockingQueue.java:435)
+	at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.12.1/ThreadPoolExecutor.java:1070)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.12.1/ThreadPoolExecutor.java:1130)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.12.1/ThreadPoolExecutor.java:642)
+	at sun.awt.shell.Win32ShellFolderManager2$ComInvoker$1.run(java.desktop@21.0.12.1/Win32ShellFolderManager2.java:599)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"Log4j2-TF-3-Scheduled-1" #27 [55880] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=233.13s tid=0x0000027693c004a0 nid=55880 waiting on condition  [0x000000f40bbff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000006c0844ee0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.12.1/LockSupport.java:269)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1797)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(java.base@21.0.12.1/ScheduledThreadPoolExecutor.java:1182)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(java.base@21.0.12.1/ScheduledThreadPoolExecutor.java:899)
+	at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.12.1/ThreadPoolExecutor.java:1070)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.12.1/ThreadPoolExecutor.java:1130)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.12.1/ThreadPoolExecutor.java:642)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"GTimer" #29 [60300] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=232.14s tid=0x0000027693dae770 nid=60300 in Object.wait()  [0x000000f40bcff000]
+   java.lang.Thread.State: TIMED_WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <no object reference available>
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.util.TimerThread.mainLoop(java.base@21.0.12.1/Timer.java:563)
+	- locked <0x00000006c7bb01d8> (a java.util.TaskQueue)
+	at java.util.TimerThread.run(java.base@21.0.12.1/Timer.java:516)
+
+"FelixDispatchQueue" #31 [12268] prio=5 os_prio=0 cpu=0.00ms elapsed=231.76s tid=0x000002769475da30 nid=12268 in Object.wait()  [0x000000f40b2ff000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x00000006c11e6bf8> (a java.util.ArrayList)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at org.apache.felix.framework.EventDispatcher.run(EventDispatcher.java:1122)
+	- locked <0x00000006c11e6bf8> (a java.util.ArrayList)
+	at org.apache.felix.framework.EventDispatcher.access$000(EventDispatcher.java:54)
+	at org.apache.felix.framework.EventDispatcher$1.run(EventDispatcher.java:102)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"FelixFrameworkWiring" #37 [12968] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=231.69s tid=0x00000276947227e0 nid=12968 in Object.wait()  [0x000000f40c2fe000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x00000006c11e7258> (a java.util.ArrayList)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at org.apache.felix.framework.FrameworkWiringImpl.run(FrameworkWiringImpl.java:169)
+	- locked <0x00000006c11e7258> (a java.util.ArrayList)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"FelixStartLevel" #38 [51956] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=231.69s tid=0x0000027694722150 nid=51956 in Object.wait()  [0x000000f40c3ff000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x00000006c11e7380> (a java.util.ArrayList)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at org.apache.felix.framework.FrameworkStartLevelImpl.run(FrameworkStartLevelImpl.java:274)
+	- locked <0x00000006c11e7380> (a java.util.ArrayList)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"GhidraSwinglessTimer" #40 [56368] daemon prio=5 os_prio=0 cpu=2000.00ms elapsed=231.52s tid=0x0000027694721ac0 nid=56368 in Object.wait()  [0x000000f40c5ff000]
+   java.lang.Thread.State: TIMED_WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <no object reference available>
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.util.TimerThread.mainLoop(java.base@21.0.12.1/Timer.java:563)
+	- locked <0x00000006c7a35fa0> (a java.util.TaskQueue)
+	at java.util.TimerThread.run(java.base@21.0.12.1/Timer.java:516)
+
+"File System Listener" #41 [25392] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=231.52s tid=0x0000027694722e70 nid=25392 waiting on condition  [0x000000f40c6fe000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000006c7a00118> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.12.1/LockSupport.java:371)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:519)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.12.1/ForkJoinPool.java:3780)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.12.1/ForkJoinPool.java:3725)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1746)
+	at java.util.concurrent.LinkedBlockingQueue.take(java.base@21.0.12.1/LinkedBlockingQueue.java:435)
+	at ghidra.framework.store.FileSystemEventManager$FileSystemEventProcessingThread.run(FileSystemEventManager.java:227)
+
+"GC Thread#1" os_prio=2 cpu=7718.75ms elapsed=233.34s tid=0x000002769377dd00 nid=58912 runnable  
+
+"VM Thread" os_prio=2 cpu=171.88ms elapsed=233.91s tid=0x00000276fe519840 nid=47880 runnable  
+
+"VM Periodic Task Thread" os_prio=2 cpu=31.25ms elapsed=233.91s tid=0x00000276fe5060b0 nid=56760 waiting on condition  
+
+"G1 Service" os_prio=2 cpu=93.75ms elapsed=233.91s tid=0x00000276fe3cb2a0 nid=51864 runnable  
+
+"G1 Refine#0" os_prio=2 cpu=218.75ms elapsed=233.91s tid=0x00000276fe3caa70 nid=14700 runnable  
+
+"G1 Conc#0" os_prio=2 cpu=2171.88ms elapsed=233.91s tid=0x00000276ee4f3f00 nid=54708 runnable  
+
+"G1 Main Marker" os_prio=2 cpu=0.00ms elapsed=233.91s tid=0x00000276ee4f0eb0 nid=44268 runnable  
+
+"GC Thread#0" os_prio=2 cpu=7718.75ms elapsed=233.91s tid=0x00000276ee4dffb0 nid=58164 runnable  
+
+JNI global refs: 29, weak refs: 0
+

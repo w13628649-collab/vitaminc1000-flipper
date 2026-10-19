@@ -1,0 +1,45 @@
+0x1809e10d0 mov      qword ptr [rsp + 8], rbx
+0x1809e10d5 mov      qword ptr [rsp + 0x10], rsi
+0x1809e10da push     rdi
+0x1809e10db sub      rsp, 0x20
+0x1809e10df cmp      byte ptr [rip + 0x4699d3a], 0
+0x1809e10e6 movzx    ebx, r8w
+0x1809e10ea mov      rdi, rdx
+0x1809e10ed mov      rsi, rcx
+0x1809e10f0 jne      0x1809e1105
+0x1809e10f2 lea      rcx, [rip + 0x43e102f]
+0x1809e10f9 call     0x180361910
+0x1809e10fe mov      byte ptr [rip + 0x4699d1b], 1
+0x1809e1105 mov      eax, 0x16c
+0x1809e110a cmp      bx, ax
+0x1809e110d je       0x1809e1130
+0x1809e110f xor      r9d, r9d
+0x1809e1112 movzx    r8d, bx
+0x1809e1116 mov      rdx, rdi
+0x1809e1119 mov      rcx, rsi
+0x1809e111c mov      rbx, qword ptr [rsp + 0x30]
+0x1809e1121 mov      rsi, qword ptr [rsp + 0x38]
+0x1809e1126 add      rsp, 0x20
+0x1809e112a pop      rdi
+0x1809e112b jmp      0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x1809e1130 mov      rdx, qword ptr [rip + 0x43e0ff1]
+0x1809e1137 mov      rcx, rdi
+0x1809e113a call     0x182003eb0
+0x1809e113f xor      edx, edx
+0x1809e1141 mov      rcx, rsi
+0x1809e1144 mov      rbx, rax
+0x1809e1147 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809e114c test     rbx, rbx
+0x1809e114f je       0x1809e1174
+0x1809e1151 test     rax, rax
+0x1809e1154 je       0x1809e1174
+0x1809e1156 movzx    edx, byte ptr [rbx + 0x18]
+0x1809e115a xor      r8d, r8d
+0x1809e115d mov      rcx, rax
+0x1809e1160 mov      rbx, qword ptr [rsp + 0x30]
+0x1809e1165 mov      rsi, qword ptr [rsp + 0x38]
+0x1809e116a add      rsp, 0x20
+0x1809e116e pop      rdi
+0x1809e116f jmp      0x180bcd9b0 ; Albion.PhotonClient.dll:cpx.aja
+0x1809e1174 call     0x180361b60
+0x1809e1179 int3     

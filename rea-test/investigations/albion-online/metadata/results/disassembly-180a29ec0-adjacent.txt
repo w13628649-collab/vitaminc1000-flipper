@@ -1,0 +1,54 @@
+0x180a29ec0 mov      qword ptr [rsp + 8], rbx
+0x180a29ec5 mov      qword ptr [rsp + 0x10], rsi
+0x180a29eca push     rdi
+0x180a29ecb sub      rsp, 0x20
+0x180a29ecf cmp      byte ptr [rip + 0x4651076], 0
+0x180a29ed6 movzx    edi, r8w
+0x180a29eda mov      rsi, rdx
+0x180a29edd mov      rbx, rcx
+0x180a29ee0 jne      0x180a29ef5
+0x180a29ee2 lea      rcx, [rip + 0x439aa8f]
+0x180a29ee9 call     0x180361910
+0x180a29eee mov      byte ptr [rip + 0x4651057], 1
+0x180a29ef5 mov      eax, 0x1cd
+0x180a29efa cmp      di, ax
+0x180a29efd jne      0x180a29f46
+0x180a29eff mov      rdx, qword ptr [rip + 0x439aa72]
+0x180a29f06 mov      rcx, rsi
+0x180a29f09 call     0x182003eb0
+0x180a29f0e test     rax, rax
+0x180a29f11 je       0x180a29f79
+0x180a29f13 xor      edx, edx
+0x180a29f15 mov      rcx, rbx
+0x180a29f18 cmp      byte ptr [rax + 0x18], dl
+0x180a29f1b jne      0x180a29f56
+0x180a29f1d call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a29f22 test     rax, rax
+0x180a29f25 je       0x180a29f79
+0x180a29f27 xor      edx, edx
+0x180a29f29 mov      rcx, rax
+0x180a29f2c call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x180a29f31 test     rax, rax
+0x180a29f34 je       0x180a29f79
+0x180a29f36 xor      r8d, r8d
+0x180a29f39 mov      edx, 1
+0x180a29f3e mov      rcx, rax
+0x180a29f41 call     0x1809b4240 ; Albion.PhotonClient.dll:ct7.f5
+0x180a29f46 mov      rbx, qword ptr [rsp + 0x30]
+0x180a29f4b mov      rsi, qword ptr [rsp + 0x38]
+0x180a29f50 add      rsp, 0x20
+0x180a29f54 pop      rdi
+0x180a29f55 ret      
+0x180a29f56 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x180a29f5b test     rax, rax
+0x180a29f5e je       0x180a29f79
+0x180a29f60 xor      edx, edx
+0x180a29f62 mov      rcx, rax
+0x180a29f65 call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x180a29f6a test     rax, rax
+0x180a29f6d je       0x180a29f79
+0x180a29f6f xor      r8d, r8d
+0x180a29f72 mov      edx, 2
+0x180a29f77 jmp      0x180a29f3e
+0x180a29f79 call     0x180361b60
+0x180a29f7e int3     

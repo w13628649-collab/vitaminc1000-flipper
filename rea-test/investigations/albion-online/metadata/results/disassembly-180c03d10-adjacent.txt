@@ -1,0 +1,104 @@
+0x180c03d10 mov      qword ptr [rsp + 8], rbx
+0x180c03d15 mov      qword ptr [rsp + 0x10], rsi
+0x180c03d1a push     rdi
+0x180c03d1b sub      rsp, 0x30
+0x180c03d1f cmp      byte ptr [rip + 0x447832b], 0
+0x180c03d26 movzx    edi, r8w
+0x180c03d2a mov      rsi, rdx
+0x180c03d2d mov      rbx, rcx
+0x180c03d30 jne      0x180c03d51
+0x180c03d32 lea      rcx, [rip + 0x41ba0bf]
+0x180c03d39 call     0x180361910
+0x180c03d3e lea      rcx, [rip + 0x421882b]
+0x180c03d45 call     0x180361910
+0x180c03d4a mov      byte ptr [rip + 0x4478300], 1
+0x180c03d51 mov      eax, 0x1da
+0x180c03d56 cmp      di, ax
+0x180c03d59 je       0x180c03de3
+0x180c03d5f mov      eax, 0x1db
+0x180c03d64 cmp      di, ax
+0x180c03d67 jne      0x180c03dd3
+0x180c03d69 xor      edx, edx
+0x180c03d6b mov      rcx, rbx
+0x180c03d6e call     0x180bf3a50 ; Albion.PhotonClient.dll:csr.w
+0x180c03d73 test     rax, rax
+0x180c03d76 je       0x180c03e99
+0x180c03d7c xor      edx, edx
+0x180c03d7e mov      rcx, rax
+0x180c03d81 call     0x180bc4fb0 ; Albion.PhotonClient.dll:cpo.azo
+0x180c03d86 test     rax, rax
+0x180c03d89 je       0x180c03dd3
+0x180c03d8b mov      r8, qword ptr [rax]
+0x180c03d8e mov      rdx, qword ptr [rip + 0x42187db]
+0x180c03d95 movzx    eax, byte ptr [rdx + 0x130]
+0x180c03d9c cmp      byte ptr [r8 + 0x130], al
+0x180c03da3 jb       0x180c03dd3
+0x180c03da5 movzx    ecx, al
+0x180c03da8 mov      rax, qword ptr [r8 + 0xc8]
+0x180c03daf cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x180c03db4 jne      0x180c03dd3
+0x180c03db6 xor      edx, edx
+0x180c03db8 mov      rcx, rbx
+0x180c03dbb call     0x180bf3a50 ; Albion.PhotonClient.dll:csr.w
+0x180c03dc0 test     rax, rax
+0x180c03dc3 je       0x180c03e99
+0x180c03dc9 xor      edx, edx
+0x180c03dcb mov      rcx, rax
+0x180c03dce call     0x180bc4f40 ; Albion.PhotonClient.dll:cpo.azm
+0x180c03dd3 mov      rbx, qword ptr [rsp + 0x40]
+0x180c03dd8 mov      rsi, qword ptr [rsp + 0x48]
+0x180c03ddd add      rsp, 0x30
+0x180c03de1 pop      rdi
+0x180c03de2 ret      
+0x180c03de3 mov      rdx, qword ptr [rip + 0x41ba00e]
+0x180c03dea mov      rcx, rsi
+0x180c03ded call     0x182003eb0
+0x180c03df2 xor      edx, edx
+0x180c03df4 mov      rcx, rbx
+0x180c03df7 mov      rdi, rax
+0x180c03dfa call     0x180bf3a50 ; Albion.PhotonClient.dll:csr.w
+0x180c03dff test     rax, rax
+0x180c03e02 je       0x180c03e99
+0x180c03e08 xor      r8d, r8d
+0x180c03e0b mov      edx, 0x25
+0x180c03e10 mov      rcx, rax
+0x180c03e13 call     0x180a13540 ; Albion.PhotonClient.dll:cpx.x8 | Albion.PhotonClient.dll:c0a.af
+0x180c03e18 test     al, al
+0x180c03e1a je       0x180c03dd3
+0x180c03e1c xor      edx, edx
+0x180c03e1e mov      rcx, rbx
+0x180c03e21 call     0x180bf3a50 ; Albion.PhotonClient.dll:csr.w
+0x180c03e26 test     rax, rax
+0x180c03e29 je       0x180c03e99
+0x180c03e2b xor      edx, edx
+0x180c03e2d mov      rcx, rax
+0x180c03e30 call     0x180bc4fb0 ; Albion.PhotonClient.dll:cpo.azo
+0x180c03e35 mov      rcx, rax
+0x180c03e38 test     rdi, rdi
+0x180c03e3b je       0x180c03e99
+0x180c03e3d mov      r8, qword ptr [rip + 0x421872c]
+0x180c03e44 test     rax, rax
+0x180c03e47 je       0x180c03e99
+0x180c03e49 mov      r9, qword ptr [rax]
+0x180c03e4c movzx    eax, byte ptr [r8 + 0x130]
+0x180c03e54 cmp      byte ptr [r9 + 0x130], al
+0x180c03e5b jb       0x180c03e9f
+0x180c03e5d movzx    edx, al
+0x180c03e60 mov      rax, qword ptr [r9 + 0xc8]
+0x180c03e67 cmp      qword ptr [rax + rdx*8 - 8], r8
+0x180c03e6c jne      0x180c03e9f
+0x180c03e6e movsx    r9d, word ptr [rdi + 0x28]
+0x180c03e73 mov      r8, qword ptr [rdi + 0x20]
+0x180c03e77 mov      rdx, qword ptr [rdi + 0x18]
+0x180c03e7b mov      qword ptr [rsp + 0x20], 0
+0x180c03e84 call     0x180bdb810 ; Albion.PhotonClient.dll:cp8.f5
+0x180c03e89 mov      rbx, qword ptr [rsp + 0x40]
+0x180c03e8e mov      rsi, qword ptr [rsp + 0x48]
+0x180c03e93 add      rsp, 0x30
+0x180c03e97 pop      rdi
+0x180c03e98 ret      
+0x180c03e99 call     0x180361b60
+0x180c03e9e int3     
+0x180c03e9f mov      rdx, r8
+0x180c03ea2 call     0x180360c80
+0x180c03ea7 int3     

@@ -1,0 +1,161 @@
+0x180a95d90 mov      qword ptr [rsp + 0x10], rbx
+0x180a95d95 mov      qword ptr [rsp + 0x18], rsi
+0x180a95d9a mov      qword ptr [rsp + 0x20], rdi
+0x180a95d9f push     r14
+0x180a95da1 sub      rsp, 0x40
+0x180a95da5 mov      r14, r8
+0x180a95da8 mov      rsi, rdx
+0x180a95dab mov      rbx, rcx
+0x180a95dae cmp      byte ptr [rip + 0x45e56a1], 0
+0x180a95db5 jne      0x180a95e12
+0x180a95db7 lea      rcx, [rip + 0x43ada1a]
+0x180a95dbe call     0x180361910
+0x180a95dc3 lea      rcx, [rip + 0x43495f6]
+0x180a95dca call     0x180361910
+0x180a95dcf lea      rcx, [rip + 0x4391b5a]
+0x180a95dd6 call     0x180361910
+0x180a95ddb lea      rcx, [rip + 0x438466e]
+0x180a95de2 call     0x180361910
+0x180a95de7 lea      rcx, [rip + 0x43937d2]
+0x180a95dee call     0x180361910
+0x180a95df3 lea      rcx, [rip + 0x436cdf6]
+0x180a95dfa call     0x180361910
+0x180a95dff lea      rcx, [rip + 0x4373152]
+0x180a95e06 call     0x180361910
+0x180a95e0b mov      byte ptr [rip + 0x45e5644], 1
+0x180a95e12 mov      rcx, qword ptr [rbx + 0x18]
+0x180a95e16 test     rcx, rcx
+0x180a95e19 je       0x180a9604a
+0x180a95e1f mov      rdx, qword ptr [rip + 0x43ad9b2]
+0x180a95e26 call     0x1829f9840
+0x180a95e2b mov      qword ptr [rsp + 0x50], rax
+0x180a95e30 mov      qword ptr [rsp + 0x28], 0
+0x180a95e39 lea      rbx, [rsp + 0x50]
+0x180a95e3e mov      qword ptr [rsp + 0x30], rbx
+0x180a95e43 nop      dword ptr [rax]
+0x180a95e47 nop      word ptr [rax + rax]
+0x180a95e50 mov      r8, qword ptr [rsp + 0x50]
+0x180a95e55 test     r8, r8
+0x180a95e58 je       0x180a9603e
+0x180a95e5e xor      ecx, ecx
+0x180a95e60 mov      rdx, qword ptr [rip + 0x4393759]
+0x180a95e67 call     0x180001ee0
+0x180a95e6c test     al, al
+0x180a95e6e je       0x180a95fbd
+0x180a95e74 mov      r8, qword ptr [rsp + 0x50]
+0x180a95e79 test     r8, r8
+0x180a95e7c je       0x180a96039
+0x180a95e82 xor      ecx, ecx
+0x180a95e84 mov      rdx, qword ptr [rip + 0x43845c5]
+0x180a95e8b call     0x180001ee0
+0x180a95e90 mov      rdi, rax
+0x180a95e93 cmp      rax, rsi
+0x180a95e96 jne      0x180a95e50
+0x180a95e98 test     r14, r14
+0x180a95e9b je       0x180a96034
+0x180a95ea1 mov      rcx, qword ptr [r14 + 0x18]
+0x180a95ea5 test     rcx, rcx
+0x180a95ea8 je       0x180a9602f
+0x180a95eae xor      r8d, r8d
+0x180a95eb1 mov      dl, 1
+0x180a95eb3 call     0x1832ad840 ; Photon3Unity3D.dll:g7g.e
+0x180a95eb8 mov      r8, qword ptr [rip + 0x4600099]
+0x180a95ebf test     rax, rax
+0x180a95ec2 je       0x180a9602a
+0x180a95ec8 mov      rdx, qword ptr [rax]
+0x180a95ecb mov      rcx, qword ptr [r8 + 0x40]
+0x180a95ecf cmp      qword ptr [rdx + 0x40], rcx
+0x180a95ed3 mov      rcx, rax
+0x180a95ed6 jne      0x180a96022
+0x180a95edc call     0x180360e20
+0x180a95ee1 movzx    ecx, byte ptr [rax]
+0x180a95ee4 sub      ecx, 1
+0x180a95ee7 je       0x180a95f1d
+0x180a95ee9 sub      ecx, 1
+0x180a95eec je       0x180a95f08
+0x180a95eee cmp      ecx, 1
+0x180a95ef1 jne      0x180a95f30
+0x180a95ef3 test     rdi, rdi
+0x180a95ef6 je       0x180a96012
+0x180a95efc mov      dword ptr [rdi + 0x148], 3
+0x180a95f06 jmp      0x180a95f30
+0x180a95f08 test     rdi, rdi
+0x180a95f0b je       0x180a96018
+0x180a95f11 mov      dword ptr [rdi + 0x148], 2
+0x180a95f1b jmp      0x180a95f30
+0x180a95f1d test     rdi, rdi
+0x180a95f20 je       0x180a9601d
+0x180a95f26 mov      dword ptr [rdi + 0x148], 1
+0x180a95f30 mov      rcx, qword ptr [rip + 0x4349489]
+0x180a95f37 cmp      dword ptr [rcx + 0xe4], 0
+0x180a95f3e jne      0x180a95f45
+0x180a95f40 call     0x180361bf0
+0x180a95f45 xor      ecx, ecx
+0x180a95f47 call     0x183163e80 ; mscorlib.dll:System.DateTime.get_UtcNow
+0x180a95f4c mov      rdi, rax
+0x180a95f4f mov      rcx, qword ptr [rip + 0x436cc9a]
+0x180a95f56 cmp      dword ptr [rcx + 0xe4], 0
+0x180a95f5d jne      0x180a95f64
+0x180a95f5f call     0x180361bf0
+0x180a95f64 xor      edx, edx
+0x180a95f66 movsd    xmm0, qword ptr [rip + 0x33d3d82]
+0x180a95f6e call     0x1831923e0 ; mscorlib.dll:System.TimeSpan.FromSeconds
+0x180a95f73 xor      r8d, r8d
+0x180a95f76 mov      rdx, rax
+0x180a95f79 mov      rcx, rdi
+0x180a95f7c call     0x183163f30 ; mscorlib.dll:System.DateTime.op_Addition
+0x180a95f81 mov      rdi, rax
+0x180a95f84 mov      rcx, qword ptr [rip + 0x4372fcd]
+0x180a95f8b cmp      dword ptr [rcx + 0xe4], 0
+0x180a95f92 jne      0x180a95f99
+0x180a95f94 call     0x180361bf0
+0x180a95f99 xor      edx, edx
+0x180a95f9b mov      rcx, rdi
+0x180a95f9e call     0x180a8fd50
+0x180a95fa3 nop      
+0x180a95fa4 cmp      qword ptr [rbx], 0
+0x180a95fa8 je       0x180a95fbb
+0x180a95faa xor      ecx, ecx
+0x180a95fac mov      r8, qword ptr [rbx]
+0x180a95faf mov      rdx, qword ptr [rip + 0x439197a]
+0x180a95fb6 call     0x180001ee0
+0x180a95fbb jmp      0x180a95ffc
+0x180a95fbd cmp      qword ptr [rbx], 0
+0x180a95fc1 je       0x180a95fd4
+0x180a95fc3 xor      ecx, ecx
+0x180a95fc5 mov      r8, qword ptr [rbx]
+0x180a95fc8 mov      rdx, qword ptr [rip + 0x4391961]
+0x180a95fcf call     0x180001ee0
+0x180a95fd4 jmp      0x180a95ffc
+0x180a95fd6 mov      r8, qword ptr [rsp + 0x30]
+0x180a95fdb cmp      qword ptr [r8], 0
+0x180a95fdf je       0x180a95ff2
+0x180a95fe1 xor      ecx, ecx
+0x180a95fe3 mov      r8, qword ptr [r8]
+0x180a95fe6 mov      rdx, qword ptr [rip + 0x4391943]
+0x180a95fed call     0x180001ee0
+0x180a95ff2 mov      rcx, qword ptr [rsp + 0x28]
+0x180a95ff7 test     rcx, rcx
+0x180a95ffa jne      0x180a96044
+0x180a95ffc mov      rbx, qword ptr [rsp + 0x58]
+0x180a96001 mov      rsi, qword ptr [rsp + 0x60]
+0x180a96006 mov      rdi, qword ptr [rsp + 0x68]
+0x180a9600b add      rsp, 0x40
+0x180a9600f pop      r14
+0x180a96011 ret      
+0x180a96012 call     0x180361b60
+0x180a96017 nop      
+0x180a96018 call     0x180361b60
+0x180a9601d call     0x180361b60
+0x180a96022 mov      rdx, r8
+0x180a96025 call     0x180360c80
+0x180a9602a call     0x180361b60
+0x180a9602f call     0x180361b60
+0x180a96034 call     0x180361b60
+0x180a96039 call     0x180361b60
+0x180a9603e call     0x180361b60
+0x180a96043 nop      
+0x180a96044 call     0x18035da00
+0x180a96049 int3     
+0x180a9604a call     0x180361b60
+0x180a9604f int3     

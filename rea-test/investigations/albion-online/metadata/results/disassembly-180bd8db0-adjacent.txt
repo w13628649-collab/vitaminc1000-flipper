@@ -1,0 +1,60 @@
+0x180bd8db0 mov      qword ptr [rsp + 8], rbx
+0x180bd8db5 push     rdi
+0x180bd8db6 sub      rsp, 0x20
+0x180bd8dba cmp      byte ptr [rip + 0x44a31d2], 0
+0x180bd8dc1 mov      rdi, rdx
+0x180bd8dc4 mov      rbx, rcx
+0x180bd8dc7 jne      0x180bd8df4
+0x180bd8dc9 lea      rcx, [rip + 0x4230188]
+0x180bd8dd0 call     0x180361910
+0x180bd8dd5 lea      rcx, [rip + 0x4271cdc]
+0x180bd8ddc call     0x180361910
+0x180bd8de1 lea      rcx, [rip + 0x42720d8]
+0x180bd8de8 call     0x180361910
+0x180bd8ded mov      byte ptr [rip + 0x44a319f], 1
+0x180bd8df4 lea      rcx, [rbx + 0x328]
+0x180bd8dfb mov      qword ptr [rbx + 0x328], rdi
+0x180bd8e02 mov      rdx, rdi
+0x180bd8e05 call     0x180360c40
+0x180bd8e0a mov      rcx, qword ptr [rip + 0x4230147]
+0x180bd8e11 cmp      dword ptr [rcx + 0xe4], 0
+0x180bd8e18 jne      0x180bd8e1f
+0x180bd8e1a call     0x180361bf0
+0x180bd8e1f cmp      byte ptr [rip + 0x44a1b7c], 0
+0x180bd8e26 jne      0x180bd8e3b
+0x180bd8e28 lea      rcx, [rip + 0x4230129]
+0x180bd8e2f call     0x180361910
+0x180bd8e34 mov      byte ptr [rip + 0x44a1b67], 1
+0x180bd8e3b mov      rcx, qword ptr [rip + 0x4230116]
+0x180bd8e42 cmp      dword ptr [rcx + 0xe4], 0
+0x180bd8e49 jne      0x180bd8e50
+0x180bd8e4b call     0x180361bf0
+0x180bd8e50 mov      rcx, qword ptr [rip + 0x4230101]
+0x180bd8e57 call     0x180361710
+0x180bd8e5c mov      r8, qword ptr [rax]
+0x180bd8e5f test     r8, r8
+0x180bd8e62 je       0x180bd8ebb
+0x180bd8e64 mov      r8, qword ptr [r8 + 0x30]
+0x180bd8e68 test     r8, r8
+0x180bd8e6b je       0x180bd8ebb
+0x180bd8e6d mov      rdx, qword ptr [rip + 0x4271c44]
+0x180bd8e74 mov      ecx, 3
+0x180bd8e79 call     0x180001ee0
+0x180bd8e7e test     rax, rax
+0x180bd8e81 je       0x180bd8ebb
+0x180bd8e83 mov      rdx, qword ptr [rip + 0x4272036]
+0x180bd8e8a xor      ecx, ecx
+0x180bd8e8c mov      r9, rdi
+0x180bd8e8f mov      r8, rax
+0x180bd8e92 call     0x18000a5c0
+0x180bd8e97 mov      r8, qword ptr [rbx]
+0x180bd8e9a mov      rdx, rax
+0x180bd8e9d mov      rcx, rbx
+0x180bd8ea0 mov      r9, qword ptr [r8 + 0x618]
+0x180bd8ea7 mov      r8, qword ptr [r8 + 0x620]
+0x180bd8eae mov      rbx, qword ptr [rsp + 0x30]
+0x180bd8eb3 add      rsp, 0x20
+0x180bd8eb7 pop      rdi
+0x180bd8eb8 jmp      r9
+0x180bd8ebb call     0x180361b60
+0x180bd8ec0 int3     

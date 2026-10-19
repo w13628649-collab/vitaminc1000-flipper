@@ -1,0 +1,441 @@
+{
+  "kind": "derived review of eight saved REA function dossiers",
+  "records": [
+    {
+      "file": "evidence/new-character-message-handler.json",
+      "file_sha256": "fa36b5cb30c6f2e5772219305889583608ebe2a489f35b023183d457e281159f",
+      "evidence_id": "ev_1432a2360489cab337f425cde48c2fe3f515b2e1eb2919145f4d50970f6e5657",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180aacaf0",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180aacaf0",
+            "end": "0x180aace35"
+          }
+        ],
+        "total_bytes": 838,
+        "span_bytes": 838,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180aace2b to 0x180a5e900 FUN_180a5e900 (external=false, thunk=false, hasNoReturn=false); fallthrough is excluded by Ghidra's flow model. The reason for the terminal flow is not established by this observation.",
+        "Ghidra Listing reports a terminal call at 0x180aace35 with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/new_character_state_application.json",
+      "file_sha256": "e5e832ade71eaf518876b09b677e9fba01fb10f39c7a675f3524fed9da01b9a1",
+      "evidence_id": "ev_905c916ab1b812d7bb7d64cca4d302e59fe5290bcce60f9fc90f597acbe37fb3",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180becdc0",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180becdc0",
+            "end": "0x180bee901"
+          }
+        ],
+        "total_bytes": 6978,
+        "span_bytes": 6978,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": true,
+      "omitted_operations_lower_bound": 1,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180bee7a4 to 0x180bd18f0 FUN_180bd18f0 (external=false, thunk=false, hasNoReturn=false); fallthrough is excluded by Ghidra's flow model. The reason for the terminal flow is not established by this observation.",
+        "Ghidra Listing reports a terminal call at 0x180bee7ae with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7b4 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7bd with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7c9 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7d2 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7db with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7e4 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7f0 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee7f9 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee802 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee80e with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee817 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee823 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee82c with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee835 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee841 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee84d with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee856 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee85f with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee868 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee871 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee87a with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee883 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee88c with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee895 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee89e with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8a7 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8b0 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8b9 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8c2 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8cb with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8d4 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8dd with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8e6 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8ef with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee8f8 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bee901 with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/character_name_setter.json",
+      "file_sha256": "b5632d10bf7ad792a8e1efcb8bec937c8550a497c3e309f11a39fcdda1d4bbba",
+      "evidence_id": "ev_e6913f7f59d91e7c49745ea72241e03b2f13b76e860498d2bf120b3fd623a34a",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180bd9010",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180bd9010",
+            "end": "0x180bd9300"
+          }
+        ],
+        "total_bytes": 753,
+        "span_bytes": 753,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180bd9300 with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/equipment_indices_setter.json",
+      "file_sha256": "ca41fd33f3ff069a381702594460972280f4a702c86f9e74b117139ad7b86b14",
+      "evidence_id": "ev_7fb7b0995d7fc471f6c8a8c73f7b0626922f7f0018508a15e5c6d6e718f37c88",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180bd9770",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180bd9770",
+            "end": "0x180bd9a81"
+          }
+        ],
+        "total_bytes": 786,
+        "span_bytes": 786,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180bd9a5c with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bd9a6c with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bd9a75 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bd9a7b with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180bd9a81 with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/equipment_changed_handler.json",
+      "file_sha256": "0c3e16b92e3ac3e828345a17027bdd3baf79000f71c7bf2b9a2421573f578dcf",
+      "evidence_id": "ev_c29961641b5e48548c4f096918dd40095a62c188c27b676dd6bdd5ac36e2b728",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180be90e0",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180be90e0",
+            "end": "0x180be951e"
+          }
+        ],
+        "total_bytes": 1087,
+        "span_bytes": 1087,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180be94cd with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be94d6 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be94df with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be94eb with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be94f4 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be9500 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be950c with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be9518 with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x180be951e with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/health_update_handler.json",
+      "file_sha256": "806eb9e3731043b608ad9455c382a2f5f6455c664bc61514c1b4952fe7f3e41e",
+      "evidence_id": "ev_77566fb7d680d514d7c0ec8f57b221fba9e088470a46d63bcabf4a3d0778dff5",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x180bc2cb0",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x180bc2cb0",
+            "end": "0x180bc2dde"
+          }
+        ],
+        "total_bytes": 303,
+        "span_bytes": 303,
+        "non_contiguous": false,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x180bc2dde with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/minimap-interest-area-position-updates.json",
+      "file_sha256": "367c3516ae2093b2497d1c9d79150b91affc9239df12b3324eaaee888e3260f2",
+      "evidence_id": "ev_5297bf2d8ea7ce8c8ed7aa8908d17209596678f26bc978e2a8964d5bceb7ee3b",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x18145ae00",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x18145ae00",
+            "end": "0x18145b00c"
+          },
+          {
+            "start": "0x18145b028",
+            "end": "0x18145b063"
+          }
+        ],
+        "total_bytes": 585,
+        "span_bytes": 612,
+        "non_contiguous": true,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": false,
+      "omitted_operations_lower_bound": 0,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x18145b05d with no resolved callee; its no-return basis is unknown.",
+        "Ghidra Listing reports a terminal call at 0x18145b063 with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    },
+    {
+      "file": "evidence/minimap-party-member-position-updates.json",
+      "file_sha256": "54b38f78c8e86eec15b5ea4361f89703c7d57786ea72b9ecb953bec42ad1b253",
+      "evidence_id": "ev_a2e8f7a470169f9315f5f94e1ae1b18763fb01a06b5ab2ea88c78e3ee72f5325",
+      "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+      "provider": {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": "12.1.4"
+      },
+      "profile_digest": "96664c5e569b8baa0db21aa3e46d10a6d2eaff5fe5324a1fbaa54ee3a5a61643",
+      "address": "0x18145c270",
+      "body": {
+        "available": true,
+        "provenance": "ghidra-function-body-address-set",
+        "ranges": [
+          {
+            "start": "0x18145c270",
+            "end": "0x18145c8af"
+          },
+          {
+            "start": "0x18145c8ea",
+            "end": "0x18145ca57"
+          },
+          {
+            "start": "0x18145ca9a",
+            "end": "0x18145cafc"
+          },
+          {
+            "start": "0x18145cb2c",
+            "end": "0x18145cc79"
+          },
+          {
+            "start": "0x18145cc9e",
+            "end": "0x18145cdcc"
+          },
+          {
+            "start": "0x18145cdf4",
+            "end": "0x18145ceab"
+          }
+        ],
+        "total_bytes": 2886,
+        "span_bytes": 3132,
+        "non_contiguous": true,
+        "contains_entry": true
+      },
+      "native_value_flow_truncated": true,
+      "omitted_operations_lower_bound": 1,
+      "known_omitted_inputs": 0,
+      "known_omitted_edges": 0,
+      "normalized_limitations": [
+        "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+        "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+        "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+        "Ghidra Listing reports a terminal call at 0x18145ceab with no resolved callee; its no-return basis is unknown."
+      ],
+      "value_flow_limitations": [
+        "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+        "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+        "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+        "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+        "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+      ]
+    }
+  ],
+  "corrections": "../metadata/results/player-semantic-rea-review-corrections.json"
+}

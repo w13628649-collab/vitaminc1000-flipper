@@ -1,0 +1,73 @@
+0x180b20e70 mov      qword ptr [rsp + 0x18], rbx
+0x180b20e75 mov      qword ptr [rsp + 0x10], rdx
+0x180b20e7a mov      qword ptr [rsp + 8], rcx
+0x180b20e7f push     rdi
+0x180b20e80 sub      rsp, 0x40
+0x180b20e84 mov      rdi, rdx
+0x180b20e87 mov      rbx, rcx
+0x180b20e8a cmp      byte ptr [rip + 0x455a9da], 0
+0x180b20e91 jne      0x180b20ea6
+0x180b20e93 lea      rcx, [rip + 0x42a94be]
+0x180b20e9a call     0x180361910
+0x180b20e9f mov      byte ptr [rip + 0x455a9c5], 1
+0x180b20ea6 xor      edx, edx
+0x180b20ea8 mov      rcx, rbx
+0x180b20eab call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180b20eb0 nop      
+0x180b20eb1 mov      rdx, qword ptr [rip + 0x42a94a0]
+0x180b20eb8 mov      rcx, rdi
+0x180b20ebb call     0x181edb0f0
+0x180b20ec0 mov      qword ptr [rbx + 0x10], rax
+0x180b20ec4 lea      rcx, [rbx + 0x10]
+0x180b20ec8 mov      rdx, rax
+0x180b20ecb call     0x180360c40
+0x180b20ed0 nop      
+0x180b20ed1 jmp      0x180b20f91
+0x180b20ed6 lea      rcx, [rip + 0x428878b]
+0x180b20edd call     0x180361930
+0x180b20ee2 mov      rcx, rax
+0x180b20ee5 call     0x180361b10
+0x180b20eea mov      rbx, rax
+0x180b20eed xor      edx, edx
+0x180b20eef mov      rcx, rax
+0x180b20ef2 call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x180b20ef7 mov      rcx, qword ptr [rsp + 0x50]
+0x180b20efc mov      qword ptr [rcx + 0x10], rbx
+0x180b20f00 add      rcx, 0x10
+0x180b20f04 mov      rdx, rbx
+0x180b20f07 call     0x180360c40
+0x180b20f0c mov      rcx, qword ptr [rsp + 0x68]
+0x180b20f11 test     rcx, rcx
+0x180b20f14 je       0x180b20f9c
+0x180b20f1a mov      rdx, qword ptr [rcx]
+0x180b20f1d mov      rax, qword ptr [rdx + 0x188]
+0x180b20f24 mov      rdx, qword ptr [rdx + 0x190]
+0x180b20f2b call     rax
+0x180b20f2d mov      rdi, rax
+0x180b20f30 lea      rcx, [rip + 0x42aa779]
+0x180b20f37 call     0x180361930
+0x180b20f3c mov      rbx, rax
+0x180b20f3f lea      rcx, [rip + 0x429f3f2]
+0x180b20f46 call     0x180361930
+0x180b20f4b mov      qword ptr [rsp + 0x20], 0
+0x180b20f54 mov      r9, qword ptr [rsp + 0x58]
+0x180b20f59 mov      r8, rbx
+0x180b20f5c mov      rdx, rdi
+0x180b20f5f mov      rcx, rax
+0x180b20f62 call     0x182fbd420 ; mscorlib.dll:System.String.Concat
+0x180b20f67 mov      rbx, rax
+0x180b20f6a lea      rcx, [rip + 0x4350b5f]
+0x180b20f71 call     0x180361930
+0x180b20f76 cmp      dword ptr [rax + 0xe4], 0
+0x180b20f7d jne      0x180b20f87
+0x180b20f7f mov      rcx, rax
+0x180b20f82 call     0x180361bf0
+0x180b20f87 xor      edx, edx
+0x180b20f89 mov      rcx, rbx
+0x180b20f8c call     0x1804f7650 ; Albion.Common.dll:e.b
+0x180b20f91 mov      rbx, qword ptr [rsp + 0x60]
+0x180b20f96 add      rsp, 0x40
+0x180b20f9a pop      rdi
+0x180b20f9b ret      
+0x180b20f9c call     0x180361b60
+0x180b20fa1 int3     

@@ -1,0 +1,53 @@
+0x1808e5070 push     rbx
+0x1808e5072 sub      rsp, 0x20
+0x1808e5076 cmp      byte ptr [rip + 0x4795462], 0
+0x1808e507d jne      0x1808e50c2
+0x1808e507f lea      rcx, [rip + 0x455207a]
+0x1808e5086 call     0x180361910
+0x1808e508b lea      rcx, [rip + 0x4596ce6]
+0x1808e5092 call     0x180361910
+0x1808e5097 lea      rcx, [rip + 0x44f581a]
+0x1808e509e call     0x180361910
+0x1808e50a3 lea      rcx, [rip + 0x4594b0e]
+0x1808e50aa call     0x180361910
+0x1808e50af lea      rcx, [rip + 0x44c619a]
+0x1808e50b6 call     0x180361910
+0x1808e50bb mov      byte ptr [rip + 0x479541d], 1
+0x1808e50c2 mov      rcx, qword ptr [rip + 0x4596caf]
+0x1808e50c9 call     0x180361b10
+0x1808e50ce mov      rdx, qword ptr [rip + 0x455202b]
+0x1808e50d5 mov      rcx, rax
+0x1808e50d8 mov      rbx, rax
+0x1808e50db call     0x182b60120
+0x1808e50e0 mov      rcx, qword ptr [rip + 0x44c6169]
+0x1808e50e7 mov      rdx, qword ptr [rcx + 0xb8]
+0x1808e50ee mov      qword ptr [rdx], rbx
+0x1808e50f1 mov      rdx, rbx
+0x1808e50f4 mov      rcx, qword ptr [rip + 0x44c6155]
+0x1808e50fb mov      rcx, qword ptr [rcx + 0xb8]
+0x1808e5102 call     0x180360c40
+0x1808e5107 mov      rcx, qword ptr [rip + 0x47b0f12]
+0x1808e510e mov      rbx, qword ptr [rip + 0x4594aa3]
+0x1808e5115 cmp      dword ptr [rcx + 0xe4], 0
+0x1808e511c jne      0x1808e5123
+0x1808e511e call     0x180361bf0
+0x1808e5123 xor      edx, edx
+0x1808e5125 mov      rcx, rbx
+0x1808e5128 call     0x183196310 ; mscorlib.dll:System.Type.GetTypeFromHandle
+0x1808e512d mov      rcx, qword ptr [rip + 0x44f5784]
+0x1808e5134 mov      rbx, rax
+0x1808e5137 cmp      dword ptr [rcx + 0xe4], 0
+0x1808e513e jne      0x1808e5145
+0x1808e5140 call     0x180361bf0
+0x1808e5145 xor      edx, edx
+0x1808e5147 mov      rcx, rbx
+0x1808e514a call     0x18084da40 ; Albion.Common.dll:c0.a
+0x1808e514f mov      rcx, qword ptr [rip + 0x44c60fa]
+0x1808e5156 mov      rdx, qword ptr [rcx + 0xb8]
+0x1808e515d mov      qword ptr [rdx], rax
+0x1808e5160 mov      rdx, rax
+0x1808e5163 mov      rcx, qword ptr [rip + 0x44c60e6]
+0x1808e516a mov      rcx, qword ptr [rcx + 0xb8]
+0x1808e5171 add      rsp, 0x20
+0x1808e5175 pop      rbx
+0x1808e5176 jmp      0x180360c40

@@ -1,0 +1,46 @@
+{
+  "evidence_id": "AO-META-LEAF-180bd8ed0",
+  "function_va": "0x180bd8ed0",
+  "file_offset": 12416208,
+  "byte_length": 11,
+  "bytes_sha256": "c5a78e8bf3e66181b28233d64d006f605a7af88cf61e6624cb76ed6f79287892",
+  "binary_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "symbols": [
+    {
+      "type_index": 19513,
+      "type": "cp0",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 135918,
+      "name": "aew",
+      "token": "0x6001875",
+      "native_va": "0x180bd8ed0",
+      "native_rva": "0xbd8ed0",
+      "native_file_offset": 12416208,
+      "pointer_slot_file_offset": 79866512
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x180bd8ed0",
+      "file_offset": 12416208,
+      "bytes": "0f1002",
+      "mnemonic": "movups",
+      "operands": "xmm0, xmmword ptr [rdx]"
+    },
+    {
+      "va": "0x180bd8ed3",
+      "file_offset": 12416211,
+      "bytes": "0f118138030000",
+      "mnemonic": "movups",
+      "operands": "xmmword ptr [rcx + 0x338], xmm0"
+    },
+    {
+      "va": "0x180bd8eda",
+      "file_offset": 12416218,
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    }
+  ],
+  "limitations": "Metadata-named code pointer with no PE unwind record. Maximum64 bytes bounded by next named method, stop at first RET/JMP; leaf function membership remains inference. No runtime observation."
+}

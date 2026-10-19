@@ -1,0 +1,103 @@
+0x180a454c0 mov      qword ptr [rsp + 0x18], rbx
+0x180a454c5 push     rdi
+0x180a454c6 sub      rsp, 0x30
+0x180a454ca cmp      byte ptr [rip + 0x4635c28], 0
+0x180a454d1 movzx    ebx, r8w
+0x180a454d5 mov      rdi, rdx
+0x180a454d8 jne      0x180a4551d
+0x180a454da lea      rcx, [rip + 0x4354a0f]
+0x180a454e1 call     0x180361910
+0x180a454e6 lea      rcx, [rip + 0x43c3a6b]
+0x180a454ed call     0x180361910
+0x180a454f2 lea      rcx, [rip + 0x43a168f]
+0x180a454f9 call     0x180361910
+0x180a454fe lea      rcx, [rip + 0x43c572b]
+0x180a45505 call     0x180361910
+0x180a4550a lea      rcx, [rip + 0x43f9ab7]
+0x180a45511 call     0x180361910
+0x180a45516 mov      byte ptr [rip + 0x4635bdc], 1
+0x180a4551d mov      eax, 0x251
+0x180a45522 cmp      bx, ax
+0x180a45525 jne      0x180a45692
+0x180a4552b mov      qword ptr [rsp + 0x48], rsi
+0x180a45530 mov      rdx, qword ptr [rip + 0x43a1651]
+0x180a45537 mov      rcx, rdi
+0x180a4553a call     0x182003eb0
+0x180a4553f mov      rcx, qword ptr [rip + 0x43c56ea]
+0x180a45546 mov      rbx, rax
+0x180a45549 cmp      dword ptr [rcx + 0xe4], 0
+0x180a45550 jne      0x180a45557
+0x180a45552 call     0x180361bf0
+0x180a45557 cmp      byte ptr [rip + 0x463558a], 0
+0x180a4555e jne      0x180a45573
+0x180a45560 lea      rcx, [rip + 0x43c56c9]
+0x180a45567 call     0x180361910
+0x180a4556c mov      byte ptr [rip + 0x4635575], 1
+0x180a45573 mov      rcx, qword ptr [rip + 0x43c56b6]
+0x180a4557a cmp      dword ptr [rcx + 0xe4], 0
+0x180a45581 jne      0x180a45588
+0x180a45583 call     0x180361bf0
+0x180a45588 mov      rcx, qword ptr [rip + 0x43c56a1]
+0x180a4558f mov      qword ptr [rsp + 0x40], rbp
+0x180a45594 call     0x180361710
+0x180a45599 mov      rsi, qword ptr [rax]
+0x180a4559c test     rsi, rsi
+0x180a4559f je       0x180a4569d
+0x180a455a5 mov      rsi, qword ptr [rsi + 0x58]
+0x180a455a9 test     rsi, rsi
+0x180a455ac je       0x180a455c7
+0x180a455ae mov      rsi, qword ptr [rsi + 0xc0]
+0x180a455b5 test     rsi, rsi
+0x180a455b8 je       0x180a4569d
+0x180a455be mov      rsi, qword ptr [rsi + 0x20]
+0x180a455c2 test     rsi, rsi
+0x180a455c5 jne      0x180a455d8
+0x180a455c7 mov      rax, qword ptr [rip + 0x4650a02]
+0x180a455ce mov      rcx, qword ptr [rax + 0xb8]
+0x180a455d5 mov      rsi, qword ptr [rcx]
+0x180a455d8 test     rbx, rbx
+0x180a455db je       0x180a4569d
+0x180a455e1 mov      edi, dword ptr [rbx + 0x18]
+0x180a455e4 mov      rcx, qword ptr [rip + 0x43f99dd]
+0x180a455eb mov      rbx, qword ptr [rbx + 0x10]
+0x180a455ef call     0x180361b10
+0x180a455f4 mov      r9, rsi
+0x180a455f7 mov      qword ptr [rsp + 0x20], 0
+0x180a45600 mov      r8, rbx
+0x180a45603 mov      edx, edi
+0x180a45605 mov      rcx, rax
+0x180a45608 mov      rbp, rax
+0x180a4560b call     0x180a9b5f0 ; Albion.PhotonClient.dll:dbk..ctor
+0x180a45610 mov      rcx, qword ptr [rip + 0x43c3941]
+0x180a45617 cmp      dword ptr [rcx + 0xe4], 0
+0x180a4561e jne      0x180a45625
+0x180a45620 call     0x180361bf0
+0x180a45625 cmp      byte ptr [rip + 0x4635376], 0
+0x180a4562c jne      0x180a45641
+0x180a4562e lea      rcx, [rip + 0x43c3923]
+0x180a45635 call     0x180361910
+0x180a4563a mov      byte ptr [rip + 0x4635361], 1
+0x180a45641 mov      rcx, qword ptr [rip + 0x43c3910]
+0x180a45648 cmp      dword ptr [rcx + 0xe4], 0
+0x180a4564f jne      0x180a45656
+0x180a45651 call     0x180361bf0
+0x180a45656 mov      rcx, qword ptr [rip + 0x43c38fb]
+0x180a4565d call     0x180361710
+0x180a45662 mov      rcx, qword ptr [rax]
+0x180a45665 test     rcx, rcx
+0x180a45668 je       0x180a4569d
+0x180a4566a mov      rcx, qword ptr [rcx + 0x228]
+0x180a45671 test     rcx, rcx
+0x180a45674 je       0x180a4569d
+0x180a45676 mov      r9, qword ptr [rip + 0x4354873]
+0x180a4567d xor      r8d, r8d
+0x180a45680 mov      rdx, rbp
+0x180a45683 call     0x182003b60
+0x180a45688 mov      rbp, qword ptr [rsp + 0x40]
+0x180a4568d mov      rsi, qword ptr [rsp + 0x48]
+0x180a45692 mov      rbx, qword ptr [rsp + 0x50]
+0x180a45697 add      rsp, 0x30
+0x180a4569b pop      rdi
+0x180a4569c ret      
+0x180a4569d call     0x180361b60
+0x180a456a2 int3     

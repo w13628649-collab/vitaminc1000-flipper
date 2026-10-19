@@ -1,0 +1,64 @@
+0x180bbd470 mov      qword ptr [rsp + 0x10], rbx
+0x180bbd475 push     rdi
+0x180bbd476 sub      rsp, 0x40
+0x180bbd47a mov      rbx, rdx
+0x180bbd47d mov      rdi, rcx
+0x180bbd480 cmp      r8w, 0x32
+0x180bbd485 je       0x180bbd499
+0x180bbd487 xor      r9d, r9d
+0x180bbd48a mov      rbx, qword ptr [rsp + 0x58]
+0x180bbd48f add      rsp, 0x40
+0x180bbd493 pop      rdi
+0x180bbd494 jmp      0x180ba1410 ; Albion.PhotonClient.dll:cou.ajv
+0x180bbd499 cmp      byte ptr [rip + 0x44bea15], 0
+0x180bbd4a0 jne      0x180bbd4c1
+0x180bbd4a2 lea      rcx, [rip + 0x429d8c7]
+0x180bbd4a9 call     0x180361910
+0x180bbd4ae lea      rcx, [rip + 0x42280d3]
+0x180bbd4b5 call     0x180361910
+0x180bbd4ba mov      byte ptr [rip + 0x44be9f4], 1
+0x180bbd4c1 mov      rdx, qword ptr [rip + 0x42280c0]
+0x180bbd4c8 mov      rcx, rbx
+0x180bbd4cb call     0x182003eb0
+0x180bbd4d0 mov      rbx, rax
+0x180bbd4d3 test     rax, rax
+0x180bbd4d6 je       0x180bbd582
+0x180bbd4dc mov      rcx, qword ptr [rax + 0x60]
+0x180bbd4e0 mov      r9, qword ptr [rax + 0x40]
+0x180bbd4e4 mov      r8, qword ptr [rax + 0x50]
+0x180bbd4e8 mov      rdx, qword ptr [rax + 0x48]
+0x180bbd4ec mov      qword ptr [rsp + 0x30], 0
+0x180bbd4f5 mov      qword ptr [rsp + 0x28], rcx
+0x180bbd4fa mov      rcx, qword ptr [rax + 0x58]
+0x180bbd4fe mov      qword ptr [rsp + 0x20], rcx
+0x180bbd503 mov      rcx, rdi
+0x180bbd506 mov      qword ptr [rsp + 0x50], rsi
+0x180bbd50b call     0x180b99500 ; Albion.PhotonClient.dll:cos.af
+0x180bbd510 mov      rcx, qword ptr [rip + 0x429d859]
+0x180bbd517 mov      rsi, qword ptr [rbx + 0x20]
+0x180bbd51b cmp      dword ptr [rcx + 0xe4], 0
+0x180bbd522 jne      0x180bbd529
+0x180bbd524 call     0x180361bf0
+0x180bbd529 xor      edx, edx
+0x180bbd52b mov      rcx, rsi
+0x180bbd52e call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180bbd533 mov      qword ptr [rdi + 0x1f8], rax
+0x180bbd53a xor      edx, edx
+0x180bbd53c mov      rcx, qword ptr [rbx + 0x28]
+0x180bbd540 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180bbd545 mov      qword ptr [rdi + 0x200], rax
+0x180bbd54c xor      edx, edx
+0x180bbd54e mov      rax, qword ptr [rbx + 0x30]
+0x180bbd552 mov      qword ptr [rdi + 0x208], rax
+0x180bbd559 mov      rcx, qword ptr [rbx + 0x38]
+0x180bbd55d call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x180bbd562 xor      edx, edx
+0x180bbd564 mov      qword ptr [rdi + 0x210], rax
+0x180bbd56b mov      rcx, rdi
+0x180bbd56e mov      rsi, qword ptr [rsp + 0x50]
+0x180bbd573 mov      rbx, qword ptr [rsp + 0x58]
+0x180bbd578 add      rsp, 0x40
+0x180bbd57c pop      rdi
+0x180bbd57d jmp      0x180b9b830 ; Albion.PhotonClient.dll:cos.ar4 | Albion.PhotonClient.dll:cot.af
+0x180bbd582 call     0x180361b60
+0x180bbd587 int3     

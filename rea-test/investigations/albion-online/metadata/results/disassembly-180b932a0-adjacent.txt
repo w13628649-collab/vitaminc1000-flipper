@@ -1,0 +1,103 @@
+0x180b932a0 mov      qword ptr [rsp + 8], rbx
+0x180b932a5 mov      qword ptr [rsp + 0x10], rbp
+0x180b932aa mov      qword ptr [rsp + 0x18], rsi
+0x180b932af push     rdi
+0x180b932b0 sub      rsp, 0x20
+0x180b932b4 mov      eax, 0x24f
+0x180b932b9 mov      rbx, rdx
+0x180b932bc mov      rdi, rcx
+0x180b932bf cmp      r8w, ax
+0x180b932c3 jne      0x180b93408
+0x180b932c9 cmp      byte ptr [rip + 0x44e8a98], 0
+0x180b932d0 jne      0x180b932fd
+0x180b932d2 lea      rcx, [rip + 0x42dd94f]
+0x180b932d9 call     0x180361910
+0x180b932de lea      rcx, [rip + 0x42dda9b]
+0x180b932e5 call     0x180361910
+0x180b932ea lea      rcx, [rip + 0x4234d7f]
+0x180b932f1 call     0x180361910
+0x180b932f6 mov      byte ptr [rip + 0x44e8a6b], 1
+0x180b932fd mov      rdx, qword ptr [rip + 0x4234d6c]
+0x180b93304 mov      rcx, rbx
+0x180b93307 call     0x182003eb0
+0x180b9330c cmp      byte ptr [rip + 0x44e8a4f], 0
+0x180b93313 mov      rsi, rax
+0x180b93316 jne      0x180b9332b
+0x180b93318 lea      rcx, [rip + 0x4279661]
+0x180b9331f call     0x180361910
+0x180b93324 mov      byte ptr [rip + 0x44e8a37], 1
+0x180b9332b mov      rcx, qword ptr [rip + 0x427964e]
+0x180b93332 mov      rbx, qword ptr [rdi + 0x1a8]
+0x180b93339 cmp      dword ptr [rcx + 0xe4], 0
+0x180b93340 jne      0x180b93347
+0x180b93342 call     0x180361bf0
+0x180b93347 xor      ecx, ecx
+0x180b93349 call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x180b9334e xor      r8d, r8d
+0x180b93351 mov      rdx, rax
+0x180b93354 mov      rcx, rbx
+0x180b93357 call     0x180852d30 ; Albion.Common.dll:c4.t | Albion.Common.dll:a7m.j | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h | mscorlib.dll:System.TimeSpan.op_GreaterThan
+0x180b9335c movzx    ebp, al
+0x180b9335f test     rsi, rsi
+0x180b93362 je       0x180b93463
+0x180b93368 mov      rcx, qword ptr [rsi + 0x18]
+0x180b9336c mov      qword ptr [rdi + 0x1a8], rcx
+0x180b93373 mov      rcx, qword ptr [rdi + 0x1d8]
+0x180b9337a test     rcx, rcx
+0x180b9337d je       0x180b93463
+0x180b93383 mov      rdx, qword ptr [rip + 0x42dd9f6]
+0x180b9338a call     0x18291b8d0
+0x180b9338f test     eax, eax
+0x180b93391 jle      0x180b9344e
+0x180b93397 cmp      byte ptr [rip + 0x44e89c4], 0
+0x180b9339e mov      rsi, qword ptr [rdi + 0x1d8]
+0x180b933a5 jne      0x180b933ba
+0x180b933a7 lea      rcx, [rip + 0x42795d2]
+0x180b933ae call     0x180361910
+0x180b933b3 mov      byte ptr [rip + 0x44e89a8], 1
+0x180b933ba mov      rcx, qword ptr [rip + 0x42795bf]
+0x180b933c1 mov      rbx, qword ptr [rdi + 0x1a8]
+0x180b933c8 cmp      dword ptr [rcx + 0xe4], 0
+0x180b933cf jne      0x180b933d6
+0x180b933d1 call     0x180361bf0
+0x180b933d6 xor      ecx, ecx
+0x180b933d8 call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x180b933dd xor      r8d, r8d
+0x180b933e0 mov      rdx, rax
+0x180b933e3 mov      rcx, rbx
+0x180b933e6 call     0x180852d30 ; Albion.Common.dll:c4.t | Albion.Common.dll:a7m.j | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h | mscorlib.dll:System.TimeSpan.op_GreaterThan
+0x180b933eb test     rsi, rsi
+0x180b933ee je       0x180b93463
+0x180b933f0 mov      r9, qword ptr [rip + 0x42dd831]
+0x180b933f7 movzx    r8d, bpl
+0x180b933fb movzx    edx, al
+0x180b933fe mov      rcx, rsi
+0x180b93401 call     0x18291dbe0
+0x180b93406 jmp      0x180b9344e
+0x180b93408 mov      eax, 0x256
+0x180b9340d cmp      r8w, ax
+0x180b93411 jne      0x180b93446
+0x180b93413 mov      byte ptr [rcx + 0x1b9], 1
+0x180b9341a mov      rcx, qword ptr [rcx + 0x1d0]
+0x180b93421 test     rcx, rcx
+0x180b93424 je       0x180b93463
+0x180b93426 xor      edx, edx
+0x180b93428 call     0x1807467c0 ; Albion.Common.dll:bk.c
+0x180b9342d test     eax, eax
+0x180b9342f jle      0x180b9344e
+0x180b93431 mov      rcx, qword ptr [rdi + 0x1d0]
+0x180b93438 test     rcx, rcx
+0x180b9343b je       0x180b93463
+0x180b9343d xor      edx, edx
+0x180b9343f call     0x180746130 ; Albion.Common.dll:bk.Invoke
+0x180b93444 jmp      0x180b9344e
+0x180b93446 xor      r9d, r9d
+0x180b93449 call     0x180ba1410 ; Albion.PhotonClient.dll:cou.ajv
+0x180b9344e mov      rbx, qword ptr [rsp + 0x30]
+0x180b93453 mov      rbp, qword ptr [rsp + 0x38]
+0x180b93458 mov      rsi, qword ptr [rsp + 0x40]
+0x180b9345d add      rsp, 0x20
+0x180b93461 pop      rdi
+0x180b93462 ret      
+0x180b93463 call     0x180361b60
+0x180b93468 int3     

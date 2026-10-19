@@ -1,0 +1,143 @@
+0x1814a55e0 mov      qword ptr [rsp + 8], rbx
+0x1814a55e5 mov      qword ptr [rsp + 0x10], rsi
+0x1814a55ea push     rdi
+0x1814a55eb sub      rsp, 0x50
+0x1814a55ef cmp      byte ptr [rip + 0x3bdb096], 0
+0x1814a55f6 mov      rdi, r8
+0x1814a55f9 mov      rsi, rdx
+0x1814a55fc mov      rbx, rcx
+0x1814a55ff jne      0x1814a5620
+0x1814a5601 lea      rcx, [rip + 0x396f018]
+0x1814a5608 call     0x180361910
+0x1814a560d lea      rcx, [rip + 0x396561c]
+0x1814a5614 call     0x180361910
+0x1814a5619 mov      byte ptr [rip + 0x3bdb06c], 1
+0x1814a5620 mov      rcx, qword ptr [rip + 0x3965609]
+0x1814a5627 cmp      dword ptr [rcx + 0xe4], 0
+0x1814a562e jne      0x1814a5635
+0x1814a5630 call     0x180361bf0
+0x1814a5635 cmp      byte ptr [rip + 0x3bd54ac], 0
+0x1814a563c jne      0x1814a5651
+0x1814a563e lea      rcx, [rip + 0x39655eb]
+0x1814a5645 call     0x180361910
+0x1814a564a mov      byte ptr [rip + 0x3bd5497], 1
+0x1814a5651 mov      rcx, qword ptr [rip + 0x39655d8]
+0x1814a5658 cmp      dword ptr [rcx + 0xe4], 0
+0x1814a565f jne      0x1814a5666
+0x1814a5661 call     0x180361bf0
+0x1814a5666 mov      rcx, qword ptr [rip + 0x39655c3]
+0x1814a566d movaps   xmmword ptr [rsp + 0x40], xmm6
+0x1814a5672 call     0x180361710
+0x1814a5677 mov      rax, qword ptr [rax]
+0x1814a567a test     rax, rax
+0x1814a567d je       0x1814a5859
+0x1814a5683 mov      rax, qword ptr [rax + 0x28]
+0x1814a5687 test     rax, rax
+0x1814a568a je       0x1814a5859
+0x1814a5690 mov      rax, qword ptr [rax + 0x48]
+0x1814a5694 test     rax, rax
+0x1814a5697 je       0x1814a5859
+0x1814a569d mov      rax, qword ptr [rax + 0x108]
+0x1814a56a4 test     rax, rax
+0x1814a56a7 je       0x1814a5859
+0x1814a56ad cmp      byte ptr [rax + 0x8c], 0
+0x1814a56b4 jne      0x1814a584c
+0x1814a56ba test     rbx, rbx
+0x1814a56bd je       0x1814a5859
+0x1814a56c3 mov      r8, qword ptr [rbx]
+0x1814a56c6 lea      rcx, [rsp + 0x30]
+0x1814a56cb mov      rdx, rbx
+0x1814a56ce mov      rax, qword ptr [r8 + 0x5c8]
+0x1814a56d5 mov      r8, qword ptr [r8 + 0x5d0]
+0x1814a56dc call     rax
+0x1814a56de movups   xmm6, xmmword ptr [rax]
+0x1814a56e1 test     rsi, rsi
+0x1814a56e4 je       0x1814a5859
+0x1814a56ea mov      r8, qword ptr [rsi]
+0x1814a56ed lea      rcx, [rsp + 0x30]
+0x1814a56f2 mov      rdx, rsi
+0x1814a56f5 mov      rax, qword ptr [r8 + 0x5c8]
+0x1814a56fc mov      r8, qword ptr [r8 + 0x5d0]
+0x1814a5703 call     rax
+0x1814a5705 xor      r8d, r8d
+0x1814a5708 lea      rdx, [rsp + 0x20]
+0x1814a570d lea      rcx, [rsp + 0x30]
+0x1814a5712 movups   xmm0, xmmword ptr [rax]
+0x1814a5715 movdqa   xmmword ptr [rsp + 0x30], xmm6
+0x1814a571b movaps   xmmword ptr [rsp + 0x20], xmm0
+0x1814a5720 call     0x183169df0 ; mscorlib.dll:System.Guid.op_Equality | System.Drawing.dll:System.Drawing.Rectangle.op_Equality | Unity.Mathematics.dll:Unity.Mathematics.uint4.Equals
+0x1814a5725 test     al, al
+0x1814a5727 je       0x1814a5795
+0x1814a5729 mov      r8, qword ptr [rbx]
+0x1814a572c lea      rcx, [rsp + 0x20]
+0x1814a5731 mov      rdx, rbx
+0x1814a5734 mov      rax, qword ptr [r8 + 0x5c8]
+0x1814a573b mov      r8, qword ptr [r8 + 0x5d0]
+0x1814a5742 call     rax
+0x1814a5744 mov      rcx, qword ptr [rip + 0x396eed5]
+0x1814a574b xor      r8d, r8d
+0x1814a574e movups   xmm1, xmmword ptr [rax]
+0x1814a5751 mov      rdx, qword ptr [rcx + 0xb8]
+0x1814a5758 lea      rcx, [rsp + 0x20]
+0x1814a575d movaps   xmmword ptr [rsp + 0x20], xmm1
+0x1814a5762 movups   xmm0, xmmword ptr [rdx]
+0x1814a5765 lea      rdx, [rsp + 0x30]
+0x1814a576a movaps   xmmword ptr [rsp + 0x30], xmm0
+0x1814a576f call     0x183169e20 ; mscorlib.dll:System.Guid.op_Inequality
+0x1814a5774 test     al, al
+0x1814a5776 je       0x1814a5795
+0x1814a5778 mov      dword ptr [rdi], 6
+0x1814a577e mov      al, 1
+0x1814a5780 movaps   xmm6, xmmword ptr [rsp + 0x40]
+0x1814a5785 mov      rbx, qword ptr [rsp + 0x60]
+0x1814a578a mov      rsi, qword ptr [rsp + 0x68]
+0x1814a578f add      rsp, 0x50
+0x1814a5793 pop      rdi
+0x1814a5794 ret      
+0x1814a5795 mov      r8, qword ptr [rbx]
+0x1814a5798 lea      rcx, [rsp + 0x30]
+0x1814a579d mov      rdx, rbx
+0x1814a57a0 mov      rax, qword ptr [r8 + 0x648]
+0x1814a57a7 mov      r8, qword ptr [r8 + 0x650]
+0x1814a57ae call     rax
+0x1814a57b0 mov      r8, qword ptr [rsi]
+0x1814a57b3 lea      rcx, [rsp + 0x30]
+0x1814a57b8 mov      rdx, rsi
+0x1814a57bb movups   xmm6, xmmword ptr [rax]
+0x1814a57be mov      rax, qword ptr [r8 + 0x648]
+0x1814a57c5 mov      r8, qword ptr [r8 + 0x650]
+0x1814a57cc call     rax
+0x1814a57ce xor      r8d, r8d
+0x1814a57d1 movdqa   xmmword ptr [rsp + 0x20], xmm6
+0x1814a57d7 lea      rdx, [rsp + 0x30]
+0x1814a57dc lea      rcx, [rsp + 0x20]
+0x1814a57e1 movups   xmm0, xmmword ptr [rax]
+0x1814a57e4 movaps   xmmword ptr [rsp + 0x30], xmm0
+0x1814a57e9 call     0x183169df0 ; mscorlib.dll:System.Guid.op_Equality | System.Drawing.dll:System.Drawing.Rectangle.op_Equality | Unity.Mathematics.dll:Unity.Mathematics.uint4.Equals
+0x1814a57ee test     al, al
+0x1814a57f0 je       0x1814a584c
+0x1814a57f2 mov      r8, qword ptr [rbx]
+0x1814a57f5 lea      rcx, [rsp + 0x20]
+0x1814a57fa mov      rdx, rbx
+0x1814a57fd mov      rax, qword ptr [r8 + 0x648]
+0x1814a5804 mov      r8, qword ptr [r8 + 0x650]
+0x1814a580b call     rax
+0x1814a580d mov      rcx, qword ptr [rip + 0x396ee0c]
+0x1814a5814 xor      r8d, r8d
+0x1814a5817 movups   xmm1, xmmword ptr [rax]
+0x1814a581a mov      rdx, qword ptr [rcx + 0xb8]
+0x1814a5821 lea      rcx, [rsp + 0x20]
+0x1814a5826 movaps   xmmword ptr [rsp + 0x20], xmm1
+0x1814a582b movups   xmm0, xmmword ptr [rdx]
+0x1814a582e lea      rdx, [rsp + 0x30]
+0x1814a5833 movaps   xmmword ptr [rsp + 0x30], xmm0
+0x1814a5838 call     0x183169e20 ; mscorlib.dll:System.Guid.op_Inequality
+0x1814a583d test     al, al
+0x1814a583f je       0x1814a584c
+0x1814a5841 mov      dword ptr [rdi], 5
+0x1814a5847 jmp      0x1814a577e
+0x1814a584c mov      dword ptr [rdi], 1
+0x1814a5852 xor      al, al
+0x1814a5854 jmp      0x1814a5780
+0x1814a5859 call     0x180361b60
+0x1814a585e int3     

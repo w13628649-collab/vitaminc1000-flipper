@@ -1,0 +1,48 @@
+0x180b5d240 mov      qword ptr [rsp + 8], rbx
+0x180b5d245 mov      qword ptr [rsp + 0x10], rsi
+0x180b5d24a push     rdi
+0x180b5d24b sub      rsp, 0x20
+0x180b5d24f cmp      byte ptr [rip + 0x451e864], 0
+0x180b5d256 movzx    edi, r8w
+0x180b5d25a mov      rsi, rdx
+0x180b5d25d mov      rbx, rcx
+0x180b5d260 jne      0x180b5d281
+0x180b5d262 lea      rcx, [rip + 0x4303a77]
+0x180b5d269 call     0x180361910
+0x180b5d26e lea      rcx, [rip + 0x4247b1b]
+0x180b5d275 call     0x180361910
+0x180b5d27a mov      byte ptr [rip + 0x451e839], 1
+0x180b5d281 mov      eax, 0x135
+0x180b5d286 cmp      di, ax
+0x180b5d289 je       0x180b5d2ad
+0x180b5d28b xor      r9d, r9d
+0x180b5d28e movzx    r8d, di
+0x180b5d292 mov      rdx, rsi
+0x180b5d295 mov      rcx, rbx
+0x180b5d298 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180b5d29d mov      rbx, qword ptr [rsp + 0x30]
+0x180b5d2a2 mov      rsi, qword ptr [rsp + 0x38]
+0x180b5d2a7 add      rsp, 0x20
+0x180b5d2ab pop      rdi
+0x180b5d2ac ret      
+0x180b5d2ad mov      rdx, qword ptr [rip + 0x4247adc]
+0x180b5d2b4 mov      rcx, rsi
+0x180b5d2b7 call     0x182003eb0
+0x180b5d2bc test     rax, rax
+0x180b5d2bf je       0x180b5d2f5
+0x180b5d2c1 movzx    ecx, byte ptr [rax + 0x18]
+0x180b5d2c5 cmp      byte ptr [rbx + 0x5c], cl
+0x180b5d2c8 je       0x180b5d29d
+0x180b5d2ca mov      byte ptr [rbx + 0x5c], cl
+0x180b5d2cd mov      rcx, qword ptr [rbx + 0x60]
+0x180b5d2d1 test     rcx, rcx
+0x180b5d2d4 je       0x180b5d2f5
+0x180b5d2d6 mov      r8, qword ptr [rip + 0x4303a03]
+0x180b5d2dd movzx    edx, byte ptr [rax + 0x18]
+0x180b5d2e1 mov      rbx, qword ptr [rsp + 0x30]
+0x180b5d2e6 mov      rsi, qword ptr [rsp + 0x38]
+0x180b5d2eb add      rsp, 0x20
+0x180b5d2ef pop      rdi
+0x180b5d2f0 jmp      0x182919f30
+0x180b5d2f5 call     0x180361b60
+0x180b5d2fa int3     

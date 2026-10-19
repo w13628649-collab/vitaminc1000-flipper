@@ -1,0 +1,22 @@
+0x1809df450 sub      rsp, 0x28
+0x1809df454 mov      eax, 0x113
+0x1809df459 cmp      r8w, ax
+0x1809df45d jne      0x1809df48e
+0x1809df45f xor      edx, edx
+0x1809df461 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809df466 test     rax, rax
+0x1809df469 je       0x1809df493
+0x1809df46b xor      edx, edx
+0x1809df46d mov      rcx, rax
+0x1809df470 call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x1809df475 test     rax, rax
+0x1809df478 je       0x1809df493
+0x1809df47a xor      r8d, r8d
+0x1809df47d mov      edx, 2
+0x1809df482 mov      rcx, rax
+0x1809df485 add      rsp, 0x28
+0x1809df489 jmp      0x1809b4240 ; Albion.PhotonClient.dll:ct7.f5
+0x1809df48e add      rsp, 0x28
+0x1809df492 ret      
+0x1809df493 call     0x180361b60
+0x1809df498 int3     

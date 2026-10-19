@@ -1,0 +1,39 @@
+0x1809b8e20 mov      qword ptr [rsp + 8], rbx
+0x1809b8e25 mov      qword ptr [rsp + 0x10], rsi
+0x1809b8e2a push     rdi
+0x1809b8e2b sub      rsp, 0x30
+0x1809b8e2f cmp      byte ptr [rip + 0x46c1e5e], 0
+0x1809b8e36 movzx    esi, r8w
+0x1809b8e3a mov      rbx, rdx
+0x1809b8e3d mov      rdi, rcx
+0x1809b8e40 jne      0x1809b8e55
+0x1809b8e42 lea      rcx, [rip + 0x442988f]
+0x1809b8e49 call     0x180361910
+0x1809b8e4e mov      byte ptr [rip + 0x46c1e3f], 1
+0x1809b8e55 mov      rdx, qword ptr [rip + 0x442987c]
+0x1809b8e5c mov      rcx, rbx
+0x1809b8e5f call     0x182003eb0
+0x1809b8e64 test     rax, rax
+0x1809b8e67 je       0x1809b8eb7
+0x1809b8e69 mov      rdx, qword ptr [rax + 0x18]
+0x1809b8e6d xor      r9d, r9d
+0x1809b8e70 xor      r8d, r8d
+0x1809b8e73 mov      qword ptr [rsp + 0x20], 0
+0x1809b8e7c mov      rcx, rdi
+0x1809b8e7f call     0x1809b85e0 ; Albion.PhotonClient.dll:ctu.a
+0x1809b8e84 test     rax, rax
+0x1809b8e87 je       0x1809b8ea7
+0x1809b8e89 mov      r9, qword ptr [rax]
+0x1809b8e8c movzx    r8d, si
+0x1809b8e90 mov      rdx, rbx
+0x1809b8e93 mov      rcx, rax
+0x1809b8e96 mov      r10, qword ptr [r9 + 0x198]
+0x1809b8e9d mov      r9, qword ptr [r9 + 0x1a0]
+0x1809b8ea4 call     r10
+0x1809b8ea7 mov      rbx, qword ptr [rsp + 0x40]
+0x1809b8eac mov      rsi, qword ptr [rsp + 0x48]
+0x1809b8eb1 add      rsp, 0x30
+0x1809b8eb5 pop      rdi
+0x1809b8eb6 ret      
+0x1809b8eb7 call     0x180361b60
+0x1809b8ebc int3     

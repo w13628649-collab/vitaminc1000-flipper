@@ -1,0 +1,53 @@
+0x1809e2a90 mov      qword ptr [rsp + 8], rbx
+0x1809e2a95 push     rdi
+0x1809e2a96 sub      rsp, 0x30
+0x1809e2a9a cmp      byte ptr [rip + 0x469838a], 0
+0x1809e2aa1 mov      rbx, rdx
+0x1809e2aa4 mov      rdi, rcx
+0x1809e2aa7 jne      0x1809e2abc
+0x1809e2aa9 lea      rcx, [rip + 0x43dfbd8]
+0x1809e2ab0 call     0x180361910
+0x1809e2ab5 mov      byte ptr [rip + 0x469836f], 1
+0x1809e2abc mov      rdx, qword ptr [rip + 0x43dfbc5]
+0x1809e2ac3 mov      rcx, rbx
+0x1809e2ac6 call     0x182003eb0
+0x1809e2acb xor      edx, edx
+0x1809e2acd mov      rcx, rdi
+0x1809e2ad0 mov      rbx, rax
+0x1809e2ad3 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809e2ad8 test     rax, rax
+0x1809e2adb je       0x1809e2b52
+0x1809e2add test     rbx, rbx
+0x1809e2ae0 je       0x1809e2b52
+0x1809e2ae2 mov      rcx, qword ptr [rax + 0x190]
+0x1809e2ae9 test     rcx, rcx
+0x1809e2aec je       0x1809e2b52
+0x1809e2aee mov      rax, qword ptr [rbx + 0x28]
+0x1809e2af2 xor      edx, edx
+0x1809e2af4 mov      qword ptr [rcx + 0x10], rax
+0x1809e2af8 mov      rcx, rdi
+0x1809e2afb call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809e2b00 test     rax, rax
+0x1809e2b03 je       0x1809e2b52
+0x1809e2b05 mov      ecx, dword ptr [rbx + 0x30]
+0x1809e2b08 xor      edx, edx
+0x1809e2b0a mov      dword ptr [rax + 0x170], ecx
+0x1809e2b10 mov      rcx, rdi
+0x1809e2b13 call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809e2b18 test     rax, rax
+0x1809e2b1b je       0x1809e2b52
+0x1809e2b1d mov      rcx, qword ptr [rax]
+0x1809e2b20 movzx    r9d, byte ptr [rbx + 0x51]
+0x1809e2b25 movzx    r8d, byte ptr [rbx + 0x50]
+0x1809e2b2a mov      rdx, qword ptr [rbx + 0x18]
+0x1809e2b2e mov      r10, qword ptr [rcx + 0x7a8]
+0x1809e2b35 mov      rcx, qword ptr [rcx + 0x7b0]
+0x1809e2b3c mov      qword ptr [rsp + 0x20], rcx
+0x1809e2b41 mov      rcx, rax
+0x1809e2b44 call     r10
+0x1809e2b47 mov      rbx, qword ptr [rsp + 0x40]
+0x1809e2b4c add      rsp, 0x30
+0x1809e2b50 pop      rdi
+0x1809e2b51 ret      
+0x1809e2b52 call     0x180361b60
+0x1809e2b57 int3     

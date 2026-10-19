@@ -1,0 +1,56 @@
+0x180c04c90 mov      qword ptr [rsp + 8], rbx
+0x180c04c95 mov      qword ptr [rsp + 0x10], rsi
+0x180c04c9a push     rdi
+0x180c04c9b sub      rsp, 0x20
+0x180c04c9f cmp      byte ptr [rip + 0x447742f], 0
+0x180c04ca6 movzx    edi, r8w
+0x180c04caa mov      rsi, rdx
+0x180c04cad mov      rbx, rcx
+0x180c04cb0 jne      0x180c04cd1
+0x180c04cb2 lea      rcx, [rip + 0x41c72df]
+0x180c04cb9 call     0x180361910
+0x180c04cbe lea      rcx, [rip + 0x41cc0c3]
+0x180c04cc5 call     0x180361910
+0x180c04cca mov      byte ptr [rip + 0x4477404], 1
+0x180c04cd1 mov      eax, 0x281
+0x180c04cd6 cmp      di, ax
+0x180c04cd9 jne      0x180c04d29
+0x180c04cdb mov      rdx, qword ptr [rip + 0x41c72b6]
+0x180c04ce2 mov      rcx, rsi
+0x180c04ce5 call     0x182003eb0
+0x180c04cea mov      rdx, qword ptr [rbx + 0x10]
+0x180c04cee test     rdx, rdx
+0x180c04cf1 je       0x180c04d60
+0x180c04cf3 test     rax, rax
+0x180c04cf6 je       0x180c04d60
+0x180c04cf8 mov      rcx, qword ptr [rax + 0x10]
+0x180c04cfc cmp      qword ptr [rdx + 0x10], rcx
+0x180c04d00 jne      0x180c04d50
+0x180c04d02 xor      r8d, r8d
+0x180c04d05 mov      rdx, rax
+0x180c04d08 mov      rcx, rbx
+0x180c04d0b call     0x180c046f0 ; Albion.PhotonClient.dll:ctd.k
+0x180c04d10 xor      edx, edx
+0x180c04d12 mov      rcx, rbx
+0x180c04d15 mov      rbx, qword ptr [rsp + 0x30]
+0x180c04d1a mov      rsi, qword ptr [rsp + 0x38]
+0x180c04d1f add      rsp, 0x20
+0x180c04d23 pop      rdi
+0x180c04d24 jmp      0x180c04dc0 ; Albion.PhotonClient.dll:ctd.k
+0x180c04d29 mov      eax, 0x282
+0x180c04d2e cmp      di, ax
+0x180c04d31 jne      0x180c04d50
+0x180c04d33 mov      rdx, qword ptr [rip + 0x41cc04e]
+0x180c04d3a mov      rcx, rsi
+0x180c04d3d call     0x182003eb0
+0x180c04d42 xor      r8d, r8d
+0x180c04d45 mov      rdx, rax
+0x180c04d48 mov      rcx, rbx
+0x180c04d4b call     0x180c045a0 ; Albion.PhotonClient.dll:ctd.k
+0x180c04d50 mov      rbx, qword ptr [rsp + 0x30]
+0x180c04d55 mov      rsi, qword ptr [rsp + 0x38]
+0x180c04d5a add      rsp, 0x20
+0x180c04d5e pop      rdi
+0x180c04d5f ret      
+0x180c04d60 call     0x180361b60
+0x180c04d65 int3     

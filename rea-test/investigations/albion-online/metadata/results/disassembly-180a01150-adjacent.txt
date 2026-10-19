@@ -1,0 +1,63 @@
+0x180a01150 push     rbx
+0x180a01152 sub      rsp, 0x20
+0x180a01156 cmp      byte ptr [rip + 0x4679d77], 0
+0x180a0115d mov      rbx, rdx
+0x180a01160 jne      0x180a0118d
+0x180a01162 lea      rcx, [rip + 0x43d3487]
+0x180a01169 call     0x180361910
+0x180a0116e lea      rcx, [rip + 0x4409abb]
+0x180a01175 call     0x180361910
+0x180a0117a lea      rcx, [rip + 0x440fda7]
+0x180a01181 call     0x180361910
+0x180a01186 mov      byte ptr [rip + 0x4679d47], 1
+0x180a0118d mov      rdx, qword ptr [rip + 0x43d345c]
+0x180a01194 mov      rcx, rbx
+0x180a01197 call     0x182003eb0
+0x180a0119c mov      rcx, qword ptr [rip + 0x4409a8d]
+0x180a011a3 mov      rbx, rax
+0x180a011a6 cmp      dword ptr [rcx + 0xe4], 0
+0x180a011ad jne      0x180a011b4
+0x180a011af call     0x180361bf0
+0x180a011b4 cmp      byte ptr [rip + 0x467992d], 0
+0x180a011bb jne      0x180a011d0
+0x180a011bd lea      rcx, [rip + 0x4409a6c]
+0x180a011c4 call     0x180361910
+0x180a011c9 mov      byte ptr [rip + 0x4679918], 1
+0x180a011d0 mov      rcx, qword ptr [rip + 0x4409a59]
+0x180a011d7 cmp      dword ptr [rcx + 0xe4], 0
+0x180a011de jne      0x180a011e5
+0x180a011e0 call     0x180361bf0
+0x180a011e5 mov      rcx, qword ptr [rip + 0x4409a44]
+0x180a011ec call     0x180361710
+0x180a011f1 test     rbx, rbx
+0x180a011f4 je       0x180a01256
+0x180a011f6 mov      rcx, qword ptr [rax]
+0x180a011f9 test     rcx, rcx
+0x180a011fc je       0x180a01256
+0x180a011fe mov      rdx, qword ptr [rbx + 0x20]
+0x180a01202 xor      r8d, r8d
+0x180a01205 call     0x18096f090 ; Albion.PhotonClient.dll:ciy.a
+0x180a0120a mov      rdx, qword ptr [rip + 0x440fd17]
+0x180a01211 mov      rcx, rax
+0x180a01214 call     0x180360c60
+0x180a01219 test     rax, rax
+0x180a0121c je       0x180a01250
+0x180a0121e mov      rdx, qword ptr [rip + 0x440fd03]
+0x180a01225 mov      ecx, 2
+0x180a0122a mov      r8, rax
+0x180a0122d call     0x180001ee0
+0x180a01232 test     rax, rax
+0x180a01235 je       0x180a01256
+0x180a01237 mov      rcx, qword ptr [rax + 0x28]
+0x180a0123b test     rcx, rcx
+0x180a0123e je       0x180a01256
+0x180a01240 xor      r8d, r8d
+0x180a01243 mov      rdx, rbx
+0x180a01246 add      rsp, 0x20
+0x180a0124a pop      rbx
+0x180a0124b jmp      0x180b6bde0 ; Albion.PhotonClient.dll:cm9.d
+0x180a01250 add      rsp, 0x20
+0x180a01254 pop      rbx
+0x180a01255 ret      
+0x180a01256 call     0x180361b60
+0x180a0125b int3     

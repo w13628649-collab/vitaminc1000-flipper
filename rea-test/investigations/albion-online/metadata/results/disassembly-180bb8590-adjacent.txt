@@ -1,0 +1,37 @@
+0x180bb8590 push     rbx
+0x180bb8592 sub      rsp, 0x20
+0x180bb8596 mov      rbx, rcx
+0x180bb8599 cmp      r8w, 0x38
+0x180bb859e jne      0x180bb85ad
+0x180bb85a0 xor      r8d, r8d
+0x180bb85a3 add      rsp, 0x20
+0x180bb85a7 pop      rbx
+0x180bb85a8 jmp      0x180bb75f0 ; Albion.PhotonClient.dll:cph.abq
+0x180bb85ad cmp      r8w, 0x39
+0x180bb85b2 jne      0x180bb85c1
+0x180bb85b4 xor      r8d, r8d
+0x180bb85b7 add      rsp, 0x20
+0x180bb85bb pop      rbx
+0x180bb85bc jmp      0x180bb9200 ; Albion.PhotonClient.dll:cph.x8
+0x180bb85c1 mov      eax, 0x122
+0x180bb85c6 cmp      r8w, ax
+0x180bb85ca jne      0x180bb8611
+0x180bb85cc cmp      byte ptr [rip + 0x44c3895], 0
+0x180bb85d3 jne      0x180bb85e8
+0x180bb85d5 lea      rcx, [rip + 0x42543a4]
+0x180bb85dc call     0x180361910
+0x180bb85e1 mov      byte ptr [rip + 0x44c3880], 1
+0x180bb85e8 mov      rcx, qword ptr [rip + 0x4254391]
+0x180bb85ef cmp      dword ptr [rcx + 0xe4], 0
+0x180bb85f6 jne      0x180bb85fd
+0x180bb85f8 call     0x180361bf0
+0x180bb85fd xor      ecx, ecx
+0x180bb85ff call     0x1808b3070 ; Albion.Common.dll:Albion.Common.Time.GameTimeStamp.h
+0x180bb8604 mov      qword ptr [rbx + 0x240], rax
+0x180bb860b add      rsp, 0x20
+0x180bb860f pop      rbx
+0x180bb8610 ret      
+0x180bb8611 xor      r9d, r9d
+0x180bb8614 add      rsp, 0x20
+0x180bb8618 pop      rbx
+0x180bb8619 jmp      0x180ba1410 ; Albion.PhotonClient.dll:cou.ajv

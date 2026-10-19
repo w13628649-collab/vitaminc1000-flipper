@@ -1,0 +1,273 @@
+0x1809bb110 mov      qword ptr [rsp + 0x18], rbx
+0x1809bb115 mov      qword ptr [rsp + 0x20], rbp
+0x1809bb11a push     rsi
+0x1809bb11b sub      rsp, 0x50
+0x1809bb11f cmp      byte ptr [rip + 0x46bfb8a], 0
+0x1809bb126 mov      rbx, rdx
+0x1809bb129 mov      rbp, rcx
+0x1809bb12c jne      0x1809bb165
+0x1809bb12e lea      rcx, [rip + 0x449fc3b]
+0x1809bb135 call     0x180361910
+0x1809bb13a lea      rcx, [rip + 0x4416d0f]
+0x1809bb141 call     0x180361910
+0x1809bb146 lea      rcx, [rip + 0x444de0b]
+0x1809bb14d call     0x180361910
+0x1809bb152 lea      rcx, [rip + 0x4427aff]
+0x1809bb159 call     0x180361910
+0x1809bb15e mov      byte ptr [rip + 0x46bfb4b], 1
+0x1809bb165 mov      rdx, qword ptr [rip + 0x4427aec]
+0x1809bb16c mov      rcx, rbx
+0x1809bb16f mov      qword ptr [rsp + 0x60], rdi
+0x1809bb174 mov      qword ptr [rsp + 0x68], r14
+0x1809bb179 call     0x182003eb0
+0x1809bb17e mov      rsi, rax
+0x1809bb181 test     rax, rax
+0x1809bb184 je       0x1809bb633
+0x1809bb18a mov      rdi, qword ptr [rbp + 0x30]
+0x1809bb18e mov      rbx, qword ptr [rax + 0x18]
+0x1809bb192 test     rdi, rdi
+0x1809bb195 je       0x1809bb633
+0x1809bb19b cmp      byte ptr [rip + 0x46bfb0f], 0
+0x1809bb1a2 jne      0x1809bb1cf
+0x1809bb1a4 lea      rcx, [rip + 0x444ddad]
+0x1809bb1ab call     0x180361910
+0x1809bb1b0 lea      rcx, [rip + 0x448f901]
+0x1809bb1b7 call     0x180361910
+0x1809bb1bc lea      rcx, [rip + 0x448fcfd]
+0x1809bb1c3 call     0x180361910
+0x1809bb1c8 mov      byte ptr [rip + 0x46bfae2], 1
+0x1809bb1cf lea      rcx, [rdi + 0x10]
+0x1809bb1d3 mov      qword ptr [rdi + 0x10], rbx
+0x1809bb1d7 mov      rdx, rbx
+0x1809bb1da call     0x180360c40
+0x1809bb1df mov      rcx, qword ptr [rip + 0x444dd72]
+0x1809bb1e6 cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb1ed jne      0x1809bb1f4
+0x1809bb1ef call     0x180361bf0
+0x1809bb1f4 cmp      byte ptr [rip + 0x46bf7a7], 0
+0x1809bb1fb jne      0x1809bb210
+0x1809bb1fd lea      rcx, [rip + 0x444dd54]
+0x1809bb204 call     0x180361910
+0x1809bb209 mov      byte ptr [rip + 0x46bf792], 1
+0x1809bb210 mov      rcx, qword ptr [rip + 0x444dd41]
+0x1809bb217 cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb21e jne      0x1809bb225
+0x1809bb220 call     0x180361bf0
+0x1809bb225 mov      rcx, qword ptr [rip + 0x444dd2c]
+0x1809bb22c call     0x180361710
+0x1809bb231 mov      r8, qword ptr [rax]
+0x1809bb234 test     r8, r8
+0x1809bb237 je       0x1809bb633
+0x1809bb23d mov      r8, qword ptr [r8 + 0x30]
+0x1809bb241 test     r8, r8
+0x1809bb244 je       0x1809bb633
+0x1809bb24a mov      rdx, qword ptr [rip + 0x448f867]
+0x1809bb251 mov      ecx, 3
+0x1809bb256 call     0x180001ee0
+0x1809bb25b test     rax, rax
+0x1809bb25e je       0x1809bb633
+0x1809bb264 mov      rdx, qword ptr [rip + 0x448fc55]
+0x1809bb26b xor      ecx, ecx
+0x1809bb26d mov      r9, rbx
+0x1809bb270 mov      r8, rax
+0x1809bb273 call     0x18000a5c0
+0x1809bb278 lea      rcx, [rdi + 0x18]
+0x1809bb27c mov      qword ptr [rdi + 0x18], rax
+0x1809bb280 mov      rdx, rax
+0x1809bb283 call     0x180360c40
+0x1809bb288 cmp      byte ptr [rip + 0x46bfa23], 0
+0x1809bb28f movups   xmm0, xmmword ptr [rsi + 0x20]
+0x1809bb293 movups   xmmword ptr [rdi + 0x20], xmm0
+0x1809bb297 mov      rbx, qword ptr [rsi + 0x30]
+0x1809bb29b jne      0x1809bb2c8
+0x1809bb29d lea      rcx, [rip + 0x444dcb4]
+0x1809bb2a4 call     0x180361910
+0x1809bb2a9 lea      rcx, [rip + 0x448f808]
+0x1809bb2b0 call     0x180361910
+0x1809bb2b5 lea      rcx, [rip + 0x448fd5c]
+0x1809bb2bc call     0x180361910
+0x1809bb2c1 mov      byte ptr [rip + 0x46bf9ea], 1
+0x1809bb2c8 lea      rcx, [rdi + 0x48]
+0x1809bb2cc mov      qword ptr [rdi + 0x48], rbx
+0x1809bb2d0 mov      rdx, rbx
+0x1809bb2d3 call     0x180360c40
+0x1809bb2d8 mov      rcx, qword ptr [rip + 0x444dc79]
+0x1809bb2df cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb2e6 jne      0x1809bb2ed
+0x1809bb2e8 call     0x180361bf0
+0x1809bb2ed cmp      byte ptr [rip + 0x46bf6ae], 0
+0x1809bb2f4 jne      0x1809bb309
+0x1809bb2f6 lea      rcx, [rip + 0x444dc5b]
+0x1809bb2fd call     0x180361910
+0x1809bb302 mov      byte ptr [rip + 0x46bf699], 1
+0x1809bb309 mov      rcx, qword ptr [rip + 0x444dc48]
+0x1809bb310 cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb317 jne      0x1809bb31e
+0x1809bb319 call     0x180361bf0
+0x1809bb31e mov      rcx, qword ptr [rip + 0x444dc33]
+0x1809bb325 call     0x180361710
+0x1809bb32a mov      r8, qword ptr [rax]
+0x1809bb32d test     r8, r8
+0x1809bb330 je       0x1809bb633
+0x1809bb336 mov      r8, qword ptr [r8 + 0x30]
+0x1809bb33a test     r8, r8
+0x1809bb33d je       0x1809bb633
+0x1809bb343 mov      rdx, qword ptr [rip + 0x448f76e]
+0x1809bb34a mov      ecx, 4
+0x1809bb34f call     0x180001ee0
+0x1809bb354 test     rax, rax
+0x1809bb357 je       0x1809bb633
+0x1809bb35d mov      rdx, qword ptr [rip + 0x448fcb4]
+0x1809bb364 xor      ecx, ecx
+0x1809bb366 mov      r9, rbx
+0x1809bb369 mov      r8, rax
+0x1809bb36c call     0x18000a5c0
+0x1809bb371 lea      rcx, [rdi + 0x50]
+0x1809bb375 mov      qword ptr [rdi + 0x50], rax
+0x1809bb379 mov      rdx, rax
+0x1809bb37c call     0x180360c40
+0x1809bb381 mov      rdx, qword ptr [rsi + 0x38]
+0x1809bb385 lea      rcx, [rdi + 0x58]
+0x1809bb389 mov      qword ptr [rdi + 0x58], rdx
+0x1809bb38d call     0x180360c40
+0x1809bb392 mov      eax, dword ptr [rsi + 0x40]
+0x1809bb395 lea      rcx, [rdi + 0x70]
+0x1809bb399 mov      dword ptr [rdi + 0x68], eax
+0x1809bb39c mov      rdx, qword ptr [rsi + 0x48]
+0x1809bb3a0 mov      qword ptr [rdi + 0x70], rdx
+0x1809bb3a4 call     0x180360c40
+0x1809bb3a9 mov      eax, dword ptr [rsi + 0x50]
+0x1809bb3ac mov      dword ptr [rdi + 0x78], eax
+0x1809bb3af mov      eax, dword ptr [rsi + 0x54]
+0x1809bb3b2 mov      dword ptr [rdi + 0x7c], eax
+0x1809bb3b5 mov      rcx, qword ptr [rip + 0x449f9b4]
+0x1809bb3bc mov      rbx, qword ptr [rsi + 0x58]
+0x1809bb3c0 cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb3c7 jne      0x1809bb3ce
+0x1809bb3c9 call     0x180361bf0
+0x1809bb3ce xor      edx, edx
+0x1809bb3d0 mov      rcx, rbx
+0x1809bb3d3 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb3d8 mov      qword ptr [rdi + 0x80], rax
+0x1809bb3df xor      edx, edx
+0x1809bb3e1 mov      rcx, qword ptr [rsi + 0x60]
+0x1809bb3e5 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb3ea mov      qword ptr [rdi + 0x88], rax
+0x1809bb3f1 xor      edx, edx
+0x1809bb3f3 mov      eax, dword ptr [rsi + 0x68]
+0x1809bb3f6 mov      dword ptr [rdi + 0x90], eax
+0x1809bb3fc mov      eax, dword ptr [rsi + 0x6c]
+0x1809bb3ff mov      dword ptr [rdi + 0x94], eax
+0x1809bb405 mov      rcx, qword ptr [rsi + 0x88]
+0x1809bb40c call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb411 mov      qword ptr [rdi + 0x98], rax
+0x1809bb418 xor      edx, edx
+0x1809bb41a mov      rcx, qword ptr [rsi + 0x90]
+0x1809bb421 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb426 mov      qword ptr [rdi + 0xa0], rax
+0x1809bb42d xor      edx, edx
+0x1809bb42f mov      rcx, qword ptr [rsi + 0x98]
+0x1809bb436 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb43b mov      qword ptr [rdi + 0xa8], rax
+0x1809bb442 xor      edx, edx
+0x1809bb444 mov      rcx, qword ptr [rsi + 0xa0]
+0x1809bb44b call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb450 mov      qword ptr [rdi + 0xb0], rax
+0x1809bb457 xor      edx, edx
+0x1809bb459 mov      rcx, qword ptr [rsi + 0xb0]
+0x1809bb460 call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb465 mov      qword ptr [rdi + 0xb8], rax
+0x1809bb46c lea      rcx, [rdi + 0xf8]
+0x1809bb473 mov      eax, dword ptr [rsi + 0xb8]
+0x1809bb479 mov      dword ptr [rdi + 0xc0], eax
+0x1809bb47f mov      eax, dword ptr [rsi + 0xc0]
+0x1809bb485 mov      dword ptr [rdi + 0xc8], eax
+0x1809bb48b mov      eax, dword ptr [rsi + 0xbc]
+0x1809bb491 mov      dword ptr [rdi + 0xc4], eax
+0x1809bb497 mov      eax, dword ptr [rsi + 0xc4]
+0x1809bb49d mov      dword ptr [rdi + 0xcc], eax
+0x1809bb4a3 mov      eax, dword ptr [rsi + 0x74]
+0x1809bb4a6 mov      dword ptr [rdi + 0xd4], eax
+0x1809bb4ac mov      eax, dword ptr [rsi + 0x70]
+0x1809bb4af mov      dword ptr [rdi + 0xd0], eax
+0x1809bb4b5 mov      eax, dword ptr [rsi + 0x78]
+0x1809bb4b8 mov      dword ptr [rdi + 0xd8], eax
+0x1809bb4be mov      rdx, qword ptr [rsi + 0xf8]
+0x1809bb4c5 mov      qword ptr [rdi + 0xf8], rdx
+0x1809bb4cc call     0x180360c40
+0x1809bb4d1 mov      rcx, qword ptr [rsi + 0x100]
+0x1809bb4d8 xor      edx, edx
+0x1809bb4da call     0x180729620 ; Assembly-CSharp.dll:CorruptedDungeonEntranceGui.get_ParentGui | Assembly-CSharp.dll:AnimPreviewer.EmoteState | Assembly-CSharp.dll:AnimPreviewer.get_FishingState | Assembly-CSharp.dll:fuz.a | Assembly-CSharp.dll:guu.bv | Albion.Common.dll:c4.q | Albion.Common.dll:c4.l | Albion.Common.dll:a7m.e | Albion.Common.dll:bp6.qe | Albion.Common.dll:b8y.we | Albion.Common.dll:b7v.vp | mscorlib.dll:Locale.GetText | mscorlib.dll:SR.GetString | mscorlib.dll:SR.GetResourceString | mscorlib.dll:System.String.Clone | mscorlib.dll:System.String.ToString | mscorlib.dll:System.String.ToString | mscorlib.dll:Syst
+0x1809bb4df mov      qword ptr [rdi + 0x100], rax
+0x1809bb4e6 mov      rcx, qword ptr [rip + 0x444da6b]
+0x1809bb4ed cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb4f4 jne      0x1809bb4fb
+0x1809bb4f6 call     0x180361bf0
+0x1809bb4fb cmp      byte ptr [rip + 0x46bf4a0], 0
+0x1809bb502 jne      0x1809bb517
+0x1809bb504 lea      rcx, [rip + 0x444da4d]
+0x1809bb50b call     0x180361910
+0x1809bb510 mov      byte ptr [rip + 0x46bf48b], 1
+0x1809bb517 mov      rcx, qword ptr [rip + 0x444da3a]
+0x1809bb51e cmp      dword ptr [rcx + 0xe4], 0
+0x1809bb525 jne      0x1809bb52c
+0x1809bb527 call     0x180361bf0
+0x1809bb52c mov      rcx, qword ptr [rip + 0x444da25]
+0x1809bb533 call     0x180361710
+0x1809bb538 mov      rcx, qword ptr [rax]
+0x1809bb53b test     rcx, rcx
+0x1809bb53e je       0x1809bb633
+0x1809bb544 mov      rax, qword ptr [rcx + 0x50]
+0x1809bb548 test     rax, rax
+0x1809bb54b je       0x1809bb633
+0x1809bb551 mov      rcx, qword ptr [rip + 0x44168f8]
+0x1809bb558 mov      r14, qword ptr [rax + 0x80]
+0x1809bb55f call     0x180361b10
+0x1809bb564 xor      edx, edx
+0x1809bb566 mov      rcx, rax
+0x1809bb569 mov      rbx, rax
+0x1809bb56c call     0x180429690 ; Assembly-CSharp.dll:djn..ctor | Assembly-CSharp.dll:djp..ctor | Assembly-CSharp.dll:a..ctor | Assembly-CSharp.dll:WeatherRow..ctor | Assembly-CSharp.dll:FXWeatherTestSceneBiome..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:c..ctor | Assembly-CSharp.dll:BMGlyph..ctor | Assembly-CSharp.dll:BMSymbol..ctor | Assembly-CSharp.dll:EventDelegate..ctor | Assembly-CSharp.dll:e..ctor | Assembly-CSharp.dll:PropertyReference..ctor | Assembly-CSharp.dll:AnchorPoint..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:<>c..ctor | Assembly-CSharp.dll:a..cto
+0x1809bb571 lea      rcx, [rdi + 0x30]
+0x1809bb575 mov      qword ptr [rdi + 0x30], rbx
+0x1809bb579 mov      rdx, rbx
+0x1809bb57c call     0x180360c40
+0x1809bb581 mov      rcx, qword ptr [rdi + 0x30]
+0x1809bb585 test     rcx, rcx
+0x1809bb588 je       0x1809bb633
+0x1809bb58e mov      eax, dword ptr [rsi + 0xd8]
+0x1809bb594 mov      rdx, r14
+0x1809bb597 movss    xmm0, dword ptr [rsi + 0xe0]
+0x1809bb59f movss    xmm1, dword ptr [rsi + 0xdc]
+0x1809bb5a7 mov      r9d, dword ptr [rsi + 0xcc]
+0x1809bb5ae mov      r8d, dword ptr [rsi + 0xc8]
+0x1809bb5b5 mov      qword ptr [rsp + 0x48], 0
+0x1809bb5be movss    dword ptr [rsp + 0x40], xmm0
+0x1809bb5c4 movss    dword ptr [rsp + 0x38], xmm1
+0x1809bb5ca mov      dword ptr [rsp + 0x30], eax
+0x1809bb5ce mov      eax, dword ptr [rsi + 0xd4]
+0x1809bb5d4 mov      dword ptr [rsp + 0x28], eax
+0x1809bb5d8 mov      eax, dword ptr [rsi + 0xd0]
+0x1809bb5de mov      dword ptr [rsp + 0x20], eax
+0x1809bb5e2 call     0x18079ca30 ; Albion.Common.dll:bux.j
+0x1809bb5e7 mov      rax, qword ptr [rsi + 0xe8]
+0x1809bb5ee mov      qword ptr [rdi + 0x38], rax
+0x1809bb5f2 mov      eax, dword ptr [rsi + 0xf0]
+0x1809bb5f8 mov      dword ptr [rdi + 0x40], eax
+0x1809bb5fb mov      rcx, qword ptr [rbp + 0x38]
+0x1809bb5ff mov      byte ptr [rbp + 0x40], 1
+0x1809bb603 test     rcx, rcx
+0x1809bb606 je       0x1809bb619
+0x1809bb608 mov      rax, qword ptr [rcx + 0x18]
+0x1809bb60c mov      rdx, rbp
+0x1809bb60f mov      r8, qword ptr [rcx + 0x28]
+0x1809bb613 mov      rcx, qword ptr [rcx + 0x40]
+0x1809bb617 call     rax
+0x1809bb619 mov      r14, qword ptr [rsp + 0x68]
+0x1809bb61e mov      rdi, qword ptr [rsp + 0x60]
+0x1809bb623 mov      rbx, qword ptr [rsp + 0x70]
+0x1809bb628 mov      rbp, qword ptr [rsp + 0x78]
+0x1809bb62d add      rsp, 0x50
+0x1809bb631 pop      rsi
+0x1809bb632 ret      
+0x1809bb633 call     0x180361b60
+0x1809bb638 int3     

@@ -1,0 +1,689 @@
+0x1814afa00 push     rbx
+0x1814afa02 push     rdi
+0x1814afa03 sub      rsp, 0x68
+0x1814afa07 cmp      byte ptr [rip + 0x3bd0c78], 0
+0x1814afa0e mov      rbx, rcx
+0x1814afa11 jne      0x1814afaa2
+0x1814afa17 lea      rcx, [rip + 0x38eabca]
+0x1814afa1e call     0x180361910
+0x1814afa23 lea      rcx, [rip + 0x398a516]
+0x1814afa2a call     0x180361910
+0x1814afa2f lea      rcx, [rip + 0x3993ac2]
+0x1814afa36 call     0x180361910
+0x1814afa3b lea      rcx, [rip + 0x38f7fce]
+0x1814afa42 call     0x180361910
+0x1814afa47 lea      rcx, [rip + 0x395950a]
+0x1814afa4e call     0x180361910
+0x1814afa53 lea      rcx, [rip + 0x396c706]
+0x1814afa5a call     0x180361910
+0x1814afa5f lea      rcx, [rip + 0x396ed02]
+0x1814afa66 call     0x180361910
+0x1814afa6b lea      rcx, [rip + 0x3974966]
+0x1814afa72 call     0x180361910
+0x1814afa77 lea      rcx, [rip + 0x39a4802]
+0x1814afa7e call     0x180361910
+0x1814afa83 lea      rcx, [rip + 0x39adf36]
+0x1814afa8a call     0x180361910
+0x1814afa8f lea      rcx, [rip + 0x39b9b32]
+0x1814afa96 call     0x180361910
+0x1814afa9b mov      byte ptr [rip + 0x3bd0be4], 1
+0x1814afaa2 mov      rcx, qword ptr [rip + 0x38eab3f]
+0x1814afaa9 mov      rdi, qword ptr [rbx + 0x150]
+0x1814afab0 cmp      dword ptr [rcx + 0xe4], 0
+0x1814afab7 jne      0x1814afabe
+0x1814afab9 call     0x180361bf0
+0x1814afabe xor      edx, edx
+0x1814afac0 mov      rcx, rdi
+0x1814afac3 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814afac8 test     al, al
+0x1814afaca je       0x1814b05f3
+0x1814afad0 mov      qword ptr [rsp + 0x88], rbp
+0x1814afad8 mov      qword ptr [rsp + 0x60], rsi
+0x1814afadd mov      qword ptr [rsp + 0x58], r12
+0x1814afae2 mov      qword ptr [rsp + 0x50], r13
+0x1814afae7 mov      qword ptr [rsp + 0x48], r14
+0x1814afaec mov      qword ptr [rsp + 0x40], r15
+0x1814afaf1 mov      rcx, qword ptr [rip + 0x3be64d8]
+0x1814afaf8 xor      sil, sil
+0x1814afafb mov      rbp, qword ptr [rip + 0x39939f6]
+0x1814afb02 xor      r14b, r14b
+0x1814afb05 xor      r12d, r12d
+0x1814afb08 mov      byte ptr [rsp + 0x90], sil
+0x1814afb10 xor      r15b, r15b
+0x1814afb13 mov      rax, qword ptr [rcx + 0xb8]
+0x1814afb1a mov      rdi, qword ptr [rax]
+0x1814afb1d mov      r13, rdi
+0x1814afb20 mov      qword ptr [rsp + 0x98], rdi
+0x1814afb28 cmp      qword ptr [rbx + 0x130], r12
+0x1814afb2f je       0x1814afec6
+0x1814afb35 mov      rcx, qword ptr [rbx + 0x130]
+0x1814afb3c mov      rdx, qword ptr [rcx]
+0x1814afb3f mov      rax, qword ptr [rdx + 0x2b8]
+0x1814afb46 mov      rdx, qword ptr [rdx + 0x2c0]
+0x1814afb4d call     rax
+0x1814afb4f mov      rdi, qword ptr [rbx + 0x130]
+0x1814afb56 mov      rbp, rax
+0x1814afb59 test     rdi, rdi
+0x1814afb5c je       0x1814afec6
+0x1814afb62 mov      rdx, qword ptr [rip + 0x396ebff]
+0x1814afb69 mov      r8, qword ptr [rdi]
+0x1814afb6c movzx    eax, byte ptr [rdx + 0x130]
+0x1814afb73 cmp      byte ptr [r8 + 0x130], al
+0x1814afb7a jb       0x1814afec6
+0x1814afb80 movzx    ecx, al
+0x1814afb83 mov      rax, qword ptr [r8 + 0xc8]
+0x1814afb8a cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x1814afb8f jne      0x1814afec6
+0x1814afb95 mov      rcx, qword ptr [rip + 0x38f7e74]
+0x1814afb9c movzx    r14d, byte ptr [rdi + 0x16e]
+0x1814afba4 cmp      dword ptr [rcx + 0xe4], r12d
+0x1814afbab jne      0x1814afbb2
+0x1814afbad call     0x180361bf0
+0x1814afbb2 xor      edx, edx
+0x1814afbb4 movzx    ecx, r14b
+0x1814afbb8 call     0x1805b2170 ; Albion.Common.dll:bcj.b
+0x1814afbbd test     al, al
+0x1814afbbf je       0x1814afc85
+0x1814afbc5 mov      rcx, qword ptr [rip + 0x395938c]
+0x1814afbcc cmp      dword ptr [rcx + 0xe4], r12d
+0x1814afbd3 jne      0x1814afbda
+0x1814afbd5 call     0x180361bf0
+0x1814afbda xor      ecx, ecx
+0x1814afbdc call     0x180947b10
+0x1814afbe1 test     rax, rax
+0x1814afbe4 je       0x1814b05fa
+0x1814afbea mov      rcx, qword ptr [rax + 0x50]
+0x1814afbee test     rcx, rcx
+0x1814afbf1 je       0x1814b05fa
+0x1814afbf7 mov      r8, qword ptr [rip + 0x39747da]
+0x1814afbfe mov      rsi, qword ptr [rcx + 0x1b8]
+0x1814afc05 mov      rcx, qword ptr [rdi]
+0x1814afc08 movzx    eax, byte ptr [r8 + 0x130]
+0x1814afc10 cmp      byte ptr [rcx + 0x130], al
+0x1814afc16 jb       0x1814afc54
+0x1814afc18 movzx    edx, al
+0x1814afc1b mov      rax, qword ptr [rcx + 0xc8]
+0x1814afc22 cmp      qword ptr [rax + rdx*8 - 8], r8
+0x1814afc27 jne      0x1814afc54
+0x1814afc29 xor      r8d, r8d
+0x1814afc2c movzx    edx, r14b
+0x1814afc30 mov      rcx, rdi
+0x1814afc33 call     0x1809a90d0 ; Albion.PhotonClient.dll:ctp.k0
+0x1814afc38 test     rsi, rsi
+0x1814afc3b je       0x1814b05fa
+0x1814afc41 xor      r8d, r8d
+0x1814afc44 mov      rdx, rax
+0x1814afc47 mov      rcx, rsi
+0x1814afc4a call     0x1805ae150 ; Albion.Common.dll:bcg.acp
+0x1814afc4f mov      r12, rax
+0x1814afc52 jmp      0x1814afc85
+0x1814afc54 mov      rdx, qword ptr [rip + 0x396c505]
+0x1814afc5b mov      r8, rcx
+0x1814afc5e movzx    eax, byte ptr [rdx + 0x130]
+0x1814afc65 cmp      byte ptr [rcx + 0x130], al
+0x1814afc6b jb       0x1814afc85
+0x1814afc6d movzx    ecx, al
+0x1814afc70 mov      rax, qword ptr [r8 + 0xc8]
+0x1814afc77 cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x1814afc7c jne      0x1814afc85
+0x1814afc7e mov      r12, qword ptr [rdi + 0x2f0]
+0x1814afc85 xor      edx, edx
+0x1814afc87 mov      rcx, rdi
+0x1814afc8a call     0x180bcfe80 ; Albion.PhotonClient.dll:cpx.aul
+0x1814afc8f test     al, al
+0x1814afc91 je       0x1814afca1
+0x1814afc93 xor      edx, edx
+0x1814afc95 mov      rcx, rdi
+0x1814afc98 call     0x180bcff50 ; Albion.PhotonClient.dll:cpx.aum
+0x1814afc9d movzx    r15d, al
+0x1814afca1 xor      edx, edx
+0x1814afca3 mov      rcx, rdi
+0x1814afca6 call     0x180bd3dd0 ; Albion.PhotonClient.dll:cpx.bf
+0x1814afcab test     rax, rax
+0x1814afcae je       0x1814b05fa
+0x1814afcb4 mov      rcx, qword ptr [rax + 0x20]
+0x1814afcb8 xor      edx, edx
+0x1814afcba call     0x182fc26f0 ; mscorlib.dll:System.String.IsNullOrEmpty
+0x1814afcbf test     al, al
+0x1814afcc1 jne      0x1814afcfc
+0x1814afcc3 xor      edx, edx
+0x1814afcc5 mov      rcx, rdi
+0x1814afcc8 call     0x180bd3dd0 ; Albion.PhotonClient.dll:cpx.bf
+0x1814afccd test     rax, rax
+0x1814afcd0 je       0x1814b05fa
+0x1814afcd6 mov      rcx, qword ptr [rip + 0x39a45a3]
+0x1814afcdd mov      rsi, qword ptr [rax + 0x20]
+0x1814afce1 cmp      dword ptr [rcx + 0xe4], 0
+0x1814afce8 jne      0x1814afcef
+0x1814afcea call     0x180361bf0
+0x1814afcef xor      edx, edx
+0x1814afcf1 mov      rcx, rsi
+0x1814afcf4 call     0x181304000 ; Assembly-CSharp.dll:dmp.e
+0x1814afcf9 mov      r13, rax
+0x1814afcfc xor      edx, edx
+0x1814afcfe mov      rcx, rdi
+0x1814afd01 call     0x180bd02c0 ; Albion.PhotonClient.dll:cpx.avk
+0x1814afd06 mov      rcx, qword ptr [rip + 0x395924b]
+0x1814afd0d mov      byte ptr [rsp + 0x80], al
+0x1814afd14 cmp      dword ptr [rcx + 0xe4], 0
+0x1814afd1b jne      0x1814afd22
+0x1814afd1d call     0x180361bf0
+0x1814afd22 xor      ecx, ecx
+0x1814afd24 call     0x180947b10
+0x1814afd29 test     rax, rax
+0x1814afd2c je       0x1814b05fa
+0x1814afd32 mov      rax, qword ptr [rax + 0x190]
+0x1814afd39 test     rax, rax
+0x1814afd3c je       0x1814b05fa
+0x1814afd42 mov      rax, qword ptr [rax + 0x58]
+0x1814afd46 test     rax, rax
+0x1814afd49 je       0x1814afd93
+0x1814afd4b cmp      dword ptr [rax + 0x10], 0
+0x1814afd4f je       0x1814afd93
+0x1814afd51 movups   xmm0, xmmword ptr [rdi + 0x1f0]
+0x1814afd58 xor      r8d, r8d
+0x1814afd5b lea      rdx, [rsp + 0x20]
+0x1814afd60 movups   xmm1, xmmword ptr [rax + 0x18]
+0x1814afd64 lea      rcx, [rsp + 0x30]
+0x1814afd69 movaps   xmmword ptr [rsp + 0x20], xmm0
+0x1814afd6e movaps   xmmword ptr [rsp + 0x30], xmm1
+0x1814afd73 call     0x183169df0 ; mscorlib.dll:System.Guid.op_Equality | System.Drawing.dll:System.Drawing.Rectangle.op_Equality | Unity.Mathematics.dll:Unity.Mathematics.uint4.Equals
+0x1814afd78 mov      ecx, dword ptr [rsp + 0x90]
+0x1814afd7f test     al, al
+0x1814afd81 movzx    ecx, cl
+0x1814afd84 mov      edx, 1
+0x1814afd89 cmovne   ecx, edx
+0x1814afd8c mov      dword ptr [rsp + 0x90], ecx
+0x1814afd93 mov      rax, qword ptr [rbx + 0x150]
+0x1814afd9a test     rax, rax
+0x1814afd9d je       0x1814b05fa
+0x1814afda3 mov      rcx, qword ptr [rip + 0x38ea83e]
+0x1814afdaa mov      rsi, qword ptr [rax + 0x38]
+0x1814afdae cmp      dword ptr [rcx + 0xe4], 0
+0x1814afdb5 jne      0x1814afdbc
+0x1814afdb7 call     0x180361bf0
+0x1814afdbc xor      edx, edx
+0x1814afdbe mov      rcx, rsi
+0x1814afdc1 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814afdc6 test     al, al
+0x1814afdc8 je       0x1814afebe
+0x1814afdce mov      rdx, qword ptr [rdi]
+0x1814afdd1 mov      rcx, rdi
+0x1814afdd4 mov      rax, qword ptr [rdx + 0x608]
+0x1814afddb mov      rdx, qword ptr [rdx + 0x610]
+0x1814afde2 call     rax
+0x1814afde4 xor      edx, edx
+0x1814afde6 mov      rcx, rax
+0x1814afde9 call     0x182fc26f0 ; mscorlib.dll:System.String.IsNullOrEmpty
+0x1814afdee test     al, al
+0x1814afdf0 jne      0x1814afebe
+0x1814afdf6 mov      rdx, qword ptr [rdi]
+0x1814afdf9 mov      rcx, rdi
+0x1814afdfc mov      rax, qword ptr [rdx + 0x688]
+0x1814afe03 mov      rdx, qword ptr [rdx + 0x690]
+0x1814afe0a call     rax
+0x1814afe0c mov      rdx, qword ptr [rdi]
+0x1814afe0f mov      rcx, rdi
+0x1814afe12 mov      rsi, rax
+0x1814afe15 mov      r8, qword ptr [rdx + 0x608]
+0x1814afe1c mov      rdx, qword ptr [rdx + 0x610]
+0x1814afe23 call     r8
+0x1814afe26 mov      rcx, qword ptr [rip + 0x39adb93]
+0x1814afe2d mov      rdi, rax
+0x1814afe30 cmp      dword ptr [rcx + 0xe4], 0
+0x1814afe37 jne      0x1814afe3e
+0x1814afe39 call     0x180361bf0
+0x1814afe3e xor      r8d, r8d
+0x1814afe41 mov      rdx, rdi
+0x1814afe44 mov      rcx, rsi
+0x1814afe47 call     0x1816862e0 ; Assembly-CSharp.dll:dr2.a
+0x1814afe4c mov      rcx, qword ptr [rip + 0x39b9775]
+0x1814afe53 mov      rdi, rax
+0x1814afe56 mov      qword ptr [rsp + 0x98], rax
+0x1814afe5e cmp      dword ptr [rcx + 0xe4], 0
+0x1814afe65 jne      0x1814afe6c
+0x1814afe67 call     0x180361bf0
+0x1814afe6c xor      ecx, ecx
+0x1814afe6e call     0x1818cd350 ; Assembly-CSharp.dll:dwf.v
+0x1814afe73 test     rax, rax
+0x1814afe76 je       0x1814b05fa
+0x1814afe7c mov      rcx, qword ptr [rax + 0x88]
+0x1814afe83 test     rcx, rcx
+0x1814afe86 je       0x1814b05fa
+0x1814afe8c mov      rdx, qword ptr [rip + 0x398a0ad]
+0x1814afe93 mov      rcx, qword ptr [rcx + 0x110]
+0x1814afe9a call     0x18242bab0
+0x1814afe9f test     al, al
+0x1814afea1 je       0x1814afebe
+0x1814afea3 test     rdi, rdi
+0x1814afea6 je       0x1814b05fa
+0x1814afeac xor      edx, edx
+0x1814afeae mov      rcx, rdi
+0x1814afeb1 call     0x182fc80a0 ; mscorlib.dll:System.String.ToUpper
+0x1814afeb6 mov      qword ptr [rsp + 0x98], rax
+0x1814afebe movzx    esi, byte ptr [rsp + 0x80]
+0x1814afec6 mov      rax, qword ptr [rbx + 0x150]
+0x1814afecd test     rax, rax
+0x1814afed0 je       0x1814b05fa
+0x1814afed6 mov      rcx, qword ptr [rip + 0x38ea70b]
+0x1814afedd mov      rdi, qword ptr [rax + 0x30]
+0x1814afee1 cmp      dword ptr [rcx + 0xe4], 0
+0x1814afee8 jne      0x1814afeef
+0x1814afeea call     0x180361bf0
+0x1814afeef xor      edx, edx
+0x1814afef1 mov      rcx, rdi
+0x1814afef4 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814afef9 test     al, al
+0x1814afefb je       0x1814b0254
+0x1814aff01 mov      rax, qword ptr [rbx + 0x150]
+0x1814aff08 test     rax, rax
+0x1814aff0b je       0x1814b05fa
+0x1814aff11 mov      rcx, qword ptr [rax + 0x30]
+0x1814aff15 test     rcx, rcx
+0x1814aff18 je       0x1814b05fa
+0x1814aff1e xor      edx, edx
+0x1814aff20 call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814aff25 test     rax, rax
+0x1814aff28 je       0x1814b05fa
+0x1814aff2e xor      edx, edx
+0x1814aff30 mov      rcx, rax
+0x1814aff33 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814aff38 test     al, al
+0x1814aff3a je       0x1814b0254
+0x1814aff40 mov      rax, qword ptr [rbx + 0x150]
+0x1814aff47 test     rax, rax
+0x1814aff4a je       0x1814b05fa
+0x1814aff50 mov      rcx, qword ptr [rax + 0x30]
+0x1814aff54 test     rcx, rcx
+0x1814aff57 je       0x1814b05fa
+0x1814aff5d mov      r9, qword ptr [rcx]
+0x1814aff60 mov      r8b, 1
+0x1814aff63 movzx    edx, r8b
+0x1814aff67 mov      rax, qword ptr [r9 + 0x198]
+0x1814aff6e mov      r9, qword ptr [r9 + 0x1a0]
+0x1814aff75 call     rax
+0x1814aff77 xor      edx, edx
+0x1814aff79 mov      rcx, r13
+0x1814aff7c call     0x182fc26f0 ; mscorlib.dll:System.String.IsNullOrEmpty
+0x1814aff81 test     al, al
+0x1814aff83 jne      0x1814aff96
+0x1814aff85 xor      r8d, r8d
+0x1814aff88 mov      rdx, r13
+0x1814aff8b mov      rcx, rbp
+0x1814aff8e call     0x182fbdcf0 ; mscorlib.dll:System.String.Concat
+0x1814aff93 mov      rbp, rax
+0x1814aff96 mov      rcx, qword ptr [rip + 0x38f7a73]
+0x1814aff9d cmp      dword ptr [rcx + 0xe4], 0
+0x1814affa4 jne      0x1814affab
+0x1814affa6 call     0x180361bf0
+0x1814affab xor      edx, edx
+0x1814affad movzx    ecx, r14b
+0x1814affb1 call     0x1805b2170 ; Albion.Common.dll:bcj.b
+0x1814affb6 test     al, al
+0x1814affb8 jne      0x1814b0006
+0x1814affba cmp      r14b, 0xff
+0x1814affbe je       0x1814affd4
+0x1814affc0 xor      ecx, ecx
+0x1814affc2 movzx    eax, r15b
+0x1814affc6 test     r14b, r14b
+0x1814affc9 cmove    ecx, eax
+0x1814affcc test     ecx, ecx
+0x1814affce je       0x1814b0094
+0x1814affd4 mov      rdx, qword ptr [rip + 0x39a42a5]
+0x1814affdb cmp      dword ptr [rdx + 0xe4], 0
+0x1814affe2 jne      0x1814afff3
+0x1814affe4 mov      rcx, rdx
+0x1814affe7 call     0x180361bf0
+0x1814affec mov      rdx, qword ptr [rip + 0x39a428d]
+0x1814afff3 mov      rdx, qword ptr [rdx + 0xb8]
+0x1814afffa mov      rdx, qword ptr [rdx + 0xf50]
+0x1814b0001 jmp      0x1814b0086
+0x1814b0006 test     r12, r12
+0x1814b0009 je       0x1814b0094
+0x1814b000f mov      rcx, qword ptr [rip + 0x3958f42]
+0x1814b0016 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b001d jne      0x1814b0024
+0x1814b001f call     0x180361bf0
+0x1814b0024 xor      ecx, ecx
+0x1814b0026 call     0x180947b10
+0x1814b002b test     rax, rax
+0x1814b002e je       0x1814b05fa
+0x1814b0034 mov      rcx, qword ptr [rax + 0x50]
+0x1814b0038 test     rcx, rcx
+0x1814b003b je       0x1814b05fa
+0x1814b0041 mov      rcx, qword ptr [rcx + 0x1b8]
+0x1814b0048 test     rcx, rcx
+0x1814b004b je       0x1814b05fa
+0x1814b0051 xor      r8d, r8d
+0x1814b0054 mov      rdx, r12
+0x1814b0057 call     0x1805ab4f0 ; Albion.Common.dll:bcg.abs
+0x1814b005c mov      rcx, qword ptr [rip + 0x39a421d]
+0x1814b0063 mov      rdi, rax
+0x1814b0066 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b006d jne      0x1814b0074
+0x1814b006f call     0x180361bf0
+0x1814b0074 xor      r8d, r8d
+0x1814b0077 movzx    edx, r14b
+0x1814b007b mov      rcx, rdi
+0x1814b007e call     0x181300980 ; Assembly-CSharp.dll:dmp.a
+0x1814b0083 mov      rdx, rax
+0x1814b0086 xor      r8d, r8d
+0x1814b0089 mov      rcx, rbp
+0x1814b008c call     0x182fbdcf0 ; mscorlib.dll:System.String.Concat
+0x1814b0091 mov      rbp, rax
+0x1814b0094 cmp      byte ptr [rsp + 0x90], 0
+0x1814b009c je       0x1814b00d9
+0x1814b009e mov      rdx, qword ptr [rip + 0x39a41db]
+0x1814b00a5 cmp      dword ptr [rdx + 0xe4], 0
+0x1814b00ac jne      0x1814b00bd
+0x1814b00ae mov      rcx, rdx
+0x1814b00b1 call     0x180361bf0
+0x1814b00b6 mov      rdx, qword ptr [rip + 0x39a41c3]
+0x1814b00bd mov      rdx, qword ptr [rdx + 0xb8]
+0x1814b00c4 xor      r8d, r8d
+0x1814b00c7 mov      rcx, rbp
+0x1814b00ca mov      rdx, qword ptr [rdx + 0xb40]
+0x1814b00d1 call     0x182fbdcf0 ; mscorlib.dll:System.String.Concat
+0x1814b00d6 mov      rbp, rax
+0x1814b00d9 mov      rax, qword ptr [rbx + 0x150]
+0x1814b00e0 test     rax, rax
+0x1814b00e3 je       0x1814b05fa
+0x1814b00e9 mov      rdx, qword ptr [rax + 0x30]
+0x1814b00ed test     rdx, rdx
+0x1814b00f0 je       0x1814b05fa
+0x1814b00f6 mov      rdx, qword ptr [rdx + 0x220]
+0x1814b00fd xor      r8d, r8d
+0x1814b0100 mov      rcx, rbp
+0x1814b0103 call     0x182fc89d0 ; mscorlib.dll:System.String.op_Inequality
+0x1814b0108 test     al, al
+0x1814b010a je       0x1814b0158
+0x1814b010c mov      rax, qword ptr [rbx + 0x150]
+0x1814b0113 test     rax, rax
+0x1814b0116 je       0x1814b05fa
+0x1814b011c mov      rcx, qword ptr [rax + 0x30]
+0x1814b0120 test     rcx, rcx
+0x1814b0123 je       0x1814b05fa
+0x1814b0129 xor      r8d, r8d
+0x1814b012c mov      rdx, rbp
+0x1814b012f call     0x1819426a0 ; Assembly-CSharp.dll:UILabel.set_text
+0x1814b0134 xor      edx, edx
+0x1814b0136 mov      rcx, rbx
+0x1814b0139 call     0x18147fde0 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.ClearWidgets
+0x1814b013e xor      edx, edx
+0x1814b0140 mov      rcx, rbx
+0x1814b0143 call     0x181480440 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.MarkAsDirty
+0x1814b0148 mov      word ptr [rbx + 0x191], 0x101
+0x1814b0151 mov      byte ptr [rbx + 0x190], 1
+0x1814b0158 mov      rax, qword ptr [rbx + 0x150]
+0x1814b015f test     rax, rax
+0x1814b0162 je       0x1814b05fa
+0x1814b0168 mov      rcx, qword ptr [rip + 0x38ea479]
+0x1814b016f mov      rdi, qword ptr [rax + 0x20]
+0x1814b0173 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b017a jne      0x1814b0181
+0x1814b017c call     0x180361bf0
+0x1814b0181 xor      edx, edx
+0x1814b0183 mov      rcx, rdi
+0x1814b0186 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814b018b test     al, al
+0x1814b018d je       0x1814b0254
+0x1814b0193 mov      rax, qword ptr [rbx + 0x150]
+0x1814b019a test     rax, rax
+0x1814b019d je       0x1814b05fa
+0x1814b01a3 mov      rcx, qword ptr [rax + 0x20]
+0x1814b01a7 test     rcx, rcx
+0x1814b01aa je       0x1814b05fa
+0x1814b01b0 xor      edx, edx
+0x1814b01b2 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b01b7 cmp      byte ptr [rbx + 0x220], 0
+0x1814b01be mov      ecx, 0
+0x1814b01c3 movzx    eax, al
+0x1814b01c6 sete     cl
+0x1814b01c9 cmp      eax, ecx
+0x1814b01cb je       0x1814b0254
+0x1814b01d1 mov      rax, qword ptr [rbx + 0x150]
+0x1814b01d8 movzx    edi, byte ptr [rbx + 0x220]
+0x1814b01df test     rax, rax
+0x1814b01e2 je       0x1814b05fa
+0x1814b01e8 mov      rcx, qword ptr [rax + 0x20]
+0x1814b01ec test     rcx, rcx
+0x1814b01ef je       0x1814b05fa
+0x1814b01f5 xor      edx, edx
+0x1814b01f7 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b01fc cmp      dil, al
+0x1814b01ff jne      0x1814b020b
+0x1814b0201 xor      edx, edx
+0x1814b0203 mov      rcx, rbx
+0x1814b0206 call     0x18147fde0 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.ClearWidgets
+0x1814b020b mov      rax, qword ptr [rbx + 0x150]
+0x1814b0212 test     rax, rax
+0x1814b0215 je       0x1814b05fa
+0x1814b021b mov      rcx, qword ptr [rax + 0x20]
+0x1814b021f test     rcx, rcx
+0x1814b0222 je       0x1814b05fa
+0x1814b0228 cmp      byte ptr [rbx + 0x220], 0
+0x1814b022f sete     dl
+0x1814b0232 xor      r8d, r8d
+0x1814b0235 call     0x183a3ecc0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.SetActive
+0x1814b023a xor      edx, edx
+0x1814b023c mov      rcx, rbx
+0x1814b023f call     0x181480440 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.MarkAsDirty
+0x1814b0244 mov      word ptr [rbx + 0x191], 0x101
+0x1814b024d mov      byte ptr [rbx + 0x190], 1
+0x1814b0254 mov      rax, qword ptr [rbx + 0x150]
+0x1814b025b test     rax, rax
+0x1814b025e je       0x1814b05fa
+0x1814b0264 mov      rcx, qword ptr [rip + 0x38ea37d]
+0x1814b026b mov      rdi, qword ptr [rax + 0x30]
+0x1814b026f cmp      dword ptr [rcx + 0xe4], 0
+0x1814b0276 jne      0x1814b027d
+0x1814b0278 call     0x180361bf0
+0x1814b027d xor      edx, edx
+0x1814b027f mov      rcx, rdi
+0x1814b0282 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814b0287 test     al, al
+0x1814b0289 je       0x1814b02c6
+0x1814b028b mov      rax, qword ptr [rbx + 0x150]
+0x1814b0292 test     rax, rax
+0x1814b0295 je       0x1814b05fa
+0x1814b029b mov      rcx, qword ptr [rax + 0x30]
+0x1814b029f test     rcx, rcx
+0x1814b02a2 je       0x1814b05fa
+0x1814b02a8 xor      edx, edx
+0x1814b02aa call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b02af test     rax, rax
+0x1814b02b2 je       0x1814b05fa
+0x1814b02b8 xor      edx, edx
+0x1814b02ba mov      rcx, rax
+0x1814b02bd call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b02c2 test     al, al
+0x1814b02c4 jne      0x1814b0340
+0x1814b02c6 mov      rax, qword ptr [rbx + 0x150]
+0x1814b02cd test     rax, rax
+0x1814b02d0 je       0x1814b05fa
+0x1814b02d6 mov      rcx, qword ptr [rip + 0x38ea30b]
+0x1814b02dd mov      rdi, qword ptr [rax + 0x38]
+0x1814b02e1 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b02e8 jne      0x1814b02ef
+0x1814b02ea call     0x180361bf0
+0x1814b02ef xor      edx, edx
+0x1814b02f1 mov      rcx, rdi
+0x1814b02f4 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814b02f9 test     al, al
+0x1814b02fb je       0x1814b0526
+0x1814b0301 mov      rax, qword ptr [rbx + 0x150]
+0x1814b0308 test     rax, rax
+0x1814b030b je       0x1814b05fa
+0x1814b0311 mov      rcx, qword ptr [rax + 0x38]
+0x1814b0315 test     rcx, rcx
+0x1814b0318 je       0x1814b05fa
+0x1814b031e xor      edx, edx
+0x1814b0320 call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b0325 test     rax, rax
+0x1814b0328 je       0x1814b05fa
+0x1814b032e xor      edx, edx
+0x1814b0330 mov      rcx, rax
+0x1814b0333 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b0338 test     al, al
+0x1814b033a je       0x1814b0526
+0x1814b0340 mov      rax, qword ptr [rbx + 0x150]
+0x1814b0347 test     rax, rax
+0x1814b034a je       0x1814b05fa
+0x1814b0350 mov      rcx, qword ptr [rax + 0x98]
+0x1814b0357 test     rcx, rcx
+0x1814b035a je       0x1814b05fa
+0x1814b0360 xor      edx, edx
+0x1814b0362 call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b0367 mov      rcx, qword ptr [rip + 0x38ea27a]
+0x1814b036e mov      rdi, rax
+0x1814b0371 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b0378 jne      0x1814b037f
+0x1814b037a call     0x180361bf0
+0x1814b037f xor      edx, edx
+0x1814b0381 mov      rcx, rdi
+0x1814b0384 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814b0389 test     al, al
+0x1814b038b je       0x1814b0526
+0x1814b0391 mov      rax, qword ptr [rbx + 0x150]
+0x1814b0398 test     rax, rax
+0x1814b039b je       0x1814b05fa
+0x1814b03a1 mov      rcx, qword ptr [rax + 0x98]
+0x1814b03a8 test     rcx, rcx
+0x1814b03ab je       0x1814b05fa
+0x1814b03b1 xor      edx, edx
+0x1814b03b3 call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b03b8 test     rax, rax
+0x1814b03bb je       0x1814b05fa
+0x1814b03c1 xor      edx, edx
+0x1814b03c3 mov      rcx, rax
+0x1814b03c6 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b03cb cmp      al, sil
+0x1814b03ce je       0x1814b0526
+0x1814b03d4 mov      rax, qword ptr [rbx + 0x150]
+0x1814b03db test     rax, rax
+0x1814b03de je       0x1814b05fa
+0x1814b03e4 mov      rcx, qword ptr [rax + 0x98]
+0x1814b03eb test     rcx, rcx
+0x1814b03ee je       0x1814b05fa
+0x1814b03f4 xor      edx, edx
+0x1814b03f6 call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b03fb test     rax, rax
+0x1814b03fe je       0x1814b05fa
+0x1814b0404 xor      edx, edx
+0x1814b0406 mov      rcx, rax
+0x1814b0409 call     0x183a3f3d0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.get_activeSelf
+0x1814b040e cmp      sil, al
+0x1814b0411 je       0x1814b041d
+0x1814b0413 xor      edx, edx
+0x1814b0415 mov      rcx, rbx
+0x1814b0418 call     0x18147fde0 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.ClearWidgets
+0x1814b041d mov      rax, qword ptr [rbx + 0x150]
+0x1814b0424 test     rax, rax
+0x1814b0427 je       0x1814b05fa
+0x1814b042d mov      rcx, qword ptr [rax + 0x98]
+0x1814b0434 test     rcx, rcx
+0x1814b0437 je       0x1814b05fa
+0x1814b043d xor      edx, edx
+0x1814b043f call     0x183a39e90 ; UnityEngine.CoreModule.dll:UnityEngine.Component.get_gameObject
+0x1814b0444 test     rax, rax
+0x1814b0447 je       0x1814b05fa
+0x1814b044d xor      r8d, r8d
+0x1814b0450 movzx    edx, sil
+0x1814b0454 mov      rcx, rax
+0x1814b0457 call     0x183a3ecc0 ; UnityEngine.CoreModule.dll:UnityEngine.GameObject.SetActive
+0x1814b045c cmp      byte ptr [rip + 0x3bd0236], 0
+0x1814b0463 jne      0x1814b0478
+0x1814b0465 lea      rcx, [rip + 0x38ea17c]
+0x1814b046c call     0x180361910
+0x1814b0471 mov      byte ptr [rip + 0x3bd0221], 1
+0x1814b0478 mov      rcx, qword ptr [rip + 0x38ea169]
+0x1814b047f mov      rdi, qword ptr [rbx + 0x150]
+0x1814b0486 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b048d jne      0x1814b0494
+0x1814b048f call     0x180361bf0
+0x1814b0494 xor      r8d, r8d
+0x1814b0497 xor      edx, edx
+0x1814b0499 mov      rcx, rdi
+0x1814b049c call     0x183a45b00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Equality
+0x1814b04a1 test     al, al
+0x1814b04a3 jne      0x1814b050c
+0x1814b04a5 mov      rax, qword ptr [rbx + 0x150]
+0x1814b04ac test     rax, rax
+0x1814b04af je       0x1814b05fa
+0x1814b04b5 mov      rcx, qword ptr [rip + 0x38ea12c]
+0x1814b04bc mov      rdi, qword ptr [rax + 0xb0]
+0x1814b04c3 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b04ca jne      0x1814b04d1
+0x1814b04cc call     0x180361bf0
+0x1814b04d1 xor      r8d, r8d
+0x1814b04d4 xor      edx, edx
+0x1814b04d6 mov      rcx, rdi
+0x1814b04d9 call     0x183a45b00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Equality
+0x1814b04de test     al, al
+0x1814b04e0 jne      0x1814b050c
+0x1814b04e2 mov      rax, qword ptr [rbx + 0x150]
+0x1814b04e9 test     rax, rax
+0x1814b04ec je       0x1814b05fa
+0x1814b04f2 mov      rcx, qword ptr [rax + 0xb0]
+0x1814b04f9 test     rcx, rcx
+0x1814b04fc je       0x1814b05fa
+0x1814b0502 xor      r8d, r8d
+0x1814b0505 mov      dl, 1
+0x1814b0507 call     0x1816ed3c0 ; Assembly-CSharp.dll:UIRect.ForceUpdateAnchorsNow
+0x1814b050c xor      edx, edx
+0x1814b050e mov      rcx, rbx
+0x1814b0511 call     0x181480440 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.MarkAsDirty
+0x1814b0516 mov      word ptr [rbx + 0x191], 0x101
+0x1814b051f mov      byte ptr [rbx + 0x190], 1
+0x1814b0526 mov      rax, qword ptr [rbx + 0x150]
+0x1814b052d test     rax, rax
+0x1814b0530 je       0x1814b05fa
+0x1814b0536 mov      rcx, qword ptr [rip + 0x38ea0ab]
+0x1814b053d mov      rdi, qword ptr [rax + 0x38]
+0x1814b0541 cmp      dword ptr [rcx + 0xe4], 0
+0x1814b0548 jne      0x1814b054f
+0x1814b054a call     0x180361bf0
+0x1814b054f xor      edx, edx
+0x1814b0551 mov      rcx, rdi
+0x1814b0554 call     0x183a45c00 ; UnityEngine.CoreModule.dll:UnityEngine.Object.op_Implicit
+0x1814b0559 test     al, al
+0x1814b055b je       0x1814b05d2
+0x1814b055d mov      rax, qword ptr [rbx + 0x150]
+0x1814b0564 test     rax, rax
+0x1814b0567 je       0x1814b05fa
+0x1814b056d mov      rcx, qword ptr [rax + 0x38]
+0x1814b0571 test     rcx, rcx
+0x1814b0574 je       0x1814b05fa
+0x1814b057a mov      rdi, qword ptr [rsp + 0x98]
+0x1814b0582 xor      r8d, r8d
+0x1814b0585 mov      rcx, qword ptr [rcx + 0x220]
+0x1814b058c mov      rdx, rdi
+0x1814b058f call     0x182fc89d0 ; mscorlib.dll:System.String.op_Inequality
+0x1814b0594 test     al, al
+0x1814b0596 je       0x1814b05d2
+0x1814b0598 mov      rax, qword ptr [rbx + 0x150]
+0x1814b059f test     rax, rax
+0x1814b05a2 je       0x1814b05fa
+0x1814b05a4 mov      rcx, qword ptr [rax + 0x38]
+0x1814b05a8 test     rcx, rcx
+0x1814b05ab je       0x1814b05fa
+0x1814b05ad xor      r8d, r8d
+0x1814b05b0 mov      rdx, rdi
+0x1814b05b3 call     0x1819426a0 ; Assembly-CSharp.dll:UILabel.set_text
+0x1814b05b8 xor      edx, edx
+0x1814b05ba mov      rcx, rbx
+0x1814b05bd call     0x181480440 ; Assembly-CSharp.dll:WorldObjectAnchoredGui.MarkAsDirty
+0x1814b05c2 mov      word ptr [rbx + 0x191], 0x101
+0x1814b05cb mov      byte ptr [rbx + 0x190], 1
+0x1814b05d2 mov      r14, qword ptr [rsp + 0x48]
+0x1814b05d7 mov      r13, qword ptr [rsp + 0x50]
+0x1814b05dc mov      r12, qword ptr [rsp + 0x58]
+0x1814b05e1 mov      rsi, qword ptr [rsp + 0x60]
+0x1814b05e6 mov      rbp, qword ptr [rsp + 0x88]
+0x1814b05ee mov      r15, qword ptr [rsp + 0x40]
+0x1814b05f3 add      rsp, 0x68
+0x1814b05f7 pop      rdi
+0x1814b05f8 pop      rbx
+0x1814b05f9 ret      
+0x1814b05fa call     0x180361b60
+0x1814b05ff int3     

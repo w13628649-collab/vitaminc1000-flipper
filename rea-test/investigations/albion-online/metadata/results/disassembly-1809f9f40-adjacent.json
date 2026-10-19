@@ -1,0 +1,3690 @@
+{
+  "evidence_id": "AO-META-DISASM-1809f9f40-adjacent",
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "requested_va": "0x1809f9f40",
+  "function_va": "0x1809f9f40",
+  "end_exclusive_va": "0x1809fa39f",
+  "file_offset": 10454336,
+  "byte_length": 1119,
+  "function_sha256": "60e177f031bf58b1e3483487f91d0cadbf8583d08c8c518e90ff69154b2590ef",
+  "capstone_version": "5.0.7",
+  "symbols": [
+    {
+      "type_index": 19890,
+      "type": "cx6",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 139312,
+      "name": "aft",
+      "token": "0x60025b7",
+      "native_va": "0x1809f9f40",
+      "native_rva": "0x9f9f40",
+      "native_file_offset": 10454336,
+      "pointer_slot_file_offset": 79893664
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x1809f9f40",
+      "file_offset": 10454336,
+      "bytes": "48895c2418",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x18], rbx"
+    },
+    {
+      "va": "0x1809f9f45",
+      "file_offset": 10454341,
+      "bytes": "4889742420",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x20], rsi"
+    },
+    {
+      "va": "0x1809f9f4a",
+      "file_offset": 10454346,
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "rdi"
+    },
+    {
+      "va": "0x1809f9f4b",
+      "file_offset": 10454347,
+      "bytes": "4883ec40",
+      "mnemonic": "sub",
+      "operands": "rsp, 0x40"
+    },
+    {
+      "va": "0x1809f9f4f",
+      "file_offset": 10454351,
+      "bytes": "803d6b0f680400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x4680f6b], 0"
+    },
+    {
+      "va": "0x1809f9f56",
+      "file_offset": 10454358,
+      "bytes": "410fb7f8",
+      "mnemonic": "movzx",
+      "operands": "edi, r8w"
+    },
+    {
+      "va": "0x1809f9f5a",
+      "file_offset": 10454362,
+      "bytes": "488bf2",
+      "mnemonic": "mov",
+      "operands": "rsi, rdx"
+    },
+    {
+      "va": "0x1809f9f5d",
+      "file_offset": 10454365,
+      "bytes": "488bd9",
+      "mnemonic": "mov",
+      "operands": "rbx, rcx"
+    },
+    {
+      "va": "0x1809f9f60",
+      "file_offset": 10454368,
+      "bytes": "754f",
+      "mnemonic": "jne",
+      "operands": "0x1809f9fb1"
+    },
+    {
+      "va": "0x1809f9f62",
+      "file_offset": 10454370,
+      "bytes": "488d0dcf7c3f04",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x43f7ccf]"
+    },
+    {
+      "va": "0x1809f9f69",
+      "file_offset": 10454377,
+      "bytes": "e8a27996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9f6e",
+      "file_offset": 10454382,
+      "bytes": "488d0d3b7e4704",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4477e3b]"
+    },
+    {
+      "va": "0x1809f9f75",
+      "file_offset": 10454389,
+      "bytes": "e8967996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9f7a",
+      "file_offset": 10454394,
+      "bytes": "488d0dd7ef4004",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x440efd7]"
+    },
+    {
+      "va": "0x1809f9f81",
+      "file_offset": 10454401,
+      "bytes": "e88a7996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9f86",
+      "file_offset": 10454406,
+      "bytes": "488d0d5b733d04",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x43d735b]"
+    },
+    {
+      "va": "0x1809f9f8d",
+      "file_offset": 10454413,
+      "bytes": "e87e7996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9f92",
+      "file_offset": 10454418,
+      "bytes": "488d0d970c4104",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4410c97]"
+    },
+    {
+      "va": "0x1809f9f99",
+      "file_offset": 10454425,
+      "bytes": "e8727996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9f9e",
+      "file_offset": 10454430,
+      "bytes": "488d0d93b84204",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x442b893]"
+    },
+    {
+      "va": "0x1809f9fa5",
+      "file_offset": 10454437,
+      "bytes": "e8667996ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9faa",
+      "file_offset": 10454442,
+      "bytes": "c605100f680401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x4680f10], 1"
+    },
+    {
+      "va": "0x1809f9fb1",
+      "file_offset": 10454449,
+      "bytes": "b8a5000000",
+      "mnemonic": "mov",
+      "operands": "eax, 0xa5"
+    },
+    {
+      "va": "0x1809f9fb6",
+      "file_offset": 10454454,
+      "bytes": "663bf8",
+      "mnemonic": "cmp",
+      "operands": "di, ax"
+    },
+    {
+      "va": "0x1809f9fb9",
+      "file_offset": 10454457,
+      "bytes": "0f85db020000",
+      "mnemonic": "jne",
+      "operands": "0x1809fa29a"
+    },
+    {
+      "va": "0x1809f9fbf",
+      "file_offset": 10454463,
+      "bytes": "488b1522733d04",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rip + 0x43d7322]"
+    },
+    {
+      "va": "0x1809f9fc6",
+      "file_offset": 10454470,
+      "bytes": "488bce",
+      "mnemonic": "mov",
+      "operands": "rcx, rsi"
+    },
+    {
+      "va": "0x1809f9fc9",
+      "file_offset": 10454473,
+      "bytes": "48896c2450",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x50], rbp"
+    },
+    {
+      "va": "0x1809f9fce",
+      "file_offset": 10454478,
+      "bytes": "4c89742458",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x58], r14"
+    },
+    {
+      "va": "0x1809f9fd3",
+      "file_offset": 10454483,
+      "bytes": "e8d89e6001",
+      "mnemonic": "call",
+      "operands": "0x182003eb0",
+      "target_va": "0x182003eb0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809f9fd8",
+      "file_offset": 10454488,
+      "bytes": "488bf0",
+      "mnemonic": "mov",
+      "operands": "rsi, rax"
+    },
+    {
+      "va": "0x1809f9fdb",
+      "file_offset": 10454491,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809f9fde",
+      "file_offset": 10454494,
+      "bytes": "0f84ac030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809f9fe4",
+      "file_offset": 10454500,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809f9fe6",
+      "file_offset": 10454502,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809f9fe9",
+      "file_offset": 10454505,
+      "bytes": "385040",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rax + 0x40], dl"
+    },
+    {
+      "va": "0x1809f9fec",
+      "file_offset": 10454508,
+      "bytes": "0f85b8020000",
+      "mnemonic": "jne",
+      "operands": "0x1809fa2aa"
+    },
+    {
+      "va": "0x1809f9ff2",
+      "file_offset": 10454514,
+      "bytes": "e8c936feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809f9ff7",
+      "file_offset": 10454519,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809f9ffa",
+      "file_offset": 10454522,
+      "bytes": "0f8490030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa000",
+      "file_offset": 10454528,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa002",
+      "file_offset": 10454530,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa005",
+      "file_offset": 10454533,
+      "bytes": "e8c67e1d00",
+      "mnemonic": "call",
+      "operands": "0x180bd1ed0",
+      "target_va": "0x180bd1ed0",
+      "target_symbols": [
+        {
+          "type_index": 19510,
+          "type": "cpx",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135749,
+          "name": "awm",
+          "token": "0x60017cc",
+          "native_va": "0x180bd1ed0",
+          "native_rva": "0xbd1ed0",
+          "native_file_offset": 12387536,
+          "pointer_slot_file_offset": 79865160
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa00a",
+      "file_offset": 10454538,
+      "bytes": "84c0",
+      "mnemonic": "test",
+      "operands": "al, al"
+    },
+    {
+      "va": "0x1809fa00c",
+      "file_offset": 10454540,
+      "bytes": "0f8585000000",
+      "mnemonic": "jne",
+      "operands": "0x1809fa097"
+    },
+    {
+      "va": "0x1809fa012",
+      "file_offset": 10454546,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa014",
+      "file_offset": 10454548,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa017",
+      "file_offset": 10454551,
+      "bytes": "e8a436feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa01c",
+      "file_offset": 10454556,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa01f",
+      "file_offset": 10454559,
+      "bytes": "0f846b030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa025",
+      "file_offset": 10454565,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa028",
+      "file_offset": 10454568,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa02a",
+      "file_offset": 10454570,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa02d",
+      "file_offset": 10454573,
+      "bytes": "e83eb51c00",
+      "mnemonic": "call",
+      "operands": "0x180bc5570",
+      "target_va": "0x180bc5570",
+      "target_symbols": [
+        {
+          "type_index": 19490,
+          "type": "cpo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135413,
+          "name": "x8",
+          "token": "0x600167c",
+          "native_va": "0x180bc5570",
+          "native_rva": "0xbc5570",
+          "native_file_offset": 12335984,
+          "pointer_slot_file_offset": 79862472
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa032",
+      "file_offset": 10454578,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa034",
+      "file_offset": 10454580,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa037",
+      "file_offset": 10454583,
+      "bytes": "e88436feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa03c",
+      "file_offset": 10454588,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa03f",
+      "file_offset": 10454591,
+      "bytes": "0f844b030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa045",
+      "file_offset": 10454597,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa047",
+      "file_offset": 10454599,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa04a",
+      "file_offset": 10454602,
+      "bytes": "e891dafaff",
+      "mnemonic": "call",
+      "operands": "0x1809a7ae0",
+      "target_va": "0x1809a7ae0",
+      "target_symbols": [
+        {
+          "type_index": 19680,
+          "type": "ctp",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 137420,
+          "name": "atr",
+          "token": "0x6001e53",
+          "native_va": "0x1809a7ae0",
+          "native_rva": "0x9a7ae0",
+          "native_file_offset": 10117344,
+          "pointer_slot_file_offset": 79878528
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa04f",
+      "file_offset": 10454607,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa052",
+      "file_offset": 10454610,
+      "bytes": "0f8438030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa058",
+      "file_offset": 10454616,
+      "bytes": "4c8b08",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa05b",
+      "file_offset": 10454619,
+      "bytes": "ba01000000",
+      "mnemonic": "mov",
+      "operands": "edx, 1"
+    },
+    {
+      "va": "0x1809fa060",
+      "file_offset": 10454624,
+      "bytes": "41b80f000000",
+      "mnemonic": "mov",
+      "operands": "r8d, 0xf"
+    },
+    {
+      "va": "0x1809fa066",
+      "file_offset": 10454630,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa069",
+      "file_offset": 10454633,
+      "bytes": "4d8b9148020000",
+      "mnemonic": "mov",
+      "operands": "r10, qword ptr [r9 + 0x248]"
+    },
+    {
+      "va": "0x1809fa070",
+      "file_offset": 10454640,
+      "bytes": "4d8b8950020000",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [r9 + 0x250]"
+    },
+    {
+      "va": "0x1809fa077",
+      "file_offset": 10454647,
+      "bytes": "41ffd2",
+      "mnemonic": "call",
+      "operands": "r10"
+    },
+    {
+      "va": "0x1809fa07a",
+      "file_offset": 10454650,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa07c",
+      "file_offset": 10454652,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa07f",
+      "file_offset": 10454655,
+      "bytes": "e83c36feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa084",
+      "file_offset": 10454660,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa087",
+      "file_offset": 10454663,
+      "bytes": "0f8403030000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa08d",
+      "file_offset": 10454669,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa08f",
+      "file_offset": 10454671,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa092",
+      "file_offset": 10454674,
+      "bytes": "e8f9731d00",
+      "mnemonic": "call",
+      "operands": "0x180bd1490",
+      "target_va": "0x180bd1490",
+      "target_symbols": [
+        {
+          "type_index": 19510,
+          "type": "cpx",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135797,
+          "name": "aw7",
+          "token": "0x60017fc",
+          "native_va": "0x180bd1490",
+          "native_rva": "0xbd1490",
+          "native_file_offset": 12384912,
+          "pointer_slot_file_offset": 79865544
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa097",
+      "file_offset": 10454679,
+      "bytes": "488b0d920b4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410b92]"
+    },
+    {
+      "va": "0x1809fa09e",
+      "file_offset": 10454686,
+      "bytes": "4c8b7628",
+      "mnemonic": "mov",
+      "operands": "r14, qword ptr [rsi + 0x28]"
+    },
+    {
+      "va": "0x1809fa0a2",
+      "file_offset": 10454690,
+      "bytes": "488b6e38",
+      "mnemonic": "mov",
+      "operands": "rbp, qword ptr [rsi + 0x38]"
+    },
+    {
+      "va": "0x1809fa0a6",
+      "file_offset": 10454694,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa0ad",
+      "file_offset": 10454701,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa0b4"
+    },
+    {
+      "va": "0x1809fa0af",
+      "file_offset": 10454703,
+      "bytes": "e83c7b96ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa0b4",
+      "file_offset": 10454708,
+      "bytes": "803d2d0a680400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x4680a2d], 0"
+    },
+    {
+      "va": "0x1809fa0bb",
+      "file_offset": 10454715,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x1809fa0d0"
+    },
+    {
+      "va": "0x1809fa0bd",
+      "file_offset": 10454717,
+      "bytes": "488d0d6c0b4104",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4410b6c]"
+    },
+    {
+      "va": "0x1809fa0c4",
+      "file_offset": 10454724,
+      "bytes": "e8477896ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa0c9",
+      "file_offset": 10454729,
+      "bytes": "c605180a680401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x4680a18], 1"
+    },
+    {
+      "va": "0x1809fa0d0",
+      "file_offset": 10454736,
+      "bytes": "488b0d590b4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410b59]"
+    },
+    {
+      "va": "0x1809fa0d7",
+      "file_offset": 10454743,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa0de",
+      "file_offset": 10454750,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa0e5"
+    },
+    {
+      "va": "0x1809fa0e0",
+      "file_offset": 10454752,
+      "bytes": "e80b7b96ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa0e5",
+      "file_offset": 10454757,
+      "bytes": "488b0d440b4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410b44]"
+    },
+    {
+      "va": "0x1809fa0ec",
+      "file_offset": 10454764,
+      "bytes": "e81f7696ff",
+      "mnemonic": "call",
+      "operands": "0x180361710",
+      "target_va": "0x180361710",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa0f1",
+      "file_offset": 10454769,
+      "bytes": "488b08",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa0f4",
+      "file_offset": 10454772,
+      "bytes": "4885c9",
+      "mnemonic": "test",
+      "operands": "rcx, rcx"
+    },
+    {
+      "va": "0x1809fa0f7",
+      "file_offset": 10454775,
+      "bytes": "0f8493020000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa0fd",
+      "file_offset": 10454781,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa0ff",
+      "file_offset": 10454783,
+      "bytes": "e88c94f7ff",
+      "mnemonic": "call",
+      "operands": "0x180973590",
+      "target_va": "0x180973590",
+      "target_symbols": [
+        {
+          "type_index": 19162,
+          "type": "ciy",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 130192,
+          "name": "bm",
+          "token": "0x6000217",
+          "native_va": "0x180973590",
+          "native_rva": "0x973590",
+          "native_file_offset": 9902992,
+          "pointer_slot_file_offset": 79820704
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa104",
+      "file_offset": 10454788,
+      "bytes": "84c0",
+      "mnemonic": "test",
+      "operands": "al, al"
+    },
+    {
+      "va": "0x1809fa106",
+      "file_offset": 10454790,
+      "bytes": "0f84c9000000",
+      "mnemonic": "je",
+      "operands": "0x1809fa1d5"
+    },
+    {
+      "va": "0x1809fa10c",
+      "file_offset": 10454796,
+      "bytes": "488b0d1d0b4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410b1d]"
+    },
+    {
+      "va": "0x1809fa113",
+      "file_offset": 10454803,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa11a",
+      "file_offset": 10454810,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa121"
+    },
+    {
+      "va": "0x1809fa11c",
+      "file_offset": 10454812,
+      "bytes": "e8cf7a96ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa121",
+      "file_offset": 10454817,
+      "bytes": "803dc009680400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x46809c0], 0"
+    },
+    {
+      "va": "0x1809fa128",
+      "file_offset": 10454824,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x1809fa13d"
+    },
+    {
+      "va": "0x1809fa12a",
+      "file_offset": 10454826,
+      "bytes": "488d0dff0a4104",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4410aff]"
+    },
+    {
+      "va": "0x1809fa131",
+      "file_offset": 10454833,
+      "bytes": "e8da7796ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa136",
+      "file_offset": 10454838,
+      "bytes": "c605ab09680401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x46809ab], 1"
+    },
+    {
+      "va": "0x1809fa13d",
+      "file_offset": 10454845,
+      "bytes": "488b0dec0a4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410aec]"
+    },
+    {
+      "va": "0x1809fa144",
+      "file_offset": 10454852,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa14b",
+      "file_offset": 10454859,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa152"
+    },
+    {
+      "va": "0x1809fa14d",
+      "file_offset": 10454861,
+      "bytes": "e89e7a96ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa152",
+      "file_offset": 10454866,
+      "bytes": "488b0dd70a4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410ad7]"
+    },
+    {
+      "va": "0x1809fa159",
+      "file_offset": 10454873,
+      "bytes": "e8b27596ff",
+      "mnemonic": "call",
+      "operands": "0x180361710",
+      "target_va": "0x180361710",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa15e",
+      "file_offset": 10454878,
+      "bytes": "488b08",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa161",
+      "file_offset": 10454881,
+      "bytes": "4885c9",
+      "mnemonic": "test",
+      "operands": "rcx, rcx"
+    },
+    {
+      "va": "0x1809fa164",
+      "file_offset": 10454884,
+      "bytes": "0f8426020000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa16a",
+      "file_offset": 10454890,
+      "bytes": "4533c9",
+      "mnemonic": "xor",
+      "operands": "r9d, r9d"
+    },
+    {
+      "va": "0x1809fa16d",
+      "file_offset": 10454893,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa170",
+      "file_offset": 10454896,
+      "bytes": "498bd6",
+      "mnemonic": "mov",
+      "operands": "rdx, r14"
+    },
+    {
+      "va": "0x1809fa173",
+      "file_offset": 10454899,
+      "bytes": "e8685ff7ff",
+      "mnemonic": "call",
+      "operands": "0x1809700e0",
+      "target_va": "0x1809700e0",
+      "target_symbols": [
+        {
+          "type_index": 19162,
+          "type": "ciy",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 130269,
+          "name": "a",
+          "token": "0x6000264",
+          "native_va": "0x1809700e0",
+          "native_rva": "0x9700e0",
+          "native_file_offset": 9889504,
+          "pointer_slot_file_offset": 79821320
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa178",
+      "file_offset": 10454904,
+      "bytes": "803d6909680400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x4680969], 0"
+    },
+    {
+      "va": "0x1809fa17f",
+      "file_offset": 10454911,
+      "bytes": "4c8bf0",
+      "mnemonic": "mov",
+      "operands": "r14, rax"
+    },
+    {
+      "va": "0x1809fa182",
+      "file_offset": 10454914,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x1809fa197"
+    },
+    {
+      "va": "0x1809fa184",
+      "file_offset": 10454916,
+      "bytes": "488d0da50a4104",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x4410aa5]"
+    },
+    {
+      "va": "0x1809fa18b",
+      "file_offset": 10454923,
+      "bytes": "e8807796ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa190",
+      "file_offset": 10454928,
+      "bytes": "c6055109680401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x4680951], 1"
+    },
+    {
+      "va": "0x1809fa197",
+      "file_offset": 10454935,
+      "bytes": "488b0d920a4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410a92]"
+    },
+    {
+      "va": "0x1809fa19e",
+      "file_offset": 10454942,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa1a5",
+      "file_offset": 10454949,
+      "bytes": "750c",
+      "mnemonic": "jne",
+      "operands": "0x1809fa1b3"
+    },
+    {
+      "va": "0x1809fa1a7",
+      "file_offset": 10454951,
+      "bytes": "e8447a96ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa1ac",
+      "file_offset": 10454956,
+      "bytes": "488b0d7d0a4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x4410a7d]"
+    },
+    {
+      "va": "0x1809fa1b3",
+      "file_offset": 10454963,
+      "bytes": "e8587596ff",
+      "mnemonic": "call",
+      "operands": "0x180361710",
+      "target_va": "0x180361710",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa1b8",
+      "file_offset": 10454968,
+      "bytes": "488b08",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa1bb",
+      "file_offset": 10454971,
+      "bytes": "4885c9",
+      "mnemonic": "test",
+      "operands": "rcx, rcx"
+    },
+    {
+      "va": "0x1809fa1be",
+      "file_offset": 10454974,
+      "bytes": "0f84cc010000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa1c4",
+      "file_offset": 10454980,
+      "bytes": "4533c9",
+      "mnemonic": "xor",
+      "operands": "r9d, r9d"
+    },
+    {
+      "va": "0x1809fa1c7",
+      "file_offset": 10454983,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa1ca",
+      "file_offset": 10454986,
+      "bytes": "488bd5",
+      "mnemonic": "mov",
+      "operands": "rdx, rbp"
+    },
+    {
+      "va": "0x1809fa1cd",
+      "file_offset": 10454989,
+      "bytes": "e80e5ff7ff",
+      "mnemonic": "call",
+      "operands": "0x1809700e0",
+      "target_va": "0x1809700e0",
+      "target_symbols": [
+        {
+          "type_index": 19162,
+          "type": "ciy",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 130269,
+          "name": "a",
+          "token": "0x6000264",
+          "native_va": "0x1809700e0",
+          "native_rva": "0x9700e0",
+          "native_file_offset": 9889504,
+          "pointer_slot_file_offset": 79821320
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa1d2",
+      "file_offset": 10454994,
+      "bytes": "488be8",
+      "mnemonic": "mov",
+      "operands": "rbp, rax"
+    },
+    {
+      "va": "0x1809fa1d5",
+      "file_offset": 10454997,
+      "bytes": "488b0d5c7a3f04",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x43f7a5c]"
+    },
+    {
+      "va": "0x1809fa1dc",
+      "file_offset": 10455004,
+      "bytes": "488b7e20",
+      "mnemonic": "mov",
+      "operands": "rdi, qword ptr [rsi + 0x20]"
+    },
+    {
+      "va": "0x1809fa1e0",
+      "file_offset": 10455008,
+      "bytes": "488b5e30",
+      "mnemonic": "mov",
+      "operands": "rbx, qword ptr [rsi + 0x30]"
+    },
+    {
+      "va": "0x1809fa1e4",
+      "file_offset": 10455012,
+      "bytes": "e8277996ff",
+      "mnemonic": "call",
+      "operands": "0x180361b10",
+      "target_va": "0x180361b10",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa1e9",
+      "file_offset": 10455017,
+      "bytes": "48c744243000000000",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x30], 0"
+    },
+    {
+      "va": "0x1809fa1f2",
+      "file_offset": 10455026,
+      "bytes": "4c8bcb",
+      "mnemonic": "mov",
+      "operands": "r9, rbx"
+    },
+    {
+      "va": "0x1809fa1f5",
+      "file_offset": 10455029,
+      "bytes": "c644242801",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rsp + 0x28], 1"
+    },
+    {
+      "va": "0x1809fa1fa",
+      "file_offset": 10455034,
+      "bytes": "4d8bc6",
+      "mnemonic": "mov",
+      "operands": "r8, r14"
+    },
+    {
+      "va": "0x1809fa1fd",
+      "file_offset": 10455037,
+      "bytes": "488bd7",
+      "mnemonic": "mov",
+      "operands": "rdx, rdi"
+    },
+    {
+      "va": "0x1809fa200",
+      "file_offset": 10455040,
+      "bytes": "48896c2420",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x20], rbp"
+    },
+    {
+      "va": "0x1809fa205",
+      "file_offset": 10455045,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa208",
+      "file_offset": 10455048,
+      "bytes": "488bf0",
+      "mnemonic": "mov",
+      "operands": "rsi, rax"
+    },
+    {
+      "va": "0x1809fa20b",
+      "file_offset": 10455051,
+      "bytes": "e860040a00",
+      "mnemonic": "call",
+      "operands": "0x180a9a670",
+      "target_va": "0x180a9a670",
+      "target_symbols": [
+        {
+          "type_index": 20348,
+          "type": "c8c",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 143373,
+          "name": ".ctor",
+          "token": "0x6003594",
+          "native_va": "0x180a9a670",
+          "native_rva": "0xa9a670",
+          "native_file_offset": 11111536,
+          "pointer_slot_file_offset": 79926152
+        },
+        {
+          "type_index": 20497,
+          "type": "dcc",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144168,
+          "name": ".ctor",
+          "token": "0x60038af",
+          "native_va": "0x180a9a670",
+          "native_rva": "0xa9a670",
+          "native_file_offset": 11111536,
+          "pointer_slot_file_offset": 79932512
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa210",
+      "file_offset": 10455056,
+      "bytes": "488b0d41ed4004",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x440ed41]"
+    },
+    {
+      "va": "0x1809fa217",
+      "file_offset": 10455063,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa21e",
+      "file_offset": 10455070,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa225"
+    },
+    {
+      "va": "0x1809fa220",
+      "file_offset": 10455072,
+      "bytes": "e8cb7996ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa225",
+      "file_offset": 10455077,
+      "bytes": "803d7607680400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x4680776], 0"
+    },
+    {
+      "va": "0x1809fa22c",
+      "file_offset": 10455084,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x1809fa241"
+    },
+    {
+      "va": "0x1809fa22e",
+      "file_offset": 10455086,
+      "bytes": "488d0d23ed4004",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x440ed23]"
+    },
+    {
+      "va": "0x1809fa235",
+      "file_offset": 10455093,
+      "bytes": "e8d67696ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa23a",
+      "file_offset": 10455098,
+      "bytes": "c6056107680401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x4680761], 1"
+    },
+    {
+      "va": "0x1809fa241",
+      "file_offset": 10455105,
+      "bytes": "488b0d10ed4004",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x440ed10]"
+    },
+    {
+      "va": "0x1809fa248",
+      "file_offset": 10455112,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x1809fa24f",
+      "file_offset": 10455119,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x1809fa256"
+    },
+    {
+      "va": "0x1809fa251",
+      "file_offset": 10455121,
+      "bytes": "e89a7996ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa256",
+      "file_offset": 10455126,
+      "bytes": "488b0dfbec4004",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x440ecfb]"
+    },
+    {
+      "va": "0x1809fa25d",
+      "file_offset": 10455133,
+      "bytes": "e8ae7496ff",
+      "mnemonic": "call",
+      "operands": "0x180361710",
+      "target_va": "0x180361710",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa262",
+      "file_offset": 10455138,
+      "bytes": "488b08",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa265",
+      "file_offset": 10455141,
+      "bytes": "4885c9",
+      "mnemonic": "test",
+      "operands": "rcx, rcx"
+    },
+    {
+      "va": "0x1809fa268",
+      "file_offset": 10455144,
+      "bytes": "0f8422010000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa26e",
+      "file_offset": 10455150,
+      "bytes": "488b8928020000",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rcx + 0x228]"
+    },
+    {
+      "va": "0x1809fa275",
+      "file_offset": 10455157,
+      "bytes": "4885c9",
+      "mnemonic": "test",
+      "operands": "rcx, rcx"
+    },
+    {
+      "va": "0x1809fa278",
+      "file_offset": 10455160,
+      "bytes": "0f8412010000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa27e",
+      "file_offset": 10455166,
+      "bytes": "4c8b0d2b7b4704",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [rip + 0x4477b2b]"
+    },
+    {
+      "va": "0x1809fa285",
+      "file_offset": 10455173,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa288",
+      "file_offset": 10455176,
+      "bytes": "488bd6",
+      "mnemonic": "mov",
+      "operands": "rdx, rsi"
+    },
+    {
+      "va": "0x1809fa28b",
+      "file_offset": 10455179,
+      "bytes": "e8d0986001",
+      "mnemonic": "call",
+      "operands": "0x182003b60",
+      "target_va": "0x182003b60",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa290",
+      "file_offset": 10455184,
+      "bytes": "488b6c2450",
+      "mnemonic": "mov",
+      "operands": "rbp, qword ptr [rsp + 0x50]"
+    },
+    {
+      "va": "0x1809fa295",
+      "file_offset": 10455189,
+      "bytes": "4c8b742458",
+      "mnemonic": "mov",
+      "operands": "r14, qword ptr [rsp + 0x58]"
+    },
+    {
+      "va": "0x1809fa29a",
+      "file_offset": 10455194,
+      "bytes": "488b5c2460",
+      "mnemonic": "mov",
+      "operands": "rbx, qword ptr [rsp + 0x60]"
+    },
+    {
+      "va": "0x1809fa29f",
+      "file_offset": 10455199,
+      "bytes": "488b742468",
+      "mnemonic": "mov",
+      "operands": "rsi, qword ptr [rsp + 0x68]"
+    },
+    {
+      "va": "0x1809fa2a4",
+      "file_offset": 10455204,
+      "bytes": "4883c440",
+      "mnemonic": "add",
+      "operands": "rsp, 0x40"
+    },
+    {
+      "va": "0x1809fa2a8",
+      "file_offset": 10455208,
+      "bytes": "5f",
+      "mnemonic": "pop",
+      "operands": "rdi"
+    },
+    {
+      "va": "0x1809fa2a9",
+      "file_offset": 10455209,
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    },
+    {
+      "va": "0x1809fa2aa",
+      "file_offset": 10455210,
+      "bytes": "e81134feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa2af",
+      "file_offset": 10455215,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa2b2",
+      "file_offset": 10455218,
+      "bytes": "0f84d8000000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa2b8",
+      "file_offset": 10455224,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa2ba",
+      "file_offset": 10455226,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa2bd",
+      "file_offset": 10455229,
+      "bytes": "e83e7c1d00",
+      "mnemonic": "call",
+      "operands": "0x180bd1f00",
+      "target_va": "0x180bd1f00",
+      "target_symbols": [
+        {
+          "type_index": 19510,
+          "type": "cpx",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135750,
+          "name": "awn",
+          "token": "0x60017cd",
+          "native_va": "0x180bd1f00",
+          "native_rva": "0xbd1f00",
+          "native_file_offset": 12387584,
+          "pointer_slot_file_offset": 79865168
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa2c2",
+      "file_offset": 10455234,
+      "bytes": "84c0",
+      "mnemonic": "test",
+      "operands": "al, al"
+    },
+    {
+      "va": "0x1809fa2c4",
+      "file_offset": 10455236,
+      "bytes": "0f85cdfdffff",
+      "mnemonic": "jne",
+      "operands": "0x1809fa097"
+    },
+    {
+      "va": "0x1809fa2ca",
+      "file_offset": 10455242,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa2cc",
+      "file_offset": 10455244,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa2cf",
+      "file_offset": 10455247,
+      "bytes": "e8ec33feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa2d4",
+      "file_offset": 10455252,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa2d7",
+      "file_offset": 10455255,
+      "bytes": "0f84b3000000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa2dd",
+      "file_offset": 10455261,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa2e0",
+      "file_offset": 10455264,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa2e2",
+      "file_offset": 10455266,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa2e5",
+      "file_offset": 10455269,
+      "bytes": "e886b21c00",
+      "mnemonic": "call",
+      "operands": "0x180bc5570",
+      "target_va": "0x180bc5570",
+      "target_symbols": [
+        {
+          "type_index": 19490,
+          "type": "cpo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135413,
+          "name": "x8",
+          "token": "0x600167c",
+          "native_va": "0x180bc5570",
+          "native_rva": "0xbc5570",
+          "native_file_offset": 12335984,
+          "pointer_slot_file_offset": 79862472
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa2ea",
+      "file_offset": 10455274,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa2ec",
+      "file_offset": 10455276,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa2ef",
+      "file_offset": 10455279,
+      "bytes": "e8cc33feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa2f4",
+      "file_offset": 10455284,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa2f7",
+      "file_offset": 10455287,
+      "bytes": "0f8493000000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa2fd",
+      "file_offset": 10455293,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa2ff",
+      "file_offset": 10455295,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa302",
+      "file_offset": 10455298,
+      "bytes": "e8d9d7faff",
+      "mnemonic": "call",
+      "operands": "0x1809a7ae0",
+      "target_va": "0x1809a7ae0",
+      "target_symbols": [
+        {
+          "type_index": 19680,
+          "type": "ctp",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 137420,
+          "name": "atr",
+          "token": "0x6001e53",
+          "native_va": "0x1809a7ae0",
+          "native_rva": "0x9a7ae0",
+          "native_file_offset": 10117344,
+          "pointer_slot_file_offset": 79878528
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa307",
+      "file_offset": 10455303,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa30a",
+      "file_offset": 10455306,
+      "bytes": "0f8480000000",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa310",
+      "file_offset": 10455312,
+      "bytes": "4c8b08",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa313",
+      "file_offset": 10455315,
+      "bytes": "ba01000000",
+      "mnemonic": "mov",
+      "operands": "edx, 1"
+    },
+    {
+      "va": "0x1809fa318",
+      "file_offset": 10455320,
+      "bytes": "41b813000000",
+      "mnemonic": "mov",
+      "operands": "r8d, 0x13"
+    },
+    {
+      "va": "0x1809fa31e",
+      "file_offset": 10455326,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa321",
+      "file_offset": 10455329,
+      "bytes": "4d8b9148020000",
+      "mnemonic": "mov",
+      "operands": "r10, qword ptr [r9 + 0x248]"
+    },
+    {
+      "va": "0x1809fa328",
+      "file_offset": 10455336,
+      "bytes": "4d8b8950020000",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [r9 + 0x250]"
+    },
+    {
+      "va": "0x1809fa32f",
+      "file_offset": 10455343,
+      "bytes": "41ffd2",
+      "mnemonic": "call",
+      "operands": "r10"
+    },
+    {
+      "va": "0x1809fa332",
+      "file_offset": 10455346,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa334",
+      "file_offset": 10455348,
+      "bytes": "488bcb",
+      "mnemonic": "mov",
+      "operands": "rcx, rbx"
+    },
+    {
+      "va": "0x1809fa337",
+      "file_offset": 10455351,
+      "bytes": "e88433feff",
+      "mnemonic": "call",
+      "operands": "0x1809dd6c0",
+      "target_va": "0x1809dd6c0",
+      "target_symbols": [
+        {
+          "type_index": 19797,
+          "type": "cye",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138928,
+          "name": "ae",
+          "token": "0x6002437",
+          "native_va": "0x1809dd6c0",
+          "native_rva": "0x9dd6c0",
+          "native_file_offset": 10337472,
+          "pointer_slot_file_offset": 79890592
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa33c",
+      "file_offset": 10455356,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa33f",
+      "file_offset": 10455359,
+      "bytes": "744f",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa341",
+      "file_offset": 10455361,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x1809fa343",
+      "file_offset": 10455363,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa346",
+      "file_offset": 10455366,
+      "bytes": "e895d7faff",
+      "mnemonic": "call",
+      "operands": "0x1809a7ae0",
+      "target_va": "0x1809a7ae0",
+      "target_symbols": [
+        {
+          "type_index": 19680,
+          "type": "ctp",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 137420,
+          "name": "atr",
+          "token": "0x6001e53",
+          "native_va": "0x1809a7ae0",
+          "native_rva": "0x9a7ae0",
+          "native_file_offset": 10117344,
+          "pointer_slot_file_offset": 79878528
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa34b",
+      "file_offset": 10455371,
+      "bytes": "4c8b05e6b44204",
+      "mnemonic": "mov",
+      "operands": "r8, qword ptr [rip + 0x442b4e6]"
+    },
+    {
+      "va": "0x1809fa352",
+      "file_offset": 10455378,
+      "bytes": "488bc8",
+      "mnemonic": "mov",
+      "operands": "rcx, rax"
+    },
+    {
+      "va": "0x1809fa355",
+      "file_offset": 10455381,
+      "bytes": "4885c0",
+      "mnemonic": "test",
+      "operands": "rax, rax"
+    },
+    {
+      "va": "0x1809fa358",
+      "file_offset": 10455384,
+      "bytes": "7436",
+      "mnemonic": "je",
+      "operands": "0x1809fa390"
+    },
+    {
+      "va": "0x1809fa35a",
+      "file_offset": 10455386,
+      "bytes": "4c8b08",
+      "mnemonic": "mov",
+      "operands": "r9, qword ptr [rax]"
+    },
+    {
+      "va": "0x1809fa35d",
+      "file_offset": 10455389,
+      "bytes": "410fb68030010000",
+      "mnemonic": "movzx",
+      "operands": "eax, byte ptr [r8 + 0x130]"
+    },
+    {
+      "va": "0x1809fa365",
+      "file_offset": 10455397,
+      "bytes": "41388130010000",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [r9 + 0x130], al"
+    },
+    {
+      "va": "0x1809fa36c",
+      "file_offset": 10455404,
+      "bytes": "7228",
+      "mnemonic": "jb",
+      "operands": "0x1809fa396"
+    },
+    {
+      "va": "0x1809fa36e",
+      "file_offset": 10455406,
+      "bytes": "0fb6d0",
+      "mnemonic": "movzx",
+      "operands": "edx, al"
+    },
+    {
+      "va": "0x1809fa371",
+      "file_offset": 10455409,
+      "bytes": "498b81c8000000",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [r9 + 0xc8]"
+    },
+    {
+      "va": "0x1809fa378",
+      "file_offset": 10455416,
+      "bytes": "4c3944d0f8",
+      "mnemonic": "cmp",
+      "operands": "qword ptr [rax + rdx*8 - 8], r8"
+    },
+    {
+      "va": "0x1809fa37d",
+      "file_offset": 10455421,
+      "bytes": "7517",
+      "mnemonic": "jne",
+      "operands": "0x1809fa396"
+    },
+    {
+      "va": "0x1809fa37f",
+      "file_offset": 10455423,
+      "bytes": "488b5648",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rsi + 0x48]"
+    },
+    {
+      "va": "0x1809fa383",
+      "file_offset": 10455427,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x1809fa386",
+      "file_offset": 10455430,
+      "bytes": "e855a9afff",
+      "mnemonic": "call",
+      "operands": "0x1804f4ce0",
+      "target_va": "0x1804f4ce0",
+      "target_symbols": [
+        {
+          "type_index": 2252,
+          "type": "dsu",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 20892,
+          "name": "set_CombatIdleAnimExtension",
+          "token": "0x600519d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80220800
+        },
+        {
+          "type_index": 2347,
+          "type": "NpcAnimPreviewer",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 22091,
+          "name": "set_BusyStart",
+          "token": "0x600564c",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80230392
+        },
+        {
+          "type_index": 2515,
+          "type": "dz6",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 23445,
+          "name": "a",
+          "token": "0x6005b96",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80241224
+        },
+        {
+          "type_index": 2839,
+          "type": "WorldMap.WorldmapTreasureSpawn",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 25529,
+          "name": "set_xShownProtectedUntil",
+          "token": "0x60063ba",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80257896
+        },
+        {
+          "type_index": 2839,
+          "type": "WorldMap.WorldmapTreasureSpawn",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 25532,
+          "name": "UpdateTime",
+          "token": "0x60063bd",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80257920
+        },
+        {
+          "type_index": 3454,
+          "type": "RemappableParameters",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 30927,
+          "name": "c",
+          "token": "0x60078d0",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80301080
+        },
+        {
+          "type_index": 4683,
+          "type": "esp",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 38302,
+          "name": "m",
+          "token": "0x600959f",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80360080
+        },
+        {
+          "type_index": 4685,
+          "type": "esr",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 38320,
+          "name": "o",
+          "token": "0x60095b1",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80360224
+        },
+        {
+          "type_index": 5692,
+          "type": "fkq",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 42203,
+          "name": "u",
+          "token": "0x600a4dc",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80391288
+        },
+        {
+          "type_index": 6240,
+          "type": "fw4",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 44756,
+          "name": "h",
+          "token": "0x600aed5",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80411712
+        },
+        {
+          "type_index": 6276,
+          "type": "fxx",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 44907,
+          "name": "i",
+          "token": "0x600af6c",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80412920
+        },
+        {
+          "type_index": 6670,
+          "type": "f66",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 46929,
+          "name": "l4",
+          "token": "0x600b752",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80429096
+        },
+        {
+          "type_index": 7878,
+          "type": "gxd",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 54522,
+          "name": "ji",
+          "token": "0x600d4fb",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80489840
+        },
+        {
+          "type_index": 7879,
+          "type": "gxe",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 54556,
+          "name": "jk",
+          "token": "0x600d51d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80490112
+        },
+        {
+          "type_index": 8849,
+          "type": "AlbionGui.OutlandsTeleportationGui.BreakdownEntry",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 60774,
+          "name": "set_Silver",
+          "token": "0x600ed67",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80539856
+        },
+        {
+          "type_index": 9285,
+          "type": "a",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 64626,
+          "name": "f",
+          "token": "0x600fc73",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80570672
+        },
+        {
+          "type_index": 9285,
+          "type": "a",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 64628,
+          "name": "g",
+          "token": "0x600fc75",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80570688
+        },
+        {
+          "type_index": 9525,
+          "type": "AlbionGui.FastTravelGui.DestinationSelection.FastTravelDestinationView",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 66633,
+          "name": "set_StaticObject",
+          "token": "0x601044a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80586728
+        },
+        {
+          "type_index": 9587,
+          "type": "AlbionGui.DeathRecap.DeathRecapCombatLogFilterToggle",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 67145,
+          "name": "set_Type",
+          "token": "0x601064a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80590824
+        },
+        {
+          "type_index": 9689,
+          "type": "a",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 68149,
+          "name": "cd",
+          "token": "0x6010a36",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80598856
+        },
+        {
+          "type_index": 9874,
+          "type": "AlbionGui.AssetOverviewGui.PassedTimeLabel",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 69727,
+          "name": "set_StartTime",
+          "token": "0x6011060",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80611480
+        },
+        {
+          "type_index": 10501,
+          "type": "b",
+          "image": "Albion.Common.dll",
+          "method_index": 74402,
+          "name": "t",
+          "token": "0x60000d8",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79570712
+        },
+        {
+          "type_index": 10564,
+          "type": "ah",
+          "image": "Albion.Common.dll",
+          "method_index": 75114,
+          "name": "h",
+          "token": "0x60003a0",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79576408
+        },
+        {
+          "type_index": 10585,
+          "type": "ax",
+          "image": "Albion.Common.dll",
+          "method_index": 75300,
+          "name": "h",
+          "token": "0x600045a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79577896
+        },
+        {
+          "type_index": 10587,
+          "type": "az",
+          "image": "Albion.Common.dll",
+          "method_index": 75320,
+          "name": "e",
+          "token": "0x600046e",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79578056
+        },
+        {
+          "type_index": 12761,
+          "type": "a48",
+          "image": "Albion.Common.dll",
+          "method_index": 79549,
+          "name": "u",
+          "token": "0x60014f3",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79611888
+        },
+        {
+          "type_index": 12763,
+          "type": "a5a",
+          "image": "Albion.Common.dll",
+          "method_index": 79606,
+          "name": "o",
+          "token": "0x600152c",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79612344
+        },
+        {
+          "type_index": 12764,
+          "type": "a5b",
+          "image": "Albion.Common.dll",
+          "method_index": 79679,
+          "name": "n",
+          "token": "0x6001575",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79612928
+        },
+        {
+          "type_index": 12770,
+          "type": "a5f",
+          "image": "Albion.Common.dll",
+          "method_index": 79755,
+          "name": "g",
+          "token": "0x60015c1",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79613536
+        },
+        {
+          "type_index": 12788,
+          "type": "a5r",
+          "image": "Albion.Common.dll",
+          "method_index": 80056,
+          "name": "e",
+          "token": "0x60016ee",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79615944
+        },
+        {
+          "type_index": 12879,
+          "type": "a7j",
+          "image": "Albion.Common.dll",
+          "method_index": 81088,
+          "name": "j",
+          "token": "0x6001af6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79624200
+        },
+        {
+          "type_index": 13021,
+          "type": "bab",
+          "image": "Albion.Common.dll",
+          "method_index": 82531,
+          "name": "h",
+          "token": "0x6002099",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79635744
+        },
+        {
+          "type_index": 13078,
+          "type": "ba9",
+          "image": "Albion.Common.dll",
+          "method_index": 82906,
+          "name": "al",
+          "token": "0x6002210",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79638744
+        },
+        {
+          "type_index": 13091,
+          "type": "bbf",
+          "image": "Albion.Common.dll",
+          "method_index": 83081,
+          "name": "abo",
+          "token": "0x60022bf",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79640144
+        },
+        {
+          "type_index": 13164,
+          "type": "bca",
+          "image": "Albion.Common.dll",
+          "method_index": 83796,
+          "name": "j",
+          "token": "0x600258a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79645864
+        },
+        {
+          "type_index": 13184,
+          "type": "a",
+          "image": "Albion.Common.dll",
+          "method_index": 84099,
+          "name": "r",
+          "token": "0x60026b9",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79648288
+        },
+        {
+          "type_index": 13207,
+          "type": "c",
+          "image": "Albion.Common.dll",
+          "method_index": 84466,
+          "name": "f",
+          "token": "0x6002828",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79651224
+        },
+        {
+          "type_index": 13210,
+          "type": "bch",
+          "image": "Albion.Common.dll",
+          "method_index": 84422,
+          "name": "abt",
+          "token": "0x60027fc",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79650872
+        },
+        {
+          "type_index": 13211,
+          "type": "bci",
+          "image": "Albion.Common.dll",
+          "method_index": 84490,
+          "name": "g",
+          "token": "0x6002840",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79651416
+        },
+        {
+          "type_index": 13242,
+          "type": "e",
+          "image": "Albion.Common.dll",
+          "method_index": 85222,
+          "name": "n",
+          "token": "0x6002b1c",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79657272
+        },
+        {
+          "type_index": 13284,
+          "type": "d",
+          "image": "Albion.Common.dll",
+          "method_index": 85898,
+          "name": "t",
+          "token": "0x6002dc0",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79662680
+        },
+        {
+          "type_index": 13303,
+          "type": "bdi",
+          "image": "Albion.Common.dll",
+          "method_index": 86062,
+          "name": "e",
+          "token": "0x6002e64",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79663992
+        },
+        {
+          "type_index": 13397,
+          "type": "beo",
+          "image": "Albion.Common.dll",
+          "method_index": 87408,
+          "name": "f",
+          "token": "0x60033a6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79674760
+        },
+        {
+          "type_index": 13449,
+          "type": "bfp",
+          "image": "Albion.Common.dll",
+          "method_index": 87863,
+          "name": "br",
+          "token": "0x600356d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79678400
+        },
+        {
+          "type_index": 13463,
+          "type": "bfv",
+          "image": "Albion.Common.dll",
+          "method_index": 88258,
+          "name": "n",
+          "token": "0x60036f8",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79681560
+        },
+        {
+          "type_index": 13467,
+          "type": "bfx",
+          "image": "Albion.Common.dll",
+          "method_index": 88387,
+          "name": "h",
+          "token": "0x6003779",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79682592
+        },
+        {
+          "type_index": 13512,
+          "type": "bgt",
+          "image": "Albion.Common.dll",
+          "method_index": 88802,
+          "name": "l",
+          "token": "0x6003918",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79685912
+        },
+        {
+          "type_index": 13556,
+          "type": "bha",
+          "image": "Albion.Common.dll",
+          "method_index": 89373,
+          "name": "x",
+          "token": "0x6003b53",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79690480
+        },
+        {
+          "type_index": 13595,
+          "type": "bhu",
+          "image": "Albion.Common.dll",
+          "method_index": 89691,
+          "name": "m",
+          "token": "0x6003c91",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79693024
+        },
+        {
+          "type_index": 13920,
+          "type": "bny",
+          "image": "Albion.Common.dll",
+          "method_index": 92454,
+          "name": "ai",
+          "token": "0x600475c",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79715128
+        },
+        {
+          "type_index": 13931,
+          "type": "d",
+          "image": "Albion.Common.dll",
+          "method_index": 92599,
+          "name": "m",
+          "token": "0x60047ed",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79716288
+        },
+        {
+          "type_index": 13933,
+          "type": "e",
+          "image": "Albion.Common.dll",
+          "method_index": 92623,
+          "name": "k",
+          "token": "0x6004805",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79716480
+        },
+        {
+          "type_index": 13949,
+          "type": "bn7",
+          "image": "Albion.Common.dll",
+          "method_index": 92708,
+          "name": "i",
+          "token": "0x600485a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79717160
+        },
+        {
+          "type_index": 13966,
+          "type": "bof",
+          "image": "Albion.Common.dll",
+          "method_index": 92891,
+          "name": "k",
+          "token": "0x6004911",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79718624
+        },
+        {
+          "type_index": 14100,
+          "type": "bqy",
+          "image": "Albion.Common.dll",
+          "method_index": 94120,
+          "name": "o",
+          "token": "0x6004dde",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79728456
+        },
+        {
+          "type_index": 14115,
+          "type": "brd",
+          "image": "Albion.Common.dll",
+          "method_index": 94313,
+          "name": "s",
+          "token": "0x6004e9f",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79730000
+        },
+        {
+          "type_index": 14120,
+          "type": "brh",
+          "image": "Albion.Common.dll",
+          "method_index": 94375,
+          "name": "t",
+          "token": "0x6004edd",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79730496
+        },
+        {
+          "type_index": 14123,
+          "type": "a",
+          "image": "Albion.Common.dll",
+          "method_index": 94432,
+          "name": "f",
+          "token": "0x6004f16",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79730952
+        },
+        {
+          "type_index": 14175,
+          "type": "br5",
+          "image": "Albion.Common.dll",
+          "method_index": 94879,
+          "name": "g",
+          "token": "0x60050d5",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79734528
+        },
+        {
+          "type_index": 14176,
+          "type": "br6",
+          "image": "Albion.Common.dll",
+          "method_index": 94890,
+          "name": "o",
+          "token": "0x60050e0",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79734616
+        },
+        {
+          "type_index": 14194,
+          "type": "bsj",
+          "image": "Albion.Common.dll",
+          "method_index": 95086,
+          "name": "l",
+          "token": "0x60051a4",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79736184
+        },
+        {
+          "type_index": 14216,
+          "type": "bsq",
+          "image": "Albion.Common.dll",
+          "method_index": 95323,
+          "name": "an",
+          "token": "0x6005291",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79738080
+        },
+        {
+          "type_index": 14230,
+          "type": "bs2",
+          "image": "Albion.Common.dll",
+          "method_index": 95511,
+          "name": "ae",
+          "token": "0x600534d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79739584
+        },
+        {
+          "type_index": 14234,
+          "type": "bs6",
+          "image": "Albion.Common.dll",
+          "method_index": 95603,
+          "name": "j",
+          "token": "0x60053a9",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79740320
+        },
+        {
+          "type_index": 14367,
+          "type": "bve",
+          "image": "Albion.Common.dll",
+          "method_index": 96711,
+          "name": "abp",
+          "token": "0x60057fd",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79749184
+        },
+        {
+          "type_index": 14392,
+          "type": "bv2",
+          "image": "Albion.Common.dll",
+          "method_index": 96944,
+          "name": "q",
+          "token": "0x60058e6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79751048
+        },
+        {
+          "type_index": 14394,
+          "type": "bv4",
+          "image": "Albion.Common.dll",
+          "method_index": 96981,
+          "name": "p",
+          "token": "0x600590b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79751344
+        },
+        {
+          "type_index": 14406,
+          "type": "bwe",
+          "image": "Albion.Common.dll",
+          "method_index": 97100,
+          "name": "o",
+          "token": "0x6005982",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79752296
+        },
+        {
+          "type_index": 14486,
+          "type": "byh",
+          "image": "Albion.Common.dll",
+          "method_index": 97543,
+          "name": "abo",
+          "token": "0x6005b3d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79755840
+        },
+        {
+          "type_index": 14537,
+          "type": "bzm",
+          "image": "Albion.Common.dll",
+          "method_index": 97904,
+          "name": "abp",
+          "token": "0x6005ca6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79758728
+        },
+        {
+          "type_index": 14732,
+          "type": "b3x",
+          "image": "Albion.Common.dll",
+          "method_index": 99381,
+          "name": "o",
+          "token": "0x600626b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79770544
+        },
+        {
+          "type_index": 14733,
+          "type": "b3y",
+          "image": "Albion.Common.dll",
+          "method_index": 99407,
+          "name": "z",
+          "token": "0x6006285",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79770752
+        },
+        {
+          "type_index": 14755,
+          "type": "b4f",
+          "image": "Albion.Common.dll",
+          "method_index": 99543,
+          "name": "ab",
+          "token": "0x600630d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79771840
+        },
+        {
+          "type_index": 14973,
+          "type": "b8r",
+          "image": "Albion.Common.dll",
+          "method_index": 101843,
+          "name": "bq",
+          "token": "0x6006c09",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79790240
+        },
+        {
+          "type_index": 14981,
+          "type": "b8z",
+          "image": "Albion.Common.dll",
+          "method_index": 101909,
+          "name": "bq",
+          "token": "0x6006c4b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79790768
+        },
+        {
+          "type_index": 15273,
+          "type": "ce9",
+          "image": "Albion.Common.dll",
+          "method_index": 104208,
+          "name": "f",
+          "token": "0x6007546",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79809160
+        },
+        {
+          "type_index": 15576,
+          "type": "Albion.Common.Chat.LegendarySoulSnapshot",
+          "image": "Albion.Common.dll",
+          "method_index": 104544,
+          "name": "set_LegendaryRating",
+          "token": "0x6007696",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79811848
+        },
+        {
+          "type_index": 19191,
+          "type": "i",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 130758,
+          "name": "g",
+          "token": "0x600044d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79825232
+        },
+        {
+          "type_index": 19516,
+          "type": "cp2",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135977,
+          "name": "f7",
+          "token": "0x60018b0",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79866984
+        },
+        {
+          "type_index": 19518,
+          "type": "cp3",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 135985,
+          "name": "afi",
+          "token": "0x60018b8",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79867048
+        },
+        {
+          "type_index": 19529,
+          "type": "c1g",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 136033,
+          "name": "f5",
+          "token": "0x60018e8",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79867432
+        },
+        {
+          "type_index": 19531,
+          "type": "c1h",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 136061,
+          "name": "f5",
+          "token": "0x6001904",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79867656
+        },
+        {
+          "type_index": 19538,
+          "type": "cqi",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 136130,
+          "name": "f5",
+          "token": "0x6001949",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79868208
+        },
+        {
+          "type_index": 19545,
+          "type": "cqo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 136178,
+          "name": "f8",
+          "token": "0x6001979",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79868592
+        },
+        {
+          "type_index": 19633,
+          "type": "cs2",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 136591,
+          "name": "p",
+          "token": "0x6001b16",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79871896
+        },
+        {
+          "type_index": 19692,
+          "type": "a",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 137738,
+          "name": "k",
+          "token": "0x6001f91",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79881072
+        },
+        {
+          "type_index": 19693,
+          "type": "ctt",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 137700,
+          "name": "s",
+          "token": "0x6001f6b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79880768
+        },
+        {
+          "type_index": 19722,
+          "type": "ct8",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138140,
+          "name": "gc",
+          "token": "0x6002123",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79884288
+        },
+        {
+          "type_index": 19723,
+          "type": "ct9",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138147,
+          "name": "afi",
+          "token": "0x600212a",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79884344
+        },
+        {
+          "type_index": 19728,
+          "type": "cud",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138164,
+          "name": "f5",
+          "token": "0x600213b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79884480
+        },
+        {
+          "type_index": 19730,
+          "type": "cue",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138174,
+          "name": "f5",
+          "token": "0x6002145",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79884560
+        },
+        {
+          "type_index": 19737,
+          "type": "cuj",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138258,
+          "name": "f6",
+          "token": "0x6002199",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79885232
+        },
+        {
+          "type_index": 19747,
+          "type": "cuq",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138449,
+          "name": "f5",
+          "token": "0x6002258",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79886760
+        },
+        {
+          "type_index": 19754,
+          "type": "cux",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138542,
+          "name": "f5",
+          "token": "0x60022b5",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79887504
+        },
+        {
+          "type_index": 19762,
+          "type": "cu4",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138640,
+          "name": "f5",
+          "token": "0x6002317",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79888288
+        },
+        {
+          "type_index": 19763,
+          "type": "cu5",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138649,
+          "name": "f5",
+          "token": "0x6002320",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79888360
+        },
+        {
+          "type_index": 19763,
+          "type": "cu5",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 138652,
+          "name": "f7",
+          "token": "0x6002323",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79888384
+        },
+        {
+          "type_index": 20008,
+          "type": "c1e",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 139856,
+          "name": "f5",
+          "token": "0x60027d7",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79898016
+        },
+        {
+          "type_index": 20009,
+          "type": "c1f",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 139863,
+          "name": "f6",
+          "token": "0x60027de",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79898072
+        },
+        {
+          "type_index": 20010,
+          "type": "c1i",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 139880,
+          "name": "f5",
+          "token": "0x60027ef",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79898208
+        },
+        {
+          "type_index": 20063,
+          "type": "c2p",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 140683,
+          "name": "k",
+          "token": "0x6002b12",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79904632
+        },
+        {
+          "type_index": 20082,
+          "type": "a",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 140869,
+          "name": "i",
+          "token": "0x6002bcc",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79906120
+        },
+        {
+          "type_index": 20113,
+          "type": "d",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 141390,
+          "name": "g",
+          "token": "0x6002dd5",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79910288
+        },
+        {
+          "type_index": 20146,
+          "type": "a",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 141631,
+          "name": "g",
+          "token": "0x6002ec6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79912216
+        },
+        {
+          "type_index": 20196,
+          "type": "c4d",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 142437,
+          "name": "i",
+          "token": "0x60031ec",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79918664
+        },
+        {
+          "type_index": 20212,
+          "type": "c4t",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 142554,
+          "name": "k",
+          "token": "0x6003261",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79919600
+        },
+        {
+          "type_index": 20247,
+          "type": "c5r",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 142788,
+          "name": "g",
+          "token": "0x600334b",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79921472
+        },
+        {
+          "type_index": 20280,
+          "type": "c6j",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 142998,
+          "name": "w",
+          "token": "0x600341d",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79923152
+        },
+        {
+          "type_index": 20310,
+          "type": "c7c",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 143172,
+          "name": "f",
+          "token": "0x60034cb",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79924544
+        },
+        {
+          "type_index": 20374,
+          "type": "c80",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 143511,
+          "name": "f",
+          "token": "0x600361e",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79927256
+        },
+        {
+          "type_index": 20388,
+          "type": "c9d",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 143565,
+          "name": "e",
+          "token": "0x6003654",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79927688
+        },
+        {
+          "type_index": 20470,
+          "type": "dbl",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 143984,
+          "name": "h",
+          "token": "0x60037f7",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79931040
+        },
+        {
+          "type_index": 20478,
+          "type": "dbt",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144031,
+          "name": "f",
+          "token": "0x6003826",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79931416
+        },
+        {
+          "type_index": 20479,
+          "type": "dbu",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144042,
+          "name": "h",
+          "token": "0x6003831",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79931504
+        },
+        {
+          "type_index": 20507,
+          "type": "dck",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144243,
+          "name": "l",
+          "token": "0x60038fa",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79933112
+        },
+        {
+          "type_index": 20508,
+          "type": "dcl",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144266,
+          "name": "g",
+          "token": "0x6003911",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79933296
+        },
+        {
+          "type_index": 20549,
+          "type": "ddo",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144463,
+          "name": "e",
+          "token": "0x60039d6",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79934872
+        },
+        {
+          "type_index": 20556,
+          "type": "ddp",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144475,
+          "name": "k",
+          "token": "0x60039e2",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79934968
+        },
+        {
+          "type_index": 20563,
+          "type": "ddv",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144690,
+          "name": "u",
+          "token": "0x6003ab9",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79936688
+        },
+        {
+          "type_index": 20576,
+          "type": "a",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144940,
+          "name": "i",
+          "token": "0x6003bb3",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79938688
+        },
+        {
+          "type_index": 20579,
+          "type": "dd7",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 144957,
+          "name": "t",
+          "token": "0x6003bc4",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79938824
+        },
+        {
+          "type_index": 20612,
+          "type": "del",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 145290,
+          "name": "ab",
+          "token": "0x6003d11",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79941488
+        },
+        {
+          "type_index": 20653,
+          "type": "dfe",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 145752,
+          "name": "h",
+          "token": "0x6003edf",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 79945184
+        },
+        {
+          "type_index": 26003,
+          "type": "CleverTapSDK.CleverTapInboxMessage",
+          "image": "CleverTap.dll",
+          "method_index": 188198,
+          "name": "set_ExpiresTs",
+          "token": "0x60001b1",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 80650624
+        },
+        {
+          "type_index": 27848,
+          "type": "UnityEngine.InputForUI.KeyEvent",
+          "image": "UnityEngine.InputForUIModule.dll",
+          "method_index": 197824,
+          "name": "set_timestamp",
+          "token": "0x6000037",
+          "native_va": "0x1804f4ce0",
+          "native_rva": "0x4f4ce0",
+          "native_file_offset": 5190368,
+          "pointer_slot_file_offset": 84178208
+        }
+      ]
+    },
+    {
+      "va": "0x1809fa38b",
+      "file_offset": 10455435,
+      "bytes": "e9eafcffff",
+      "mnemonic": "jmp",
+      "operands": "0x1809fa07a",
+      "target_va": "0x1809fa07a",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa390",
+      "file_offset": 10455440,
+      "bytes": "e8cb7796ff",
+      "mnemonic": "call",
+      "operands": "0x180361b60",
+      "target_va": "0x180361b60",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa395",
+      "file_offset": 10455445,
+      "bytes": "cc",
+      "mnemonic": "int3",
+      "operands": ""
+    },
+    {
+      "va": "0x1809fa396",
+      "file_offset": 10455446,
+      "bytes": "498bd0",
+      "mnemonic": "mov",
+      "operands": "rdx, r8"
+    },
+    {
+      "va": "0x1809fa399",
+      "file_offset": 10455449,
+      "bytes": "e8e26896ff",
+      "mnemonic": "call",
+      "operands": "0x180360c80",
+      "target_va": "0x180360c80",
+      "target_symbols": []
+    },
+    {
+      "va": "0x1809fa39e",
+      "file_offset": 10455454,
+      "bytes": "cc",
+      "mnemonic": "int3",
+      "operands": ""
+    }
+  ],
+  "pdata_segments": [
+    {
+      "begin_va": "0x1809f9f40",
+      "end_exclusive_va": "0x1809f9fc9",
+      "unwind_rva": "0x4928388"
+    },
+    {
+      "begin_va": "0x1809f9fc9",
+      "end_exclusive_va": "0x1809fa29a",
+      "unwind_rva": "0x49606b4"
+    },
+    {
+      "begin_va": "0x1809fa29a",
+      "end_exclusive_va": "0x1809fa2aa",
+      "unwind_rva": "0x49606cc"
+    },
+    {
+      "begin_va": "0x1809fa2aa",
+      "end_exclusive_va": "0x1809fa39f",
+      "unwind_rva": "0x49606dc"
+    }
+  ],
+  "limitations": "PE unwind function range and x64 instruction decode. With adjacent flag, contiguous unwind fragments before next named method are included as a candidate interval; fragment membership remains inference. Direct call labels from metadata pointer slots; overloaded/folded pointers may have multiple symbols. No control-flow reconstruction or runtime evidence."
+}

@@ -1,0 +1,288 @@
+{
+  "created_utc": "2026-10-13T09:50:12.151871+00:00",
+  "server": "Asia / East",
+  "scope": "derived from the preserved public samples, no new API requests",
+  "samples": {
+    "prices.json": {
+      "sha256": "ba0ba30344e97bac788ffdb5adee6aad4b2171ec1f2a5ca5e3693aa9a4b11028",
+      "type": "list",
+      "count": 2,
+      "keys": [
+        "item_id",
+        "city",
+        "quality",
+        "sell_price_min",
+        "sell_price_min_date",
+        "sell_price_max",
+        "sell_price_max_date",
+        "buy_price_min",
+        "buy_price_min_date",
+        "buy_price_max",
+        "buy_price_max_date"
+      ],
+      "values": [
+        {
+          "item_id": "T4_BAG",
+          "city": "Bridgewatch",
+          "quality": 1,
+          "sell_price_min": 0,
+          "sell_price_min_date": "0001-01-01T00:00:00",
+          "sell_price_max": 0,
+          "sell_price_max_date": "0001-01-01T00:00:00",
+          "buy_price_min": 1,
+          "buy_price_min_date": "2026-10-12T11:00:00",
+          "buy_price_max": 2087,
+          "buy_price_max_date": "2026-10-12T11:00:00"
+        },
+        {
+          "item_id": "T4_BAG",
+          "city": "Caerleon",
+          "quality": 1,
+          "sell_price_min": 0,
+          "sell_price_min_date": "0001-01-01T00:00:00",
+          "sell_price_max": 0,
+          "sell_price_max_date": "0001-01-01T00:00:00",
+          "buy_price_min": 0,
+          "buy_price_min_date": "0001-01-01T00:00:00",
+          "buy_price_max": 0,
+          "buy_price_max_date": "0001-01-01T00:00:00"
+        }
+      ],
+      "interpretation": "zero prices and year-0001 dates are missing observations"
+    },
+    "history.json": {
+      "sha256": "f87ec8e26a2d43062d431daad44580a392057e9b59f339ac5eaf08a789fb3901",
+      "type": "list",
+      "count": 1,
+      "keys": [
+        "location",
+        "item_id",
+        "quality",
+        "data"
+      ],
+      "requested_date_range": [
+        "2026-10-01",
+        "2026-10-12"
+      ],
+      "returned_first_last": [
+        "2026-09-30T00:00:00",
+        "2026-10-11T00:00:00"
+      ]
+    },
+    "player.json": {
+      "sha256": "b2b34eef0a0ce4ee1402080e85f3e8e7bd3439614598767c8407016d36f4742b",
+      "type": "dict",
+      "count": null,
+      "keys": [
+        "AverageItemPower",
+        "Equipment",
+        "Inventory",
+        "Name",
+        "Id",
+        "GuildName",
+        "GuildId",
+        "AllianceName",
+        "AllianceId",
+        "AllianceTag",
+        "Avatar",
+        "AvatarRing",
+        "DeathFame",
+        "KillFame",
+        "FameRatio",
+        "LifetimeStatistics"
+      ],
+      "name": "JaceCoe",
+      "player_id": "wpDh5rpcTXyKkmDpnm7PNg",
+      "all_equipment_null": true,
+      "inventory_count": 0,
+      "average_item_power": 0.0,
+      "no_current_zone_or_coordinates_in_sample": true
+    },
+    "events.json": {
+      "sha256": "637ae887bf4ade05130b7699f20aee99c6f44155f79e0bcadac7afcf188e457b",
+      "type": "list",
+      "count": 1,
+      "keys": [
+        "groupMemberCount",
+        "numberOfParticipants",
+        "EventId",
+        "TimeStamp",
+        "Version",
+        "Killer",
+        "Victim",
+        "TotalVictimKillFame",
+        "Location",
+        "Participants",
+        "GroupMembers",
+        "GvGMatch",
+        "BattleId",
+        "KillArea",
+        "Category",
+        "Type"
+      ],
+      "locations": [
+        null
+      ],
+      "kill_areas": [
+        "OPEN_WORLD"
+      ],
+      "event_ids": [
+        519355066
+      ],
+      "requested_limit": 1,
+      "actual_count": 1,
+      "interpretation": "historical event snapshots; null location provides no position"
+    },
+    "player-kills.json": {
+      "sha256": "7110c649990b4385114bba7d5cb460431655b313089df9e9bde71212d5d60d62",
+      "type": "list",
+      "count": 10,
+      "keys": [
+        "groupMemberCount",
+        "numberOfParticipants",
+        "EventId",
+        "TimeStamp",
+        "Version",
+        "Killer",
+        "Victim",
+        "TotalVictimKillFame",
+        "Location",
+        "Participants",
+        "GroupMembers",
+        "GvGMatch",
+        "BattleId",
+        "KillArea",
+        "Category",
+        "Type"
+      ],
+      "locations": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "kill_areas": [
+        "OPEN_WORLD"
+      ],
+      "event_ids": [
+        519276013,
+        519249664,
+        519245076,
+        519220556,
+        519212315,
+        519212244,
+        519181396,
+        519158758,
+        518944609,
+        518943455
+      ],
+      "requested_limit": 1,
+      "actual_count": 10,
+      "interpretation": "historical event snapshots; null location provides no position"
+    },
+    "player-deaths.json": {
+      "sha256": "ce511cfc204f964a916e56ead6370901998d779e90c484d81c7c4cd324ddbfb2",
+      "type": "list",
+      "count": 10,
+      "keys": [
+        "groupMemberCount",
+        "numberOfParticipants",
+        "EventId",
+        "TimeStamp",
+        "Version",
+        "Killer",
+        "Victim",
+        "TotalVictimKillFame",
+        "Location",
+        "Participants",
+        "GroupMembers",
+        "GvGMatch",
+        "BattleId",
+        "KillArea",
+        "Category",
+        "Type"
+      ],
+      "locations": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "kill_areas": [
+        "OPEN_WORLD"
+      ],
+      "event_ids": [
+        519234843,
+        519194064,
+        519168257,
+        518783242,
+        518754789,
+        518480501,
+        518477160,
+        518312153,
+        518282865,
+        518234405
+      ],
+      "requested_limit": 1,
+      "actual_count": 10,
+      "interpretation": "historical event snapshots; null location provides no position"
+    },
+    "guild.json": {
+      "sha256": "12d6ea440c43e689c1fee949722a1167d196e1f30faaf48359e9807485c0d276",
+      "type": "dict",
+      "count": null,
+      "keys": [
+        "Id",
+        "Name",
+        "FounderId",
+        "FounderName",
+        "Founded",
+        "AllianceTag",
+        "AllianceId",
+        "AllianceName",
+        "Logo",
+        "killFame",
+        "DeathFame",
+        "AttacksWon",
+        "DefensesWon",
+        "MemberCount"
+      ]
+    },
+    "alliance.json": {
+      "sha256": "3abccc19d1beddd183215c98f7493e8820a48c6ab80fcab05297f8242e883b61",
+      "type": "dict",
+      "count": null,
+      "keys": [
+        "AllianceId",
+        "AllianceName",
+        "AllianceTag",
+        "FounderId",
+        "FounderName",
+        "Founded",
+        "Guilds",
+        "NumPlayers"
+      ]
+    },
+    "search.json": {
+      "sha256": "44dc73be24243e7a5cdfc71d10c75308756041adfee8c9524a4f50eb3c12349b",
+      "type": "dict",
+      "count": null,
+      "keys": [
+        "guilds",
+        "players"
+      ]
+    }
+  }
+}

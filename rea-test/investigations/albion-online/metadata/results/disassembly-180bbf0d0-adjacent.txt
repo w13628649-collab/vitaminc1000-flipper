@@ -1,0 +1,10 @@
+0x180bbf0d0 sub      rsp, 0x28
+0x180bbf0d4 mov      rax, qword ptr [rcx + 0x80]
+0x180bbf0db movss    dword ptr [rcx + 0x40], xmm1
+0x180bbf0e0 test     rax, rax
+0x180bbf0e3 je       0x180bbf0ef
+0x180bbf0e5 movss    dword ptr [rax + 0x68], xmm1
+0x180bbf0ea add      rsp, 0x28
+0x180bbf0ee ret      
+0x180bbf0ef call     0x180361b60
+0x180bbf0f4 int3     

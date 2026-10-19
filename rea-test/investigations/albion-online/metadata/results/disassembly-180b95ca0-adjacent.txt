@@ -1,0 +1,30 @@
+0x180b95ca0 push     rbx
+0x180b95ca2 sub      rsp, 0x20
+0x180b95ca6 mov      eax, 0x240
+0x180b95cab mov      rbx, rcx
+0x180b95cae cmp      r8w, ax
+0x180b95cb2 je       0x180b95cc7
+0x180b95cb4 xor      r9d, r9d
+0x180b95cb7 add      rsp, 0x20
+0x180b95cbb pop      rbx
+0x180b95cbc jmp      0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180b95cc1 add      rsp, 0x20
+0x180b95cc5 pop      rbx
+0x180b95cc6 ret      
+0x180b95cc7 mov      byte ptr [rcx + 0x98], 1
+0x180b95cce mov      rcx, qword ptr [rcx + 0x60]
+0x180b95cd2 test     rcx, rcx
+0x180b95cd5 je       0x180b95cf7
+0x180b95cd7 xor      edx, edx
+0x180b95cd9 call     0x1807467c0 ; Albion.Common.dll:bk.c
+0x180b95cde test     eax, eax
+0x180b95ce0 jle      0x180b95cc1
+0x180b95ce2 mov      rcx, qword ptr [rbx + 0x60]
+0x180b95ce6 test     rcx, rcx
+0x180b95ce9 je       0x180b95cf7
+0x180b95ceb xor      edx, edx
+0x180b95ced add      rsp, 0x20
+0x180b95cf1 pop      rbx
+0x180b95cf2 jmp      0x180746130 ; Albion.Common.dll:bk.Invoke
+0x180b95cf7 call     0x180361b60
+0x180b95cfc int3     

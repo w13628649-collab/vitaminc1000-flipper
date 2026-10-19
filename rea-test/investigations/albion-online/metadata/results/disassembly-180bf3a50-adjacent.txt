@@ -1,0 +1,27 @@
+0x180bf3a50 push     rbx
+0x180bf3a52 sub      rsp, 0x20
+0x180bf3a56 cmp      byte ptr [rip + 0x44885a8], 0
+0x180bf3a5d mov      rbx, rcx
+0x180bf3a60 jne      0x180bf3a75
+0x180bf3a62 lea      rcx, [rip + 0x42286f7]
+0x180bf3a69 call     0x180361910
+0x180bf3a6e mov      byte ptr [rip + 0x4488590], 1
+0x180bf3a75 mov      rax, qword ptr [rbx + 0x10]
+0x180bf3a79 mov      r8, qword ptr [rip + 0x42286e0]
+0x180bf3a80 test     rax, rax
+0x180bf3a83 jne      0x180bf3a8b
+0x180bf3a85 add      rsp, 0x20
+0x180bf3a89 pop      rbx
+0x180bf3a8a ret      
+0x180bf3a8b mov      r9, qword ptr [rax]
+0x180bf3a8e movzx    ecx, byte ptr [r8 + 0x130]
+0x180bf3a96 cmp      byte ptr [r9 + 0x130], cl
+0x180bf3a9d jb       0x180bf3ab0
+0x180bf3a9f movzx    edx, cl
+0x180bf3aa2 mov      rcx, qword ptr [r9 + 0xc8]
+0x180bf3aa9 cmp      qword ptr [rcx + rdx*8 - 8], r8
+0x180bf3aae je       0x180bf3a85
+0x180bf3ab0 mov      rdx, r8
+0x180bf3ab3 mov      rcx, rax
+0x180bf3ab6 call     0x180360c80
+0x180bf3abb int3     

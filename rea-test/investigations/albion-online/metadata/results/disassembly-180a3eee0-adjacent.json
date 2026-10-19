@@ -1,0 +1,1765 @@
+{
+  "evidence_id": "AO-META-DISASM-180a3eee0-adjacent",
+  "target_sha256": "19a684ad23103f0b9a12b005c0d31609a55e3624699dc1b0e6fd509166c77202",
+  "requested_va": "0x180a3eee0",
+  "function_va": "0x180a3eee0",
+  "end_exclusive_va": "0x180a3efd7",
+  "file_offset": 10736864,
+  "byte_length": 247,
+  "function_sha256": "b6adc6b38f762105ed86228a88c22d5a3f3fadd98ba5231917bd12adec0e1345",
+  "capstone_version": "5.0.7",
+  "symbols": [
+    {
+      "type_index": 20052,
+      "type": "c2g",
+      "image": "Albion.PhotonClient.dll",
+      "method_index": 140520,
+      "name": "ajv",
+      "token": "0x6002a6f",
+      "native_va": "0x180a3eee0",
+      "native_rva": "0xa3eee0",
+      "native_file_offset": 10736864,
+      "pointer_slot_file_offset": 79903328
+    }
+  ],
+  "instructions": [
+    {
+      "va": "0x180a3eee0",
+      "file_offset": 10736864,
+      "bytes": "48895c2408",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 8], rbx"
+    },
+    {
+      "va": "0x180a3eee5",
+      "file_offset": 10736869,
+      "bytes": "4889742410",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x10], rsi"
+    },
+    {
+      "va": "0x180a3eeea",
+      "file_offset": 10736874,
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "rdi"
+    },
+    {
+      "va": "0x180a3eeeb",
+      "file_offset": 10736875,
+      "bytes": "4883ec20",
+      "mnemonic": "sub",
+      "operands": "rsp, 0x20"
+    },
+    {
+      "va": "0x180a3eeef",
+      "file_offset": 10736879,
+      "bytes": "803dc3c1630400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x463c1c3], 0"
+    },
+    {
+      "va": "0x180a3eef6",
+      "file_offset": 10736886,
+      "bytes": "410fb7d8",
+      "mnemonic": "movzx",
+      "operands": "ebx, r8w"
+    },
+    {
+      "va": "0x180a3eefa",
+      "file_offset": 10736890,
+      "bytes": "488bf2",
+      "mnemonic": "mov",
+      "operands": "rsi, rdx"
+    },
+    {
+      "va": "0x180a3eefd",
+      "file_offset": 10736893,
+      "bytes": "488bf9",
+      "mnemonic": "mov",
+      "operands": "rdi, rcx"
+    },
+    {
+      "va": "0x180a3ef00",
+      "file_offset": 10736896,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x180a3ef15"
+    },
+    {
+      "va": "0x180a3ef02",
+      "file_offset": 10736898,
+      "bytes": "488d0dffb83904",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x439b8ff]"
+    },
+    {
+      "va": "0x180a3ef09",
+      "file_offset": 10736905,
+      "bytes": "e8022a92ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3ef0e",
+      "file_offset": 10736910,
+      "bytes": "c605a4c1630401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x463c1a4], 1"
+    },
+    {
+      "va": "0x180a3ef15",
+      "file_offset": 10736917,
+      "bytes": "6683fb1f",
+      "mnemonic": "cmp",
+      "operands": "bx, 0x1f"
+    },
+    {
+      "va": "0x180a3ef19",
+      "file_offset": 10736921,
+      "bytes": "0f85a2000000",
+      "mnemonic": "jne",
+      "operands": "0x180a3efc1"
+    },
+    {
+      "va": "0x180a3ef1f",
+      "file_offset": 10736927,
+      "bytes": "488b15e2b83904",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rip + 0x439b8e2]"
+    },
+    {
+      "va": "0x180a3ef26",
+      "file_offset": 10736934,
+      "bytes": "488bce",
+      "mnemonic": "mov",
+      "operands": "rcx, rsi"
+    },
+    {
+      "va": "0x180a3ef29",
+      "file_offset": 10736937,
+      "bytes": "e8824f5c01",
+      "mnemonic": "call",
+      "operands": "0x182003eb0",
+      "target_va": "0x182003eb0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3ef2e",
+      "file_offset": 10736942,
+      "bytes": "803d85c1630400",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rip + 0x463c185], 0"
+    },
+    {
+      "va": "0x180a3ef35",
+      "file_offset": 10736949,
+      "bytes": "488bd8",
+      "mnemonic": "mov",
+      "operands": "rbx, rax"
+    },
+    {
+      "va": "0x180a3ef38",
+      "file_offset": 10736952,
+      "bytes": "7513",
+      "mnemonic": "jne",
+      "operands": "0x180a3ef4d"
+    },
+    {
+      "va": "0x180a3ef3a",
+      "file_offset": 10736954,
+      "bytes": "488d0d2fbe4104",
+      "mnemonic": "lea",
+      "operands": "rcx, [rip + 0x441be2f]"
+    },
+    {
+      "va": "0x180a3ef41",
+      "file_offset": 10736961,
+      "bytes": "e8ca2992ff",
+      "mnemonic": "call",
+      "operands": "0x180361910",
+      "target_va": "0x180361910",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3ef46",
+      "file_offset": 10736966,
+      "bytes": "c6056dc1630401",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rip + 0x463c16d], 1"
+    },
+    {
+      "va": "0x180a3ef4d",
+      "file_offset": 10736973,
+      "bytes": "c644244000",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rsp + 0x40], 0"
+    },
+    {
+      "va": "0x180a3ef52",
+      "file_offset": 10736978,
+      "bytes": "4885db",
+      "mnemonic": "test",
+      "operands": "rbx, rbx"
+    },
+    {
+      "va": "0x180a3ef55",
+      "file_offset": 10736981,
+      "bytes": "747a",
+      "mnemonic": "je",
+      "operands": "0x180a3efd1"
+    },
+    {
+      "va": "0x180a3ef57",
+      "file_offset": 10736983,
+      "bytes": "0fb74b1a",
+      "mnemonic": "movzx",
+      "operands": "ecx, word ptr [rbx + 0x1a]"
+    },
+    {
+      "va": "0x180a3ef5b",
+      "file_offset": 10736987,
+      "bytes": "66894f52",
+      "mnemonic": "mov",
+      "operands": "word ptr [rdi + 0x52], cx"
+    },
+    {
+      "va": "0x180a3ef5f",
+      "file_offset": 10736991,
+      "bytes": "0fb6431c",
+      "mnemonic": "movzx",
+      "operands": "eax, byte ptr [rbx + 0x1c]"
+    },
+    {
+      "va": "0x180a3ef63",
+      "file_offset": 10736995,
+      "bytes": "884750",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rdi + 0x50], al"
+    },
+    {
+      "va": "0x180a3ef66",
+      "file_offset": 10736998,
+      "bytes": "488b0d03be4104",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rip + 0x441be03]"
+    },
+    {
+      "va": "0x180a3ef6d",
+      "file_offset": 10737005,
+      "bytes": "488b7338",
+      "mnemonic": "mov",
+      "operands": "rsi, qword ptr [rbx + 0x38]"
+    },
+    {
+      "va": "0x180a3ef71",
+      "file_offset": 10737009,
+      "bytes": "83b9e400000000",
+      "mnemonic": "cmp",
+      "operands": "dword ptr [rcx + 0xe4], 0"
+    },
+    {
+      "va": "0x180a3ef78",
+      "file_offset": 10737016,
+      "bytes": "7505",
+      "mnemonic": "jne",
+      "operands": "0x180a3ef7f"
+    },
+    {
+      "va": "0x180a3ef7a",
+      "file_offset": 10737018,
+      "bytes": "e8712c92ff",
+      "mnemonic": "call",
+      "operands": "0x180361bf0",
+      "target_va": "0x180361bf0",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3ef7f",
+      "file_offset": 10737023,
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x180a3ef81",
+      "file_offset": 10737025,
+      "bytes": "488bce",
+      "mnemonic": "mov",
+      "operands": "rcx, rsi"
+    },
+    {
+      "va": "0x180a3ef84",
+      "file_offset": 10737028,
+      "bytes": "e897a6ceff",
+      "mnemonic": "call",
+      "operands": "0x180729620",
+      "target_va": "0x180729620",
+      "target_symbols": [
+        {
+          "type_index": 945,
+          "type": "CorruptedDungeonEntranceGui",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 8000,
+          "name": "get_ParentGui",
+          "token": "0x6001f41",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80117664
+        },
+        {
+          "type_index": 2339,
+          "type": "AnimPreviewer",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 21962,
+          "name": "EmoteState",
+          "token": "0x60055cb",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80229360
+        },
+        {
+          "type_index": 2339,
+          "type": "AnimPreviewer",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 21963,
+          "name": "get_FishingState",
+          "token": "0x60055cc",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80229368
+        },
+        {
+          "type_index": 6133,
+          "type": "fuz",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 44100,
+          "name": "a",
+          "token": "0x600ac45",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80406464
+        },
+        {
+          "type_index": 7785,
+          "type": "guu",
+          "image": "Assembly-CSharp.dll",
+          "method_index": 53845,
+          "name": "bv",
+          "token": "0x600d256",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80484424
+        },
+        {
+          "type_index": 10713,
+          "type": "c4",
+          "image": "Albion.Common.dll",
+          "method_index": 76219,
+          "name": "q",
+          "token": "0x60007f1",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79585248
+        },
+        {
+          "type_index": 10713,
+          "type": "c4",
+          "image": "Albion.Common.dll",
+          "method_index": 76253,
+          "name": "l",
+          "token": "0x6000813",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79585520
+        },
+        {
+          "type_index": 12884,
+          "type": "a7m",
+          "image": "Albion.Common.dll",
+          "method_index": 81149,
+          "name": "e",
+          "token": "0x6001b33",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79624688
+        },
+        {
+          "type_index": 14062,
+          "type": "bp6",
+          "image": "Albion.Common.dll",
+          "method_index": 93801,
+          "name": "qe",
+          "token": "0x6004c9f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79725904
+        },
+        {
+          "type_index": 14915,
+          "type": "b8y",
+          "image": "Albion.Common.dll",
+          "method_index": 101205,
+          "name": "we",
+          "token": "0x600698b",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79785136
+        },
+        {
+          "type_index": 14926,
+          "type": "b7v",
+          "image": "Albion.Common.dll",
+          "method_index": 101350,
+          "name": "vp",
+          "token": "0x6006a1c",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79786296
+        },
+        {
+          "type_index": 15625,
+          "type": "Locale",
+          "image": "mscorlib.dll",
+          "method_index": 104669,
+          "name": "GetText",
+          "token": "0x6000040",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83701880
+        },
+        {
+          "type_index": 15626,
+          "type": "SR",
+          "image": "mscorlib.dll",
+          "method_index": 104673,
+          "name": "GetString",
+          "token": "0x6000044",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83701912
+        },
+        {
+          "type_index": 15626,
+          "type": "SR",
+          "image": "mscorlib.dll",
+          "method_index": 104678,
+          "name": "GetResourceString",
+          "token": "0x6000049",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83701952
+        },
+        {
+          "type_index": 15731,
+          "type": "System.String",
+          "image": "mscorlib.dll",
+          "method_index": 105319,
+          "name": "Clone",
+          "token": "0x60002ca",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83707080
+        },
+        {
+          "type_index": 15731,
+          "type": "System.String",
+          "image": "mscorlib.dll",
+          "method_index": 105330,
+          "name": "ToString",
+          "token": "0x60002d5",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83707168
+        },
+        {
+          "type_index": 15731,
+          "type": "System.String",
+          "image": "mscorlib.dll",
+          "method_index": 105331,
+          "name": "ToString",
+          "token": "0x60002d6",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83707176
+        },
+        {
+          "type_index": 15905,
+          "type": "System.TimeSpan",
+          "image": "mscorlib.dll",
+          "method_index": 107378,
+          "name": "FromTicks",
+          "token": "0x6000ad5",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83723552
+        },
+        {
+          "type_index": 15956,
+          "type": "System.Array",
+          "image": "mscorlib.dll",
+          "method_index": 107975,
+          "name": "get_SyncRoot",
+          "token": "0x6000d2a",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83728328
+        },
+        {
+          "type_index": 15989,
+          "type": "System.RuntimeType",
+          "image": "mscorlib.dll",
+          "method_index": 108418,
+          "name": "get_UnderlyingSystemType",
+          "token": "0x6000ee5",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83731872
+        },
+        {
+          "type_index": 15989,
+          "type": "System.RuntimeType",
+          "image": "mscorlib.dll",
+          "method_index": 108451,
+          "name": "Clone",
+          "token": "0x6000f06",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83732136
+        },
+        {
+          "type_index": 16002,
+          "type": "System.Environment",
+          "image": "mscorlib.dll",
+          "method_index": 108594,
+          "name": "GetResourceString",
+          "token": "0x6000f95",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83733280
+        },
+        {
+          "type_index": 16025,
+          "type": "System.IntPtr",
+          "image": "mscorlib.dll",
+          "method_index": 108744,
+          "name": "op_Explicit",
+          "token": "0x600102b",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83734480
+        },
+        {
+          "type_index": 16025,
+          "type": "System.IntPtr",
+          "image": "mscorlib.dll",
+          "method_index": 108745,
+          "name": "op_Explicit",
+          "token": "0x600102c",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83734488
+        },
+        {
+          "type_index": 16025,
+          "type": "System.IntPtr",
+          "image": "mscorlib.dll",
+          "method_index": 108748,
+          "name": "op_Explicit",
+          "token": "0x600102f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83734512
+        },
+        {
+          "type_index": 16060,
+          "type": "System.UIntPtr",
+          "image": "mscorlib.dll",
+          "method_index": 108986,
+          "name": "op_Explicit",
+          "token": "0x600111d",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83736416
+        },
+        {
+          "type_index": 16079,
+          "type": "System.Decimal",
+          "image": "mscorlib.dll",
+          "method_index": 109030,
+          "name": "AsMutable",
+          "token": "0x6001149",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83736768
+        },
+        {
+          "type_index": 16328,
+          "type": "System.Security.PermissionSet",
+          "image": "mscorlib.dll",
+          "method_index": 110861,
+          "name": "get_SyncRoot",
+          "token": "0x6001870",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83751416
+        },
+        {
+          "type_index": 16345,
+          "type": "System.Security.Policy.Evidence",
+          "image": "mscorlib.dll",
+          "method_index": 110942,
+          "name": "get_SyncRoot",
+          "token": "0x60018c1",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83752064
+        },
+        {
+          "type_index": 16570,
+          "type": "System.Runtime.Remoting.Messaging.MessageDictionary",
+          "image": "mscorlib.dll",
+          "method_index": 112239,
+          "name": "get_SyncRoot",
+          "token": "0x6001dd2",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83762440
+        },
+        {
+          "type_index": 16727,
+          "type": "System.Runtime.InteropServices.GCHandle",
+          "image": "mscorlib.dll",
+          "method_index": 113099,
+          "name": "op_Explicit",
+          "token": "0x600212e",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83769320
+        },
+        {
+          "type_index": 16727,
+          "type": "System.Runtime.InteropServices.GCHandle",
+          "image": "mscorlib.dll",
+          "method_index": 113110,
+          "name": "ToIntPtr",
+          "token": "0x6002139",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83769408
+        },
+        {
+          "type_index": 16894,
+          "type": "System.Reflection.SignatureType",
+          "image": "mscorlib.dll",
+          "method_index": 113841,
+          "name": "get_UnderlyingSystemType",
+          "token": "0x6002414",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83775256
+        },
+        {
+          "type_index": 16902,
+          "type": "System.Reflection.TypeInfo",
+          "image": "mscorlib.dll",
+          "method_index": 113963,
+          "name": "System.Reflection.IReflectableType.GetTypeInfo",
+          "token": "0x600248e",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83776232
+        },
+        {
+          "type_index": 17011,
+          "type": "System.Globalization.CultureData",
+          "image": "mscorlib.dll",
+          "method_index": 115186,
+          "name": "ReescapeWin32Strings",
+          "token": "0x6002955",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83786016
+        },
+        {
+          "type_index": 17011,
+          "type": "System.Globalization.CultureData",
+          "image": "mscorlib.dll",
+          "method_index": 115187,
+          "name": "ReescapeWin32String",
+          "token": "0x6002956",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83786024
+        },
+        {
+          "type_index": 17079,
+          "type": "System.Collections.CollectionBase",
+          "image": "mscorlib.dll",
+          "method_index": 115502,
+          "name": "get_List",
+          "token": "0x6002a91",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83788544
+        },
+        {
+          "type_index": 17751,
+          "type": "UnityEngine.UIElements.DefaultDragAndDropClient",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 120402,
+          "name": "get_data",
+          "token": "0x6000b11",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84252912
+        },
+        {
+          "type_index": 17994,
+          "type": "CameraRayEnumerator",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 121902,
+          "name": "GetEnumerator",
+          "token": "0x60010ed",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84264912
+        },
+        {
+          "type_index": 17994,
+          "type": "CameraRayEnumerator",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 121903,
+          "name": "System.Collections.IEnumerable.GetEnumerator",
+          "token": "0x60010ee",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84264920
+        },
+        {
+          "type_index": 18260,
+          "type": "UnityEngine.UIElements.VisualElement",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 124185,
+          "name": "get_styleAnimation",
+          "token": "0x60019d8",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84283176
+        },
+        {
+          "type_index": 18548,
+          "type": "UnityEngine.UIElements.TextElement",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 126740,
+          "name": "get_edition",
+          "token": "0x60023d3",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84303616
+        },
+        {
+          "type_index": 18548,
+          "type": "UnityEngine.UIElements.TextElement",
+          "image": "UnityEngine.UIElementsModule.dll",
+          "method_index": 126818,
+          "name": "get_selection",
+          "token": "0x6002421",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84304240
+        },
+        {
+          "type_index": 19241,
+          "type": "cj2",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 131259,
+          "name": "aqp",
+          "token": "0x6000642",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79829240
+        },
+        {
+          "type_index": 19282,
+          "type": "clc",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 131784,
+          "name": "zo",
+          "token": "0x600084f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79833440
+        },
+        {
+          "type_index": 19322,
+          "type": "clw",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 132597,
+          "name": "aqq",
+          "token": "0x6000b7c",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 79839944
+        },
+        {
+          "type_index": 21005,
+          "type": "System.Xml.XsdValidatingReader",
+          "image": "System.Xml.dll",
+          "method_index": 148894,
+          "name": "get_SchemaInfo",
+          "token": "0x60007d3",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83917392
+        },
+        {
+          "type_index": 21020,
+          "type": "System.Xml.XmlAttributeCollection",
+          "image": "System.Xml.dll",
+          "method_index": 149160,
+          "name": "System.Collections.ICollection.get_SyncRoot",
+          "token": "0x60008dd",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83919520
+        },
+        {
+          "type_index": 21115,
+          "type": "System.Xml.Res",
+          "image": "System.Xml.dll",
+          "method_index": 150299,
+          "name": "GetString",
+          "token": "0x6000d50",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83928632
+        },
+        {
+          "type_index": 21394,
+          "type": "System.Xml.Schema.XmlAtomicValue",
+          "image": "System.Xml.dll",
+          "method_index": 152504,
+          "name": "System.ICloneable.Clone",
+          "token": "0x60015ed",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83946272
+        },
+        {
+          "type_index": 21406,
+          "type": "System.Xml.Schema.XmlSchemaCollection",
+          "image": "System.Xml.dll",
+          "method_index": 152685,
+          "name": "System.Collections.ICollection.get_SyncRoot",
+          "token": "0x60016a2",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83947720
+        },
+        {
+          "type_index": 21508,
+          "type": "System.Xml.Schema.XsdBuilder",
+          "image": "System.Xml.dll",
+          "method_index": 153806,
+          "name": "ParseUriReference",
+          "token": "0x6001b03",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83956688
+        },
+        {
+          "type_index": 21539,
+          "type": "MS.Internal.Xml.XPath.EmptyQuery",
+          "image": "System.Xml.dll",
+          "method_index": 154054,
+          "name": "Clone",
+          "token": "0x6001bfb",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83958672
+        },
+        {
+          "type_index": 21539,
+          "type": "MS.Internal.Xml.XPath.EmptyQuery",
+          "image": "System.Xml.dll",
+          "method_index": 154055,
+          "name": "Evaluate",
+          "token": "0x6001bfc",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83958680
+        },
+        {
+          "type_index": 21562,
+          "type": "MS.Internal.Xml.XPath.OperandQuery",
+          "image": "System.Xml.dll",
+          "method_index": 154230,
+          "name": "Clone",
+          "token": "0x6001cab",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83960080
+        },
+        {
+          "type_index": 21586,
+          "type": "MS.Internal.Xml.XPath.XPathEmptyIterator",
+          "image": "System.Xml.dll",
+          "method_index": 154380,
+          "name": "Clone",
+          "token": "0x6001d41",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83961280
+        },
+        {
+          "type_index": 21829,
+          "type": "System.UriParser",
+          "image": "System.dll",
+          "method_index": 155631,
+          "name": "OnNewUri",
+          "token": "0x6000412",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83974472
+        },
+        {
+          "type_index": 21854,
+          "type": "System.Text.RegularExpressions.MatchCollection",
+          "image": "System.dll",
+          "method_index": 155824,
+          "name": "get_SyncRoot",
+          "token": "0x60004d3",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83976016
+        },
+        {
+          "type_index": 21907,
+          "type": "System.Security.Cryptography.OidCollection",
+          "image": "System.dll",
+          "method_index": 156342,
+          "name": "get_SyncRoot",
+          "token": "0x60006d9",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83980160
+        },
+        {
+          "type_index": 21946,
+          "type": "System.Security.Cryptography.X509Certificates.X509ExtensionCollection",
+          "image": "System.dll",
+          "method_index": 156629,
+          "name": "get_SyncRoot",
+          "token": "0x60007f8",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83982456
+        },
+        {
+          "type_index": 22099,
+          "type": "DesignerOptionCollection",
+          "image": "System.dll",
+          "method_index": 157690,
+          "name": "System.Collections.ICollection.get_SyncRoot",
+          "token": "0x6000c1d",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83990944
+        },
+        {
+          "type_index": 22271,
+          "type": "System.Net.NetworkCredential",
+          "image": "System.dll",
+          "method_index": 159004,
+          "name": "GetCredential",
+          "token": "0x600113f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84001456
+        },
+        {
+          "type_index": 22313,
+          "type": "System.Net.CookieCollection",
+          "image": "System.dll",
+          "method_index": 159277,
+          "name": "get_SyncRoot",
+          "token": "0x6001250",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84003640
+        },
+        {
+          "type_index": 22980,
+          "type": "UnityEngine.InputSystem.LowLevel.TouchscreenState",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164826,
+          "name": "get_primaryTouch",
+          "token": "0x6000e7e",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84055912
+        },
+        {
+          "type_index": 22982,
+          "type": "UnityEngine.InputSystem.LowLevel.ActionEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164844,
+          "name": "ToEventPtr",
+          "token": "0x6000e90",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056056
+        },
+        {
+          "type_index": 22984,
+          "type": "UnityEngine.InputSystem.LowLevel.DeltaStateEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164851,
+          "name": "ToEventPtr",
+          "token": "0x6000e97",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056112
+        },
+        {
+          "type_index": 22984,
+          "type": "UnityEngine.InputSystem.LowLevel.DeltaStateEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164853,
+          "name": "FromUnchecked",
+          "token": "0x6000e99",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056128
+        },
+        {
+          "type_index": 22985,
+          "type": "UnityEngine.InputSystem.LowLevel.DeviceConfigurationEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164856,
+          "name": "ToEventPtr",
+          "token": "0x6000e9c",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056152
+        },
+        {
+          "type_index": 22986,
+          "type": "UnityEngine.InputSystem.LowLevel.DeviceRemoveEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164859,
+          "name": "ToEventPtr",
+          "token": "0x6000e9f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056176
+        },
+        {
+          "type_index": 22999,
+          "type": "UnityEngine.InputSystem.LowLevel.InputEventPtr",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164954,
+          "name": "op_Implicit",
+          "token": "0x6000efe",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056936
+        },
+        {
+          "type_index": 22999,
+          "type": "UnityEngine.InputSystem.LowLevel.InputEventPtr",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164955,
+          "name": "From",
+          "token": "0x6000eff",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056944
+        },
+        {
+          "type_index": 22999,
+          "type": "UnityEngine.InputSystem.LowLevel.InputEventPtr",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164956,
+          "name": "op_Implicit",
+          "token": "0x6000f00",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056952
+        },
+        {
+          "type_index": 22999,
+          "type": "UnityEngine.InputSystem.LowLevel.InputEventPtr",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 164957,
+          "name": "FromInputEventPtr",
+          "token": "0x6000f01",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84056960
+        },
+        {
+          "type_index": 23009,
+          "type": "UnityEngine.InputSystem.LowLevel.StateEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 165059,
+          "name": "ToEventPtr",
+          "token": "0x6000f67",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84057776
+        },
+        {
+          "type_index": 23009,
+          "type": "UnityEngine.InputSystem.LowLevel.StateEvent",
+          "image": "Unity.InputSystem.dll",
+          "method_index": 165065,
+          "name": "FromUnchecked",
+          "token": "0x6000f6d",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84057824
+        },
+        {
+          "type_index": 23568,
+          "type": "AwaitableHandle",
+          "image": "UnityEngine.CoreModule.dll",
+          "method_index": 169460,
+          "name": "op_Implicit",
+          "token": "0x6000b70",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84139496
+        },
+        {
+          "type_index": 24132,
+          "type": "SR",
+          "image": "System.Data.dll",
+          "method_index": 171333,
+          "name": "GetString",
+          "token": "0x6000004",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83862120
+        },
+        {
+          "type_index": 24164,
+          "type": "System.Data.InternalDataCollectionBase",
+          "image": "System.Data.dll",
+          "method_index": 172117,
+          "name": "get_SyncRoot",
+          "token": "0x6000314",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83868392
+        },
+        {
+          "type_index": 24197,
+          "type": "System.Data.DataRowView",
+          "image": "System.Data.dll",
+          "method_index": 172515,
+          "name": "System.ComponentModel.ICustomTypeDescriptor.GetPropertyOwner",
+          "token": "0x60004a2",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83871576
+        },
+        {
+          "type_index": 24207,
+          "type": "System.Data.DataView",
+          "image": "System.Data.dll",
+          "method_index": 172567,
+          "name": "System.Collections.ICollection.get_SyncRoot",
+          "token": "0x60004d6",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83871992
+        },
+        {
+          "type_index": 24215,
+          "type": "System.Data.AggregateNode",
+          "image": "System.Data.dll",
+          "method_index": 172660,
+          "name": "Optimize",
+          "token": "0x6000533",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83872736
+        },
+        {
+          "type_index": 24219,
+          "type": "System.Data.ConstNode",
+          "image": "System.Data.dll",
+          "method_index": 172697,
+          "name": "Optimize",
+          "token": "0x6000558",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83873032
+        },
+        {
+          "type_index": 24233,
+          "type": "System.Data.LookupNode",
+          "image": "System.Data.dll",
+          "method_index": 172840,
+          "name": "Optimize",
+          "token": "0x60005e7",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83874176
+        },
+        {
+          "type_index": 24234,
+          "type": "System.Data.NameNode",
+          "image": "System.Data.dll",
+          "method_index": 172853,
+          "name": "Optimize",
+          "token": "0x60005f4",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83874280
+        },
+        {
+          "type_index": 24237,
+          "type": "System.Data.ZeroOpNode",
+          "image": "System.Data.dll",
+          "method_index": 172882,
+          "name": "Optimize",
+          "token": "0x6000611",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83874512
+        },
+        {
+          "type_index": 24256,
+          "type": "System.Data.RelatedView",
+          "image": "System.Data.dll",
+          "method_index": 173050,
+          "name": "GetFilter",
+          "token": "0x60006b9",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83875856
+        },
+        {
+          "type_index": 24367,
+          "type": "SR",
+          "image": "System.Core.dll",
+          "method_index": 174624,
+          "name": "GetString",
+          "token": "0x6000001",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83834640
+        },
+        {
+          "type_index": 26439,
+          "type": "Steamworks.SteamId",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191013,
+          "name": "op_Implicit",
+          "token": "0x60001bf",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80661760
+        },
+        {
+          "type_index": 26439,
+          "type": "Steamworks.SteamId",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191014,
+          "name": "op_Implicit",
+          "token": "0x60001c0",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80661768
+        },
+        {
+          "type_index": 26673,
+          "type": "Steamworks.Data.SteamAPICall_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191507,
+          "name": "op_Implicit",
+          "token": "0x60003ad",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80665712
+        },
+        {
+          "type_index": 26674,
+          "type": "Steamworks.Data.PartyBeaconID_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191513,
+          "name": "op_Implicit",
+          "token": "0x60003b3",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80665760
+        },
+        {
+          "type_index": 26679,
+          "type": "Steamworks.Data.UGCHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191546,
+          "name": "op_Implicit",
+          "token": "0x60003d4",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666024
+        },
+        {
+          "type_index": 26680,
+          "type": "Steamworks.Data.PublishedFileUpdateHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191552,
+          "name": "op_Implicit",
+          "token": "0x60003da",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666072
+        },
+        {
+          "type_index": 26681,
+          "type": "Steamworks.Data.PublishedFileId",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191558,
+          "name": "op_Implicit",
+          "token": "0x60003e0",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666120
+        },
+        {
+          "type_index": 26682,
+          "type": "Steamworks.Data.UGCFileWriteStreamHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191564,
+          "name": "op_Implicit",
+          "token": "0x60003e6",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666168
+        },
+        {
+          "type_index": 26688,
+          "type": "Steamworks.Data.UGCQueryHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191597,
+          "name": "op_Implicit",
+          "token": "0x6000407",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666432
+        },
+        {
+          "type_index": 26689,
+          "type": "Steamworks.Data.UGCUpdateHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191603,
+          "name": "op_Implicit",
+          "token": "0x600040d",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666480
+        },
+        {
+          "type_index": 26690,
+          "type": "Steamworks.Data.InventoryItemId",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191609,
+          "name": "op_Implicit",
+          "token": "0x6000413",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666528
+        },
+        {
+          "type_index": 26693,
+          "type": "Steamworks.Data.SteamInventoryUpdateHandle_t",
+          "image": "Facepunch.Steamworks.Win64.dll",
+          "method_index": 191627,
+          "name": "op_Implicit",
+          "token": "0x6000425",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 80666672
+        },
+        {
+          "type_index": 26706,
+          "type": "Locale",
+          "image": "Mono.Security.dll",
+          "method_index": 191665,
+          "name": "GetText",
+          "token": "0x6000001",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 83682384
+        },
+        {
+          "type_index": 26899,
+          "type": "BasicProvider",
+          "image": "UnityEngine.AdaptivePerformanceModule.dll",
+          "method_index": 192875,
+          "name": "get_ApplicationLifecycle",
+          "token": "0x600028e",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84107192
+        },
+        {
+          "type_index": 26899,
+          "type": "BasicProvider",
+          "image": "UnityEngine.AdaptivePerformanceModule.dll",
+          "method_index": 192876,
+          "name": "get_PerformanceLevelControl",
+          "token": "0x600028f",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84107200
+        },
+        {
+          "type_index": 27323,
+          "type": "UnityEngine.Timeline.TrackAsset",
+          "image": "Unity.Timeline.dll",
+          "method_index": 195403,
+          "name": "UnityEngine.Timeline.ICurvesOwner.get_asset",
+          "token": "0x600012a",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84097976
+        },
+        {
+          "type_index": 27323,
+          "type": "UnityEngine.Timeline.TrackAsset",
+          "image": "Unity.Timeline.dll",
+          "method_index": 195405,
+          "name": "UnityEngine.Timeline.ICurvesOwner.get_targetTrack",
+          "token": "0x600012c",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84097992
+        },
+        {
+          "type_index": 27327,
+          "type": "UnityEngine.Timeline.DiscreteTime",
+          "image": "Unity.Timeline.dll",
+          "method_index": 195496,
+          "name": "FromTicks",
+          "token": "0x6000187",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84098720
+        },
+        {
+          "type_index": 27906,
+          "type": "Unity.Hierarchy.HierarchyFlattenedNode",
+          "image": "UnityEngine.HierarchyCoreModule.dll",
+          "method_index": 198191,
+          "name": "GetNodeByRef",
+          "token": "0x60000b5",
+          "native_va": "0x180729620",
+          "native_rva": "0x729620",
+          "native_file_offset": 7502880,
+          "pointer_slot_file_offset": 84167904
+        }
+      ]
+    },
+    {
+      "va": "0x180a3ef89",
+      "file_offset": 10737033,
+      "bytes": "48894768",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rdi + 0x68], rax"
+    },
+    {
+      "va": "0x180a3ef8d",
+      "file_offset": 10737037,
+      "bytes": "488d4f60",
+      "mnemonic": "lea",
+      "operands": "rcx, [rdi + 0x60]"
+    },
+    {
+      "va": "0x180a3ef91",
+      "file_offset": 10737041,
+      "bytes": "488b5330",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rbx + 0x30]"
+    },
+    {
+      "va": "0x180a3ef95",
+      "file_offset": 10737045,
+      "bytes": "48895760",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rdi + 0x60], rdx"
+    },
+    {
+      "va": "0x180a3ef99",
+      "file_offset": 10737049,
+      "bytes": "e8a21c92ff",
+      "mnemonic": "call",
+      "operands": "0x180360c40",
+      "target_va": "0x180360c40",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3ef9e",
+      "file_offset": 10737054,
+      "bytes": "4533c9",
+      "mnemonic": "xor",
+      "operands": "r9d, r9d"
+    },
+    {
+      "va": "0x180a3efa1",
+      "file_offset": 10737057,
+      "bytes": "4c8d442440",
+      "mnemonic": "lea",
+      "operands": "r8, [rsp + 0x40]"
+    },
+    {
+      "va": "0x180a3efa6",
+      "file_offset": 10737062,
+      "bytes": "488bd3",
+      "mnemonic": "mov",
+      "operands": "rdx, rbx"
+    },
+    {
+      "va": "0x180a3efa9",
+      "file_offset": 10737065,
+      "bytes": "488bcf",
+      "mnemonic": "mov",
+      "operands": "rcx, rdi"
+    },
+    {
+      "va": "0x180a3efac",
+      "file_offset": 10737068,
+      "bytes": "e8efaffdff",
+      "mnemonic": "call",
+      "operands": "0x180a19fa0",
+      "target_va": "0x180a19fa0",
+      "target_symbols": [
+        {
+          "type_index": 20019,
+          "type": "c10",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 139977,
+          "name": "af",
+          "token": "0x6002850",
+          "native_va": "0x180a19fa0",
+          "native_rva": "0xa19fa0",
+          "native_file_offset": 10585504,
+          "pointer_slot_file_offset": 79898984
+        }
+      ]
+    },
+    {
+      "va": "0x180a3efb1",
+      "file_offset": 10737073,
+      "bytes": "0fb6542440",
+      "mnemonic": "movzx",
+      "operands": "edx, byte ptr [rsp + 0x40]"
+    },
+    {
+      "va": "0x180a3efb6",
+      "file_offset": 10737078,
+      "bytes": "4533c0",
+      "mnemonic": "xor",
+      "operands": "r8d, r8d"
+    },
+    {
+      "va": "0x180a3efb9",
+      "file_offset": 10737081,
+      "bytes": "488bcf",
+      "mnemonic": "mov",
+      "operands": "rcx, rdi"
+    },
+    {
+      "va": "0x180a3efbc",
+      "file_offset": 10737084,
+      "bytes": "e84fb3fdff",
+      "mnemonic": "call",
+      "operands": "0x180a1a310",
+      "target_va": "0x180a1a310",
+      "target_symbols": [
+        {
+          "type_index": 20019,
+          "type": "c10",
+          "image": "Albion.PhotonClient.dll",
+          "method_index": 139979,
+          "name": "aja",
+          "token": "0x6002852",
+          "native_va": "0x180a1a310",
+          "native_rva": "0xa1a310",
+          "native_file_offset": 10586384,
+          "pointer_slot_file_offset": 79899000
+        }
+      ]
+    },
+    {
+      "va": "0x180a3efc1",
+      "file_offset": 10737089,
+      "bytes": "488b5c2430",
+      "mnemonic": "mov",
+      "operands": "rbx, qword ptr [rsp + 0x30]"
+    },
+    {
+      "va": "0x180a3efc6",
+      "file_offset": 10737094,
+      "bytes": "488b742438",
+      "mnemonic": "mov",
+      "operands": "rsi, qword ptr [rsp + 0x38]"
+    },
+    {
+      "va": "0x180a3efcb",
+      "file_offset": 10737099,
+      "bytes": "4883c420",
+      "mnemonic": "add",
+      "operands": "rsp, 0x20"
+    },
+    {
+      "va": "0x180a3efcf",
+      "file_offset": 10737103,
+      "bytes": "5f",
+      "mnemonic": "pop",
+      "operands": "rdi"
+    },
+    {
+      "va": "0x180a3efd0",
+      "file_offset": 10737104,
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    },
+    {
+      "va": "0x180a3efd1",
+      "file_offset": 10737105,
+      "bytes": "e88a2b92ff",
+      "mnemonic": "call",
+      "operands": "0x180361b60",
+      "target_va": "0x180361b60",
+      "target_symbols": []
+    },
+    {
+      "va": "0x180a3efd6",
+      "file_offset": 10737110,
+      "bytes": "cc",
+      "mnemonic": "int3",
+      "operands": ""
+    }
+  ],
+  "pdata_segments": [
+    {
+      "begin_va": "0x180a3eee0",
+      "end_exclusive_va": "0x180a3efd7",
+      "unwind_rva": "0x4916ad8"
+    }
+  ],
+  "limitations": "PE unwind function range and x64 instruction decode. With adjacent flag, contiguous unwind fragments before next named method are included as a candidate interval; fragment membership remains inference. Direct call labels from metadata pointer slots; overloaded/folded pointers may have multiple symbols. No control-flow reconstruction or runtime evidence."
+}

@@ -1,0 +1,142 @@
+0x18098b480 mov      qword ptr [rsp + 0x10], rbx
+0x18098b485 mov      qword ptr [rsp + 0x20], rsi
+0x18098b48a push     rdi
+0x18098b48b sub      rsp, 0x90
+0x18098b492 mov      rbx, rcx
+0x18098b495 cmp      byte ptr [rip + 0x46ef6d9], 0
+0x18098b49c jne      0x18098b511
+0x18098b49e lea      rcx, [rip + 0x44e3883]
+0x18098b4a5 call     0x180361910
+0x18098b4aa lea      rcx, [rip + 0x44b02ef]
+0x18098b4b1 call     0x180361910
+0x18098b4b6 lea      rcx, [rip + 0x4426e83]
+0x18098b4bd call     0x180361910
+0x18098b4c2 lea      rcx, [rip + 0x4426fcf]
+0x18098b4c9 call     0x180361910
+0x18098b4ce lea      rcx, [rip + 0x4427113]
+0x18098b4d5 call     0x180361910
+0x18098b4da lea      rcx, [rip + 0x4436f4f]
+0x18098b4e1 call     0x180361910
+0x18098b4e6 lea      rcx, [rip + 0x443709b]
+0x18098b4ed call     0x180361910
+0x18098b4f2 lea      rcx, [rip + 0x447dbbf]
+0x18098b4f9 call     0x180361910
+0x18098b4fe lea      rcx, [rip + 0x446e35b]
+0x18098b505 call     0x180361910
+0x18098b50a mov      byte ptr [rip + 0x46ef664], 1
+0x18098b511 xor      esi, esi
+0x18098b513 mov      word ptr [rsp + 0xa0], si
+0x18098b51b mov      rcx, qword ptr [rip + 0x447db96]
+0x18098b522 call     0x180361710
+0x18098b527 mov      rdi, qword ptr [rax + 0x20]
+0x18098b52b test     rbx, rbx
+0x18098b52e je       0x18098b6af
+0x18098b534 xor      edx, edx
+0x18098b536 mov      rcx, rbx
+0x18098b539 call     0x1831cb6f0 ; mscorlib.dll:System.Object.GetType
+0x18098b53e test     rdi, rdi
+0x18098b541 je       0x18098b6af
+0x18098b547 mov      r9, qword ptr [rip + 0x44b0252]
+0x18098b54e lea      r8, [rsp + 0xa0]
+0x18098b556 mov      rdx, rax
+0x18098b559 mov      rcx, rdi
+0x18098b55c call     0x182b89e40
+0x18098b561 test     al, al
+0x18098b563 je       0x18098b6c7
+0x18098b569 mov      rcx, qword ptr [rip + 0x446e2f0]
+0x18098b570 call     0x180361b10
+0x18098b575 mov      rdi, rax
+0x18098b578 xor      edx, edx
+0x18098b57a mov      rcx, rax
+0x18098b57d call     0x1832c5c50 ; Photon3Unity3D.dll:g7s..ctor
+0x18098b582 mov      qword ptr [rsp + 0xb0], rdi
+0x18098b58a test     rdi, rdi
+0x18098b58d je       0x18098b6af
+0x18098b593 mov      byte ptr [rdi + 0x10], 1
+0x18098b597 xor      edx, edx
+0x18098b599 mov      rcx, rbx
+0x18098b59c call     0x1808e4b90 ; Albion.Common.dll:e0.b | Albion.Common.dll:e0.b | Albion.Common.dll:e0.b
+0x18098b5a1 test     rax, rax
+0x18098b5a4 je       0x18098b6af
+0x18098b5aa mov      r8, qword ptr [rip + 0x44e3777]
+0x18098b5b1 mov      rdx, rax
+0x18098b5b4 lea      rcx, [rsp + 0x60]
+0x18098b5b9 call     0x182a48ea0
+0x18098b5be movups   xmm0, xmmword ptr [rsp + 0x60]
+0x18098b5c3 movups   xmmword ptr [rsp + 0x38], xmm0
+0x18098b5c8 movups   xmm1, xmmword ptr [rsp + 0x70]
+0x18098b5cd movups   xmmword ptr [rsp + 0x48], xmm1
+0x18098b5d2 movsd    xmm0, qword ptr [rsp + 0x80]
+0x18098b5db movsd    qword ptr [rsp + 0x58], xmm0
+0x18098b5e1 mov      qword ptr [rsp + 0x28], rsi
+0x18098b5e6 lea      rbx, [rsp + 0x38]
+0x18098b5eb mov      qword ptr [rsp + 0x30], rbx
+0x18098b5f0 mov      rdx, qword ptr [rip + 0x4426ea1]
+0x18098b5f7 lea      rcx, [rsp + 0x38]
+0x18098b5fc call     0x182cadc10
+0x18098b601 test     al, al
+0x18098b603 je       0x18098b626
+0x18098b605 mov      rcx, qword ptr [rdi + 0x18]
+0x18098b609 test     rcx, rcx
+0x18098b60c je       0x18098b6b5
+0x18098b612 xor      r9d, r9d
+0x18098b615 mov      r8, qword ptr [rsp + 0x50]
+0x18098b61a movzx    edx, byte ptr [rsp + 0x48]
+0x18098b61f call     0x1832ad940 ; Photon3Unity3D.dll:g7g.e
+0x18098b624 jmp      0x18098b5f0
+0x18098b626 mov      rdx, qword ptr [rip + 0x4426d13]
+0x18098b62d mov      rcx, rbx
+0x18098b630 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x18098b635 jmp      0x18098b65a
+0x18098b637 mov      rdx, qword ptr [rip + 0x4426d02]
+0x18098b63e mov      rcx, qword ptr [rsp + 0x30]
+0x18098b643 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x18098b648 mov      rcx, qword ptr [rsp + 0x28]
+0x18098b64d test     rcx, rcx
+0x18098b650 jne      0x18098b6bb
+0x18098b652 mov      rdi, qword ptr [rsp + 0xb0]
+0x18098b65a mov      rbx, qword ptr [rdi + 0x18]
+0x18098b65e movzx    edx, word ptr [rsp + 0xa0]
+0x18098b666 mov      word ptr [rsp + 0xb0], dx
+0x18098b66e lea      rdx, [rsp + 0xb0]
+0x18098b676 mov      rcx, qword ptr [rip + 0x470a8fb]
+0x18098b67d call     0x180360c20
+0x18098b682 test     rbx, rbx
+0x18098b685 je       0x18098b6c1
+0x18098b687 xor      r9d, r9d
+0x18098b68a mov      r8, rax
+0x18098b68d mov      dl, 0xfc
+0x18098b68f mov      rcx, rbx
+0x18098b692 call     0x1832ad940 ; Photon3Unity3D.dll:g7g.e
+0x18098b697 mov      rax, rdi
+0x18098b69a lea      r11, [rsp + 0x90]
+0x18098b6a2 mov      rbx, qword ptr [r11 + 0x18]
+0x18098b6a6 mov      rsi, qword ptr [r11 + 0x28]
+0x18098b6aa mov      rsp, r11
+0x18098b6ad pop      rdi
+0x18098b6ae ret      
+0x18098b6af call     0x180361b60
+0x18098b6b4 nop      
+0x18098b6b5 call     0x180361b60
+0x18098b6ba nop      
+0x18098b6bb call     0x18035da00
+0x18098b6c0 int3     
+0x18098b6c1 call     0x180361b60
+0x18098b6c6 int3     
+0x18098b6c7 lea      rcx, [rip + 0x440f80a]
+0x18098b6ce call     0x180361930
+0x18098b6d3 mov      rcx, rax
+0x18098b6d6 call     0x180361b10
+0x18098b6db mov      rbx, rax
+0x18098b6de lea      rcx, [rip + 0x4478403]
+0x18098b6e5 call     0x180361930
+0x18098b6ea mov      rdx, rax
+0x18098b6ed xor      r8d, r8d
+0x18098b6f0 mov      rcx, rbx
+0x18098b6f3 call     0x1808ada90 ; Albion.Common.dll:Albion.Common.AlbionException..ctor
+0x18098b6f8 lea      rcx, [rip + 0x445d849]
+0x18098b6ff call     0x180361930
+0x18098b704 mov      rdx, rax
+0x18098b707 mov      rcx, rbx
+0x18098b70a call     0x180361b20
+0x18098b70f int3     

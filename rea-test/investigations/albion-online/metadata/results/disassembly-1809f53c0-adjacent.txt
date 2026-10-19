@@ -1,0 +1,127 @@
+0x1809f53c0 mov      qword ptr [rsp + 0x10], rbx
+0x1809f53c5 mov      qword ptr [rsp + 0x18], rsi
+0x1809f53ca push     rdi
+0x1809f53cb sub      rsp, 0x30
+0x1809f53cf cmp      byte ptr [rip + 0x4685acc], 0
+0x1809f53d6 movzx    ebx, r8w
+0x1809f53da mov      rdi, rdx
+0x1809f53dd mov      rsi, rcx
+0x1809f53e0 jne      0x1809f5425
+0x1809f53e2 lea      rcx, [rip + 0x4417597]
+0x1809f53e9 call     0x180361910
+0x1809f53ee lea      rcx, [rip + 0x43ef8ab]
+0x1809f53f5 call     0x180361910
+0x1809f53fa lea      rcx, [rip + 0x43d576f]
+0x1809f5401 call     0x180361910
+0x1809f5406 lea      rcx, [rip + 0x43d5a13]
+0x1809f540d call     0x180361910
+0x1809f5412 lea      rcx, [rip + 0x44328bf]
+0x1809f5419 call     0x180361910
+0x1809f541e mov      byte ptr [rip + 0x4685a7d], 1
+0x1809f5425 xor      edx, edx
+0x1809f5427 mov      qword ptr [rsp + 0x40], rbp
+0x1809f542c mov      rcx, rsi
+0x1809f542f call     0x1809dd6c0 ; Albion.PhotonClient.dll:cye.ae
+0x1809f5434 test     rax, rax
+0x1809f5437 je       0x1809f55de
+0x1809f543d xor      edx, edx
+0x1809f543f mov      rcx, rax
+0x1809f5442 call     0x1809a7ae0 ; Albion.PhotonClient.dll:ctp.atr
+0x1809f5447 mov      rsi, rax
+0x1809f544a test     rax, rax
+0x1809f544d je       0x1809f54fe
+0x1809f5453 mov      r8, qword ptr [rax]
+0x1809f5456 mov      rdx, qword ptr [rip + 0x443287b]
+0x1809f545d movzx    eax, byte ptr [rdx + 0x130]
+0x1809f5464 cmp      byte ptr [r8 + 0x130], al
+0x1809f546b jb       0x1809f54fe
+0x1809f5471 movzx    ecx, al
+0x1809f5474 mov      rax, qword ptr [r8 + 0xc8]
+0x1809f547b cmp      qword ptr [rax + rcx*8 - 8], rdx
+0x1809f5480 jne      0x1809f54fe
+0x1809f5482 cmp      bx, 0x3b
+0x1809f5486 je       0x1809f5513
+0x1809f548c cmp      bx, 0x3c
+0x1809f5490 jne      0x1809f54fe
+0x1809f5492 mov      rdx, qword ptr [rip + 0x43d56d7]
+0x1809f5499 mov      rcx, rdi
+0x1809f549c call     0x182003eb0
+0x1809f54a1 test     rax, rax
+0x1809f54a4 je       0x1809f55de
+0x1809f54aa mov      rdx, qword ptr [rsi]
+0x1809f54ad mov      rcx, rsi
+0x1809f54b0 mov      rbx, qword ptr [rax + 0x18]
+0x1809f54b4 mov      rax, qword ptr [rdx + 0x278]
+0x1809f54bb mov      rdx, qword ptr [rdx + 0x280]
+0x1809f54c2 call     rax
+0x1809f54c4 mov      rcx, qword ptr [rip + 0x44174b5]
+0x1809f54cb mov      rdi, rax
+0x1809f54ce cmp      dword ptr [rcx + 0xe4], 0
+0x1809f54d5 jne      0x1809f54dc
+0x1809f54d7 call     0x180361bf0
+0x1809f54dc xor      r8d, r8d
+0x1809f54df mov      rdx, rdi
+0x1809f54e2 mov      rcx, rbx
+0x1809f54e5 call     0x180852d00 ; Albion.Common.dll:c4.s | Albion.Common.dll:a7m.m | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.g | mscorlib.dll:System.TimeSpan.op_Equality | mscorlib.dll:System.Type.op_Equality | mscorlib.dll:System.RuntimeType.op_Equality | mscorlib.dll:System.IntPtr.op_Equality | mscorlib.dll:System.Object.Equals | mscorlib.dll:System.Object.ReferenceEquals | mscorlib.dll:System.UIntPtr.op_Equality | mscorlib.dll:System.Runtime.InteropServices.GCHandle.op_Equality | System.Xml.dll:System.Xml.Ref.Equal | Unity.InputSystem.dll:UnityEngine.InputSystem.LowLevel.InputEventPtr.op_Equality | System.Data.dl
+0x1809f54ea test     al, al
+0x1809f54ec je       0x1809f54fe
+0x1809f54ee xor      r8d, r8d
+0x1809f54f1 mov      edx, 1
+0x1809f54f6 mov      rcx, rsi
+0x1809f54f9 call     0x1809b4240 ; Albion.PhotonClient.dll:ct7.f5
+0x1809f54fe mov      rbp, qword ptr [rsp + 0x40]
+0x1809f5503 mov      rbx, qword ptr [rsp + 0x48]
+0x1809f5508 mov      rsi, qword ptr [rsp + 0x50]
+0x1809f550d add      rsp, 0x30
+0x1809f5511 pop      rdi
+0x1809f5512 ret      
+0x1809f5513 mov      rdx, qword ptr [rip + 0x43d5906]
+0x1809f551a mov      rcx, rdi
+0x1809f551d call     0x182003eb0
+0x1809f5522 mov      rbp, rax
+0x1809f5525 test     rax, rax
+0x1809f5528 je       0x1809f55de
+0x1809f552e mov      rdx, qword ptr [rsi]
+0x1809f5531 mov      rcx, rsi
+0x1809f5534 mov      rbx, qword ptr [rax + 0x18]
+0x1809f5538 mov      r8, qword ptr [rdx + 0x278]
+0x1809f553f mov      rdx, qword ptr [rdx + 0x280]
+0x1809f5546 call     r8
+0x1809f5549 mov      rcx, qword ptr [rip + 0x4417430]
+0x1809f5550 mov      rdi, rax
+0x1809f5553 cmp      dword ptr [rcx + 0xe4], 0
+0x1809f555a jne      0x1809f5561
+0x1809f555c call     0x180361bf0
+0x1809f5561 xor      r8d, r8d
+0x1809f5564 mov      rdx, rdi
+0x1809f5567 mov      rcx, rbx
+0x1809f556a call     0x180852d00 ; Albion.Common.dll:c4.s | Albion.Common.dll:a7m.m | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.g | mscorlib.dll:System.TimeSpan.op_Equality | mscorlib.dll:System.Type.op_Equality | mscorlib.dll:System.RuntimeType.op_Equality | mscorlib.dll:System.IntPtr.op_Equality | mscorlib.dll:System.Object.Equals | mscorlib.dll:System.Object.ReferenceEquals | mscorlib.dll:System.UIntPtr.op_Equality | mscorlib.dll:System.Runtime.InteropServices.GCHandle.op_Equality | System.Xml.dll:System.Xml.Ref.Equal | Unity.InputSystem.dll:UnityEngine.InputSystem.LowLevel.InputEventPtr.op_Equality | System.Data.dl
+0x1809f556f test     al, al
+0x1809f5571 je       0x1809f54fe
+0x1809f5573 mov      rcx, qword ptr [rip + 0x43ef726]
+0x1809f557a mov      rbx, qword ptr [rbp + 0x20]
+0x1809f557e movaps   xmmword ptr [rsp + 0x20], xmm6
+0x1809f5583 movss    xmm6, dword ptr [rbp + 0x34]
+0x1809f5588 cmp      dword ptr [rcx + 0xe4], 0
+0x1809f558f jne      0x1809f5596
+0x1809f5591 call     0x180361bf0
+0x1809f5596 cvtps2pd xmm0, xmm6
+0x1809f5599 xor      edx, edx
+0x1809f559b call     0x180852a00 ; Albion.Common.dll:c4.l
+0x1809f55a0 mov      rcx, qword ptr [rip + 0x44173d9]
+0x1809f55a7 mov      rdi, rax
+0x1809f55aa movaps   xmm6, xmmword ptr [rsp + 0x20]
+0x1809f55af cmp      dword ptr [rcx + 0xe4], 0
+0x1809f55b6 jne      0x1809f55bd
+0x1809f55b8 call     0x180361bf0
+0x1809f55bd xor      r8d, r8d
+0x1809f55c0 mov      rdx, rdi
+0x1809f55c3 mov      rcx, rbx
+0x1809f55c6 call     0x180852bc0 ; Albion.Common.dll:c4.n | Albion.Common.dll:Albion.Common.Time.GameTimeStamp.b
+0x1809f55cb xor      r8d, r8d
+0x1809f55ce mov      rdx, rax
+0x1809f55d1 mov      rcx, rsi
+0x1809f55d4 call     0x1809c9920 ; Albion.PhotonClient.dll:cuz.f5
+0x1809f55d9 jmp      0x1809f54fe
+0x1809f55de call     0x180361b60
+0x1809f55e3 int3     

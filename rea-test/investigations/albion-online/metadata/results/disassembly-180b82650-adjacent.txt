@@ -1,0 +1,9 @@
+0x180b82650 sub      rsp, 0x28
+0x180b82654 mov      rcx, qword ptr [rcx + 0x70]
+0x180b82658 test     rcx, rcx
+0x180b8265b je       0x180b82669
+0x180b8265d xor      r9d, r9d
+0x180b82660 add      rsp, 0x28
+0x180b82664 jmp      0x180b7b430 ; Albion.PhotonClient.dll:cn6.c
+0x180b82669 call     0x180361b60
+0x180b8266e int3     

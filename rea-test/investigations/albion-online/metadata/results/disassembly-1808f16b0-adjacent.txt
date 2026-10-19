@@ -1,0 +1,34 @@
+0x1808f16b0 mov      qword ptr [rsp + 8], rbx
+0x1808f16b5 mov      qword ptr [rsp + 0x10], rsi
+0x1808f16ba push     rdi
+0x1808f16bb sub      rsp, 0x30
+0x1808f16bf movaps   xmmword ptr [rsp + 0x20], xmm6
+0x1808f16c4 xor      edx, edx
+0x1808f16c6 movaps   xmm6, xmm1
+0x1808f16c9 mov      byte ptr [rcx + 0x68], 1
+0x1808f16cd mov      edi, r9d
+0x1808f16d0 mov      ebx, r8d
+0x1808f16d3 mov      rsi, rcx
+0x1808f16d6 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x1808f16db mov      rax, qword ptr [rsp + 0x70]
+0x1808f16e0 movss    xmm0, dword ptr [rsp + 0x78]
+0x1808f16e6 mov      qword ptr [rsi + 0x20], rax
+0x1808f16ea mov      rax, qword ptr [rsp + 0x68]
+0x1808f16ef mov      qword ptr [rsi + 0x40], rax
+0x1808f16f3 mov      eax, dword ptr [rsp + 0x60]
+0x1808f16f7 movss    dword ptr [rsi + 0x10], xmm6
+0x1808f16fc movaps   xmm6, xmmword ptr [rsp + 0x20]
+0x1808f1701 mov      dword ptr [rsi + 0x48], ebx
+0x1808f1704 mov      rbx, qword ptr [rsp + 0x40]
+0x1808f1709 mov      dword ptr [rsi + 0x34], eax
+0x1808f170c movss    dword ptr [rsi + 0x18], xmm0
+0x1808f1711 mov      dword ptr [rsi + 0x30], edi
+0x1808f1714 mov      byte ptr [rsi + 0x4c], 0
+0x1808f1718 mov      word ptr [rsi + 0x54], 0
+0x1808f171e mov      dword ptr [rsi + 0x58], 0
+0x1808f1725 mov      byte ptr [rsi + 0x5c], 0
+0x1808f1729 mov      byte ptr [rsi + 0x68], 1
+0x1808f172d mov      rsi, qword ptr [rsp + 0x48]
+0x1808f1732 add      rsp, 0x30
+0x1808f1736 pop      rdi
+0x1808f1737 ret      

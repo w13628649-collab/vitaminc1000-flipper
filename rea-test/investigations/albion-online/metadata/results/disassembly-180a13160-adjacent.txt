@@ -1,0 +1,23 @@
+0x180a13160 mov      qword ptr [rsp + 8], rbx
+0x180a13165 mov      qword ptr [rsp + 0x10], rsi
+0x180a1316a push     rdi
+0x180a1316b sub      rsp, 0x20
+0x180a1316f mov      rsi, rdx
+0x180a13172 movzx    edi, r8w
+0x180a13176 mov      rdx, qword ptr [rcx]
+0x180a13179 mov      rbx, rcx
+0x180a1317c mov      rax, qword ptr [rdx + 0x488]
+0x180a13183 mov      rdx, qword ptr [rdx + 0x490]
+0x180a1318a call     rax
+0x180a1318c test     al, al
+0x180a1318e jne      0x180a131a2
+0x180a13190 xor      r9d, r9d
+0x180a13193 movzx    r8d, di
+0x180a13197 mov      rdx, rsi
+0x180a1319a mov      rcx, rbx
+0x180a1319d call     0x180bbf240 ; Albion.PhotonClient.dll:cpo.aei
+0x180a131a2 mov      rbx, qword ptr [rsp + 0x30]
+0x180a131a7 mov      rsi, qword ptr [rsp + 0x38]
+0x180a131ac add      rsp, 0x20
+0x180a131b0 pop      rdi
+0x180a131b1 ret      

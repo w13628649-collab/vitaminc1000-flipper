@@ -1,0 +1,203 @@
+0x182003eb0 push     rbx
+0x182003eb2 push     rsi
+0x182003eb3 push     rdi
+0x182003eb4 push     r12
+0x182003eb6 push     r14
+0x182003eb8 push     r15
+0x182003eba sub      rsp, 0x68
+0x182003ebe mov      rdi, rdx
+0x182003ec1 mov      r15, rcx
+0x182003ec4 cmp      qword ptr [rdx + 0x38], 0
+0x182003ec9 jne      0x182003f46
+0x182003ecb lea      rcx, [rip + 0x2d98996]
+0x182003ed2 call     0x180361910
+0x182003ed7 lea      rcx, [rip + 0x2e334da]
+0x182003ede call     0x180361910
+0x182003ee3 lea      rcx, [rip + 0x2e3b506]
+0x182003eea call     0x180361910
+0x182003eef lea      rcx, [rip + 0x2e3b652]
+0x182003ef6 call     0x180361910
+0x182003efb lea      rcx, [rip + 0x2e3b7a6]
+0x182003f02 call     0x180361910
+0x182003f07 lea      rcx, [rip + 0x2dfeab2]
+0x182003f0e call     0x180361910
+0x182003f13 lea      rcx, [rip + 0x2db11b6]
+0x182003f1a call     0x180361910
+0x182003f1f lea      rcx, [rip + 0x2e05192]
+0x182003f26 call     0x180361910
+0x182003f2b lea      rcx, [rip + 0x2da731e]
+0x182003f32 call     0x180361910
+0x182003f37 cmp      qword ptr [rdi + 0x38], 0
+0x182003f3c jne      0x182003f46
+0x182003f3e mov      rcx, rdi
+0x182003f41 call     0x18035f180
+0x182003f46 xor      r12d, r12d
+0x182003f49 mov      qword ptr [rsp + 0xa8], r12
+0x182003f51 mov      qword ptr [rsp + 0xb0], r12
+0x182003f59 mov      qword ptr [rsp + 0xb8], r12
+0x182003f61 mov      qword ptr [rsp + 0xa0], r12
+0x182003f69 test     r15, r15
+0x182003f6c je       0x1820041f1
+0x182003f72 mov      rcx, qword ptr [r15 + 0x18]
+0x182003f76 test     rcx, rcx
+0x182003f79 je       0x1820041f1
+0x182003f7f xor      r9d, r9d
+0x182003f82 lea      r8, [rsp + 0xa8]
+0x182003f8a mov      dl, 0xfc
+0x182003f8c call     0x1832ad8d0 ; Photon3Unity3D.dll:g7g.e
+0x182003f91 movzx    ebx, r12w
+0x182003f95 mov      rcx, qword ptr [rsp + 0xa8]
+0x182003f9d test     rcx, rcx
+0x182003fa0 je       0x182003fd1
+0x182003fa2 mov      eax, r12d
+0x182003fa5 mov      r8, qword ptr [rip + 0x3091fcc]
+0x182003fac cmp      qword ptr [rcx], r8
+0x182003faf cmove    rax, rcx
+0x182003fb3 test     rax, rax
+0x182003fb6 je       0x182003fd1
+0x182003fb8 mov      rdx, qword ptr [rcx]
+0x182003fbb mov      rax, qword ptr [r8 + 0x40]
+0x182003fbf cmp      qword ptr [rdx + 0x40], rax
+0x182003fc3 jne      0x1820041f7
+0x182003fc9 call     0x180360e20
+0x182003fce movzx    ebx, word ptr [rax]
+0x182003fd1 mov      rcx, qword ptr [rip + 0x2e050e0]
+0x182003fd8 call     0x180361710
+0x182003fdd mov      rcx, qword ptr [rax + 0x18]
+0x182003fe1 test     rcx, rcx
+0x182003fe4 je       0x1820041f1
+0x182003fea mov      r9, qword ptr [rip + 0x2d98877]
+0x182003ff1 lea      r8, [rsp + 0xb0]
+0x182003ff9 movzx    edx, bx
+0x182003ffc call     0x182ae01f0
+0x182004001 mov      rsi, qword ptr [rsp + 0xb0]
+0x182004009 test     rsi, rsi
+0x18200400c je       0x1820041e1
+0x182004012 mov      rbx, qword ptr [rdi + 0x38]
+0x182004016 mov      rbx, qword ptr [rbx + 8]
+0x18200401a mov      rcx, qword ptr [rip + 0x3091fff]
+0x182004021 cmp      dword ptr [rcx + 0xe4], r12d
+0x182004028 jne      0x18200402f
+0x18200402a call     0x180361bf0
+0x18200402f xor      edx, edx
+0x182004031 mov      rcx, rbx
+0x182004034 call     0x183196310 ; mscorlib.dll:System.Type.GetTypeFromHandle
+0x182004039 test     rsi, rsi
+0x18200403c je       0x1820041f1
+0x182004042 mov      r8, qword ptr [rip + 0x2dfe977]
+0x182004049 mov      rdx, rax
+0x18200404c mov      rcx, rsi
+0x18200404f call     0x182253e30
+0x182004054 test     al, al
+0x182004056 je       0x1820041e1
+0x18200405c mov      rcx, qword ptr [rdi + 0x38]
+0x182004060 mov      rcx, qword ptr [rcx + 0x10]
+0x182004064 call     0x181d6eb40
+0x182004069 mov      r14, rax
+0x18200406c mov      qword ptr [rsp + 0x20], rax
+0x182004071 cmp      qword ptr [r15 + 0x18], r12
+0x182004075 je       0x1820041d0
+0x18200407b xor      sil, sil
+0x18200407e mov      rax, qword ptr [rip + 0x2da71cb]
+0x182004085 cmp      dword ptr [rax + 0xe4], r12d
+0x18200408c jne      0x18200409d
+0x18200408e mov      rcx, rax
+0x182004091 call     0x180361bf0
+0x182004096 mov      rax, qword ptr [rip + 0x2da71b3]
+0x18200409d mov      rax, qword ptr [rax + 0xb8]
+0x1820040a4 mov      rbx, qword ptr [rax]
+0x1820040a7 test     r14, r14
+0x1820040aa je       0x1820041f1
+0x1820040b0 xor      edx, edx
+0x1820040b2 mov      rcx, r14
+0x1820040b5 call     0x1831cb6f0 ; mscorlib.dll:System.Object.GetType
+0x1820040ba test     rbx, rbx
+0x1820040bd je       0x1820041f1
+0x1820040c3 mov      r9, qword ptr [rip + 0x2e332ee]
+0x1820040ca lea      r8, [rsp + 0xb8]
+0x1820040d2 mov      rdx, rax
+0x1820040d5 mov      rcx, rbx
+0x1820040d8 call     0x182b97bf0
+0x1820040dd mov      rdx, qword ptr [rsp + 0xb8]
+0x1820040e5 test     rdx, rdx
+0x1820040e8 je       0x1820041e1
+0x1820040ee mov      r8, qword ptr [rip + 0x2db0fdb]
+0x1820040f5 lea      rcx, [rsp + 0x30]
+0x1820040fa call     0x18218a540
+0x1820040ff movups   xmm0, xmmword ptr [rsp + 0x30]
+0x182004104 movups   xmmword ptr [rsp + 0x48], xmm0
+0x182004109 movsd    xmm1, qword ptr [rsp + 0x40]
+0x18200410f movsd    qword ptr [rsp + 0x58], xmm1
+0x182004115 mov      qword ptr [rsp + 0x30], r12
+0x18200411a lea      rbx, [rsp + 0x48]
+0x18200411f mov      qword ptr [rsp + 0x38], rbx
+0x182004124 mov      rdx, qword ptr [rip + 0x2e3b41d]
+0x18200412b lea      rcx, [rsp + 0x48]
+0x182004130 call     0x182c89df0
+0x182004135 test     al, al
+0x182004137 je       0x18200419f
+0x182004139 mov      rdi, qword ptr [rsp + 0x58]
+0x18200413e mov      qword ptr [rsp + 0xa0], r12
+0x182004146 mov      rcx, qword ptr [r15 + 0x18]
+0x18200414a movzx    edx, sil
+0x18200414e inc      sil
+0x182004151 test     rcx, rcx
+0x182004154 je       0x18200420b
+0x18200415a xor      r9d, r9d
+0x18200415d lea      r8, [rsp + 0xa0]
+0x182004165 call     0x1832ad8d0 ; Photon3Unity3D.dll:g7g.e
+0x18200416a test     al, al
+0x18200416c je       0x182004124
+0x18200416e test     rdi, rdi
+0x182004171 je       0x182004206
+0x182004177 mov      rcx, qword ptr [rdi + 0x18]
+0x18200417b test     rcx, rcx
+0x18200417e je       0x182004200
+0x182004184 mov      rax, qword ptr [rcx + 0x18]
+0x182004188 mov      r9, qword ptr [rcx + 0x28]
+0x18200418c mov      r8, qword ptr [rsp + 0xa0]
+0x182004194 mov      rdx, r14
+0x182004197 mov      rcx, qword ptr [rcx + 0x40]
+0x18200419b call     rax
+0x18200419d jmp      0x182004124
+0x18200419f mov      rdx, qword ptr [rip + 0x2e3b24a]
+0x1820041a6 mov      rcx, rbx
+0x1820041a9 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x1820041ae jmp      0x1820041d0
+0x1820041b0 mov      rdx, qword ptr [rip + 0x2e3b239]
+0x1820041b7 mov      rcx, qword ptr [rsp + 0x38]
+0x1820041bc call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x1820041c1 mov      rcx, qword ptr [rsp + 0x30]
+0x1820041c6 test     rcx, rcx
+0x1820041c9 jne      0x182004211
+0x1820041cb mov      r14, qword ptr [rsp + 0x20]
+0x1820041d0 mov      rax, r14
+0x1820041d3 add      rsp, 0x68
+0x1820041d7 pop      r15
+0x1820041d9 pop      r14
+0x1820041db pop      r12
+0x1820041dd pop      rdi
+0x1820041de pop      rsi
+0x1820041df pop      rbx
+0x1820041e0 ret      
+0x1820041e1 xor      eax, eax
+0x1820041e3 add      rsp, 0x68
+0x1820041e7 pop      r15
+0x1820041e9 pop      r14
+0x1820041eb pop      r12
+0x1820041ed pop      rdi
+0x1820041ee pop      rsi
+0x1820041ef pop      rbx
+0x1820041f0 ret      
+0x1820041f1 call     0x180361b60
+0x1820041f6 int3     
+0x1820041f7 mov      rdx, r8
+0x1820041fa call     0x180360c80
+0x1820041ff nop      
+0x182004200 call     0x180361b60
+0x182004205 nop      
+0x182004206 call     0x180361b60
+0x18200420b call     0x180361b60
+0x182004210 nop      
+0x182004211 call     0x18035da00
+0x182004216 int3     

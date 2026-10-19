@@ -1,0 +1,130 @@
+0x180bd18f0 mov      qword ptr [rsp + 0x10], rbx
+0x180bd18f5 mov      qword ptr [rsp + 0x18], rsi
+0x180bd18fa mov      qword ptr [rsp + 0x20], rdi
+0x180bd18ff mov      qword ptr [rsp + 8], rcx
+0x180bd1904 push     r12
+0x180bd1906 push     r14
+0x180bd1908 push     r15
+0x180bd190a sub      rsp, 0x60
+0x180bd190e mov      r15, rcx
+0x180bd1911 cmp      byte ptr [rip + 0x44aa64f], 0
+0x180bd1918 jne      0x180bd1969
+0x180bd191a lea      rcx, [rip + 0x42678ef]
+0x180bd1921 call     0x180361910
+0x180bd1926 lea      rcx, [rip + 0x4267a3b]
+0x180bd192d call     0x180361910
+0x180bd1932 lea      rcx, [rip + 0x4267b8f]
+0x180bd1939 call     0x180361910
+0x180bd193e lea      rcx, [rip + 0x41d1ec3]
+0x180bd1945 call     0x180361910
+0x180bd194a lea      rcx, [rip + 0x41d2167]
+0x180bd1951 call     0x180361910
+0x180bd1956 lea      rcx, [rip + 0x424c89b]
+0x180bd195d call     0x180361910
+0x180bd1962 mov      byte ptr [rip + 0x44aa5fe], 1
+0x180bd1969 mov      rdx, qword ptr [r15 + 0x50]
+0x180bd196d test     rdx, rdx
+0x180bd1970 je       0x180bd1af0
+0x180bd1976 mov      r8, qword ptr [rip + 0x41d1e8b]
+0x180bd197d lea      rcx, [rsp + 0x28]
+0x180bd1982 call     0x18294df60
+0x180bd1987 movups   xmm0, xmmword ptr [rsp + 0x28]
+0x180bd198c movups   xmmword ptr [rsp + 0x40], xmm0
+0x180bd1991 movsd    xmm1, qword ptr [rsp + 0x38]
+0x180bd1997 movsd    qword ptr [rsp + 0x50], xmm1
+0x180bd199d xor      r12d, r12d
+0x180bd19a0 mov      qword ptr [rsp + 0x28], r12
+0x180bd19a5 lea      rbx, [rsp + 0x40]
+0x180bd19aa mov      qword ptr [rsp + 0x30], rbx
+0x180bd19af nop      
+0x180bd19b0 mov      rdx, qword ptr [rip + 0x42679b1]
+0x180bd19b7 lea      rcx, [rsp + 0x40]
+0x180bd19bc call     0x182c88610
+0x180bd19c1 test     al, al
+0x180bd19c3 je       0x180bd1a8c
+0x180bd19c9 mov      rdi, qword ptr [rsp + 0x50]
+0x180bd19ce mov      rsi, qword ptr [rip + 0x424c823]
+0x180bd19d5 test     rdi, rdi
+0x180bd19d8 je       0x180bd1af6
+0x180bd19de mov      rdx, rsi
+0x180bd19e1 mov      rcx, rdi
+0x180bd19e4 call     0x180360c60
+0x180bd19e9 mov      rcx, rdi
+0x180bd19ec test     rax, rax
+0x180bd19ef je       0x180bd1b07
+0x180bd19f5 mov      r14, qword ptr [rip + 0x424c7fc]
+0x180bd19fc mov      rdx, r14
+0x180bd19ff call     0x180360c60
+0x180bd1a04 mov      rsi, rax
+0x180bd1a07 test     rax, rax
+0x180bd1a0a je       0x180bd1afc
+0x180bd1a10 mov      r9, qword ptr [rip + 0x424c7e1]
+0x180bd1a17 mov      r10, qword ptr [rax]
+0x180bd1a1a movzx    ecx, r12w
+0x180bd1a1e movzx    edx, word ptr [r10 + 0x12e]
+0x180bd1a26 cmp      r12w, dx
+0x180bd1a2a jae      0x180bd1a47
+0x180bd1a2c mov      r8, qword ptr [r10 + 0xb0]
+0x180bd1a33 movzx    eax, cx
+0x180bd1a36 add      rax, rax
+0x180bd1a39 cmp      qword ptr [r8 + rax*8], r9
+0x180bd1a3d je       0x180bd1a6c
+0x180bd1a3f inc      cx
+0x180bd1a42 cmp      cx, dx
+0x180bd1a45 jb       0x180bd1a33
+0x180bd1a47 mov      r8d, 1
+0x180bd1a4d mov      rdx, r9
+0x180bd1a50 mov      rcx, rsi
+0x180bd1a53 call     0x18035ea20
+0x180bd1a58 mov      rdx, rax
+0x180bd1a5b mov      rax, qword ptr [rdx]
+0x180bd1a5e mov      rdx, qword ptr [rdx + 8]
+0x180bd1a62 mov      rcx, rsi
+0x180bd1a65 call     rax
+0x180bd1a67 jmp      0x180bd19b0
+0x180bd1a6c movzx    ecx, cx
+0x180bd1a6f add      rcx, rcx
+0x180bd1a72 mov      ecx, dword ptr [r8 + rcx*8 + 8]
+0x180bd1a77 inc      ecx
+0x180bd1a79 movsxd   rdx, ecx
+0x180bd1a7c shl      rdx, 4
+0x180bd1a80 add      rdx, 0x138
+0x180bd1a87 add      rdx, r10
+0x180bd1a8a jmp      0x180bd1a5b
+0x180bd1a8c mov      rdx, qword ptr [rip + 0x426777d]
+0x180bd1a93 mov      rcx, rbx
+0x180bd1a96 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180bd1a9b jmp      0x180bd1ac0
+0x180bd1a9d mov      rdx, qword ptr [rip + 0x426776c]
+0x180bd1aa4 mov      rcx, qword ptr [rsp + 0x30]
+0x180bd1aa9 call     0x1804873c0 ; Assembly-CSharp.dll:EditorCluster.OnPreSnap | Assembly-CSharp.dll:EditorCluster.OnPostSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPreSnap | Assembly-CSharp.dll:EditorTemplateInstance.OnPostSnap | Assembly-CSharp.dll:UIWidget.set_border | Assembly-CSharp.dll:UIWidget.OnFill | Assembly-CSharp.dll:a.a | Assembly-CSharp.dll:MistFX2.Start | Assembly-CSharp.dll:UIButtonColor.OnUpdateState | Assembly-CSharp.dll:b.a | Assembly-CSharp.dll:UIDragDropItem.OnDragDropEnd | Assembly-CSharp.dll:UIGrid.Sort | Assembly-CSharp.dll:d.a | Assembly-CSharp.dll:UIProgressBar.Upgrade | Assembly-CSharp.dll:UIP
+0x180bd1aae mov      rcx, qword ptr [rsp + 0x28]
+0x180bd1ab3 test     rcx, rcx
+0x180bd1ab6 jne      0x180bd1b10
+0x180bd1ab8 mov      r15, qword ptr [rsp + 0x80]
+0x180bd1ac0 mov      rcx, qword ptr [r15 + 0x50]
+0x180bd1ac4 test     rcx, rcx
+0x180bd1ac7 je       0x180bd1af0
+0x180bd1ac9 mov      rdx, qword ptr [rip + 0x41d1fe8]
+0x180bd1ad0 call     0x18294e770
+0x180bd1ad5 lea      r11, [rsp + 0x60]
+0x180bd1ada mov      rbx, qword ptr [r11 + 0x28]
+0x180bd1ade mov      rsi, qword ptr [r11 + 0x30]
+0x180bd1ae2 mov      rdi, qword ptr [r11 + 0x38]
+0x180bd1ae6 mov      rsp, r11
+0x180bd1ae9 pop      r15
+0x180bd1aeb pop      r14
+0x180bd1aed pop      r12
+0x180bd1aef ret      
+0x180bd1af0 call     0x180361b60
+0x180bd1af5 nop      
+0x180bd1af6 call     0x180361b60
+0x180bd1afb nop      
+0x180bd1afc mov      rdx, r14
+0x180bd1aff mov      rcx, rdi
+0x180bd1b02 call     0x180360c80
+0x180bd1b07 mov      rdx, rsi
+0x180bd1b0a call     0x180360c80
+0x180bd1b0f nop      
+0x180bd1b10 call     0x18035da00
+0x180bd1b15 int3     
