@@ -135,6 +135,7 @@ func main() {
 	go flipper.RunRefineWarm(ctx)
 
 	apiSrv := api.New(st, ing, h, *fresh, flipper)
+	apiSrv.Econ = cfg.Economics // 个人账本入库时按它算税和创建费
 	apiSrv.ReleaseDir = *relDir
 	apiSrv.ReleaseVersion = *relVer
 	apiSrv.MinClientVersion = *minVer

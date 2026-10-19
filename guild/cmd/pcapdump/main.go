@@ -96,18 +96,23 @@ func main() {
 	// 业务层照常跑一遍,看解出来多少挂单、建筑
 	p := protocol.New()
 	p.SetClock(func() time.Time { return pktTime })
-	var orders, stations int
+	var orders, stations, trades int
 	p.OnOrders = func(o []model.MarketOrder) { orders += len(o) }
 	p.OnStations = func(o []model.StationObs) { stations += len(o) }
+	p.OnTrade = func(tr model.MyTrade) {
+		trades++
+		fmt.Fprintf(os.Stderr, "成交 %s %s %s ×%d @%d = %d (%s)\n", tr.ObservedAt.Format(time.DateTime),
+			tr.Kind, tr.ItemID, tr.Amount, tr.UnitPrice, tr.Total, tr.Location)
+	}
 
 	h := capture.Handler{
 		OnRequest: func(c byte, params map[byte]any) {
 			note(model.SampleOpRequest, codeOf(params, 253), params)
 			p.HandleRequest(c, params)
 		},
-		OnResponse: func(c byte, _ int16, _ string, params map[byte]any) {
+		OnResponse: func(c byte, rc int16, _ string, params map[byte]any) {
 			note(model.SampleOpResponse, codeOf(params, 253), params)
-			p.HandleResponse(c, params)
+			p.HandleResponseCode(c, rc, params)
 		},
 		OnEvent: func(c byte, params map[byte]any) {
 			// 没有 252 时真码就是派发字节(Move 就是这样,见 protocol.HandleEvent)
@@ -160,7 +165,8 @@ func main() {
 			k.kind, code, names.name(k.kind, k.code))
 	}
 	_ = tw.Flush()
-	fmt.Fprintf(os.Stderr, "\n共 %d 条消息、%d 种;解出挂单 %d 条、建筑 %d 个", total, len(counts), orders, stations)
+	fmt.Fprintf(os.Stderr, "\n共 %d 条消息、%d 种;解出挂单 %d 条、建筑 %d 个、自己的成交 %d 笔",
+		total, len(counts), orders, stations, trades)
 	if dumpAll || len(dumpSet) > 0 {
 		fmt.Fprintf(os.Stderr, ";逐条打印 %d 条", dumped)
 	}

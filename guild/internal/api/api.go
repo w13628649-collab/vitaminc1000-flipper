@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"albion-guild/internal/conf"
 	"albion-guild/internal/flip"
 	"albion-guild/internal/hub"
 	"albion-guild/internal/ingest"
@@ -51,6 +52,10 @@ type Server struct {
 	// Capture 存抓包里挂单以外的东西(工作站费率),见 capture.go。New 里设成 Store;
 	// 为 nil 时上传里的这部分丢掉、查询返回 503
 	Capture captureStore
+	// Ledger 存个人账本(成交、银币、专注),见 ledger.go。New 里设成 Store
+	Ledger ledgerStore
+	// Econ 是税率,个人账本入库时算税和创建费用。零值时用 conf.Default()
+	Econ conf.Economics
 
 	releases releaseCache
 	upgrader websocket.Upgrader
@@ -73,6 +78,7 @@ func New(st *store.Store, ing *ingest.Ingestor, h *hub.Hub,
 	}
 	if st != nil { // 同上
 		s.Capture = st
+		s.Ledger = st
 	}
 	return s
 }
@@ -89,6 +95,7 @@ func (s *Server) Routes() *http.ServeMux {
 	s.registerFlip(mux)
 	s.registerRelease(mux)
 	s.registerCapture(mux)
+	s.registerLedger(mux)
 	// 界面主要由客户端本地伺服(资源编在客户端里)。服务端这份是给
 	// 开发和排查用的:浏览器直接打开就能看,不用起客户端
 	mux.Handle("GET /", http.FileServerFS(webui.FS()))
@@ -114,8 +121,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		changed, touched = s.Ingestor.Submit(batch)
 	}
 	stations, samples := s.saveCaptureExtras(r.Context(), batch)
+	trades := s.saveLedger(r.Context(), batch)
 	writeJSON(w, map[string]int{"changed": changed, "touched": touched,
-		"stations": stations, "samples": samples})
+		"stations": stations, "samples": samples, "trades": trades})
 }
 
 // handleDiagUpload 收客户端报上来的警告和错误。

@@ -79,6 +79,10 @@ type UploadBatch struct {
 	Stations []StationObs `json:"stations,omitempty"`
 	// Samples 是原始样本(还没解过布局的消息原样),兼容性同 Stations
 	Samples []CaptureSample `json:"samples,omitempty"`
+	// 个人账本:自己的成交、银币余额、专注余额。兼容性同 Stations
+	Trades []MyTrade   `json:"trades,omitempty"`
+	Wallet []WalletObs `json:"wallet,omitempty"`
+	Focus  []FocusObs  `json:"focus,omitempty"`
 }
 
 // 原始样本的消息方向,和 protocol.Kind.String() 一致
@@ -221,4 +225,55 @@ type DiagBatch struct {
 	Version   string      `json:"version"`
 	OS        string      `json:"os"`
 	Entries   []DiagEntry `json:"entries"`
+}
+
+// ── 个人账本 ──
+
+// MyTrade.Kind 的取值。
+const (
+	TradeInstantBuy    = "instant_buy"     // 吃了别人的卖单(秒买)
+	TradeInstantSell   = "instant_sell"    // 卖给了别人的买单(秒卖,含卖给黑市)
+	TradeOrderSold     = "order_sold"      // 自己挂的卖单卖完了(市场邮件)
+	TradeOrderBought   = "order_bought"    // 自己挂的买单买齐了(市场邮件)
+	TradeSellExpired   = "sell_expired"    // 自己挂的卖单到期,可能卖了一部分(市场邮件)
+	TradeBuyExpired    = "buy_expired"     // 自己挂的买单到期,可能买了一部分(市场邮件)
+	TradeBMSellExpired = "bm_sell_expired" // 挂给黑市的卖单到期(市场邮件)
+)
+
+// MyTrade 是自己的一笔成交,个人账本的一行。
+type MyTrade struct {
+	// Key 是自然键,服务端按它去重:即时买卖是 instant:<订单号>:<毫秒>,邮件是 mail:<邮件 id>。
+	// 同一封邮件每次打开都会再发一遍,不去重会记成好几笔
+	Key       string `json:"key"`
+	Kind      string `json:"kind"`
+	Character string `json:"character"`
+	ItemID    string `json:"item_id"`
+	// Quality 0 表示不知道:市场邮件不带品质
+	Quality int16 `json:"quality"`
+	// Amount 是实际成交的件数;OrderAmount 是挂单的总件数,只有到期类邮件有。
+	// 到期类 Amount 可以是 0——挂了没人买,白付了创建费,这正是要统计的
+	Amount      int32 `json:"amount"`
+	OrderAmount int32 `json:"order_amount,omitempty"`
+	// UnitPrice / Total 是税前银币。税由服务端入库时按当时的税率算好存下来
+	UnitPrice int64  `json:"unit_price"`
+	Total     int64  `json:"total"`
+	Location  string `json:"location"` // 包里的原始地点 id
+	OrderID   int64  `json:"order_id,omitempty"`
+	MailID    int64  `json:"mail_id,omitempty"`
+	// ObservedAt:即时买卖是服务端回成功的时刻,邮件是邮件的收到时间(也就是成交时刻)
+	ObservedAt time.Time `json:"observed_at"`
+}
+
+// WalletObs 是一次银币余额观测(事件 UpdateMoney)。
+type WalletObs struct {
+	Character  string    `json:"character"`
+	Silver     int64     `json:"silver"`
+	ObservedAt time.Time `json:"observed_at"`
+}
+
+// FocusObs 是一次专注余额观测(事件 CraftingFocusUpdate)。
+type FocusObs struct {
+	Character  string    `json:"character"`
+	Focus      float64   `json:"focus"`
+	ObservedAt time.Time `json:"observed_at"`
 }

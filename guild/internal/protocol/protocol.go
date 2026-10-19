@@ -39,6 +39,12 @@ type OpCodes struct {
 	GetGameServerByCluster int // 换游戏服务器(老的切区信号)
 	ChangeCluster          int // 切区:响应 key0 是目的地
 	GetClusterMapInfo      int // 区域地图(N 键):全区建筑和制造站费率
+
+	// 个人账本(ledger.go)
+	AuctionBuyOffer                int // 即时买:吃别人的卖单
+	AuctionSellSpecificItemRequest int // 即时卖:卖给别人的买单
+	GetMailInfos                   int // 邮件列表
+	ReadMail                       int // 读一封邮件
 }
 
 // DefaultOpCodes 对应 albiondata-client 12ff34e(2026-09-16)那一版的枚举,
@@ -51,6 +57,11 @@ func DefaultOpCodes() OpCodes {
 		GetGameServerByCluster: 17,
 		ChangeCluster:          41,
 		GetClusterMapInfo:      197,
+
+		AuctionBuyOffer:                83,
+		AuctionSellSpecificItemRequest: 315,
+		GetMailInfos:                   174,
+		ReadMail:                       176,
 	}
 }
 
@@ -81,7 +92,8 @@ type rawOrder struct {
 
 // Parser 有状态:城市挂单的 LocationId 在包里是空的,得靠当前所在地补。
 type Parser struct {
-	Codes OpCodes
+	Codes  OpCodes
+	Events EventCodes
 	// Version 是客户端版本号,写进原始样本:字段布局随版本变,样本得知道自己是哪一版
 	Version string
 
@@ -101,6 +113,8 @@ type Parser struct {
 	zoneDropped int64
 	// sampled 是这次运行里每个 (方向, 码) 已经记了几条样本(sample.go)
 	sampled map[ruleKey]int
+	// ledger 是个人账本要的状态:挂单缓存、待确认的即时买卖、邮件类型(ledger.go)
+	ledger ledgerState
 
 	// clock 为 nil 时用 time.Now。留给测试钉时间
 	clock func() time.Time
@@ -122,6 +136,11 @@ type Parser struct {
 	// OnSample 记下一条原始样本时回调。所有认得出码的消息都记,
 	// 每个 (方向, 码) 每次运行最多 MaxSamplesPerCode 条(sample.go)
 	OnSample func(s model.CaptureSample)
+
+	// 个人账本(ledger.go):自己的一笔成交、银币余额变化、专注余额变化
+	OnTrade  func(t model.MyTrade)
+	OnWallet func(w model.WalletObs)
+	OnFocus  func(f model.FocusObs)
 }
 
 func (p *Parser) now() time.Time {
@@ -140,7 +159,7 @@ func (p *Parser) SetClock(f func() time.Time) {
 }
 
 func New() *Parser {
-	return &Parser{Codes: DefaultOpCodes()}
+	return &Parser{Codes: DefaultOpCodes(), Events: DefaultEventCodes()}
 }
 
 func (p *Parser) Location() string {
@@ -168,7 +187,13 @@ func (p *Parser) Character() (id, name string) {
 //
 // 认出码之后先记全键样本(sample.go),再过业务层白名单(allowlist.go):
 // 不在表里的到此为止,在表里的只把表内的键交给下面的 handle*。
-func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
+func (p *Parser) HandleResponse(photonCode byte, params map[byte]any) {
+	p.HandleResponseCode(photonCode, 0, params)
+}
+
+// HandleResponseCode 同 HandleResponse,多带 Photon 响应的 returnCode:
+// 即时买卖要靠它判服务端是不是真的成交了(0 = 成功)
+func (p *Parser) HandleResponseCode(_ byte, returnCode int16, params map[byte]any) {
 	code, hasCode := intParam(params, paramOperationCode)
 	if !hasCode {
 		// 没有参数表。params[0] 是字符串数组就一定是挂单,没有别的响应长这样。
@@ -183,7 +208,7 @@ func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 		code = p.Codes.AuctionGetOffers
 	}
 	p.recordSample(KindResponse, code, params)
-	rule, ok := p.allow.lookup(p.Codes, KindResponse, code)
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindResponse, code)
 	if !ok {
 		return
 	}
@@ -205,6 +230,12 @@ func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 		}
 	case p.Codes.GetClusterMapInfo:
 		p.handleClusterMap(params)
+	case p.Codes.AuctionBuyOffer, p.Codes.AuctionSellSpecificItemRequest:
+		p.handleInstantResponse(code, returnCode)
+	case p.Codes.GetMailInfos:
+		p.handleMailInfos(params)
+	case p.Codes.ReadMail:
+		p.handleReadMail(params)
 	}
 }
 
@@ -216,7 +247,7 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 		return
 	}
 	p.recordSample(KindRequest, code, params)
-	rule, ok := p.allow.lookup(p.Codes, KindRequest, code)
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindRequest, code)
 	if !ok {
 		return
 	}
@@ -233,6 +264,10 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 	case p.Codes.GetClusterMapInfo:
 		zone, _ := params[0].(string)
 		p.noteZoneRequest(zone, p.now())
+	case p.Codes.AuctionBuyOffer:
+		p.handleInstantRequest(code, model.TradeInstantBuy, 1, 2, params)
+	case p.Codes.AuctionSellSpecificItemRequest:
+		p.handleInstantRequest(code, model.TradeInstantSell, 4, 1, params)
 	}
 }
 
@@ -250,6 +285,17 @@ func (p *Parser) HandleEvent(photonCode byte, params map[byte]any) {
 		code = int(photonCode)
 	}
 	p.recordSample(KindEvent, code, params)
+	rule, ok := p.allow.lookup(p.Codes, p.Events, KindEvent, code)
+	if !ok {
+		return
+	}
+	params = rule.filter(params)
+	switch code {
+	case p.Events.UpdateMoney:
+		p.handleMoney(params)
+	case p.Events.CraftingFocusUpdate:
+		p.handleFocus(params)
+	}
 }
 
 func (p *Parser) handleOrders(params map[byte]any) {
@@ -298,6 +344,9 @@ func (p *Parser) handleOrders(params map[byte]any) {
 			ObservedAt: now,
 		})
 	}
+	if len(orders) > 0 {
+		p.cacheOrders(orders) // 即时买卖靠订单号查回物品和单价(ledger.go)
+	}
 	if len(orders) > 0 && p.OnOrders != nil {
 		p.OnOrders(orders)
 	}
@@ -309,6 +358,9 @@ func (p *Parser) handleJoin(params map[byte]any) {
 	// testdata/openradar)。以前只认字符串,角色 id 从来没读到过
 	if v := guidParam(params[1]); v != "" {
 		p.characterID = v
+	}
+	if v, ok := int64Param(params[0]); ok && v > 0 {
+		p.ledger.selfObject = v
 	}
 	if v, ok := params[2].(string); ok {
 		p.characterName = v

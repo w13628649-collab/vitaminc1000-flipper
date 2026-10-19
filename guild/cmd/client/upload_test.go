@@ -209,3 +209,30 @@ func TestTrimOldest_超上限丢最旧的(t *testing.T) {
 		t.Fatalf("得到 %v", got)
 	}
 }
+
+// 个人账本(成交、银币、专注)整批带走,只有它们也要发;失败原样退回队列
+func TestFlush_个人账本(t *testing.T) {
+	var got model.UploadBatch
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+	}))
+	defer srv.Close()
+	u := &uploader{server: srv.URL, client: srv.Client()}
+	u.addTrade(model.MyTrade{Key: "mail:1", Kind: model.TradeOrderSold})
+	u.addTrade(model.MyTrade{Key: "instant:2:3", Kind: model.TradeInstantBuy})
+	u.addWallet(model.WalletObs{Silver: 100})
+	u.addFocus(model.FocusObs{Focus: 30000})
+	u.flush(context.Background())
+	if len(got.Trades) != 2 || len(got.Wallet) != 1 || len(got.Focus) != 1 ||
+		len(u.trades)+len(u.wallet)+len(u.focus) != 0 {
+		t.Fatalf("服务端收到 %+v,队列里还剩 %d/%d/%d", got, len(u.trades), len(u.wallet), len(u.focus))
+	}
+
+	down := &uploader{server: "http://127.0.0.1:1", client: &http.Client{Timeout: time.Second}}
+	down.addTrade(model.MyTrade{Key: "mail:1"})
+	down.addWallet(model.WalletObs{Silver: 1})
+	down.flush(context.Background())
+	if len(down.trades) != 1 || len(down.wallet) != 1 || down.lastErr == "" {
+		t.Fatalf("发失败应该退回队列:成交 %d、银币 %d、错误 %q", len(down.trades), len(down.wallet), down.lastErr)
+	}
+}

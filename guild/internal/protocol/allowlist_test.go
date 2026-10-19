@@ -12,8 +12,16 @@ func TestAllowlist_默认码下的完整内容(t *testing.T) {
 	want := map[ruleKey][]byte{
 		{KindResponse, 81}:  {0},
 		{KindResponse, 82}:  {0},
-		{KindResponse, 2}:   {1, 2, 8},
+		{KindResponse, 2}:   {0, 1, 2, 8},
 		{KindResponse, 41}:  {0},
+		{KindResponse, 83}:  nil,
+		{KindResponse, 315}: nil,
+		{KindResponse, 174}: {3, 7, 11, 12},
+		{KindResponse, 176}: {0, 1},
+		{KindRequest, 83}:   {1, 2},
+		{KindRequest, 315}:  {1, 4},
+		{KindEvent, 81}:     {0, 1},
+		{KindEvent, 10}:     {0, 3},
 		{KindResponse, 197}: {17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
 		{KindRequest, 17}:   {0},
 		{KindRequest, 197}:  {0},
@@ -21,7 +29,7 @@ func TestAllowlist_默认码下的完整内容(t *testing.T) {
 		{KindRequest, 82}:   nil,
 	}
 	got := map[ruleKey][]byte{}
-	for _, r := range Allowlist(DefaultOpCodes()) {
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
 		k := ruleKey{r.Kind, r.Code}
 		if _, dup := got[k]; dup {
 			t.Fatalf("(%v, %d) 在表里出现了两次", r.Kind, r.Code)
@@ -54,15 +62,15 @@ func TestHandleResponse_没有253不走Photon层码(t *testing.T) {
 // 在表里的码,表外的键在进业务层之前剥掉
 func TestRuleFilter_表外的键剥掉(t *testing.T) {
 	var join Rule
-	for _, r := range Allowlist(DefaultOpCodes()) {
+	for _, r := range Allowlist(DefaultOpCodes(), DefaultEventCodes()) {
 		if r.Kind == KindResponse && r.Code == 2 {
 			join = r
 		}
 	}
-	in := map[byte]any{paramOperationCode: int16(2), 0: "x", 1: "guid", 2: "名字", 8: "0007", 9: "坐标", 200: 1}
+	in := map[byte]any{paramOperationCode: int16(2), 0: int64(6740), 1: "guid", 2: "名字", 3: "x", 8: "0007", 9: "坐标", 200: 1}
 	out := join.filter(in)
-	if !slices.Equal(slices.Sorted(maps.Keys(out)), []byte{1, 2, 8}) {
-		t.Fatalf("Join 只该留 1/2/8,得到 %v", out)
+	if !slices.Equal(slices.Sorted(maps.Keys(out)), []byte{0, 1, 2, 8}) {
+		t.Fatalf("Join 只该留 0/1/2/8,得到 %v", out)
 	}
 	// 拷出来的是新 map:业务层改它不会回写到原包
 	out[1] = "改了"

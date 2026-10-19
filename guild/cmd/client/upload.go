@@ -30,16 +30,24 @@ const maxPendingStations = 5_000
 // (阿瓦隆之路的门就是进区时推的)。队列满了从最老的丢,所以要够装下开局那一波
 const maxPendingSamples = 5000
 
+// maxPendingLedger 是个人账本(成交、银币、专注)最多堆多少条。一个人一天几百条,
+// 这个数只是断网很久时的兜底
+const maxPendingLedger = 20_000
+
 // uploader 攒一批再发,不是每解析出一条就发一次。
 type uploader struct {
 	server string
 	token  string
 	client *http.Client
 
-	mu        sync.Mutex
-	pending   []model.MarketOrder
-	stations  []model.StationObs
-	samples   []model.CaptureSample
+	mu       sync.Mutex
+	pending  []model.MarketOrder
+	stations []model.StationObs
+	samples  []model.CaptureSample
+	// 个人账本。量很小,每批全部带上,不参与限额和拆分
+	trades    []model.MyTrade
+	wallet    []model.WalletObs
+	focus     []model.FocusObs
 	character string
 	location  string
 	seen      int64
@@ -81,6 +89,27 @@ func (u *uploader) add(orders []model.MarketOrder) {
 	u.mu.Unlock()
 }
 
+func (u *uploader) addTrade(t model.MyTrade) {
+	u.mu.Lock()
+	u.trades = append(u.trades, t)
+	u.trimLocked()
+	u.mu.Unlock()
+}
+
+func (u *uploader) addWallet(w model.WalletObs) {
+	u.mu.Lock()
+	u.wallet = append(u.wallet, w)
+	u.trimLocked()
+	u.mu.Unlock()
+}
+
+func (u *uploader) addFocus(f model.FocusObs) {
+	u.mu.Lock()
+	u.focus = append(u.focus, f)
+	u.trimLocked()
+	u.mu.Unlock()
+}
+
 func (u *uploader) addStations(obs []model.StationObs) {
 	u.mu.Lock()
 	u.stations = append(u.stations, obs...)
@@ -101,6 +130,9 @@ func (u *uploader) requeue(b model.UploadBatch, err error) {
 	u.pending = append(b.Orders, u.pending...)
 	u.stations = append(b.Stations, u.stations...)
 	u.samples = append(b.Samples, u.samples...)
+	u.trades = append(b.Trades, u.trades...)
+	u.wallet = append(b.Wallet, u.wallet...)
+	u.focus = append(b.Focus, u.focus...)
 	u.trimLocked()
 	u.lastErr = err.Error()
 	u.mu.Unlock()
@@ -111,6 +143,9 @@ func (u *uploader) trimLocked() {
 	u.pending = trimOldest(u.pending, maxPending)
 	u.stations = trimOldest(u.stations, maxPendingStations)
 	u.samples = trimOldest(u.samples, maxPendingSamples)
+	u.trades = trimOldest(u.trades, maxPendingLedger)
+	u.wallet = trimOldest(u.wallet, maxPendingLedger)
+	u.focus = trimOldest(u.focus, maxPendingLedger)
 }
 
 func trimOldest[T any](s []T, limit int) []T {
@@ -179,7 +214,9 @@ func (l batchLimits) grow() batchLimits {
 		min(fullLimits.samples, l.samples*2)}
 }
 
-func batchItems(b model.UploadBatch) int { return len(b.Orders) + len(b.Stations) + len(b.Samples) }
+func batchItems(b model.UploadBatch) int {
+	return len(b.Orders) + len(b.Stations) + len(b.Samples) + len(b.Trades) + len(b.Wallet) + len(b.Focus)
+}
 
 // takeLocked 从队列头拿一批,不超过 limits。调用方必须持锁
 func (u *uploader) takeLocked() model.UploadBatch {
@@ -195,8 +232,11 @@ func (u *uploader) takeLocked() model.UploadBatch {
 		Orders:   append([]model.MarketOrder(nil), u.pending[:n]...),
 		Stations: append([]model.StationObs(nil), u.stations[:s]...),
 		Samples:  append([]model.CaptureSample(nil), u.samples[:m]...),
-		SentAt:   time.Now(), ClientVersion: version}
+		// 个人账本整批带走:量小,不值得参与限额
+		Trades: u.trades, Wallet: u.wallet, Focus: u.focus,
+		SentAt: time.Now(), ClientVersion: version}
 	u.pending, u.stations, u.samples = u.pending[n:], u.stations[s:], u.samples[m:]
+	u.trades, u.wallet, u.focus = nil, nil, nil
 	return b
 }
 
@@ -350,7 +390,8 @@ func (u *uploader) send(ctx context.Context, batch model.UploadBatch) bool {
 	u.mu.Unlock()
 	slog.Info("已上传", "sent", len(batch.Orders), "changed", out.Changed, "touched", out.Touched,
 		"stations", len(batch.Stations), "stations_saved", saved,
-		"samples", len(batch.Samples), "samples_saved", deref(out.Samples))
+		"samples", len(batch.Samples), "samples_saved", deref(out.Samples),
+		"trades", len(batch.Trades), "wallet", len(batch.Wallet), "focus", len(batch.Focus))
 	return true
 }
 

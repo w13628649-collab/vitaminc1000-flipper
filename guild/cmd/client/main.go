@@ -177,6 +177,10 @@ func main() {
 	// 原始样本:明文全抓,所有认得出码的消息都记(protocol/sample.go)
 	parser.Version = version
 	parser.OnSample = up.addSample
+	// 个人账本:即时买卖、市场邮件、银币、专注(protocol/ledger.go)
+	parser.OnTrade = up.addTrade
+	parser.OnWallet = up.addWallet
+	parser.OnFocus = up.addFocus
 	parser.OnIdentity = func(_, name, loc string) {
 		up.setIdentity(name, loc)
 		reporter.SetCharacter(name) // 诊断记录带上角色名,便于对人
@@ -188,10 +192,10 @@ func main() {
 			messages.Add(1)
 			parser.HandleRequest(code, params)
 		},
-		// Photon 的响应回调带 returnCode 和 debug 字符串,我们用不上
-		OnResponse: func(code byte, _ int16, _ string, params map[byte]any) {
+		// returnCode 要往下传:即时买卖靠它判服务端是不是真成交了
+		OnResponse: func(code byte, rc int16, _ string, params map[byte]any) {
 			messages.Add(1)
-			parser.HandleResponse(code, params)
+			parser.HandleResponseCode(code, rc, params)
 		},
 		// 事件:HandleEvent 记全键样本(明文全抓),还没有类型化处理器
 		OnEvent: func(code byte, params map[byte]any) {
