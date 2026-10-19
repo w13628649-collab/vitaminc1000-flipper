@@ -92,6 +92,79 @@
 - 两个 short、bool、int 的含义
 - 524 `NewTunnelExitTemp` 是哪种门
 
+## 门的机制(`tunnelsystem.xml`)
+
+```xml
+<tunnelexitsettings lifetimemin="43200" lifetimemax="86400" shutdownwarningtime="3600"/>
+```
+
+门存活 12–24 小时,关闭前 1 小时开始警告。三种尺寸:
+
+| 类型 | maxcharges | 每次恢复 | usedconnectionduration |
+|---|---|---|---|
+| SOLO | 7 | 300 秒 | 300 秒 |
+| GROUP | 7 | 600 秒 | 600 秒 |
+| RAID | 20 | 1200 秒 | 1200 秒 |
+
+据此推测事件 448 的两个 short(键 9、10)是当前次数 / 最大次数,
+四个时间戳里有关闭时间和警告开始时间。`FXAvalonRoadsPortal.SetRingStates`
+大概就是门上显示剩余次数的那几个环。都待抓包确认。
+
+门的**位置**是固定槽位:区域由模板拼成,`S_ROADS_Portal_01` 就是门槽
+(300 个区域共 1,536 个,每区 2–6 个)。`S_ROADS_Portal_Mistcity_01` 只有
+10 个区域有,是迷雾城随机门的落点。变的是哪些槽开着、通向哪里。
+
+## 每个区域里有什么:静态数据能精确算出来
+
+区域由模板实例拼成,每个实例带 `active_layers`;模板按层组织,
+T4/T6/T8 各一层。两边的层 id 对得上,所以按激活的层数刷新点就是该区域的内容。
+
+宝箱刷新点是 `cluster/tiles.xml` 里的瓦片,引用 `lootchests.xml` 的刷新行为:
+
+| 瓦片 | 刷新行为 | 小地图图标 | 颜色 |
+|---|---|---|---|
+| `SpawnPoint_LOOTCHEST_SMALL_AVALON_ROAD_T*` | `AVALON_SMALL_SOLO` | `roads_of_avalon_solo_pve` | 绿 |
+| `..._MEDIUM_AVALON_ROAD_VETERAN_T*` | `AVALON_MEDIUM_VETERAN` | `roads_of_avalon_group_pve` | 蓝 |
+| `..._SMALL_AVALON_ROAD_ELITE_T6/T8` | `AVALON_SMALL_ELITE` | `roads_of_avalon_raid_pve` | 金 |
+| `..._MEDIUM_AVALON_ROAD_ELITE_T6/T8` | `AVALON_MEDIUM_ELITE` | `roads_of_avalon_raid_pve` | 金 |
+
+金箱只在两个 RAID 模板里(`S_ROADS_PVE_RAID_01`、`M_ROADS_PVE_RAID_01`)。
+金箱的小地图配置是 `interestareaonly="false"`。
+
+所有阿瓦隆宝箱同一个模型 `ROAD_LOOTCHEST_AVALON`、同一个名字"阿瓦隆宝箱"。
+每个刷新点出箱概率 0.648,被开后 2–4 分钟重刷;品质按权重 6:3:1 掷
+BASE / CHAMPION / BOSS。所以算出来的是**刷新点数**,即上限。
+
+中型 RAID 模板里还有两个 `AVALON_ELITE_STATUE`:怪物
+`T6_MOB_TN_AVALON_STATUE_ELITE_STANDARD`,中文"**阿瓦隆造物女神**",
+刷新 9.75–19.5 小时。它总是成对跟着中金箱出现。
+
+400 个区域的统计:
+
+| 项目 | 有的区域 | 合计 | 单区最多 |
+|---|---|---|---|
+| 小金箱 | 74 | 96 | 3 |
+| 中金箱 | 102 | 106 | 2 |
+| 造物女神 | 102 | 212 | 4 |
+| 蓝箱 | 222 | 268 | 3 |
+| 绿箱 | 380 | 1,378 | 9 |
+| 组队地城 | 180 | 248 | 4 |
+| 单人地城 | 80 | 84 | 2 |
+| 团队地城 | 6 | 6 | 1 |
+
+**有金箱的区域 112 / 400。** 例:
+
+```
+TNL-031 Hasos-Iuimaum   绿 5,单人地城 1,组队地城 1
+TNL-050 Poues-Unatam    小金 1,中金 1,造物女神 2,绿 2,组队地城 1
+TNL-027 Conos-Avaelum   中金 1,造物女神 2,绿 8
+```
+
+资源按类型和等阶的数量在区域定义的 `distribution` 段里直接有。
+
+"金色王座""金色台子"对应这里的哪一项还没对上:可能是小/中两种金箱,
+也可能其中一个是造物女神。拿一个区域和用户常用的查询网站对一下就知道。
+
 ## 社区工具现在怎么做
 
 GitHub 上看了六个阿瓦隆之路地图项目,没有一个解这条事件:
