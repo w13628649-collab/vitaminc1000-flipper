@@ -74,6 +74,7 @@ $.candidates[].leftover[].mode: string
 $.candidates[].leftover[].qty: number
 $.candidates[].leftover[].value: number
 $.candidates[].oldest_age_h: null|number
+$.candidates[].post_setup: number
 $.candidates[].profit: object
 $.candidates[].profit.post: null|object
 $.candidates[].profit.post.net: number
@@ -306,10 +307,18 @@ $.server_defaults.volume_days: number
 $.server_defaults.window_hours: number
 $.station_fee: object
 $.station_fee.bad: number
+$.station_fee.by_tier: object
+$.station_fee.by_tier.4: number
+$.station_fee.by_tier.5: number
+$.station_fee.by_tier.6: number
+$.station_fee.by_tier.7: number
+$.station_fee.by_tier.8: number
 $.station_fee.city: string
 $.station_fee.closed: number
 $.station_fee.fee: number
+$.station_fee.gone: number
 $.station_fee.line: string
+$.station_fee.low_tier: number
 $.station_fee.max: number
 $.station_fee.max_age_hours: number
 $.station_fee.min: number
@@ -325,6 +334,7 @@ $.station_fee.station.reporter: string
 $.station_fee.station.seen_at: string
 $.station_fee.station.zone_id: string
 $.station_fee.stations: number
+$.station_fee.tier: number
 $.station_fee.transmute: bool
 $.station_fee.unmapped: array
 $.station_fee.unmapped[]: object
@@ -340,6 +350,8 @@ $.volume.days: number
 $.volume.days_with_data: number
 $.volume.known: bool
 $.volume.per_day: number
+$.volume.recent_avg: number
+$.volume.recent_days: number
 $.volume.source: string
 $.warnings: array
 $.warnings[]: object

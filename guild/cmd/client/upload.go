@@ -150,7 +150,7 @@ func (u *uploader) requeue(b model.UploadBatch, err error) {
 // trimLocked 超上限就丢最旧的。调用方必须持锁。
 func (u *uploader) trimLocked() {
 	u.pending = trimOldest(u.pending, maxPending)
-	u.stations = trimOldest(u.stations, maxPendingStations)
+	u.stations = trimStations(u.stations, maxPendingStations)
 	u.samples = trimOldest(u.samples, maxPendingSamples)
 	u.trades = trimOldest(u.trades, maxPendingLedger)
 	u.wallet = trimOldest(u.wallet, maxPendingLedger)
@@ -163,6 +163,42 @@ func trimOldest[T any](s []T, limit int) []T {
 		return append(s[:0], s[n:]...)
 	}
 	return s
+}
+
+// 建筑观测要整次扫描一起走:一次 op 197 响应是整区的全部建筑,服务端拿「最新那次里没有」
+// 判一台站拆了(flip.pickStationFee)。从一次扫描中间截开,存下的半次会把另一半当成没了。
+// 同一次响应的建筑区和观测时刻都一样(protocol.decodeStations)
+func sameScan(a, b model.StationObs) bool {
+	return a.ZoneID == b.ZoneID && a.ObservedAt.Equal(b.ObservedAt)
+}
+
+// scanCut 把切点 n 挪到扫描边界上:往前退到这次扫描的开头;一次扫描本身就比 n 长时往后挪到它的结尾
+func scanCut(st []model.StationObs, n int) int {
+	if n <= 0 || n >= len(st) || !sameScan(st[n-1], st[n]) {
+		return n
+	}
+	k := n
+	for k > 0 && sameScan(st[k-1], st[k]) {
+		k--
+	}
+	if k > 0 {
+		return k
+	}
+	for k = n; k < len(st) && sameScan(st[k-1], st[k]); k++ {
+	}
+	return k
+}
+
+// trimStations 超上限时从最旧的整次扫描丢起
+func trimStations(st []model.StationObs, limit int) []model.StationObs {
+	n := len(st) - limit
+	if n <= 0 {
+		return st
+	}
+	for n < len(st) && sameScan(st[n-1], st[n]) {
+		n++
+	}
+	return append(st[:0], st[n:]...)
 }
 
 func (u *uploader) setIdentity(name, location string) {
@@ -235,6 +271,7 @@ func (u *uploader) takeLocked() model.UploadBatch {
 		l = fullLimits
 	}
 	n, s, m := min(len(u.pending), l.orders), min(len(u.stations), l.stations), min(len(u.samples), l.samples)
+	s = scanCut(u.stations, s) // 建筑整次扫描一起发
 	// SentAt 让服务端算出这台机器的钟差并整批平移 ObservedAt。服务端的 touch
 	// 已改为记观测时间而不是服务端时刻,不带 SentAt 的话钟慢的成员的单会提前过期。
 	// 每次发送现填:退回队列重发的那批也要用这一次发出的时刻,里面的旧单才保持旧
@@ -301,7 +338,7 @@ func (u *uploader) encode(batch *model.UploadBatch) []byte {
 
 // splitBack 把这批每种各一半退回队列头,自己留前一半。
 func (u *uploader) splitBack(b *model.UploadBatch) {
-	no, ns, nm := (len(b.Orders)+1)/2, (len(b.Stations)+1)/2, (len(b.Samples)+1)/2
+	no, ns, nm := (len(b.Orders)+1)/2, scanCut(b.Stations, (len(b.Stations)+1)/2), (len(b.Samples)+1)/2
 	back := model.UploadBatch{Orders: b.Orders[no:], Stations: b.Stations[ns:], Samples: b.Samples[nm:]}
 	b.Orders, b.Stations, b.Samples = b.Orders[:no], b.Stations[:ns], b.Samples[:nm]
 	// 一种都拆不动(每种最多一条)时只能整条推回一种,不然死循环

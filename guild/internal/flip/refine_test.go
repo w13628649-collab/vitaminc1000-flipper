@@ -388,7 +388,7 @@ func TestRefine成交量按自然日平均(t *testing.T) {
 	counts := []int64{10, 0, 5, 20, 8, 7, 9, 5, 1} // 9 行、8 天有成交,合计 65
 	for i, n := range counts {
 		src.days = append(src.days, store.ItemDay{ItemID: tBar, City: "Thetford",
-			Day: first.AddDate(0, 0, i), ItemCount: n, Source: store.SourceAODP})
+			Day: first.AddDate(0, 0, i), ItemCount: n, AvgPrice: int64(1000 + 100*i), Source: store.SourceAODP})
 	}
 	// 窗口外、别的城的不算
 	src.days = append(src.days,
@@ -399,6 +399,10 @@ func TestRefine成交量按自然日平均(t *testing.T) {
 	v := res.Volume
 	if !v.Known || v.Days != 14 || v.DaysWithData != 8 || math.Abs(v.PerDay-65.0/14) > 1e-9 || v.Source != "aodp" {
 		t.Fatalf("65 件 ÷ 14 个自然日,8 天有成交: %+v", v)
+	}
+	// 近 7 天(窗口最后 7 天,第 7、8 行落在里面):5 件 @1700、1 件 @1800,按件数加权
+	if v.RecentDays != 7 || v.RecentAvg != math.Round((5*1700+1*1800)/6.0) {
+		t.Fatalf("近 7 天成交均价: %v / %d 天", v.RecentAvg, v.RecentDays)
 	}
 	if hasWarn(res.Warnings, refine.WarnNoVolume) {
 		t.Fatal("有成交数据不该报 no_volume")

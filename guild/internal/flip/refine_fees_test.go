@@ -54,15 +54,16 @@ func newFeeService(stations ...store.StationFee) (*Service, *feeRefine) {
 // 映射上了、新鲜:用这座城这条线最便宜的那台;太旧的、别的城的、映射外的、没营养的都不算;
 // 越界的费率丢掉计数。打底参数里站费和(开关打开时)主人费率都换成它,收尾时补进 Confirmed。
 func TestRefine抓到的站费映射命中且新鲜时用最便宜那台(t *testing.T) {
+	// 一次 197 响应是整区的:观测时刻不同的站放在不同的区(同一个区里更早的会当成已经没了)
 	empty := station("Thetford", "0000", 501, 9, 100, "空站", rNow.Add(-time.Hour))
 	empty.Nutrition = iptr(0)
 	s, src := newFeeService(
-		station("Thetford", "0000", 501, 1, 420, "甲", rNow.Add(-3*time.Hour)),
-		station("Thetford", "0000", 501, 2, 350, "乙", rNow.Add(-5*time.Hour)),
-		station("Thetford", "0000", 501, 3, 200, "旧站", rNow.Add(-200*time.Hour)), // 超过 168h
+		station("Thetford", "0001", 501, 1, 420, "甲", rNow.Add(-3*time.Hour)),
+		station("Thetford", "0002", 501, 2, 350, "乙", rNow.Add(-5*time.Hour)),
+		station("Thetford", "0003", 501, 3, 200, "旧站", rNow.Add(-200*time.Hour)), // 超过 168h
 		station("thetford", "0000", 502, 4, 380, "丙", rNow.Add(-time.Hour)),      // 城市不区分大小写
 		station("Martlock", "3004", 501, 5, 10, "外城", rNow.Add(-time.Hour)),
-		station("Thetford", "0000", 777, 6, 50, "不认识的类型", rNow.Add(-2*time.Hour)),
+		station("Thetford", "0004", 777, 6, 50, "不认识的类型", rNow.Add(-2*time.Hour)),
 		station("Thetford", "0000", 501, 7, 5000, "标度错了", rNow.Add(-time.Hour)),
 		empty,
 	)
@@ -123,7 +124,7 @@ func TestRefine抓到的站费映射命中且新鲜时用最便宜那台(t *test
 // Thetford 精炼金属锭只看冶炼匠;伐木场是别的线的站,不算没映射;铁匠铺 410 才是
 func TestRefine内置表认得出精炼站(t *testing.T) {
 	s, _ := newFeeService(
-		station("Thetford", "0007", 431, 1, 420, "甲", rNow.Add(-3*time.Hour)),
+		station("Thetford", "0006", 431, 1, 420, "甲", rNow.Add(-3*time.Hour)),
 		station("Thetford", "0007", 431, 2, 390, "乙", rNow.Add(-time.Hour)),
 		station("Thetford", "0007", 438, 3, 80, "伐木场", rNow.Add(-time.Hour)),
 		station("Thetford", "0007", 410, 4, 50, "铁匠铺", rNow.Add(-time.Hour)),
@@ -154,6 +155,65 @@ func TestRefine不开放的站不算(t *testing.T) {
 	}
 }
 
+// 站只能炼到本级为止:T6 纺织匠(457)炼不了 T8 布。目标 T8 时只认 T8 的站;每级最便宜的另记一份给矩阵
+func TestRefine站的级别不够不算(t *testing.T) {
+	s, _ := newFeeService(
+		station("Thetford", "0007", 457, 1, 380, "T6站", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 459, 2, 740, "T8站", rNow.Add(-time.Hour)),
+	)
+	_, info := s.RefineDefaultsLive(context.Background(), "T8_CLOTH_LEVEL4@4", "Thetford")
+	if info.Fee != 740 || info.LowTier != 1 || info.Stations != 1 || info.Tier != 8 {
+		t.Fatalf("T8 布只能用 T8 站 740: %+v", info)
+	}
+	if info.ByTier[6] != 380 || info.ByTier[7] != 740 || info.ByTier[8] != 740 || info.ByTier[4] != 380 {
+		t.Fatalf("每级最便宜: %v", info.ByTier)
+	}
+	_, info6 := s.RefineDefaultsLive(context.Background(), "T6_CLOTH", "Thetford")
+	if info6.Fee != 380 || info6.LowTier != 0 {
+		t.Fatalf("T6 布用 T6 站 380: %+v", info6)
+	}
+}
+
+// 一次 197 响应是整区的全部建筑:同一个区后来又扫过、那次里没有的站就是拆了或搬了。
+// 以前 Lymhurst 那台 330 的站 10-17 之后两次整城扫描都不在,还被当成最便宜的
+func TestRefine后来整区扫描里没有的站不算(t *testing.T) {
+	s, _ := newFeeService(
+		station("Thetford", "0007", 431, 1, 230, "拆了", rNow.Add(-40*time.Hour)),
+		station("Thetford", "0007", 431, 2, 400, "还在", rNow.Add(-time.Hour)),
+		station("Thetford", "0007", 410, 3, 50, "铁匠铺也在最新那次", rNow.Add(-time.Hour-time.Minute)),
+		// 别的区的老观测不受这个区的新扫描影响
+		station("Thetford", "0008", 431, 4, 300, "别的区", rNow.Add(-40*time.Hour)),
+	)
+	_, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	if info.Fee != 300 || info.Gone != 1 || info.Stations != 2 {
+		t.Fatalf("应当剔掉 0007 区里已经没了的 230,取别的区的 300: %+v", info)
+	}
+}
+
+// 最新那次扫描只存下一部分(客户端断网积压时从最旧的丢、上传分批)时不判「没了」:
+// 下标 0 那几台被截掉了,还在的旧观测不能当成拆了(审查 finding:否则会换成更贵的站)
+func TestRefine扫描不完整时不判没了(t *testing.T) {
+	at := func(st store.StationFee, idx int) store.StationFee { st.Index = idx; return st }
+	old := at(station("Thetford", "0007", 431, 1, 200, "截掉的那台", rNow.Add(-20*time.Hour)), 5)
+	s, _ := newFeeService(old,
+		at(station("Thetford", "0007", 431, 2, 600, "最新那次 27", rNow.Add(-time.Hour)), 27),
+		at(station("Thetford", "0007", 410, 3, 50, "最新那次 28", rNow.Add(-time.Hour)), 28),
+	)
+	_, info := s.RefineDefaultsLive(context.Background(), tBar, "")
+	if info.Fee != 200 || info.Gone != 0 {
+		t.Fatalf("最新那次不完整(下标不从 0 开始),不该剔掉 200 那台: %+v", info)
+	}
+	// 同一次扫描完整(下标 0..2 连续):照常剔
+	s2, _ := newFeeService(old,
+		at(station("Thetford", "0007", 431, 2, 600, "a", rNow.Add(-time.Hour)), 0),
+		at(station("Thetford", "0007", 410, 3, 50, "b", rNow.Add(-time.Hour)), 1),
+		at(station("Thetford", "0007", 410, 4, 50, "c", rNow.Add(-time.Hour)), 2),
+	)
+	if _, info := s2.RefineDefaultsLive(context.Background(), tBar, ""); info.Fee != 600 || info.Gone != 1 {
+		t.Fatalf("完整扫描里没有它,应当剔掉: %+v", info)
+	}
+}
+
 func TestRefine内置表_只有铁匠铺算没映射(t *testing.T) {
 	s, _ := newFeeService(
 		station("Thetford", "0007", 431, 2, 390, "乙", rNow.Add(-time.Hour)),
@@ -169,9 +229,9 @@ func TestRefine内置表_只有铁匠铺算没映射(t *testing.T) {
 // 不是精炼站的类型(或者游戏更新后内置表旧了):抓到的费率不进计算,按配置算;响应里列出来。
 func TestRefine抓到的站费没映射时用配置并列出建筑类型(t *testing.T) {
 	s, _ := newFeeService(
-		station("Thetford", "0000", 501, 1, 420, "甲", rNow.Add(-3*time.Hour)),
-		station("Thetford", "0000", 501, 2, 300, "乙", rNow.Add(-time.Hour)),
-		station("Thetford", "0000", 610, 3, 80, "丙", rNow.Add(-2*time.Hour)),
+		station("Thetford", "0001", 501, 1, 420, "甲", rNow.Add(-3*time.Hour)),
+		station("Thetford", "0002", 501, 2, 300, "乙", rNow.Add(-time.Hour)),
+		station("Thetford", "0003", 610, 3, 80, "丙", rNow.Add(-2*time.Hour)),
 	)
 	p, info := s.RefineDefaultsLive(context.Background(), tBar, "")
 	if info.Source != FeeSourceDefault || info.Fee != 500 || p.Fees.StationPer100 != 500 || info.Station != nil {

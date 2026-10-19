@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -46,8 +47,14 @@ type Tables struct {
 	AchievementRows []uint8
 	// SpecIndex 是每条线 T4~T8 精炼专精节点的成就下标
 	SpecIndex map[string][5]int
-	// StationLines 是精炼站的建筑类型 id → 线
-	StationLines map[int32]string
+	// Stations 是精炼站的建筑类型 id → 线和 tier
+	Stations map[int32]Station
+}
+
+// Station 是一种精炼站:哪条线、几级(只能炼到本级为止,T6 纺织匠炼不了 T7 布)。
+type Station struct {
+	Line string
+	Tier int
 }
 
 func main() {
@@ -67,7 +74,7 @@ func main() {
 	if err := os.WriteFile(*out, src, 0o644); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%s:%s,%d 个成就,%d 种精炼站", *out, t.ClientBuild, len(t.AchievementRows), len(t.StationLines))
+	log.Printf("%s:%s,%d 个成就,%d 种精炼站", *out, t.ClientBuild, len(t.AchievementRows), len(t.Stations))
 }
 
 // Build 读源数据算出全部表。
@@ -99,7 +106,7 @@ func Build(root string) (Tables, error) {
 		return t, err
 	}
 	defer b.Close()
-	if t.StationLines, err = stations(b); err != nil {
+	if t.Stations, err = stations(b); err != nil {
 		return t, fmt.Errorf("buildings.xml: %w", err)
 	}
 	return t, nil
@@ -223,9 +230,12 @@ func achievements(r io.Reader) ([]uint8, map[string][5]int, error) {
 // 沼泽 / 山地 / 森林的绿区建筑,三城抓到最多的分别是冶炼炉 88 台、木工坊 32 台、织布坊 34 台,
 // 正是各城的精炼专精线。从 0 数的话 Thetford 会落在山地
 //
-// 一个建筑能造某条线 T?_<产物>(_LEVELn) 就算那条线的精炼站。教学关卡的不要
-func stations(r io.Reader) (map[int32]string, error) {
-	out := map[int32]string{}
+// 一个建筑能造某条线 T?_<产物>(_LEVELn) 就算那条线的精炼站。教学关卡的不要。
+//
+// tier 取可制造清单里这条线产物的最高 tier,并核对和建筑自己的 tier 属性一致:
+// T6_WEAVINGMILL 的清单只列到 T6_CLOTH_LEVEL4,T7/T8 布炼不了
+func stations(r io.Reader) (map[int32]Station, error) {
+	out := map[int32]Station{}
 	idx := 0
 	err := topLevel(r, func(d *xml.Decoder, se xml.StartElement) error {
 		idx++
@@ -242,15 +252,24 @@ func stations(r io.Reader) (map[int32]string, error) {
 			return nil
 		}
 		var lines []string
+		top := 0
 		for _, it := range b.Items {
-			if l := lineOf(it.Name); l != "" && !slices.Contains(lines, l) {
+			l, tier := lineOf(it.Name)
+			if l == "" {
+				continue
+			}
+			if !slices.Contains(lines, l) {
 				lines = append(lines, l)
 			}
+			top = max(top, tier)
 		}
 		switch len(lines) {
 		case 0:
 		case 1:
-			out[int32(idx)] = lines[0]
+			if bt, err := strconv.Atoi(attr(se, "tier")); err != nil || bt != top {
+				return fmt.Errorf("建筑 %s 的 tier 属性 %q 和可制造清单的最高 tier %d 对不上", name, attr(se, "tier"), top)
+			}
+			out[int32(idx)] = Station{Line: lines[0], Tier: top}
 		default:
 			return fmt.Errorf("建筑 %s 能精炼 %v 几条线,一个类型只能对一条", name, lines)
 		}
@@ -262,7 +281,7 @@ func stations(r io.Reader) (map[int32]string, error) {
 	for _, l := range Lines {
 		n := 0
 		for _, v := range out {
-			if v == l {
+			if v.Line == l {
 				n++
 			}
 		}
@@ -273,19 +292,20 @@ func stations(r io.Reader) (map[int32]string, error) {
 	return out, nil
 }
 
-var refinedRe = regexp.MustCompile(`^T[2-8]_([A-Z]+)(_LEVEL[1-4])?$`)
+var refinedRe = regexp.MustCompile(`^T([2-8])_([A-Z]+)(_LEVEL[1-4])?$`)
 
-func lineOf(item string) string {
+// lineOf 认精炼产物:返回线和 tier,不是精炼产物返回 ""
+func lineOf(item string) (string, int) {
 	m := refinedRe.FindStringSubmatch(item)
 	if m == nil {
-		return ""
+		return "", 0
 	}
 	for l, p := range refinedOf {
-		if m[1] == p {
-			return l
+		if m[2] == p {
+			return l, int(m[1][0] - '0')
 		}
 	}
-	return ""
+	return "", 0
 }
 
 // Render 把表写成 Go 源码(gofmt 过)。
@@ -305,14 +325,14 @@ func Render(t Tables) ([]byte, error) {
 		s := t.SpecIndex[l]
 		fmt.Fprintf(&b, "%q: {%d, %d, %d, %d, %d},\n", l, s[0], s[1], s[2], s[3], s[4])
 	}
-	b.WriteString("}\n\n// stationLines:精炼站的建筑类型 id → 线。\nvar stationLines = map[int32]string{\n")
-	ids := make([]int32, 0, len(t.StationLines))
-	for id := range t.StationLines {
+	b.WriteString("}\n\n// stations:精炼站的建筑类型 id → 线和 tier(只能炼到本级为止)。\nvar stations = map[int32]Station{\n")
+	ids := make([]int32, 0, len(t.Stations))
+	for id := range t.Stations {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
 	for _, id := range ids {
-		fmt.Fprintf(&b, "%d: %q,\n", id, t.StationLines[id])
+		fmt.Fprintf(&b, "%d: {%q, %d},\n", id, t.Stations[id].Line, t.Stations[id].Tier)
 	}
 	b.WriteString("}\n")
 	return format.Source(b.Bytes())

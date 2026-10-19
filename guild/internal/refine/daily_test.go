@@ -1,6 +1,8 @@
 package refine
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +38,45 @@ func dailyPlan(t *testing.T, mut func(*Params), vol Volume) (*Result, Candidate)
 		t.Fatalf("候选应当拿满、算得出日化: %+v", c)
 	}
 	return res, c
+}
+
+// 挂卖价比近几天成交均价高出两成以上:警告利润靠刚涨上去的卖价,并给出回到均价时的单根利润。
+// 不改卖价本身(2026-10-19 T5.2 布:卖一 5,898,7 天均价约 4,760,盘口是真的)
+func Test挂卖价冲高要警告(t *testing.T) {
+	res, _ := dailyPlan(t, nil, Volume{})
+	price := float64(res.Sell.Post.Price)
+	for _, c := range []struct {
+		avg  float64
+		want bool
+	}{{price / 1.3, true}, {price / 1.1, false}, {0, false}} {
+		_, cand := dailyPlan(t, nil, Volume{PerDay: 100, Days: 14, Known: true, RecentAvg: c.avg, RecentDays: 7})
+		var got *Warning
+		for i, w := range cand.Warnings {
+			if w.Code == WarnPriceSpike {
+				got = &cand.Warnings[i]
+			}
+		}
+		if (got != nil) != c.want {
+			t.Fatalf("均价 %.0f、挂卖 %.0f:警告 %v,想要 %v", c.avg, price, got, c.want)
+		}
+		if got == nil {
+			continue
+		}
+		unit := c.avg*0.935 - cand.UnitCost
+		if want := fmt.Sprintf("单根利润 %+.0f", unit); !strings.Contains(got.Msg, want) || !strings.Contains(got.Msg, "近 7 天") {
+			t.Fatalf("警告里要有回到均价时的单根利润 %s: %s", want, got.Msg)
+		}
+		// 利润本身还是按卖一算,不替用户改
+		if cand.Profit.Post.Net != res.Sell.Post.Net {
+			t.Fatalf("挂卖到手价不该变: %v / %v", cand.Profit.Post.Net, res.Sell.Post.Net)
+		}
+	}
+	// 主出售方式是吃买单:主数按买一算,和卖一冲高无关,不出
+	_, take := dailyPlan(t, func(p *Params) { p.Sell.Modes = []string{SellTake, SellPost} },
+		Volume{PerDay: 100, Days: 14, Known: true, RecentAvg: price / 1.3, RecentDays: 7})
+	if hasWarning(take.Warnings, WarnPriceSpike, "") {
+		t.Fatalf("吃买单为主时不该出卖价冲高: %+v", take.Warnings)
+	}
 }
 
 // 成交量、本金都允许做很多时,日化也只算到这一批的件数:单根成本只按这一批的量沿阶梯吃过,
@@ -94,7 +135,11 @@ func Test日化本金扣掉批末余料(t *testing.T) {
 		// 本金只比开工本金少一点:一批备不齐,按扣掉余料后的本金算
 		capital := c0.UpfrontCapital - 1
 		_, c := dailyPlan(t, func(p *Params) { p.Leftover = mode; p.Daily.Capital = capital }, Volume{})
-		want := (capital - tied) / steady
+		// 主出售方式是挂卖单:每件还要当场垫创建费(PostSetup)
+		if c.PostSetup <= 0 {
+			t.Fatalf("%s:挂卖为主时应当有挂单创建费", mode)
+		}
+		want := (capital - tied) / (steady + c.PostSetup/10)
 		if c.Daily.Limits.Capital == nil {
 			t.Fatalf("%s:应当有本金上限", mode)
 		}
@@ -105,6 +150,12 @@ func Test日化本金扣掉批末余料(t *testing.T) {
 		// 不扣余料的旧算法会报 capital / 单根成本,比这里多
 		if old := capital / c.UnitCost; !(old > want) {
 			t.Fatalf("%s:扣掉余料应当更少: 旧 %.3f 新 %.3f", mode, old, want)
+		}
+
+		// 本金够备料、不够再垫挂单创建费:也算本金不够(回款前两笔都得先掏)
+		_, c = dailyPlan(t, func(p *Params) { p.Leftover = mode; p.Daily.Capital = c0.UpfrontCapital + c0.PostSetup/2 }, Volume{})
+		if c.Daily.Binding != "capital" || !hasWarning(c.Warnings, WarnCapitalShort, "") {
+			t.Fatalf("%s:料够、创建费不够也要卡在本金并警告: %+v %+v", mode, c.Daily, c.Warnings)
 		}
 
 		// 本金还不够备余料:一件都做不了

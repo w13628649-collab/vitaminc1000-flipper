@@ -74,7 +74,17 @@ type StationFeeInfo struct {
 	Unusable int `json:"unusable"`
 	// Closed:映射上了、但对你不开放的台数(房主设成 Closed / Private,或抓包的角色用不了),不参与
 	Closed int `json:"closed"`
-	// Bad:费率不在 [0, 1000] 内、整台丢掉的台数(标度可能猜错了,服务端日志有告警)
+	// Tier 是这次要炼的最高 tier:站只能炼到本级为止(T6 纺织匠炼不了 T7 布),比它低级的站不参与
+	Tier int `json:"tier"`
+	// LowTier:这条线的站里级别不够炼 Tier 的台数
+	LowTier int `json:"low_tier"`
+	// Gone:同一个区后来又整区扫描过、那次里已经没有它的台数(拆了或搬了)。一次 197 响应就是整区的
+	// 全部建筑,所以不在最新那次里的就是没了(最新那次只存下一部分时不判)
+	Gone int `json:"gone"`
+	// ByTier 是每个 tier(4~8)能用的站里最便宜的费率。矩阵按每格的 tier 取,不能整张表都套
+	// 能炼 T8 的那台;某个 tier 一台能用的都没有就不在里面
+	ByTier map[int]float64 `json:"by_tier,omitempty"`
+	// Bad:这条线的站里费率不在 [0, 1000] 内、整台丢掉的台数(标度可能猜错了,服务端日志有告警)
 	Bad int `json:"bad"`
 	// MaxAgeHours 是认多旧以内的抓包费率(refining.station_fee_max_age_hours)
 	MaxAgeHours float64 `json:"max_age_hours"`
@@ -110,10 +120,11 @@ type KindFee struct {
 func (s *Service) RefineDefaultsLive(ctx context.Context, target, city string) (refine.Params, StationFeeInfo) {
 	p := s.RefineDefaults(target, city)
 	line, ok := refine.LineOfItem(p.Target)
-	if !ok {
+	_, tier, _, okT := refine.ParseItemID(p.Target)
+	if !ok || !okT {
 		return p, StationFeeInfo{Source: FeeSourceDefault, Fee: p.Fees.StationPer100, City: p.City, Unmapped: []KindFee{}}
 	}
-	info := s.stationFeeInfo(ctx, line, p.City, s.refine.now().UTC())
+	info := s.stationFeeInfo(ctx, line, p.City, tier, s.refine.now().UTC())
 	if info.Source == FeeSourceCapture {
 		p.Fees.StationPer100 = info.Fee
 		if s.Cfg.Refining.StationFeeTransmute {
@@ -152,12 +163,12 @@ func SettleStationFee(p *refine.Params, info *StationFeeInfo, reqStation, reqTra
 	}
 }
 
-// stationFeeInfo 读抓到的站费(60 秒缓存),按城市和线挑。读不到时按配置算,不报错。
-func (s *Service) stationFeeInfo(ctx context.Context, line refine.Line, city string, now time.Time) StationFeeInfo {
+// stationFeeInfo 读抓到的站费(60 秒缓存),按城市、线和要炼的最高 tier 挑。读不到时按配置算,不报错。
+func (s *Service) stationFeeInfo(ctx context.Context, line refine.Line, city string, tier int, now time.Time) StationFeeInfo {
 	s.refine.init()
 	r := s.Cfg.Refining
 	info := StationFeeInfo{Source: FeeSourceDefault, Fee: r.StationFeeFor(city), City: city, Line: line.Key,
-		Unmapped: []KindFee{}, MaxAgeHours: r.StationFeeMaxAgeHours}
+		Unmapped: []KindFee{}, MaxAgeHours: r.StationFeeMaxAgeHours, Tier: tier}
 	if _, ok := r.StationFeeByCity[city]; ok {
 		info.Source = FeeSourceConfig
 	}
@@ -197,8 +208,21 @@ func stationMapping(extra map[string][]int32) map[string][]int32 {
 	return out
 }
 
-// pickStationFee 是纯函数:在 rows 里挑这座城、这条线映射到的建筑里最便宜的一台。
-// 假设玩家会去最便宜的站;同价取观测最新的。对你不开放的、营养或耐久观测到 0 的站不能用,不参与。
+// goneSlack:同一次 197 响应里的建筑观测时刻是同一个,上传按批平移钟差时可能差一点。
+// 比这个区最新一次扫描早这么多以上的,就不是那次扫描里的
+const goneSlack = 2 * time.Minute
+
+// stationTier 是建筑类型能炼到几级。配置里额外补的类型不知道级别,当它能炼满级
+func stationTier(buildingType int32) int {
+	if st, ok := gamedata.StationOf(buildingType); ok {
+		return st.Tier
+	}
+	return refine.MaxTier
+}
+
+// pickStationFee 是纯函数:在 rows 里挑这座城、这条线映射到的建筑里、级别够炼 info.Tier 的最便宜的一台。
+// 假设玩家会去最便宜的站;同价取观测最新的。对你不开放的、营养或耐久观测到 0 的、
+// 后来整区扫描里已经没有的站不能用,不参与。顺带按 tier 记每级能用的最便宜费率(info.ByTier)。
 func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 	mapping map[string][]int32, now time.Time) StationFeeInfo {
 
@@ -207,6 +231,36 @@ func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 		for _, id := range ids {
 			mapped[id] = true
 		}
+	}
+	// 每个区最近一次扫描的时刻:rows 是每台站最新的一条,不在最新那次里的站就是没了。
+	// 前提是那次扫描整次存进了库:客户端断网积压时会丢最旧的、上传会分批,一次扫描可能只存下一部分。
+	// 一次响应的建筑下标是 0..n-1,所以最新那次的下标从 0 连续到头才算完整,不完整的区不判「没了」
+	latest := map[string]time.Time{}
+	for _, row := range rows {
+		if row.ObservedAt.After(latest[row.ZoneID]) {
+			latest[row.ZoneID] = row.ObservedAt
+		}
+	}
+	inLatest := func(row store.StationFee) bool { return !row.ObservedAt.Before(latest[row.ZoneID].Add(-goneSlack)) }
+	idxs := map[string]map[int]bool{}
+	for _, row := range rows {
+		if inLatest(row) {
+			if idxs[row.ZoneID] == nil {
+				idxs[row.ZoneID] = map[int]bool{}
+			}
+			idxs[row.ZoneID][row.Index] = true
+		}
+	}
+	complete := map[string]bool{}
+	for zone, set := range idxs {
+		ok := true
+		for i := range len(set) {
+			if !set[i] {
+				ok = false
+				break
+			}
+		}
+		complete[zone] = ok
 	}
 	unmapped := map[int32]*KindFee{}
 	var pick *StationPick
@@ -218,15 +272,25 @@ func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 		if age > info.MaxAgeHours {
 			continue
 		}
+		isLine := slices.Contains(types, row.BuildingType)
+		if !inLatest(row) && complete[row.ZoneID] {
+			if isLine {
+				info.Gone++
+			}
+			continue
+		}
 		fee := *row.PublicFee
 		if math.IsNaN(fee) || fee < 0 || fee > stationFeeMax {
-			info.Bad++
-			slog.Warn("抓到的站费不在 [0, 1000] 内,不用(标度可能猜错了)", "city", row.City, "zone", row.ZoneID,
-				"building", row.BuildingKey, "fee", fee, "raw", row.PublicFeeRaw)
+			// 只数这条线的站:Bad 和别的计数一样是「这条线为什么少了几台」
+			if isLine {
+				info.Bad++
+				slog.Warn("抓到的站费不在 [0, 1000] 内,不用(标度可能猜错了)", "city", row.City, "zone", row.ZoneID,
+					"building", row.BuildingKey, "fee", fee, "raw", row.PublicFeeRaw)
+			}
 			continue
 		}
 		info.Seen++
-		if !slices.Contains(types, row.BuildingType) {
+		if !isLine {
 			if !mapped[row.BuildingType] {
 				k := unmapped[row.BuildingType]
 				if k == nil {
@@ -244,6 +308,19 @@ func pickStationFee(info StationFeeInfo, rows []store.StationFee, types []int32,
 		}
 		if (row.Nutrition != nil && *row.Nutrition == 0) || (row.Durability != nil && *row.Durability == 0) {
 			info.Unusable++
+			continue
+		}
+		top := stationTier(row.BuildingType)
+		for t := refine.MinEnchantTier; t <= top; t++ {
+			if f, ok := info.ByTier[t]; !ok || fee < f {
+				if info.ByTier == nil {
+					info.ByTier = map[int]float64{}
+				}
+				info.ByTier[t] = fee
+			}
+		}
+		if top < info.Tier {
+			info.LowTier++
 			continue
 		}
 		info.Stations++

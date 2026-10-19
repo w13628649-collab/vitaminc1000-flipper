@@ -533,7 +533,9 @@ func TestPlan总利润率按开工本金算_吃买单卖不完的料钱在分母
 	assertNear(t, "吃买单卖得掉", tk.Sold, 3, 1e-9)
 	assertNear(t, "吃买单总利润", tk.Total, 3*tk.Unit, 1e-6)
 	assertNear(t, "吃买单总利润率", tk.TotalPct, tk.Total/c.UpfrontCapital, 1e-12)
-	assertNear(t, "挂卖总利润率", po.TotalPct, N*po.Unit/c.UpfrontCapital, 1e-12)
+	// 挂卖单的创建费挂单当场就扣:分母另加这一笔(吃买单不收,上面那行不加)
+	setup := float64(res.Sell.Post.Price) * p.Fees.Setup * N
+	assertNear(t, "挂卖总利润率", po.TotalPct, N*po.Unit/(c.UpfrontCapital+setup), 1e-12)
 	// 开工本金里有卖不掉那 7 件的料钱,还有批末余料:比卖掉那 3 件的成本大得多
 	if c.UpfrontCapital <= c.TotalCost || c.UpfrontCapital <= 2*tk.Sold*c.UnitCost {
 		t.Fatalf("开工本金 %.0f 应当含全批料钱和余料(稳态 %.0f)", c.UpfrontCapital, c.TotalCost)

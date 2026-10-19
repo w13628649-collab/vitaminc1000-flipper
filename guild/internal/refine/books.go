@@ -70,6 +70,10 @@ type Volume struct {
 	// Known=false 表示没有成交数据(比如 AODP 覆盖空洞,规则表 G3)。
 	// 这时成交量不参与日化封顶,只标「无数据」——不能当成 0
 	Known bool `json:"known"`
+	// RecentAvg 是最近 RecentDays 个完整自然日的成交加权均价(0 = 没有)。挂卖价比它高出
+	// SpikeBand 以上时警告 price_spike,并算出回到均价时的利润
+	RecentAvg  float64 `json:"recent_avg,omitempty"`
+	RecentDays int     `json:"recent_days,omitempty"`
 }
 
 // Input 是一次计算的全部输入。引擎不连库、不看钟:同一份 Input 永远得到同一个结果。

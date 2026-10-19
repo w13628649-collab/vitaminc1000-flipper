@@ -242,6 +242,8 @@ $.cells[].volume.days: number
 $.cells[].volume.days_with_data: number
 $.cells[].volume.known: bool
 $.cells[].volume.per_day: number
+$.cells[].volume.recent_avg: number
+$.cells[].volume.recent_days: number
 $.cells[].volume.source: string
 $.cells[].warnings: array
 $.cells[].warnings[]: object
@@ -317,10 +319,18 @@ $.server_defaults.volume_days: number
 $.server_defaults.window_hours: number
 $.station_fee: object
 $.station_fee.bad: number
+$.station_fee.by_tier: object
+$.station_fee.by_tier.4: number
+$.station_fee.by_tier.5: number
+$.station_fee.by_tier.6: number
+$.station_fee.by_tier.7: number
+$.station_fee.by_tier.8: number
 $.station_fee.city: string
 $.station_fee.closed: number
 $.station_fee.fee: number
+$.station_fee.gone: number
 $.station_fee.line: string
+$.station_fee.low_tier: number
 $.station_fee.max: number
 $.station_fee.max_age_hours: number
 $.station_fee.min: number
@@ -336,6 +346,7 @@ $.station_fee.station.reporter: string
 $.station_fee.station.seen_at: string
 $.station_fee.station.zone_id: string
 $.station_fee.stations: number
+$.station_fee.tier: number
 $.station_fee.transmute: bool
 $.station_fee.unmapped: array
 $.station_fee.unmapped[]: object

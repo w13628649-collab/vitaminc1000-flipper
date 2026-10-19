@@ -31,12 +31,16 @@ func TestGeneratedUpToDate(t *testing.T) {
 }
 
 func TestLineOf(t *testing.T) {
-	for in, want := range map[string]string{
-		"T8_METALBAR": "ORE", "T4_CLOTH_LEVEL3": "FIBER", "T2_PLANKS": "WOOD",
-		"T8_ORE_LEVEL1": "", "T5_LEATHER_LEVEL5": "", "T1_CLOTH": "", "T8_MEAL_SOUP": "",
+	type lt struct {
+		line string
+		tier int
+	}
+	for in, want := range map[string]lt{
+		"T8_METALBAR": {"ORE", 8}, "T4_CLOTH_LEVEL3": {"FIBER", 4}, "T2_PLANKS": {"WOOD", 2},
+		"T8_ORE_LEVEL1": {}, "T5_LEATHER_LEVEL5": {}, "T1_CLOTH": {}, "T8_MEAL_SOUP": {},
 	} {
-		if got := lineOf(in); got != want {
-			t.Errorf("lineOf(%s) = %q, want %q", in, got, want)
+		if l, tier := lineOf(in); l != want.line || tier != want.tier {
+			t.Errorf("lineOf(%s) = %q %d, want %+v", in, l, tier, want)
 		}
 	}
 }

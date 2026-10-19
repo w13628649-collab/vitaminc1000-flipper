@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"runtime"
 	"slices"
 	"sort"
@@ -271,6 +272,11 @@ type RefineOpts struct {
 	// After:客户端收到的那条 WS 推送的服务端推送时刻(model.Quote.Pushed)。用到的快照比它旧
 	// 就重建(最多等 refineSnapWait),免得推送触发的重算拿到推送之前读的那份
 	After time.Time
+	// StationByTier / TransmuteByTier:矩阵按每格的 tier 换精炼站费 / 转化主人费率
+	// (StationFeeInfo.ByTier)。站只能炼到本级为止,整张表都套能炼 T8 的那台会高估低 tier 的费用。
+	// 只在这两项是抓包来的时候给;nil = 整张表用参数里那一个
+	StationByTier   map[int]float64
+	TransmuteByTier map[int]float64
 }
 
 // RefineWith 同 Refine,带请求选项。
@@ -732,6 +738,9 @@ func (s *Service) mergePrices(items []string, fetched []aodp.PriceRecord, now ti
 	return out
 }
 
+// refineRecentDays 是挂卖价拿来对照的成交均价取最近几个完整自然日
+const refineRecentDays = 7
+
 // refineVolumes 是每个物品在 city 的日成交量:最近 volume_days 个完整自然日(不含今天,
 // rank.Window),总量 ÷ 天数。**不用「÷ 有数据的天数」**:那样会高估稀疏的物品
 // (T8.4 钢条 @ Thetford 14 天 65 根、只有 8 天有数据:按自然日 4.6 根/天,按有数据的天 8.1)。
@@ -745,11 +754,16 @@ func (s *Service) refineVolumes(ctx context.Context, items []string, city string
 	if err != nil {
 		return nil, fmt.Errorf("读成交历史: %w", err)
 	}
+	// 近几天的成交加权均价,和挂卖价比:差太多就是刚涨上去的价(refine.WarnPriceSpike)
+	recentDays := min(refineRecentDays, days)
+	recentFrom := last.AddDate(0, 0, -(recentDays - 1))
 	type acc struct {
 		sum     int64
 		withQty int
 		rows    int
 		sources map[string]bool
+		// 近 recentDays 天:成交额和件数
+		recentAmt, recentQty float64
 	}
 	per := map[string]*acc{}
 	for _, r := range rows {
@@ -762,6 +776,10 @@ func (s *Service) refineVolumes(ctx context.Context, items []string, city string
 		a.sum += r.ItemCount
 		if r.ItemCount > 0 {
 			a.withQty++
+			if !r.Day.Before(recentFrom) && r.AvgPrice > 0 {
+				a.recentAmt += float64(r.AvgPrice) * float64(r.ItemCount)
+				a.recentQty += float64(r.ItemCount)
+			}
 		}
 		a.sources[r.Source] = true
 	}
@@ -772,6 +790,10 @@ func (s *Service) refineVolumes(ctx context.Context, items []string, city string
 			v.Known = true
 			v.PerDay = float64(a.sum) / float64(days)
 			v.DaysWithData = a.withQty
+			if a.recentQty > 0 {
+				v.RecentAvg = math.Round(a.recentAmt / a.recentQty)
+				v.RecentDays = recentDays
+			}
 			var src []string
 			for k := range a.sources {
 				src = append(src, k)
@@ -881,20 +903,21 @@ func (s *Service) RefineMatrixWith(ctx context.Context, lineKey string, base ref
 		return nil, err
 	}
 	key, err := json.Marshal(struct {
-		Line string
-		P    refine.Params
-	}{line.Key, base})
+		Line               string
+		P                  refine.Params
+		Station, Transmute map[int]float64
+	}{line.Key, base, o.StationByTier, o.TransmuteByTier})
 	if err != nil {
 		return nil, err
 	}
 	v, _, err := s.refine.matrix.get(ctx, string(key)+"|"+snapVers(snaps, cities), func(c context.Context) (*RefineMatrix, error) {
-		return s.computeMatrix(c, line, base, snaps, use)
+		return s.computeMatrix(c, line, base, snaps, use, o)
 	})
 	return v, err
 }
 
 func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refine.Params,
-	snaps map[string]*refineSnap, use snapUse) (*RefineMatrix, error) {
+	snaps map[string]*refineSnap, use snapUse, o RefineOpts) (*RefineMatrix, error) {
 
 	now := s.refine.now().UTC()
 	base.Now = now
@@ -928,6 +951,23 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 			for i := range next {
 				p := base
 				p.Target = targets[i]
+				if _, tier, _, ok := refine.ParseItemID(targets[i]); ok {
+					// 换成抓到的费率就和卡片一样算核对过(SettleStationFee 对单个目标也这么补)。
+					// Confirmed 先拷一份:base 的底层数组几个 goroutine 共用
+					confirm := func(key string) {
+						if !slices.Contains(p.Confirmed, key) {
+							p.Confirmed = append(slices.Clone(p.Confirmed), key)
+						}
+					}
+					if f, ok := o.StationByTier[tier]; ok {
+						p.Fees.StationPer100 = f
+						confirm("fees.station_per100")
+					}
+					if f, ok := o.TransmuteByTier[tier]; ok {
+						p.Fees.TransmuteStationPer100 = f
+						confirm("fees.transmute_station_per100")
+					}
+				}
 				vol := sellSnap.volume(targets[i], s.Cfg.Refining.VolumeDays)
 				res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes, Volume: vol})
 				cells[i] = matrixCell(targets[i], res, err)

@@ -148,6 +148,44 @@ func TestFlush_积压按批发(t *testing.T) {
 	}
 }
 
+// 建筑观测整次扫描一起走:积压丢旧的、分批发都不从一次扫描中间切开。
+// 服务端拿「最新那次里没有」判站拆了,存下半次扫描会把另一半当成没了(审查 finding)
+func TestStations_按整次扫描丢和分批(t *testing.T) {
+	t0 := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	scan := func(zone string, at time.Time, n int) []model.StationObs {
+		out := make([]model.StationObs, n)
+		for i := range out {
+			out[i] = model.StationObs{ZoneID: zone, Index: i, ObservedAt: at}
+		}
+		return out
+	}
+	// 积压超上限:丢掉最旧的整次扫描(Thetford 176 台),不是只丢它的前 27 台
+	var st []model.StationObs
+	st = append(st, scan("0007", t0, 176)...)
+	for i := range 49 {
+		st = append(st, scan("1000", t0.Add(time.Duration(i+1)*time.Minute), 99)...)
+	}
+	got := trimStations(st, maxPendingStations)
+	for _, o := range got {
+		if o.ZoneID == "0007" {
+			t.Fatalf("超上限时 Thetford 那次要整次丢掉,还剩下标 %d", o.Index)
+		}
+	}
+	if len(got) != 49*99 {
+		t.Fatalf("剩 %d 条,想要 %d", len(got), 49*99)
+	}
+	// 切点落在一次扫描中间:退到这次扫描开头;一次扫描本身就比切点长:挪到它结尾
+	two := append(scan("0007", t0, 5), scan("1000", t0.Add(time.Minute), 5)...)
+	for n, want := range map[int]int{3: 5, 5: 5, 7: 5, 10: 10, 0: 0} {
+		if got := scanCut(two, n); got != want {
+			t.Errorf("scanCut(%d) = %d,想要 %d", n, got, want)
+		}
+	}
+	if got := scanCut(scan("0007", t0, 8), 3); got != 8 {
+		t.Errorf("单次扫描比切点长时整次带上,得到 %d", got)
+	}
+}
+
 // 体积超过 maxBatchBytes 时把后一半退回队列,每个请求都不超限
 func TestFlush_按字节封顶(t *testing.T) {
 	var sizes []int

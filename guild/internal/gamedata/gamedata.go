@@ -28,17 +28,30 @@ func SpecIndex(line string) ([5]int, bool) {
 	return s, ok
 }
 
-// StationLine 是建筑类型 id(op 197 的 key17)对应的精炼线;不是精炼站返回 false。
+// Station 是一种精炼站:哪条线、几级。站只能炼到本级为止:T6 纺织匠的可制造清单
+// 只列到 T6_CLOTH_LEVEL4,T7/T8 布炼不了;高级站能炼所有低级的
+type Station struct {
+	Line string
+	Tier int
+}
+
+// StationOf 是建筑类型 id(op 197 的 key17)对应的精炼站;不是精炼站返回 false。
+func StationOf(buildingType int32) (Station, bool) {
+	s, ok := stations[buildingType]
+	return s, ok
+}
+
+// StationLine 是建筑类型 id 对应的精炼线;不是精炼站返回 false。
 func StationLine(buildingType int32) (string, bool) {
-	l, ok := stationLines[buildingType]
-	return l, ok
+	s, ok := stations[buildingType]
+	return s.Line, ok
 }
 
 // StationTypes 是这条线全部精炼站的建筑类型 id(T2~T8 各一种),升序。
 func StationTypes(line string) []int32 {
 	var out []int32
-	for id, l := range stationLines {
-		if l == line {
+	for id, s := range stations {
+		if s.Line == line {
 			out = append(out, id)
 		}
 	}

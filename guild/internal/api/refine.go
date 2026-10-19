@@ -170,12 +170,21 @@ func (s *Server) handleRefineMatrix(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	flip.SettleStationFee(&p, &fee, strings.TrimSpace(q.Get("station_per100")) != "",
-		strings.TrimSpace(q.Get("transmute_station_per100")) != "")
+	reqStation := strings.TrimSpace(q.Get("station_per100")) != ""
+	reqTransmute := strings.TrimSpace(q.Get("transmute_station_per100")) != ""
+	flip.SettleStationFee(&p, &fee, reqStation, reqTransmute)
 	opts, err := refineOpts(q)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	// 请求没写站费:每格按自己的 tier 取能炼它的最便宜那台。fee 是按 T8 挑的,城里只有低级站时
+	// 它退回配置,但 ByTier 里 T4~T7 照样有抓到的费率,不能整张表跟着退(和单个目标的卡片对上)
+	if !reqStation && len(fee.ByTier) > 0 {
+		opts.StationByTier = fee.ByTier
+	}
+	if !reqTransmute && s.Flip.Cfg.Refining.StationFeeTransmute && len(fee.ByTier) > 0 {
+		opts.TransmuteByTier = fee.ByTier
 	}
 	res, err := s.Flip.RefineMatrixWith(ctx, line.Key, p, opts)
 	if err != nil {

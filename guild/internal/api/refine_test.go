@@ -57,8 +57,9 @@ func (f *refineSrc) StationFees(_ context.Context, since time.Time) ([]store.Sta
 
 // withStations 给 Thetford 造两台冶炼厂(类型 501)、一台没映射的(610),并把 501 映射到矿线。
 func withStations(src *refineSrc, now time.Time) func(*flip.Service) {
+	// 一次 197 响应是整区的:观测时刻不同的站放在不同的区,不然更早的那台会被当成已经拆了
 	mk := func(btype int32, x, fee float64, owner string, age time.Duration) store.StationFee {
-		o := model.StationObs{ZoneID: "0000", BuildingType: btype, Pos: []float64{x, 1}, PublicFee: &fee,
+		o := model.StationObs{ZoneID: fmt.Sprintf("%04d", int(x)), BuildingType: btype, Pos: []float64{x, 1}, PublicFee: &fee,
 			Owner: owner, ObservedAt: now.Add(-age)}
 		return store.StationFee{StationObs: o, City: "Thetford", BuildingKey: o.BuildingKey(), Reporter: "乙"}
 	}
@@ -526,6 +527,60 @@ func TestRefine接口站费来源(t *testing.T) {
 	if m.StationFee.Source != flip.FeeSourceRequest || m.ParamsUsed.Fees.StationPer100 != 600 {
 		t.Fatalf("矩阵请求写了站费: %+v", m.StationFee)
 	}
+}
+
+// 城里只有低级站(T7 冶炼匠 430,炼不了 T8):矩阵按 T8 挑不到站、退回配置,
+// 但 T4~T7 的格子要按抓到的那台算,和单个目标的卡片对上(审查 finding)
+func TestRefine接口矩阵按格子tier取站费(t *testing.T) {
+	now := time.Now()
+	src := fullSrc(now)
+	fee := 350.0
+	o := model.StationObs{ZoneID: "0007", BuildingType: 430, Pos: []float64{1, 1}, PublicFee: &fee, Owner: "甲",
+		ObservedAt: now.Add(-time.Hour)}
+	src.stations = []store.StationFee{{StationObs: o, City: "Thetford", BuildingKey: o.BuildingKey()}}
+	srv := refineServer(src)
+	defer srv.Close()
+
+	r, raw := get(t, srv, "/api/refine/matrix?line=ORE&city=Thetford")
+	var m flip.RefineMatrix
+	if r.StatusCode != http.StatusOK || json.Unmarshal(raw, &m) != nil {
+		t.Fatalf("matrix: %d %s", r.StatusCode, raw)
+	}
+	if m.StationFee.Source == flip.FeeSourceCapture || m.StationFee.LowTier != 1 || m.StationFee.ByTier[7] != 350 {
+		t.Fatalf("按 T8 挑不到站、但每级的费率要有: %+v", m.StationFee)
+	}
+	r, raw = postPlan(t, srv, `{"target":"T5_METALBAR_LEVEL1@1","city":"Thetford"}`)
+	var plan struct {
+		StationFee flip.StationFeeInfo `json:"station_fee"`
+		Candidates []refine.Candidate  `json:"candidates"`
+	}
+	if r.StatusCode != http.StatusOK || json.Unmarshal(raw, &plan) != nil || len(plan.Candidates) == 0 {
+		t.Fatalf("plan: %d %s", r.StatusCode, raw)
+	}
+	if plan.StationFee.Source != flip.FeeSourceCapture || plan.StationFee.Fee != 350 {
+		t.Fatalf("卡片按 T5 挑得到 350: %+v", plan.StationFee)
+	}
+	for _, c := range m.Cells {
+		if c.Target != "T5_METALBAR_LEVEL1@1" || c.Best == nil {
+			continue
+		}
+		var card *refine.Candidate
+		for i := range plan.Candidates {
+			if plan.Candidates[i].ID == c.Best.ID {
+				card = &plan.Candidates[i]
+			}
+		}
+		if card == nil || math.Abs(card.UnitCost-c.Best.UnitCost) > 1e-6 {
+			t.Fatalf("矩阵这一格和卡片同一条路线的单根成本要一样: 格 %+v 卡 %+v", c.Best, card)
+		}
+		for _, w := range c.Best.Warnings {
+			if strings.Contains(w.Msg, "精炼站费") {
+				t.Fatalf("按抓到的站算的格子不该再说站费没核实: %s", w.Msg)
+			}
+		}
+		return
+	}
+	t.Fatal("矩阵里没有 T5_METALBAR_LEVEL1@1 这一格")
 }
 
 // after(WS 推送时刻)要是 RFC3339,或者 now(按服务端的现在,断线重连用);

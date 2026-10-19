@@ -102,8 +102,18 @@ func TestStationTypes(t *testing.T) {
 		}
 	}
 	for _, l := range Lines {
-		if n := len(StationTypes(l)); n != 7 {
-			t.Errorf("%s 有 %d 种站,应当是 T2~T8 七种", l, n)
+		ids := StationTypes(l)
+		if len(ids) != 7 {
+			t.Errorf("%s 有 %d 种站,应当是 T2~T8 七种", l, len(ids))
 		}
+		for i, id := range ids { // 每条线 T2~T8 按 id 升序排
+			if s, _ := StationOf(id); s.Tier != i+2 {
+				t.Errorf("%s 第 %d 种站(类型 %d)tier = %d", l, i, id, s.Tier)
+			}
+		}
+	}
+	// N 地图里实际抓到的:457 是 T6 纺织匠,炼不了 T7/T8 布
+	if s, ok := StationOf(457); !ok || s.Line != "FIBER" || s.Tier != 6 {
+		t.Errorf("457 = %+v %v", s, ok)
 	}
 }

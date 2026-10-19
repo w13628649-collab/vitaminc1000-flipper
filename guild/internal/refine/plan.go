@@ -32,7 +32,13 @@ const (
 	WarnLocked       = "locked"            // 目标 tier 没解锁,只能买不能炼
 	WarnQtyBound     = "qty_bound"         // 日化卡在这一批的件数:别的上限还允许做更多,但成本只按这一批算过
 	WarnCapitalShort = "capital_short"     // 开工本金超过本金,这一批一次备不齐料
+	WarnPriceSpike   = "price_spike"       // 挂卖价比近几天成交均价高出 SpikeBand 以上:利润靠刚涨上去的卖价
 )
+
+// SpikeBand:挂卖价比近几天成交均价(Volume.RecentAvg)高出这么多就警告 price_spike。
+// 和机会页挂单腿的价格带 filters.maker_price_band 默认值一致(docs/flipper.md:0.1、0.15
+// 会误伤盘口紧、有量的正常机会)
+const SpikeBand = 0.2
 
 // Warning 是一条警告。
 type Warning struct {
@@ -101,7 +107,8 @@ type ProfitLine struct {
 	// Total 是这一批的利润 = Sold × Unit。吃买单卖不完的那几件不在里面:
 	// 它们按成本留在手里(和批末余料 carry 一个口径),不能拿断崖之前的均价去外推
 	Total float64 `json:"total"`
-	// TotalPct 是这一批的总利润率 = Total ÷ 开工本金(Candidate.UpfrontCapital,含批末余料)。
+	// TotalPct 是这一批的总利润率 = Total ÷ 开工本金(Candidate.UpfrontCapital,含批末余料;
+	// 挂卖单那一行再加上挂单当场扣的创建费)。
 	// 和 Pct 的区别:Pct 的分母是稳态单根成本;这里是开工前真要掏的钱 ——
 	// 批末余料、吃买单卖不完压着的料都在分母里。分母用 TotalCost 的话,全卖掉、余料结转时
 	// 它就等于 Pct,没有新信息;这个数回答的是「回本快不快」
@@ -167,6 +174,9 @@ type Candidate struct {
 	TotalCost float64 `json:"total_cost"`
 	// UpfrontCapital 是开工前要备齐的钱:稳态消耗 + 批末余料(§2.4)
 	UpfrontCapital float64 `json:"upfront_capital"`
+	// PostSetup 是主出售方式为挂卖单时,这一批挂单当场扣的创建费(挂价 × 创建费率 × 件数)。
+	// 回款前也要先垫:本金上限、本金不够的判断和挂卖那一行的总利润率都把它算进去。吃买单为主时是 0
+	PostSetup float64 `json:"post_setup"`
 
 	Profit Profits  `json:"profit"`
 	Focus  FocusUse `json:"focus"`
@@ -602,7 +612,13 @@ func (e *engine) candidate(ev *evalResult, si SellInfo, bestNoFocus *float64, re
 		c.Profit.Post = &ProfitLine{Net: si.Post.Net, Unit: si.Post.Net - c.UnitCost, Sold: N}
 		c.Profit.Post.Pct = pct(c.Profit.Post.Unit, c.UnitCost)
 		c.Profit.Post.Total = c.Profit.Post.Sold * c.Profit.Post.Unit
-		c.Profit.Post.TotalPct = pct(c.Profit.Post.Total, c.UpfrontCapital)
+		// 挂卖单的创建费挂单当场就扣(F1),回款前要多垫这一笔:这一行的分母加上它。
+		// 到手价里已经扣过它,分子不动;吃买单不收创建费,那一行不加
+		setup := float64(si.Post.Price) * p.Fees.Setup * N
+		c.Profit.Post.TotalPct = pct(c.Profit.Post.Total, c.UpfrontCapital+setup)
+		if p.Sell.Modes[0] == SellPost {
+			c.PostSetup = setup
+		}
 	}
 	if si.Take != nil && si.Take.Fill.Got > 0 {
 		// 每件利润按卖掉的那几件的均价算;断崖之后的不外推(见 ProfitLine.Total)
@@ -693,7 +709,9 @@ func (e *engine) daily(c Candidate, ev *evalResult, profit float64) *Daily {
 	}
 	if steady := ev.total / float64(p.Qty); p.Daily.Capital > 0 && steady > 0 {
 		tied := c.UpfrontCapital - ev.total // 批末余料的取得成本;不算余料时是 0
-		consider((p.Daily.Capital-tied)/steady/p.Daily.TurnoverDays, "capital", &d.Limits.Capital)
+		// 挂卖单每件还要当场垫创建费(Candidate.PostSetup)
+		perUnit := steady + c.PostSetup/float64(p.Qty)
+		consider((p.Daily.Capital-tied)/perUnit/p.Daily.TurnoverDays, "capital", &d.Limits.Capital)
 	}
 	consider(float64(p.Qty)/p.Daily.TurnoverDays, "qty", &d.Limits.Qty)
 	if p.Sell.Modes[0] == SellTake && c.Profit.Take != nil {
@@ -711,10 +729,14 @@ func (e *engine) daily(c Candidate, ev *evalResult, profit float64) *Daily {
 // dailyWarnings:日化卡在批量上、开工本金超过本金,这两种要让人知道。
 func (e *engine) dailyWarnings(c *Candidate) {
 	p := e.p
-	if p.Daily.Capital > 0 && c.UpfrontCapital > p.Daily.Capital+costEps {
+	if need := c.UpfrontCapital + c.PostSetup; p.Daily.Capital > 0 && need > p.Daily.Capital+costEps {
+		what := "料(含批末余料)"
+		if c.PostSetup > 0 {
+			what = fmt.Sprintf("料(含批末余料)和挂单创建费 %.0f", c.PostSetup)
+		}
 		c.Warnings = append(c.Warnings, Warning{Code: WarnCapitalShort,
-			Msg: fmt.Sprintf("开工要先备齐 %.0f 银的料(含批末余料),超过本金 %.0f:这一批一次备不齐,日化按扣掉余料占用之后的本金算",
-				c.UpfrontCapital, p.Daily.Capital)})
+			Msg: fmt.Sprintf("开工要先备齐 %.0f 银的%s,超过本金 %.0f:这一批一次备不齐,日化按扣掉余料占用之后的本金算",
+				need, what, p.Daily.Capital)})
 	}
 	d := c.Daily
 	if d == nil || d.Binding != "qty" {
@@ -877,6 +899,20 @@ func (e *engine) ageAndWarnings(c *Candidate, ev *evalResult, si SellInfo) {
 	if c.Focus.OverBudget {
 		c.Warnings = append(c.Warnings, Warning{Code: WarnOverFocus,
 			Msg: fmt.Sprintf("这一批要 %.0f 专注,今日可用 %.0f", c.Focus.Effective, p.Focus.Budget)})
+	}
+	// 挂卖价比近几天的成交均价高出一截:利润靠的是刚涨上去的卖价。照实算出回到均价时还剩多少,
+	// 不替用户改卖价——盘口是真的,刚涨上去的价也可能撑得住(2026-10-19 T5.2 布:卖一 5,898,
+	// 7 天均价约 4,760,挂卖 42%、回到均价约 10%)。
+	// 只在主出售方式是挂卖单时出(和上面判新鲜度同一个口径):吃买单为主时主数按买一算,
+	// 和卖一冲不冲高无关,标红会误导;界面行情表里「近 7 天成交均价」那一行照样会标黄
+	if post, pl := si.Post, c.Profit.Post; post != nil && pl != nil && p.Sell.Modes[0] == SellPost {
+		if avg := e.volume.RecentAvg; avg > 0 && float64(post.Price) > avg*(1+SpikeBand) {
+			unit := avg*e.mkt.PostAsk - c.UnitCost
+			c.Warnings = append(c.Warnings, Warning{Code: WarnPriceSpike, Item: p.Target,
+				Msg: fmt.Sprintf("挂卖价 %d 比近 %d 天成交均价 %.0f 高 %.0f%%,利润靠的是刚涨上去的卖价;"+
+					"回到均价挂卖,单根利润 %+.0f(%+.1f%%)",
+					post.Price, e.volume.RecentDays, avg, (float64(post.Price)/avg-1)*100, unit, pct(unit, c.UnitCost)*100)})
+		}
 	}
 	// 值等于默认值、用户又没说核对过(Params.Confirmed)的才算「没核实」
 	var keys []string
