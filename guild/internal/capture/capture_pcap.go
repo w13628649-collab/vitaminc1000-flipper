@@ -11,8 +11,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 
 	"albion-guild/internal/photon"
@@ -25,18 +23,19 @@ import (
 // 醒得勤一点只是多几次空转,换来的是能干净地关掉。
 const readTimeout = 500 * time.Millisecond
 
-// Devices 枚举可抓的网卡。
-func Devices() ([]string, error) {
+// Devices 枚举可抓的网卡,按名字归好类(categorize.go)。
+func Devices() ([]Device, error) {
 	ifs, err := pcap.FindAllDevs()
 	if err != nil {
 		return nil, err
 	}
-	var out []string
+	var out []Device
 	for _, d := range ifs {
 		if len(d.Addresses) == 0 {
 			continue // 没地址的接口抓不到东西
 		}
-		out = append(out, d.Name)
+		out = append(out, Device{Name: d.Name, Description: d.Description,
+			Category: Categorize(d.Name, d.Description)})
 	}
 	return out, nil
 }
@@ -72,6 +71,16 @@ func Listen(ctx context.Context, opt Options, h Handler) error {
 	linkType := handle.LinkType()
 	slog.Info("开始抓包", "device", opt.Device, "port", port)
 
+	var rec *recorder
+	if opt.RecordDir != "" {
+		// 录不了不影响抓包:目录建不了之类的只记一条日志
+		if rec, err = newRecorder(opt.RecordDir, opt.Device, linkType, uint32(handle.SnapLen())); err != nil {
+			slog.Warn("录包开不起来,只抓不录", "device", opt.Device, "err", err)
+			rec = nil
+		}
+		defer rec.Close()
+	}
+
 	// 自己读,不用 gopacket.PacketSource。PacketSource 会另起一个
 	// goroutine 读包往 channel 里塞,ctx 取消后那个 goroutine 还卡在
 	// 读操作上,Close() 就永远等不到——这是退出挂死的根因。
@@ -82,7 +91,7 @@ func Listen(ctx context.Context, opt Options, h Handler) error {
 		default:
 		}
 
-		data, _, err := handle.ReadPacketData()
+		data, ci, err := handle.ReadPacketData()
 		switch {
 		case err == nil:
 		case errors.Is(err, pcap.NextErrorTimeoutExpired):
@@ -94,9 +103,8 @@ func Listen(ctx context.Context, opt Options, h Handler) error {
 			return fmt.Errorf("%s 读包失败: %w", opt.Device, err)
 		}
 
-		// ReadPacketData 每次返回新切片,NoCopy 是安全的
-		feed(parser, gopacket.NewPacket(data, linkType,
-			gopacket.DecodeOptions{Lazy: true, NoCopy: true}))
+		rec.write(ci, data)
+		feed(parser, data, linkType, 0) // BPF 已经按端口滤过
 	}
 }
 
@@ -126,17 +134,4 @@ func open(device string) (*pcap.Handle, error) {
 		return nil, err
 	}
 	return inactive.Activate()
-}
-
-func feed(parser *photon.PhotonParser, pkt gopacket.Packet) {
-	// 只认 IPv4 上的 UDP/TCP 载荷,其余直接跳过
-	if pkt.NetworkLayer() == nil || pkt.TransportLayer() == nil {
-		return
-	}
-	switch t := pkt.TransportLayer().(type) {
-	case *layers.UDP:
-		parser.ReceivePacket(t.Payload)
-	case *layers.TCP:
-		parser.ReceivePacket(t.Payload)
-	}
 }

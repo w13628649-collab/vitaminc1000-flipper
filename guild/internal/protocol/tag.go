@@ -144,3 +144,6 @@ func safeFloat(f float64) any {
 	}
 	return f
 }
+
+// TagParams 是 taggedParams 的导出版,给离线分析工具(cmd/pcapdump)打印原始参数用。
+func TagParams(params map[byte]any) json.RawMessage { return taggedParams(params) }

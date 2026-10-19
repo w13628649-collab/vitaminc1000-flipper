@@ -56,12 +56,26 @@ func TestHandleEvent_事件不进业务层(t *testing.T) {
 	for _, code := range []any{byte(3), byte(29), int16(2), int16(406)} {
 		p.HandleEvent(1, map[byte]any{paramEventCode: code, 0: "x", 1: "guid", 2: "名字", 8: "0007"})
 	}
-	p.HandleEvent(1, map[byte]any{0: "没有事件码"})
 	if identity || p.Location() != "" {
 		t.Fatalf("事件进了业务层:身份回调 %v、位置 %q", identity, p.Location())
 	}
 	if len(*got) != 4 {
-		t.Fatalf("4 条有码的事件都该记样本,得到 %d", len(*got))
+		t.Fatalf("4 条事件都该记样本,得到 %d", len(*got))
+	}
+}
+
+// 没有 252 时真码是 Photon 层的派发字节:Move(事件 3)服务端不发 252,
+// 它是最多的那类事件,不能认不出来
+func TestHandleEvent_没有252用派发字节(t *testing.T) {
+	p, got := sampleParser(t)
+	p.HandleEvent(3, map[byte]any{0: int64(12345), 1: []byte{3, 0, 0}})
+	if len(*got) != 1 || (*got)[0].Code != 3 || (*got)[0].Kind != model.SampleEvent {
+		t.Fatalf("得到 %+v", *got)
+	}
+	// 有 252 时以 252 为准,派发字节是 1(通用)
+	p.HandleEvent(1, map[byte]any{paramEventCode: int16(448)})
+	if len(*got) != 2 || (*got)[1].Code != 448 {
+		t.Fatalf("得到 %+v", *got)
 	}
 }
 

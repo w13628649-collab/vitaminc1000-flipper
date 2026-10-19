@@ -13,6 +13,7 @@ func TestAllowlist_默认码下的完整内容(t *testing.T) {
 		{KindResponse, 81}:  {0},
 		{KindResponse, 82}:  {0},
 		{KindResponse, 2}:   {1, 2, 8},
+		{KindResponse, 41}:  {0},
 		{KindResponse, 197}: {17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
 		{KindRequest, 17}:   {0},
 		{KindRequest, 197}:  {0},

@@ -55,6 +55,9 @@ func Allowlist(op OpCodes) []Rule {
 			Why: "买单列表,同上"},
 		{Kind: KindResponse, Code: op.Join, Name: "Join", Keys: []byte{1, 2, 8},
 			Why: "自己的角色 id / 角色名 / 所在区。城市挂单的 LocationId 在包里是空的,靠所在区补"},
+		{Kind: KindResponse, Code: op.ChangeCluster, Name: "ChangeCluster", Keys: []byte{0},
+			Why: "切区的响应,key0 是目的地区 id。现在的游戏里切区走它(OpenRadar 两万九千个包的" +
+				"语料里 op 17 一次都没出现),Join 响应的 key8 兜底"},
 		{Kind: KindResponse, Code: op.GetClusterMapInfo, Name: "GetClusterMapInfo",
 			Keys: []byte{17, 18, 20, 22, 23, 24, 25, 31, 33, 34},
 			Why: "区域地图里的建筑:类型、坐标、耐久、营养、银、所有者、两档使用费(23/31 含义未知,原样存)。" +

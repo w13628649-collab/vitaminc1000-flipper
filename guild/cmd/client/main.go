@@ -52,6 +52,7 @@ func main() {
 		token    = flag.String("token", "", "CDK 换来的访问令牌(暂未启用)")
 		headless = flag.Bool("headless", false, "不开窗口,只抓包上传")
 		noLink   = flag.Bool("no-shortcut", false, "不在桌面建、也不更新快捷方式")
+		record   = flag.String("record", "", "同时把抓到的 Albion 原始包写成 .pcap 存到这个目录(回放和回归测试用)")
 	)
 	flag.Parse()
 
@@ -74,8 +75,10 @@ func main() {
 		slog.Warn(w.Message, "help", w.HelpURL)
 	}
 
-	devices := []string{*device}
-	if *device == "" {
+	var devices []capture.Device
+	if *device != "" {
+		devices = []capture.Device{{Name: *device, Category: capture.Categorize(*device, "")}}
+	} else {
 		found, err := capture.Devices()
 		if err != nil {
 			fail(ctx, reporter, "枚举网卡失败", err.Error())
@@ -89,9 +92,21 @@ func main() {
 
 	// 先报一次环境。即使之后一条错误都没有,服务端也能看到
 	// "这个人确实把客户端跑起来了、装的什么版本、网卡有几张"
+	categories := map[capture.Category]int{}
+	for _, d := range devices {
+		categories[d.Category]++
+		slog.Info("网卡", "name", d.Name, "description", d.Description, "category", d.Category)
+	}
+	exitLag := capture.HasExitLag(devices)
+	if exitLag {
+		slog.Warn(capture.ExitLagHint)
+	}
+	if *record != "" {
+		slog.Info("录包已开", "dir", *record)
+	}
 	reporter.Hello(ctx, map[string]any{
-		"devices": len(devices), "port": *port,
-		"driver": driverMsg, "server": *server,
+		"devices": len(devices), "categories": categories, "port": *port,
+		"driver": driverMsg, "server": *server, "record": *record != "",
 	})
 	if len(devices) > 1 {
 		slog.Info("将监听多张网卡", "count", len(devices))
@@ -101,6 +116,9 @@ func main() {
 	// 枚举到 11 张但一张都打不开(Npcap 装成仅管理员模式最常见),
 	// 显示"抓包中"就是在骗人,而那恰恰是最需要被看见的故障
 	var live atomic.Int32
+	// messages 是收到的 Albion 消息总数,started 是启动时刻。判断"开着却抓不到"用
+	var messages atomic.Int64
+	started := time.Now()
 
 	up := &uploader{
 		server: *server,
@@ -134,6 +152,11 @@ func main() {
 			st.Devices = int(live.Load())
 			st.Capturing = live.Load() > 0
 			st.DriverWarning = driverMsg
+			// 有 ExitLag、开了一分钟还一条 Albion 消息都没收到,才提示。
+			// 刚开客户端、游戏还没进图时不提示,不然每次启动都闪一下
+			if exitLag && messages.Load() == 0 && time.Since(started) > time.Minute {
+				st.CaptureHint = capture.ExitLagHint
+			}
 			cs := crypt.Snapshot()
 			st.MarketCrypto = string(cs.State)
 			st.MarketCryptoText = cs.State.Text()
@@ -151,7 +174,7 @@ func main() {
 	parser.OnMarketResponded = crypt.MarketResponded
 	parser.OnMarketDecoded = crypt.MarketDecoded
 	parser.OnStations = up.addStations
-	// 原始样本:op 197 全键和三条专精事件,用来解字段布局(白名单见 protocol/allowlist.go)
+	// 原始样本:明文全抓,所有认得出码的消息都记(protocol/sample.go)
 	parser.Version = version
 	parser.OnSample = up.addSample
 	parser.OnIdentity = func(_, name, loc string) {
@@ -161,13 +184,20 @@ func main() {
 	}
 
 	h := capture.Handler{
-		OnRequest: parser.HandleRequest,
+		OnRequest: func(code byte, params map[byte]any) {
+			messages.Add(1)
+			parser.HandleRequest(code, params)
+		},
 		// Photon 的响应回调带 returnCode 和 debug 字符串,我们用不上
 		OnResponse: func(code byte, _ int16, _ string, params map[byte]any) {
+			messages.Add(1)
 			parser.HandleResponse(code, params)
 		},
 		// 事件:HandleEvent 记全键样本(明文全抓),还没有类型化处理器
-		OnEvent: parser.HandleEvent,
+		OnEvent: func(code byte, params map[byte]any) {
+			messages.Add(1)
+			parser.HandleEvent(code, params)
+		},
 		// 密文只交给加密判定,由它决定是不是市场被加密;这里不再自己下结论
 		OnEncrypted: crypt.Encrypted,
 	}
@@ -188,6 +218,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	for _, d := range devices {
+		d := d.Name
 		wg.Add(1)
 		go func(dev string) {
 			defer wg.Done()
@@ -195,7 +226,7 @@ func main() {
 			defer live.Add(-1)
 			// 一张网卡打不开不该影响其他网卡(Windows 上基于 Wintun 的
 			// VPN 适配器经常打不开,这是正常的)
-			if err := capture.Listen(ctx, capture.Options{Device: dev, Port: *port}, h); err != nil {
+			if err := capture.Listen(ctx, capture.Options{Device: dev, Port: *port, RecordDir: *record}, h); err != nil {
 				slog.Warn("这张网卡跳过", "device", dev, "err", err)
 			}
 		}(d)

@@ -54,6 +54,8 @@ type Status struct {
 	// DriverWarning 非空表示 Npcap 没装或者装得不对。
 	// 这是唯一一个"不解决就完全没用"的问题,必须显眼
 	DriverWarning string `json:"driver_warning"`
+	// CaptureHint 是"开着却抓不到"时的排查提示,比如检测到 ExitLag
+	CaptureHint string `json:"capture_hint"`
 
 	// Fallback 为 true 表示界面跑在浏览器里,没有程序窗口。
 	// 界面据此显示"退出"按钮

@@ -3177,6 +3177,9 @@ async function pollLocal() {
     if (s.driver_warning) {
       warn.innerHTML = `<b>抓不到数据:</b>${esc(s.driver_warning)}`;
       warn.hidden = false;
+    } else if (s.capture_hint) {
+      warn.innerHTML = `<b>抓不到数据:</b>${esc(s.capture_hint)}`;
+      warn.hidden = false;
     } else if (s.last_error) {
       warn.innerHTML = `<b>传不上去:</b>${esc(s.last_error)}`;
       warn.hidden = false;

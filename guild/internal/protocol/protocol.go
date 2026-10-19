@@ -11,6 +11,7 @@ package protocol
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -35,7 +36,8 @@ type OpCodes struct {
 	AuctionGetOffers       int // 卖单列表
 	AuctionGetRequests     int // 买单列表
 	Join                   int // 登录/切区,带角色和位置
-	GetGameServerByCluster int // 切区
+	GetGameServerByCluster int // 换游戏服务器(老的切区信号)
+	ChangeCluster          int // 切区:响应 key0 是目的地
 	GetClusterMapInfo      int // 区域地图(N 键):全区建筑和制造站费率
 }
 
@@ -47,6 +49,7 @@ func DefaultOpCodes() OpCodes {
 		AuctionGetRequests:     82,
 		Join:                   2,
 		GetGameServerByCluster: 17,
+		ChangeCluster:          41,
 		GetClusterMapInfo:      197,
 	}
 }
@@ -128,6 +131,14 @@ func (p *Parser) now() time.Time {
 	return time.Now()
 }
 
+// SetClock 让解析器用给定的时钟取"现在"。离线回放用:挂单、建筑、样本的观测时间
+// 应该是包上的抓包时间,不是回放那一刻的墙钟。nil 恢复用墙钟
+func (p *Parser) SetClock(f func() time.Time) {
+	p.mu.Lock()
+	p.clock = f
+	p.mu.Unlock()
+}
+
 func New() *Parser {
 	return &Parser{Codes: DefaultOpCodes()}
 }
@@ -188,6 +199,10 @@ func (p *Parser) HandleResponse(_ byte, params map[byte]any) {
 		p.handleOrders(params)
 	case p.Codes.Join:
 		p.handleJoin(params)
+	case p.Codes.ChangeCluster:
+		if zone, ok := params[0].(string); ok && zone != "" {
+			p.setLocation(zone)
+		}
 	case p.Codes.GetClusterMapInfo:
 		p.handleClusterMap(params)
 	}
@@ -223,12 +238,16 @@ func (p *Parser) HandleRequest(_ byte, params map[byte]any) {
 
 // HandleEvent 处理服务端推来的事件:记全键样本。
 //
+// 真码在 params[252];**没有 252 时真码就是 Photon 层的派发字节**。Move(事件 3)走的就是
+// 这条路:它占全部事件的大头,服务端为了省字节不发 252。只认 252 的话,最多的这类事件
+// 既认不出也记不了样本(拿真实录包跑出来的,见 cmd/pcapdump)。
+//
 // 还没有事件的类型化处理器——要用哪条事件,先看它的样本,再在 allowlist.go 加一行、
 // 在这里加一个分支。
-func (p *Parser) HandleEvent(_ byte, params map[byte]any) {
+func (p *Parser) HandleEvent(photonCode byte, params map[byte]any) {
 	code, ok := intParam(params, paramEventCode)
 	if !ok {
-		return
+		code = int(photonCode)
 	}
 	p.recordSample(KindEvent, code, params)
 }
@@ -238,7 +257,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 	if !ok || len(raws) == 0 {
 		return
 	}
-	now := time.Now()
+	now := p.now() // 回放时是包上的时间
 	orders := make([]model.MarketOrder, 0, len(raws))
 	decoded := 0
 	// 解开了几条就报几条,位置不明丢掉的也算:能解开 JSON 就说明是明文
@@ -286,7 +305,9 @@ func (p *Parser) handleOrders(params map[byte]any) {
 
 func (p *Parser) handleJoin(params map[byte]any) {
 	p.mu.Lock()
-	if v, ok := params[1].(string); ok {
+	// 真实的 Join 响应里 key1 是 16 字节的 Guid,不是字符串(OpenRadar 录包,
+	// testdata/openradar)。以前只认字符串,角色 id 从来没读到过
+	if v := guidParam(params[1]); v != "" {
 		p.characterID = v
 	}
 	if v, ok := params[2].(string); ok {
@@ -370,4 +391,22 @@ func stringSlice(v any) ([]string, bool) {
 		return out, len(out) > 0 || len(s) == 0
 	}
 	return nil, false
+}
+
+// guidParam 把 Guid 参数转成 .NET 的标准字符串形式。线上是 16 字节,按 .NET
+// new Guid(byte[]) 的布局:前三段小端、后 8 字节原序。转成这个形式才能和挂单 JSON 里
+// SellerCharacterId 之类的字符串对得上。已经是字符串的原样返回,认不出返回空
+func guidParam(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case []byte:
+		if len(x) != 16 {
+			return ""
+		}
+		return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+			x[3], x[2], x[1], x[0], x[5], x[4], x[7], x[6],
+			x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15])
+	}
+	return ""
 }

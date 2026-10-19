@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"testing"
+	"time"
 
 	"albion-guild/internal/model"
 )
@@ -227,5 +228,19 @@ func TestHandleResponse_有参数表时仍按253路由(t *testing.T) {
 	p.HandleResponse(99, map[byte]any{253: p.Codes.Join, 1: "guid", 2: "Tessaria", 8: "Lymhurst"})
 	if !called {
 		t.Fatal("有 253 时应该按它路由到 Join")
+	}
+}
+
+// 离线回放时挂单的观测时间是包上的时间,不是回放那一刻
+func TestSetClock_挂单用解析器的时钟(t *testing.T) {
+	p := New()
+	got := collect(t, p)
+	at := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	p.SetClock(func() time.Time { return at })
+	p.HandleResponse(1, map[byte]any{8: "Martlock", 1: "guid", 2: "Tessaria",
+		paramOperationCode: byte(p.Codes.Join)})
+	p.HandleResponse(1, map[byte]any{0: []string{offerJSON}})
+	if len(*got) != 1 || !(*got)[0].ObservedAt.Equal(at) {
+		t.Fatalf("观测时间应该是 %v,得到 %+v", at, *got)
 	}
 }

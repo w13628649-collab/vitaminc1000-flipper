@@ -32,6 +32,10 @@
     `craftingmodifiers.xml` 141 条 craftinglocation、`buildings.xml` 9,199 条
     craftingitemlist、`ItemValueToNutrition=0.1125`、`maxuseagefee=1000`
 
+**录包和离线分析**:客户端加 `-record <目录>` 把 Albion 原始包同时写成 .pcap(256 MB 一个文件);
+`go run ./cmd/pcapdump 录包.pcap` 列出每种消息出现几次,`-dump event:448` 逐条打印参数。
+写解码器先拿真实录包看,别只靠静态元数据推。真实录包夹具在 `guild/internal/protocol/testdata/`。
+
 进度和接口清单见 `docs/progress.md`,口径和设计取舍见 `docs/flipper.md`。
 
 ### 作者情况

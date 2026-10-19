@@ -26,6 +26,16 @@ type Handler struct {
 type Options struct {
 	Device string // 网卡名;空表示自动枚举全部
 	Port   int    // Albion 的 Photon 端口,默认 5056
+	// RecordDir 非空时,过了端口过滤的原始包同时写成 .pcap(record.go),
+	// 给离线回放(ReadFile)和回归测试用
+	RecordDir string
+}
+
+// Device 是一张可抓的网卡。
+type Device struct {
+	Name        string   // 打开时用的名字,Windows 上是 \Device\NPF_{GUID}
+	Description string   // 给人看的名字,比如 "Realtek PCIe GbE Family Controller"
+	Category    Category // 按名字认出来的类别(categorize.go)
 }
 
 const DefaultPort = 5056
