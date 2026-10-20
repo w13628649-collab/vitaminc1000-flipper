@@ -75,8 +75,13 @@ func sortOffers(os []offer) {
 // askOffers 是一个物品在可买城市的全部卖单档,每档等效单价 = 价 + 运费 + route。
 // 过期或没有盘口的城市跳过。
 func (e *engine) askOffers(item string, route float64, target string) []offer {
+	return e.askOffersIn(item, route, target, e.p.Sources.Cities, true)
+}
+
+// askOffersIn 同 askOffers,城市和要不要加运费由调用方定(心:全部市场、不加运费)。
+func (e *engine) askOffersIn(item string, route float64, target string, cities []string, freight bool) []offer {
 	var out []offer
-	for _, city := range e.p.Sources.Cities {
+	for _, city := range cities {
 		l, ok := e.side(item, city, true)
 		if !ok {
 			continue
@@ -84,7 +89,7 @@ func (e *engine) askOffers(item string, route float64, target string) []offer {
 		transport := 0.0
 		for i, lv := range l.levels {
 			price := float64(lv.Price)
-			if city != e.p.City {
+			if freight && city != e.p.City {
 				transport = price * e.p.Sources.TransportPct
 			}
 			qty := float64(lv.Qty)
@@ -162,9 +167,31 @@ func (e *engine) buyOffers(item string) []offer {
 	if os, ok := e.buyCache[item]; ok {
 		return os
 	}
-	os := e.askOffers(item, 0, item)
+	var os []offer
+	if e.kindOf(item) == kindHeart {
+		os = e.heartOffers(item)
+	} else {
+		os = e.askOffers(item, 0, item)
+	}
 	sortOffers(os)
 	e.buyCache[item] = os
+	return os
+}
+
+// heartSourceManual 是手填心价那一档的 source(步骤清单、心的汇总里显示「手填」)。
+const heartSourceManual = "manual"
+
+// heartOffers 是心的全部来路:Sources.HeartCities 每座城的卖单(不加运费,心很轻、随身带),
+// 再加一档手填价(Fees.HeartPrice > 0 时,要多少有多少)。
+func (e *engine) heartOffers(item string) []offer {
+	os := e.askOffersIn(item, 0, item, e.p.Sources.HeartCities, false)
+	if hp := e.p.Fees.HeartPrice; hp > 0 {
+		os = append(os, offer{
+			key:   offerKey{item: item, idx: -1},
+			price: hp, mul: 1, qty: math.Inf(1), target: item, source: heartSourceManual,
+			eff: hp,
+		})
+	}
 	return os
 }
 

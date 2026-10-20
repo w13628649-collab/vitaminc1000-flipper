@@ -61,19 +61,18 @@ func (s *Service) RefineQtyScan(ctx context.Context, p refine.Params, o RefineOp
 		return nil, err
 	}
 	line, _ := refine.LineOfItem(p.Target)
-	cities := allCities(p)
-	snaps, _, err := s.ensureSnaps(ctx, line, cities, o.After)
-	if err != nil {
-		return nil, err
-	}
-	now := s.refine.now().UTC()
-	p.Now = now
 	recipes := s.Recipes()
 	items, err := refine.ItemsFor(recipes, p.Target)
 	if err != nil {
 		return nil, &ParamError{Err: err}
 	}
-	keys := refineKeys(items, buyCities(p), []string{p.Target}, p.Sell.City)
+	snaps, _, _, err := s.snapsFor(ctx, line, p, needsHeart(line, items), o.After)
+	if err != nil {
+		return nil, err
+	}
+	now := s.refine.now().UTC()
+	p.Now = now
+	keys := refineKeysWithHeart(p, line, items, []string{p.Target})
 	books, _, _ := s.mergeBooks(keys, snaps, now, p.Sources.MaxAgeHours)
 	vol := snaps[p.Sell.City].volume(p.Target, s.Cfg.Refining.VolumeDays)
 	mode := refine.SellPost

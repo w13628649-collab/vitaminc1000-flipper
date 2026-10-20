@@ -488,7 +488,9 @@ func (st *state) rawCurve(target string, capQ float64) curve {
 
 func (st *state) buyCurve(item string, capQ float64) curve {
 	os := st.e.buyOffers(item)
-	if len(os) == 0 {
+	// 心是可选的输入(普通配方不用它),没价不算缺价:否则 .0~.3 的计划几乎总挂着「心缺价」。
+	// 心的情况在 Result.Heart 里单独报
+	if len(os) == 0 && st.e.kindOf(item) != kindHeart {
 		st.res.missing[item] = true
 	}
 	return st.offerCurve(os, capQ)

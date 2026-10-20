@@ -78,6 +78,13 @@ type SourceParams struct {
 	BidMaxQty float64 `json:"bid_max_qty"`
 	// MaxAgeHours:比这更旧的盘口当作缺价。默认 72(refining.window_hours)
 	MaxAgeHours float64 `json:"max_age_hours"`
+	// HeartCities 是能买心(心配方里替掉一个原料的阵营代币)的城市。
+	//
+	// 心很轻,在哪买都能随身带回生产城,所以不受「买料城市」限制、也不加运费。
+	// 而且心多半只在一两座城有人挂(2026-10-20 实测:纤维之心只有 Caerleon 有卖单,
+	// 山脉之心全亚服一单都没有),只在买料城市里找的话,心配方几乎永远没价、被悄悄跳过。
+	// 空 = 和 Cities 一样(老请求、测试)。服务端默认填全部市场城市(黑市除外)
+	HeartCities []string `json:"heart_cities"`
 }
 
 // FocusParams 是专注。
@@ -115,6 +122,10 @@ type FeeParams struct {
 	BuyOrderSetup bool    `json:"buy_order_setup"`
 	Outbid        int64   `json:"outbid"`
 	Undercut      int64   `json:"undercut"`
+	// HeartPrice 是手填的心单价(银 / 个),0 = 不填。
+	// 填了就当作「按这个价要多少有多少」的一档,和市场上的心一起比、取便宜的。
+	// 老表格里的「山脉之心单价」就是它;市场上没人挂心、或者心是用阵营点数换的时候只能靠它
+	HeartPrice float64 `json:"heart_price"`
 }
 
 // economics 转成 econ 认的配置,税费只走 econ 那一份逻辑(F1–F3)。
@@ -231,6 +242,9 @@ func (p Params) normalized() Params {
 	if len(p.Sources.Cities) == 0 {
 		p.Sources.Cities = []string{p.City}
 	}
+	if len(p.Sources.HeartCities) == 0 {
+		p.Sources.HeartCities = p.Sources.Cities
+	}
 	if p.Focus.Mode == "" {
 		p.Focus.Mode = FocusAuto
 	}
@@ -305,6 +319,10 @@ func (p Params) validate() (Line, int, int, error) {
 	}
 	if !(p.Sources.MaxAgeHours > 0 && p.Sources.MaxAgeHours <= MaxAgeHoursLimit) {
 		return line, 0, 0, fmt.Errorf("数据最大年龄要在 (0, %g] 小时内,得到 %g", MaxAgeHoursLimit, p.Sources.MaxAgeHours)
+	}
+	// 上限只防手滑多打几个 0:心的市价在 3~4 万
+	if !(p.Fees.HeartPrice >= 0 && p.Fees.HeartPrice < 1e7) {
+		return line, 0, 0, fmt.Errorf("心的单价要在 [0, 10,000,000) 内(0 = 不填),得到 %g", p.Fees.HeartPrice)
 	}
 	switch p.Focus.Mode {
 	case FocusAuto, FocusOff, FocusTop, FocusAll:

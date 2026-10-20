@@ -172,6 +172,16 @@ $.focus.pareto[].unit_cost: number
 $.focus.pareto[].within_budget: bool
 $.focus.tiers: array
 $.focus.tiers[]: number
+$.heart: object
+$.heart.best_age_h: number
+$.heart.best_city: string
+$.heart.best_price: null|number
+$.heart.best_source: string
+$.heart.cities: array
+$.heart.cities[]: string
+$.heart.has_recipe: bool
+$.heart.item: string
+$.heart.used: number
 $.line: string
 $.main_raw: string
 $.params_used: object
@@ -184,6 +194,7 @@ $.params_used.daily.turnover_days: number
 $.params_used.daily.volume_share: number
 $.params_used.fees: object
 $.params_used.fees.buy_order_setup: bool
+$.params_used.fees.heart_price: number
 $.params_used.fees.outbid: number
 $.params_used.fees.setup: number
 $.params_used.fees.station_per100: number
@@ -217,6 +228,8 @@ $.params_used.sources.bid_max_qty: number
 $.params_used.sources.bid_orders: bool
 $.params_used.sources.cities: array
 $.params_used.sources.cities[]: string
+$.params_used.sources.heart_cities: array
+$.params_used.sources.heart_cities[]: string
 $.params_used.sources.max_age_hours: number
 $.params_used.sources.transport_pct: number
 $.params_used.target: string

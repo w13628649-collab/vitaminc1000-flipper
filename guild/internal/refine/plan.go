@@ -270,6 +270,64 @@ type Result struct {
 	Warnings   []Warning   `json:"warnings"`
 	// RecipeSource 是配方数据的来源(库 / 上游 / 内置快照),排查对不上时先看它
 	RecipeSource string `json:"recipe_source"`
+	// Heart 是心配方(用一个心替掉一个原料)的情况。T 级没解锁、只能买现成时为 nil
+	Heart *HeartInfo `json:"heart"`
+}
+
+// HeartInfo:这条链能不能用心、心最便宜多少钱在哪、推荐那条用了几个。
+//
+// 心是可选的输入,没价不算缺价;引擎在两条配方里按成本取便宜的,不用心时界面要能说出为什么
+// (没有心配方 / 没人挂心 / 比原料贵),不然看起来就像「没做这条路」(用户 2026-10-20)。
+type HeartInfo struct {
+	Item string `json:"item"`
+	// HasRecipe:链上能自炼的那几级里有没有心配方。.4 档没有心配方,目标是 .4 时整条链都没有
+	HasRecipe bool `json:"has_recipe"`
+	// Cities 是找过心的城市(sources.heart_cities)
+	Cities []string `json:"cities"`
+	// Best* 是最便宜的一档心(含手填价);没有任何卖单、也没手填时 BestPrice 为 nil
+	BestPrice  *float64 `json:"best_price"`
+	BestCity   string   `json:"best_city,omitempty"`
+	BestSource string   `json:"best_source,omitempty"` // capture / aodp / manual
+	BestAgeH   *float64 `json:"best_age_h,omitempty"`
+	// Used 是推荐那条路线一共买了几个心(各级加起来)
+	Used float64 `json:"used"`
+}
+
+// heartInfo 汇总心的情况。推荐那条 = 第一条非参照行。
+func (e *engine) heartInfo(cands []Candidate) *HeartInfo {
+	h := &HeartInfo{Item: e.line.Heart, Cities: e.p.Sources.HeartCities}
+	for _, lv := range e.chain {
+		if !lv.makeable {
+			continue
+		}
+		for _, r := range lv.recipes {
+			if usesHeart(r) {
+				h.HasRecipe = true
+			}
+		}
+	}
+	// 链上没有心配方(.4)就不报心的价:用不上,而且服务层这时也不读心的盘口(ItemsFor 不收)
+	if !h.HasRecipe {
+		return h
+	}
+	if os := e.buyOffers(e.line.Heart); len(os) > 0 {
+		b := os[0]
+		price := b.buyUnit()
+		h.BestPrice, h.BestCity, h.BestSource = &price, b.key.city, b.source
+		_, h.BestAgeH = e.seenAge(b.seen)
+	}
+	for _, c := range cands {
+		if c.Reference != "" {
+			continue
+		}
+		for _, s := range c.Steps {
+			if s.Op == "buy" && s.Item == e.line.Heart {
+				h.Used += s.Qty
+			}
+		}
+		break
+	}
+	return h
 }
 
 // ── 入口 ────────────────────────────────────────────────────────────────
@@ -374,6 +432,7 @@ func Plan(in Input) (*Result, error) {
 	}
 	e.fillRawBreakevens(res)
 	res.Data = e.dataInfo(res.Candidates, kept)
+	res.Heart = e.heartInfo(res.Candidates)
 	return res, nil
 }
 

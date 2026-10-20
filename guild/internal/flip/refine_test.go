@@ -44,13 +44,29 @@ type fakeRefine struct {
 	volItems                        []string
 	volCity                         string
 	volFirst, volLast               time.Time
+	// 心快照(只读心这一个物品,见 refine_snap.go snapsFor)的调用单独计数:
+	// 上面那几个计数测的是整条线快照的缓存语义,心快照是另一份独立的读取
+	heartBookCalls, heartPriceCalls int
+	heartCities                     []string
+}
+
+// isHeartItem:这个物品是不是某条线的心。
+func isHeartItem(id string) bool {
+	l, ok := refine.LineOfItem(id)
+	return ok && l.Heart == id
 }
 
 func (f *fakeRefine) BookOrders(_ context.Context, keys []model.QuoteKey, since time.Time) ([]store.LiveOrder, error) {
 	f.mu.Lock()
-	f.bookCalls++
-	f.keys, f.since = keys, since
-	gate := f.gate
+	heartOnly := len(keys) > 0 && !slices.ContainsFunc(keys, func(k model.QuoteKey) bool { return !isHeartItem(k.ItemID) })
+	var gate chan struct{}
+	if heartOnly {
+		f.heartBookCalls++
+	} else {
+		f.bookCalls++
+		f.keys, f.since = keys, since
+		gate = f.gate
+	}
 	f.mu.Unlock()
 	if gate != nil {
 		<-gate
@@ -78,6 +94,14 @@ func (f *fakeRefine) BookOrders(_ context.Context, keys []model.QuoteKey, since 
 func (f *fakeRefine) AODPPrices(_ context.Context, items, cities []string) ([]aodp.PriceRecord, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if len(items) == 1 && isHeartItem(items[0]) {
+		f.heartPriceCalls++
+		f.heartCities = cities
+		if f.priceErr != nil {
+			return nil, f.priceErr
+		}
+		return f.prices, nil
+	}
 	f.priceCalls++
 	f.priceItems, f.priceCities = items, cities
 	if f.priceErr != nil {
@@ -105,6 +129,53 @@ func (f *fakeRefine) calls() (books, prices, vols int) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.bookCalls, f.priceCalls, f.volCalls
+}
+
+func (f *fakeRefine) heartCalls() (books, prices int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.heartBookCalls, f.heartPriceCalls
+}
+
+// 心只在 Caerleon 有卖单(实测常态):默认在全部市场找心,要找到并用上;心快照只读一次、命中后不重读;
+// 退回只在买料城市里找时,找不到就不用,也不进缺价清单
+func TestRefine心在别的市场卖也找得到(t *testing.T) {
+	const heart = "T1_FACTION_MOUNTAIN_TOKEN_1"
+	src := barFixture()
+	src.orders = append(src.orders, rOrders(heart, "Caerleon", model.SideOffer, rNow.Add(-time.Hour), 10, 500)...)
+	s, _ := newRefineService(src)
+	p := s.RefineDefaults(tBar, "")
+	if !slices.Contains(p.Sources.HeartCities, "Caerleon") || slices.Contains(p.Sources.HeartCities, "Black Market") {
+		t.Fatalf("默认买心的城市应是全部市场、不含黑市:%v", p.Sources.HeartCities)
+	}
+	res := mustRefine(t, s, p)
+	h := res.Heart
+	if h == nil || !h.HasRecipe || h.BestPrice == nil || *h.BestPrice != 10 || h.BestCity != "Caerleon" || h.Used <= 0 {
+		t.Fatalf("Caerleon 10 银的心要找到并用上:%+v", h)
+	}
+	if b, pr := src.heartCalls(); b != 1 || pr != 1 {
+		t.Fatalf("心快照冷启动读一次簿、一次 AODP:%d %d", b, pr)
+	}
+	if b, _, _ := src.calls(); b != 1 {
+		t.Fatalf("整条线快照照旧只读一次:%d", b)
+	}
+
+	p2 := p
+	p2.Qty++
+	mustRefine(t, s, p2)
+	if b, _ := src.heartCalls(); b != 1 {
+		t.Fatalf("参数变了、快照命中:心快照不该重读:%d", b)
+	}
+
+	p3 := p
+	p3.Sources.HeartCities = p.Sources.Cities
+	res = mustRefine(t, s, p3)
+	if res.Heart.Used != 0 || res.Heart.BestPrice != nil {
+		t.Fatalf("只在买料城市里找心时找不到:%+v", res.Heart)
+	}
+	if slices.Contains(res.Data.Missing, heart) {
+		t.Fatal("心没价不该进缺价清单")
+	}
 }
 
 // rNow 是这些测试的「现在」。

@@ -258,7 +258,42 @@ const (
 // RefineDefaults 是一次请求打底的参数:配置里的默认值(conf.Refining、conf.Economics),
 // city 为空时用目标那条线的专精城。API 层把请求体解码到它上面。
 func (s *Service) RefineDefaults(target, city string) refine.Params {
-	return refine.DefaultsFrom(target, city, s.Cfg)
+	p := refine.DefaultsFrom(target, city, s.Cfg)
+	p.Sources.HeartCities = s.heartCities()
+	return p
+}
+
+// heartCities 是默认能买心的城市:服务端城市列表里除黑市以外的全部市场。
+// 心很轻、随身带,不受买料城市限制(refine.SourceParams.HeartCities)
+func (s *Service) heartCities() []string {
+	var out []string
+	for _, c := range s.Cfg.Cities {
+		if c != world.BlackMarket {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// needsHeart:这次要看的物品里有没有这条线的心(目标链上有心配方时 ItemsFor 会把心列进来)。
+func needsHeart(line refine.Line, items []string) bool { return slices.Contains(items, line.Heart) }
+
+// refineKeysWithHeart 是 refineKeys 再加上心在 sources.heart_cities 的两边(物品里有心时)。
+func refineKeysWithHeart(p refine.Params, line refine.Line, items, targets []string) []model.QuoteKey {
+	keys := refineKeys(items, buyCities(p), targets, p.Sell.City)
+	if !needsHeart(line, items) {
+		return keys
+	}
+	seen := make(map[model.QuoteKey]bool, len(keys))
+	for _, k := range keys {
+		seen[k] = true
+	}
+	for _, k := range refineKeys([]string{line.Heart}, p.Sources.HeartCities, nil, "") {
+		if !seen[k] {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 // Refine 算一个目标的候选路线。参数不合法返回 *ParamError;读库失败返回别的错误;
@@ -287,8 +322,11 @@ func (s *Service) RefineWith(ctx context.Context, p refine.Params, o RefineOpts)
 		return nil, err
 	}
 	line, _ := refine.LineOfItem(p.Target)
-	cities := allCities(p)
-	snaps, use, err := s.ensureSnaps(ctx, line, cities, o.After)
+	items, err := refine.ItemsFor(s.Recipes(), p.Target)
+	if err != nil {
+		return nil, &ParamError{Err: err}
+	}
+	snaps, cities, use, err := s.snapsFor(ctx, line, p, needsHeart(line, items), o.After)
 	if err != nil {
 		return nil, err
 	}
@@ -327,6 +365,11 @@ func (s *Service) checkRefine(p refine.Params) error {
 			return paramErr("买料城市 %q 不在服务端的城市列表 %v 里", c, s.Cfg.Cities)
 		}
 	}
+	for _, c := range p.Sources.HeartCities {
+		if !known(c) {
+			return paramErr("买心的城市 %q 不在服务端的城市列表 %v 里", c, s.Cfg.Cities)
+		}
+	}
 	if w := s.Cfg.Refining.WindowHours; p.Sources.MaxAgeHours > w {
 		return paramErr("数据最大年龄 %g 小时超过服务端读抓包的窗口 %g 小时(refining.window_hours)",
 			p.Sources.MaxAgeHours, w)
@@ -349,7 +392,8 @@ func (s *Service) computeRefine(_ context.Context, p refine.Params, snaps map[st
 	if err != nil {
 		return nil, &ParamError{Err: err}
 	}
-	keys := refineKeys(items, buyCities(p), []string{p.Target}, p.Sell.City)
+	line, _ := refine.LineOfItem(p.Target)
+	keys := refineKeysWithHeart(p, line, items, []string{p.Target})
 	books, info, warns := s.mergeBooks(keys, snaps, now, p.Sources.MaxAgeHours)
 	t0 := time.Now()
 	res, err := refine.Plan(refine.Input{Params: p, Books: books, Recipes: recipes,
@@ -505,6 +549,9 @@ func (s *Service) mergeBooks(keys []model.QuoteKey, snaps map[string]*refineSnap
 	sort.Strings(cities)
 	for _, c := range cities {
 		sn := snaps[c]
+		if sn.heart() {
+			continue
+		}
 		if sn.at.Before(info.ReadAt) {
 			info.ReadAt = sn.at
 		}
@@ -897,8 +944,8 @@ func (s *Service) RefineMatrixWith(ctx context.Context, lineKey string, base ref
 	if err := s.checkRefine(probe); err != nil {
 		return nil, err
 	}
-	cities := allCities(base)
-	snaps, use, err := s.ensureSnaps(ctx, line, cities, o.After)
+	// 25 格里 .0~.3 都有心配方,矩阵总要找心
+	snaps, cities, use, err := s.snapsFor(ctx, line, base, true, o.After)
 	if err != nil {
 		return nil, err
 	}
@@ -933,7 +980,7 @@ func (s *Service) computeMatrix(ctx context.Context, line refine.Line, base refi
 	}
 	items = uniqStrings(items)
 	sort.Strings(items)
-	keys := refineKeys(items, buyCities(base), targets, base.Sell.City)
+	keys := refineKeysWithHeart(base, line, items, targets)
 	books, info, warns := s.mergeBooks(keys, snaps, now, base.Sources.MaxAgeHours)
 	sellSnap := snaps[base.Sell.City]
 	t0 := time.Now()

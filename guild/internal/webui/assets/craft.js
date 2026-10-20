@@ -34,6 +34,7 @@ const craft = {
     bonus: {},                  // 线 → { v, d }:今日生产加成和填的那天。过了那天就不算(每天变)
     island: false, sellCity: "", srcCities: [], transport: null,
     bid: false, bidMax: null, leftover: "", maxAge: null, capital: null, share: null, gold: null,
+    heartPrice: {},    // 线 → 手填的心单价(每条线的心不一样)
     heart: "",                  // 心也参与返还:"" 服务端默认 | "1" 返还 | "0" 不返还
     // 待核实参数哪天填的:「station:城市」「tstation:城市」「fce:线」「unlocked:线」「heart」→ 日期。
     // 填了就算核对过(请求里带 confirmed),哪怕填的正好是默认值 —— 专精真是 0、站费真是 500 的人,
@@ -193,7 +194,7 @@ function ageTag(h, title) {
   const t = title || (lv === "red" ? "超过 24 小时:这个价多半已经变了" : lv === "yellow" ? "超过 6 小时:进游戏看一眼再下单" : "6 小时以内");
   return `<span class="agetag ${lv}" title="${esc(t)}">${h < 1 ? Math.max(1, Math.round(h * 60)) + " 分钟" : h.toFixed(1) + " 小时"}</span>`;
 }
-const SRC_NAME = { capture: "抓包", aodp: "AODP", "capture+aodp": "抓包+AODP" };
+const SRC_NAME = { capture: "抓包", aodp: "AODP", "capture+aodp": "抓包+AODP", manual: "你填的" };
 
 // 警告代码 → 短标签(引擎 refine/plan.go 和服务层 flip/refine.go 的全部代码)。没列的原样显示代码
 const CRAFT_WARN = {
@@ -327,6 +328,8 @@ function craftSyncForm() {
   const bonus = cBonus();
   $("c-bonus").options[0].textContent = `服务端默认(+${num(sd.daily_bonus?.[L.line] ?? 0)})`;
   $("c-bonus").value = bonus == null ? "" : String(bonus);
+  setVal("c-heartprice", p.heartPrice[p.line]);
+  $("c-heartprice").placeholder = "按市场最便宜的卖单";
   $("c-island").checked = !!p.island;
   cSetOptions($("c-sellcity"), [["", `同生产城市(${city})`], ...cities.filter(c => c !== city).map(c => [c, c])],
     p.sellCity && p.sellCity !== city ? p.sellCity : "");
@@ -484,6 +487,7 @@ function craftBadges() {
   if (ts != null) mine.push("主人费率");
   if (b != null) mine.push("生产加成");
   if (p.heart) mine.push("心返还");
+  if (p.heartPrice[p.line] != null) mine.push("心单价");
   if (p.island) mine.push("个人岛");
   if (p.srcCities.length) mine.push("跨城买料");
   if (p.bid) mine.push("挂买单收料");
@@ -520,6 +524,7 @@ function craftBody() {
   if (p.station[city] != null) body.fees.station_per100 = p.station[city];
   if (p.tstation[city] != null) body.fees.transmute_station_per100 = p.tstation[city];
   if (p.k != null) body.fees.transmute_factor = p.k;
+  if (p.heartPrice[p.line] != null) body.fees.heart_price = p.heartPrice[p.line];
   const b = cBonus();
   if (b != null) body.rrr.daily_bonus = b;
   if (p.leftover) body.leftover = p.leftover;
@@ -1135,6 +1140,7 @@ function craftCardHTML(res) {
       tip: `(开专注的利润 − max(0, 不开专注的最好利润))÷ 每根专注;premium 门槛 ${num(craftPremiumSPF())} 银/点` },
     sf && { k: "站费", v: `${num(sf.fee)} 银/100 营养`, tip: feeTitle(sf) },
     sf && { k: "站费来源", v: feeSrcWord(sf), tip: feeTitle(sf) },
+    ...heartRows(res.heart),
     { k: "用到的价最旧", v: ageTag(c.oldest_age_h, c.oldest_age_h == null ? "没有用到带观测时间的价"
       : c.age_level === "red" ? "用到的价里最旧的超过 24 小时,先进游戏看一眼"
       : c.age_level === "yellow" ? "用到的价里最旧的超过 6 小时,下单前核一下" : "用到的价都在 6 小时以内") },
@@ -1152,6 +1158,20 @@ function craftCardHTML(res) {
     ${craftUnvHTML(res, c)}
     ${warnCompact(c.warnings)}
   </section>`;
+}
+
+// 心配方(一个心顶一个原料,.0~.3 才有)的两行:心最便宜在哪、这一批用了几个。
+// .4 没有心配方,不出这两行。心没人卖、也没手填时说清楚,免得以为没算这条路
+function heartRows(h) {
+  if (!h?.has_recipe) return [];
+  const name = cName(h.item) || HEART_WORD;
+  const tip = `心配方:${name} 顶掉一份原料。在全部市场(${(h.cities || []).join("、")})里找最便宜的卖单,心轻、不算运费;` +
+    "高级参数里能手填心的单价";
+  const price = h.best_price == null ? "哪座城都没人卖,也没手填"
+    : `${num(h.best_price)} 银 · ${h.best_source === "manual" ? "你填的" : `${esc(h.best_city)} · ${esc(SRC_NAME[h.best_source] || h.best_source || "")} ${ageTag(h.best_age_h)}`}`;
+  const used = h.used > 0 ? `${fq(h.used)} 个` : h.best_price == null ? "不用(没价)" : "不用(比原料贵)";
+  return [{ k: name, v: price, tip, vc: h.best_price == null ? "warnish" : "" },
+    { k: "这一批用心", v: used, tip }];
 }
 
 // 一张「项目 | 值」表。rows 里 falsy 的跳过,方便按条件拼行;v 是现成的 HTML(调用方负责转义)
@@ -1706,7 +1726,7 @@ $("c-reset").addEventListener("click", () => {
   Object.assign(p, {
     fce: {}, unlocked: {}, station: {}, tstation: {}, k: null, kAt: "", kSrc: "", kGold: null, bonus: {},
     island: false, sellCity: "", srcCities: [], transport: null, bid: false, bidMax: null, leftover: "",
-    maxAge: null, capital: null, share: null, gold: null, heart: "", confAt: {},
+    maxAge: null, capital: null, share: null, gold: null, heart: "", heartPrice: {}, confAt: {},
   });
   craftChanged();
 });
@@ -1767,6 +1787,9 @@ $("v-craft").addEventListener("input", e => {
       if (r.ok) { p.k = r.v; p.kAt = r.v == null ? "" : cToday(); p.kSrc = r.v == null ? "" : "manual"; p.kGold = r.v == null ? null : craftGold(); }
       break;
     case "c-transport": r = cNum(el, 0, 999); if (r.ok) p.transport = r.v; break;
+    case "c-heartprice": r = cNum(el, 0, 9999999);
+      if (r.ok) { if (r.v == null || r.v === 0) delete p.heartPrice[p.line]; else p.heartPrice[p.line] = r.v; }
+      break;
     case "c-bidmax": r = cNum(el, 0, 1e7); if (r.ok) p.bidMax = r.v; break;
     case "c-maxage": r = cNum(el, 1, sd.window_hours || CRAFT_FALLBACK.window_hours); if (r.ok) p.maxAge = r.v; break;
     case "c-capital": r = cNum(el, 0, 1e13); if (r.ok) p.capital = r.v; break;
@@ -1858,6 +1881,7 @@ function craftMatrixQuery() {
   if (f.transmute_factor != null) q.set("k", String(f.transmute_factor));
   if (f.station_per100 != null) q.set("station_per100", String(f.station_per100));
   if (f.transmute_station_per100 != null) q.set("transmute_station_per100", String(f.transmute_station_per100));
+  if (f.heart_price != null) q.set("heart_price", String(f.heart_price));
   if (body.focus.budget != null) q.set("budget", String(body.focus.budget));
   q.set("fce", CRAFT_TIERS.map(t => `${t}:${body.focus.fce[t] || 0}`).join(","));
   if (body.focus.unlocked_tier != null) q.set("unlocked_tier", String(body.focus.unlocked_tier));

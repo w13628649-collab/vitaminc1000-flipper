@@ -57,6 +57,80 @@ var refineSnapWait = 3 * time.Second
 
 type snapKey struct{ line, city string }
 
+// 心快照:心可以在任何市场买(sources.heart_cities),这些城多半不在买料 / 出售城里。
+// 为它们建整条线的快照会白读几十个物品和几座城的成交量;心快照只读心这一个物品、不读成交量。
+// 键是线名加后缀,和整条线的快照分开缓存、分开标脏、分开预热。
+const heartSnapSuffix = "#heart"
+
+func heartSnapLine(l refine.Line) refine.Line { l.Key += heartSnapSuffix; return l }
+
+func isHeartSnap(l refine.Line) bool { return strings.HasSuffix(l.Key, heartSnapSuffix) }
+
+// heart:这份是心快照。心是可选输入,它的读簿时刻不进 read_at / snapshot_age_s ——
+// 界面拿 read_at 和 WS 报价比,心快照不随整条线一起重建,算进去 read_at 会一直停在老的那份
+func (sn *refineSnap) heart() bool { return strings.HasSuffix(sn.key.line, heartSnapSuffix) }
+
+// snapLineByKey 是认心快照的 refine.LineByKey(预热按快照键找线)。
+func snapLineByKey(key string) (refine.Line, bool) {
+	if base, ok := strings.CutSuffix(key, heartSnapSuffix); ok {
+		l, ok := refine.LineByKey(base)
+		return heartSnapLine(l), ok
+	}
+	return refine.LineByKey(key)
+}
+
+// snapsFor 建一次计算要用的全部快照:allCities 的整条线快照;needHeart(这次的物品里有心)时,
+// 再加上心买料城里不在 allCities 的那些城的心快照。返回的 cities 是用到的全部城,进计算缓存键。
+//
+// 心是可选的输入:心快照建不出来只告警,照样用整条线的快照算(那几座城的心当没有)。
+func (s *Service) snapsFor(ctx context.Context, line refine.Line, p refine.Params, needHeart bool,
+	after time.Time) (map[string]*refineSnap, []string, snapUse, error) {
+
+	cities := allCities(p)
+	var extra []string
+	if needHeart {
+		for _, c := range p.Sources.HeartCities {
+			if !slices.Contains(cities, c) {
+				extra = append(extra, c)
+			}
+		}
+	}
+	// 两份快照并行等:心快照冷启动也要取一次 AODP,不该排在整条线后面
+	type heartRes struct {
+		snaps map[string]*refineSnap
+		use   snapUse
+		err   error
+	}
+	hc := make(chan heartRes, 1)
+	if len(extra) > 0 {
+		go func() {
+			// 不带 after:WS 报价时刻说的是整条线的盘口,心快照靠 TTL 和入库标脏刷新
+			hs, hu, err := s.ensureSnaps(ctx, heartSnapLine(line), extra, time.Time{})
+			hc <- heartRes{hs, hu, err}
+		}()
+	}
+	snaps, use, err := s.ensureSnaps(ctx, line, cities, after)
+	if len(extra) == 0 {
+		return snaps, cities, use, err
+	}
+	h := <-hc
+	if err != nil {
+		return nil, nil, use, err
+	}
+	if h.err != nil {
+		slog.Warn("心快照没建出来,这次只在买料 / 出售城里找心", "line", line.Key, "cities", extra, "err", h.err)
+		return snaps, cities, use, nil
+	}
+	for c, sn := range h.snaps {
+		snaps[c] = sn
+	}
+	if use.cache == "hit" {
+		use.cache = h.use.cache // 报两份里差的那个
+	}
+	use.wait = max(use.wait, h.use.wait)
+	return snaps, append(slices.Clone(cities), extra...), use, nil
+}
+
 type refineCell struct{ item, city string }
 
 // refineSnap 是一条线在一座城的原料快照。发布之后不再改(标脏记在 refineState.dirty 里),
@@ -119,7 +193,7 @@ func timingOf(snaps map[string]*refineSnap, use snapUse, now time.Time, engine t
 	for _, sn := range snaps {
 		read, aodpD, vol = max(read, sn.readDur), max(aodpD, sn.aodpDur), max(vol, sn.volDur)
 		t.AODPWaited = t.AODPWaited || sn.aodpWaited
-		if sn.at.Before(oldest) {
+		if !sn.heart() && sn.at.Before(oldest) {
 			oldest = sn.at
 		}
 	}
@@ -191,7 +265,7 @@ func (s *Service) ensureSnaps(ctx context.Context, line refine.Line, cities []st
 	}
 
 	t0 := time.Now()
-	chans := s.startBuild(line, need)
+	chans := s.startBuild(line, need, out)
 	wctx := ctx
 	if !cold {
 		var cancel context.CancelFunc
@@ -236,7 +310,11 @@ func (s *Service) ensureSnaps(ctx context.Context, line refine.Line, cities []st
 
 // startBuild 在后台重建 line 在 cities 的快照,返回每座城建完会关上的 channel。
 // 已经在建的城不重复建,直接给那个 channel(singleflight);剩下的合成一批。
-func (s *Service) startBuild(line refine.Line, cities []string) map[string]chan struct{} {
+//
+// seen 非 nil 时是调用方判断"要建"那一刻看到的快照(冷启动的城是 nil)。判断和这里之间隔着一次解锁,
+// 别人那批可能刚好建完发布、从 building 里摘掉了:现在的快照已经不是 seen 里那份,就别再建一遍,
+// 给个关上的 channel(两个并发的同样请求会因此各建一份、各算一次,缓存合并不上)
+func (s *Service) startBuild(line refine.Line, cities []string, seen map[string]*refineSnap) map[string]chan struct{} {
 	r := &s.refine
 	out := make(map[string]chan struct{}, len(cities))
 	prev := map[string]*refineSnap{}
@@ -245,6 +323,12 @@ func (s *Service) startBuild(line refine.Line, cities []string) map[string]chan 
 	for _, c := range cities {
 		k := snapKey{line.Key, c}
 		if ch, ok := r.building[k]; ok {
+			out[c] = ch
+			continue
+		}
+		if seen != nil && r.snaps[k] != seen[c] {
+			ch := make(chan struct{})
+			close(ch)
 			out[c] = ch
 			continue
 		}
@@ -374,9 +458,13 @@ func (s *Service) buildSnaps(ctx context.Context, line refine.Line, cities []str
 				sn.prices[refineCell{rec.ItemID, c}] = rec
 			}
 		}
-		if p != nil && now.Sub(p.volsAt) < refineSnapVolTTL {
+		switch {
+		case isHeartSnap(line):
+			// 心快照只为找心的价,不出售东西,用不着成交量
+			sn.volsAt = now
+		case p != nil && now.Sub(p.volsAt) < refineSnapVolTTL:
 			sn.vols, sn.volsAt = p.vols, p.volsAt
-		} else {
+		default:
 			t2 := time.Now()
 			vols, err := s.refineVolumes(ctx, line.Targets(), c, now)
 			if err != nil {
@@ -434,6 +522,9 @@ func (s *Service) aodpFollowUp(line refine.Line, cities []string, key string,
 // snapItems 是快照覆盖的物品:这条线 T2~T8 的全部原料、半成品和心,再并上 25 个目标
 // ItemsFor 收集到的(防配方表里出现线外的输入)。按 配方表 × 线 缓存。
 func (s *Service) snapItems(line refine.Line) []string {
+	if isHeartSnap(line) {
+		return []string{line.Heart}
+	}
 	r := &s.refine
 	recipes := s.Recipes()
 	key := fmt.Sprintf("%p|%s", recipes, line.Key)
@@ -476,6 +567,9 @@ func (s *Service) MarkRefineDirty(k model.QuoteKey) {
 		return
 	}
 	s.markSnapsDirty(line, []string{k.LocationID})
+	if k.ItemID == line.Heart {
+		s.markSnapsDirty(heartSnapLine(line), []string{k.LocationID})
+	}
 }
 
 func (s *Service) markSnapsDirty(line refine.Line, cities []string) {
@@ -517,7 +611,7 @@ func (s *Service) runWarm(ctx context.Context, prebuild bool) {
 	defer r.warm.Store(false)
 	if prebuild {
 		for _, l := range refine.Lines {
-			waitBuilt(ctx, s.startBuild(l, []string{l.City}))
+			waitBuilt(ctx, s.startBuild(l, []string{l.City}, nil))
 		}
 	}
 	t := time.NewTicker(refineWarmTick)
@@ -566,13 +660,13 @@ func (s *Service) warmOnce(ctx context.Context) {
 	}
 	sort.Strings(lines)
 	for _, lk := range lines {
-		line, ok := refine.LineByKey(lk)
+		line, ok := snapLineByKey(lk)
 		if !ok {
 			continue
 		}
 		cities := byLine[lk]
 		sort.Strings(cities)
-		waitBuilt(ctx, s.startBuild(line, cities))
+		waitBuilt(ctx, s.startBuild(line, cities, nil))
 	}
 }
 

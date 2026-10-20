@@ -257,6 +257,7 @@ func matrixParams(q url.Values, p *refine.Params) error {
 		func() error { return num("k", &p.Fees.TransmuteFactor) },
 		func() error { return num("station_per100", &p.Fees.StationPer100) },
 		func() error { return num("transmute_station_per100", &p.Fees.TransmuteStationPer100) },
+		func() error { return num("heart_price", &p.Fees.HeartPrice) },
 		func() error { return num("budget", &p.Focus.Budget) },
 		func() error { return integer("unlocked_tier", &p.Focus.UnlockedTier) },
 		func() error { return num("daily_bonus", &p.RRR.DailyBonus) },
