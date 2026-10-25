@@ -1169,8 +1169,8 @@ function craftCardHTML(res) {
     ${unfilledLn}${loseLn}
     ${craftBuyLine(res)}
     <div class="c-tables${dimmed ? " dimmed" : ""}">${unitT}${batchT}${focT}</div>
-    ${craftBETable(res, c, m0)}
     ${craftTrialHTML(res, c)}
+    ${craftBETable(res, c, m0)}
     ${craftFocusHTML(res, c)}
     ${craftUnvHTML(res, c)}
     ${warnCompact(c.warnings)}
