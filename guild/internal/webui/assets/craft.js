@@ -50,6 +50,7 @@ const craft = {
   candsAll: false,   // 候选表显示全部(默认只列前 CRAFT_CANDS_SHOWN 条普通候选加参照行)
   rawAll: new Set(), // 原料来路里「显示全部起点」的那几种原料
   rawOpen: false,    // 「下级链自炼用到的原料」展开着没有(重算、实时刷新后照旧)
+  trial: { target: "", price: null },   // 挂单价试算里填的价(只记这一页、这个目标,见 craftTrialHTML)
   keys: new Set(),   // 实时订阅的盘口 key(配方树上的全部物品,见 craftKeysOf)
   liveTimer: 0, liveFirst: 0, liveQuote: null, liveNote: "",
   items: new Map(),  // 物品 id → { zh, en }:按物品族一次拉全,精炼页的名字都从这来
@@ -793,8 +794,23 @@ function craftStatus(state, opts = {}) {
 // ── 结果 ──
 function craftRender(res) {
   $("c-result").classList.remove("dim");
+  // 实时推送会整块重画:正在挂单价试算框里打字的,重画后把焦点和光标还回去
+  const ae = document.activeElement, typing = ae?.id === "c-trial" ? ae.selectionStart : null;
   $("c-result").innerHTML = craftHeadHTML(res) + craftCardHTML(res) + craftRawHTML(res) + craftCandsHTML(res) + craftDataHTML(res);
+  if (typing != null || ae?.id === "c-trial") {
+    const el = $("c-trial");
+    if (el) { el.focus(); try { el.setSelectionRange(typing, typing); } catch (e) { /* number 框不支持选区 */ } }
+  }
 }
+// 挂单价试算:只重画那几行,不重算、不发请求
+$("c-result").addEventListener("input", e => {
+  const el = e.target;
+  if (el.id !== "c-trial" || !craft.data) return;
+  const v = Number(el.value);
+  craft.trial = { target: craft.data.target, price: el.value.trim() !== "" && Number.isFinite(v) && v >= 1 ? Math.round(v) : null };
+  const c = (craft.data.candidates || []).find(x => !x.reference), body = $("c-trial-body");
+  if (c && body) body.innerHTML = craftTrialRows(craft.data, c);
+});
 
 // ── 原料来路:直接回答「买 8.4 矿,还是 8.3/8.2/8.1/8.0,还是从低级转上来」(设计 §4.5) ──
 // 按推荐那条路线的需求量,列每个起点「全部从这里买、再转化上来」的等效单价和可用件数,
@@ -1154,6 +1170,7 @@ function craftCardHTML(res) {
     ${craftBuyLine(res)}
     <div class="c-tables${dimmed ? " dimmed" : ""}">${unitT}${batchT}${focT}</div>
     ${craftBETable(res, c, m0)}
+    ${craftTrialHTML(res, c)}
     ${craftFocusHTML(res, c)}
     ${craftUnvHTML(res, c)}
     ${warnCompact(c.warnings)}
@@ -1260,6 +1277,77 @@ function craftBETable(res, c, m0) {
     <caption>盈亏平衡 · ${MODE_WORD[m0]} · 路线不变,涨到这个价这一批利润归零</caption>
     <thead><tr><th class="l">投入物</th><th>这一批要</th><th>到手均价上限</th><th>现在</th><th>还能涨</th></tr></thead>
     <tbody>${rows}</tbody>${foot}</table></div>`;
+}
+
+// 挂单价试算(2026-10-25 用户:T6.4 布挂很久卖不掉,想降价,又不知道降到多少会亏):
+// 自己填一个挂价,照推荐这条路线的成本马上看到手、利润、利润率、这一批、每点专注值、前面还排着几件。
+// 纯前端算,不发请求:成本不随卖价变,到手系数用服务端这次的(post.net ÷ post.price,税率可能被装备减过)。
+// 填的价只记在这一页(按目标),换目标就清掉 —— 价是跟着盘口走的,存下来过两天就是错的
+function craftTrialHTML(res, c) {
+  if (!c?.filled) return "";
+  if (craft.trial.target !== res.target) craft.trial = { target: res.target, price: null };
+  const v = craft.trial.price;
+  return `<div class="tablewrap c-trial"><table class="tight c-bet">
+    <caption>挂单价试算 · 路线和成本不变,只换挂价
+      <label>挂价 <input type="number" id="c-trial" min="1" step="100" value="${v == null ? "" : v}"
+        placeholder="${res.sell?.post ? num(res.sell.post.price) : "填一个价"}"
+        title="填你打算挂的卖单价,下面第一行马上按这个价算;空着就只看下面几个参考价"></label></caption>
+    <thead><tr><th class="l">挂价</th><th>比现在</th><th>到手</th><th>单根利润</th><th>利润率</th>
+      <th>这一批 ${num(res.qty)} 件</th><th title="(这个价的利润 − max(0, 不开专注的利润))÷ 每根专注">每点专注值</th>
+      <th class="l" title="比你便宜或同价、已经挂着的卖单;买家先买它们">前面排着</th></tr></thead>
+    <tbody id="c-trial-body">${craftTrialRows(res, c)}</tbody></table>${craftTrialNote(res, c)}</div>`;
+}
+function craftTrialRows(res, c) {
+  const s = res.sell || {}, post = s.post, fees = res.params_used?.fees || {};
+  const k = trialMul(res);
+  if (!(k > 0)) return "";
+  const setup = fees.setup ?? 0, qty = res.qty, vol = res.volume || {};
+  const none = (res.focus?.pareto || []).find(p => !p.tiers?.length);
+  const perFocus = c.focus?.tiers?.length ? c.focus.per_unit : 0;
+  const asks = post?.asks || [];
+  const ahead = price => {
+    if (!post || post.source === "aodp" || !asks.length) return "不知道(只有 AODP 价)";
+    let n = 0;
+    for (const lv of asks) if (lv.price <= price) n += lv.qty;
+    const capped = asks.length >= 40 && price > asks[asks.length - 1].price;
+    const days = vol.known && vol.per_day > 0 ? `,约 ${(n / vol.per_day).toFixed(1)} 天的成交量` : "";
+    return n === 0 ? `<span class="pos">没有,你是卖一</span>` : `${capped ? "≥ " : ""}${num(n)} 件${days}`;
+  };
+  const row = (label, price, cls, tip) => {
+    const net = price * k, unit = net - c.unit_cost;
+    const total = unit * qty, cap = c.upfront_capital + qty * price * setup;
+    const base = none ? Math.max(0, net - none.unit_cost) : null;
+    const spf = perFocus > 0 && base != null ? (unit - base) / perFocus : null;
+    const vsNow = post?.price ? price / post.price - 1 : null;
+    const underBid = s.take && price <= s.take.best_bid
+      ? ` <span class="warnish" title="不高于买一 ${num(s.take.best_bid)}:直接吃买单到手更多(只扣税不扣创建费)、当场成交">低于买一</span>` : "";
+    return `<tr class="${cls || ""}"${tip ? ` title="${esc(tip)}"` : ""}><td class="l">${label} <b>${num(price)}</b>${underBid}</td>
+      <td>${vsNow == null ? "—" : spct(vsNow)}</td><td>${num(net)}</td>
+      <td class="${signCls(unit)}"><b>${sgn(unit)}</b></td><td class="${signCls(unit)}">${spct(unit / c.unit_cost)}</td>
+      <td class="${signCls(total)}">${sgn(total)}<span class="subln">÷ 本金 ${spct(cap > 0 ? total / cap : null)}</span></td>
+      <td>${spf == null ? "—" : `${snum(spf)} 银`}</td><td class="l">${ahead(price)}</td></tr>`;
+  };
+  const rows = [];
+  const v = craft.trial.price;
+  if (v != null) rows.push(row("你填的", v, "pick"));
+  if (post) rows.push(row("现在挂价(卖一 − 压价)", post.price));
+  if (vol.recent_avg) rows.push(row(`近 ${num(vol.recent_days)} 天成交均价`, Math.round(vol.recent_avg)));
+  // 保本价:这一批利润归零的挂价(向上取整到整银币,取整后利润 ≥ 0)
+  rows.push(row("保本价", Math.ceil(c.unit_cost / k), "", "按推荐这条路线(含专注)的成本,挂到这个价这一批利润归零;再低就亏"));
+  return rows.join("");
+}
+// 挂卖单到手系数:服务端这次的(post.net ÷ post.price,税率可能被装备减过);没有卖单时按参数里的税和创建费
+function trialMul(res) {
+  const post = res.sell?.post, fees = res.params_used?.fees || {};
+  return post?.price > 0 ? post.net / post.price : 1 - (fees.tax ?? 0) - (fees.setup ?? 0);
+}
+// 表下一句:不开专注要挂到多少才保本。挂价低于它、高于保本价时,赚的全是专注的钱
+function craftTrialNote(res, c) {
+  const none = (res.focus?.pareto || []).find(p => !p.tiers?.length), k = trialMul(res);
+  if (!none || !c.focus?.tiers?.length || !(k > 0)) return "";
+  const be = Math.ceil(c.unit_cost / k), nf = Math.ceil(none.unit_cost / k);
+  if (nf <= be) return "";
+  return `<p class="sub">不开专注要挂到 <b>${num(nf)}</b> 才保本。挂价在 ${num(be)} ~ ${num(nf)} 之间:只有开专注才赚,赚的全是专注的钱。</p>`;
 }
 
 const sameTiers = (a, b) => (a || []).length === (b || []).length && (a || []).every(t => (b || []).includes(t));

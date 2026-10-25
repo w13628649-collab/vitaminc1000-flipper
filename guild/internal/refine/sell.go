@@ -28,7 +28,19 @@ type PostSell struct {
 	SeenAt  *time.Time `json:"seen_at,omitempty"`
 	AgeH    *float64   `json:"age_h,omitempty"`
 	Source  string     `json:"source"`
+	// Asks 是卖单阶梯(从低到高,最多 sellLadderMax 档)。界面的挂单价试算拿它数
+	// 「挂这个价,前面还排着几件」。只有 AODP 价、不知道深度时为空
+	Asks []AskLevel `json:"asks"`
 }
+
+// AskLevel 是卖单阶梯的一档。
+type AskLevel struct {
+	Price int64 `json:"price"`
+	Qty   int64 `json:"qty"`
+}
+
+// sellLadderMax 是 PostSell.Asks 最多带几档:降价试算只关心卖一往上这一段
+const sellLadderMax = 40
 
 // TakeFill 是吃买单卖 N 件(不过断崖)的结果。
 type TakeFill struct {
@@ -76,9 +88,13 @@ func (e *engine) sellInfo() SellInfo {
 		best := l.levels[0].Price
 		// 挂价不能压到 0:卖一本身就是 1 银时再压 1 银就没意义了,按 1 银算
 		price := max(1, best-e.p.Fees.Undercut)
-		ps := &PostSell{BestAsk: best, Price: price, Net: float64(price) * e.mkt.PostAsk, Source: l.source}
+		ps := &PostSell{BestAsk: best, Price: price, Net: float64(price) * e.mkt.PostAsk, Source: l.source,
+			Asks: []AskLevel{}}
 		if !l.depthUnknown {
 			ps.NearQty = depth.Analyze(l.levels, sellNearPct).QtyNear
+			for _, lv := range l.levels[:min(len(l.levels), sellLadderMax)] {
+				ps.Asks = append(ps.Asks, AskLevel{Price: lv.Price, Qty: lv.Qty})
+			}
 		}
 		// 挂卖价跟的是卖一:新鲜度按卖一那一档的观测时刻
 		ps.SeenAt, ps.AgeH = e.seenAge(l.seenAt(0))

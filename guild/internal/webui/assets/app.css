@@ -718,6 +718,13 @@ table.c-kvt .agetag{font-size:inherit}
 table.c-bet{margin:10px 0 4px; font-size:13px}
 table.c-bet td.l{white-space:normal}
 table.c-bet tfoot td{border-top:1px solid var(--ink); border-bottom:0}
+/* 挂单价试算:标题行里带一个挂价输入框,第一行(你填的)淡底色 */
+.c-trial caption label{font-weight:400; color:var(--ink-mid); margin-left:16px}
+.c-trial caption input{width:130px; margin-left:6px; padding:3px 8px; font:inherit; font-size:13px; font-weight:600}
+.c-trial td.pos{color:var(--gain)}
+.c-trial td.neg{color:var(--warn)}
+.c-trial tr.pick > td{background:color-mix(in oklab,var(--bronze),var(--surface) 90%)}
+.c-trial tr[title]{cursor:help}
 /* 标题右边的出售城市行情:卖一 / 买一 / 日均成交三行,价、到手、盘口、数据四列 */
 .c-mkt-wrap{margin-left:auto; min-width:0; overflow-x:auto}
 table.c-mkt{width:auto; margin:0; font-size:12.5px}
