@@ -1,8 +1,9 @@
 @echo off
 rem Local dev stack in WSL: dockerd + TimescaleDB + guild-server, and rebuild dist\flipper-client.exe.
 rem Works from any directory, or double-click. Real logic lives in guild\dev-up.sh.
-rem   dev-up.cmd   build server + client, then (re)start everything. Always builds.
-wsl -d Ubuntu -u root --cd "%~dp0." -- bash guild/dev-up.sh
+rem   dev-up.cmd         rebuild server + client only if sources changed, then make sure everything runs.
+rem   dev-up.cmd build   always rebuild.
+wsl -d Ubuntu -u root --cd "%~dp0." -- bash guild/dev-up.sh %*
 if errorlevel 1 (
   pause
   exit /b 1
