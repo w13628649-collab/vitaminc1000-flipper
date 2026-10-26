@@ -111,6 +111,11 @@ type Parser struct {
 	zoneReqs []zoneRequest
 	// zoneDropped 是因为配不出区丢掉的 197 响应条数
 	zoneDropped int64
+	// held 是还不知道在哪时翻到的城市挂单(LocationID 空着)。客户端开在游戏中途、
+	// 角色一直没切区的话位置就一直不知道 —— 以前这些挂单直接丢,用户在市场里点半天全白点。
+	// 现在先扣着:用户在界面上确认「我就在 X」(AssumeLocation)就补上位置发出去;
+	// 先抓到切区的话它们属于切区之前那个不知道的地方,只能扔掉
+	held []model.MarketOrder
 	// sampled 是这次运行里每个 (方向, 码) 已经记了几条样本(sample.go)
 	sampled map[ruleKey]int
 	// ledger 是个人账本要的状态:挂单缓存、待确认的即时买卖、邮件类型(ledger.go)
@@ -168,6 +173,46 @@ func (p *Parser) Location() string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.location
+}
+
+// maxHeldOrders 是位置不明时最多扣着多少条挂单。翻一页 50 条,够翻几百页
+const maxHeldOrders = 20_000
+
+// HeldOrders 是位置不明、扣着没发的挂单条数。
+func (p *Parser) HeldOrders() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.held)
+}
+
+// AssumeLocation 用户在界面上确认「我现在就在 loc」。只在位置还不知道时生效:
+// 从客户端启动到现在没抓到过切区,扣着的挂单就都是在这儿翻到的,补上位置一起发出去。
+// 返回补发了几条;位置已经知道了(抓到了切区)返回 ok=false,不覆盖抓包读到的。
+func (p *Parser) AssumeLocation(loc string) (n int, ok bool) {
+	p.mu.Lock()
+	if loc == "" || p.location != "" {
+		p.mu.Unlock()
+		return 0, false
+	}
+	p.location = loc
+	held := p.held
+	p.held = nil
+	id, name := p.characterID, p.characterName
+	p.mu.Unlock()
+
+	for i := range held {
+		held[i].LocationID = loc
+	}
+	if len(held) > 0 {
+		p.cacheOrders(held)
+		if p.OnOrders != nil {
+			p.OnOrders(held)
+		}
+	}
+	if p.OnIdentity != nil {
+		p.OnIdentity(id, name, loc)
+	}
+	return len(held), true
 }
 
 func (p *Parser) Character() (id, name string) {
@@ -309,6 +354,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 	}
 	now := p.now() // 回放时是包上的时间
 	orders := make([]model.MarketOrder, 0, len(raws))
+	var held []model.MarketOrder
 	decoded := 0
 	// 解开了几条就报几条,位置不明丢掉的也算:能解开 JSON 就说明是明文
 	defer func() {
@@ -333,10 +379,7 @@ func (p *Parser) handleOrders(params map[byte]any) {
 			// 走私贩巢穴/休息区自带(形如 xxxx@yyyy),不受影响。
 			loc = p.Location()
 		}
-		if loc == "" {
-			continue // 还不知道自己在哪,这批先丢掉,切次区就好了
-		}
-		orders = append(orders, model.MarketOrder{
+		o := model.MarketOrder{
 			OrderID:    r.ID,
 			ItemID:     r.ItemTypeID,
 			LocationID: loc,
@@ -346,7 +389,21 @@ func (p *Parser) handleOrders(params map[byte]any) {
 			UnitPrice:  toSilver(r.UnitPriceSilver),
 			Amount:     r.Amount,
 			ObservedAt: now,
-		})
+		}
+		if loc == "" {
+			// 还不知道自己在哪:先扣着,用户确认位置后补发(AssumeLocation),切次区也行
+			held = append(held, o)
+			continue
+		}
+		orders = append(orders, o)
+	}
+	if len(held) > 0 {
+		p.mu.Lock()
+		p.held = append(p.held, held...)
+		if over := len(p.held) - maxHeldOrders; over > 0 {
+			p.held = append(p.held[:0:0], p.held[over:]...)
+		}
+		p.mu.Unlock()
 	}
 	if len(orders) > 0 {
 		p.cacheOrders(orders) // 即时买卖靠订单号查回物品和单价(ledger.go)
@@ -371,6 +428,7 @@ func (p *Parser) handleJoin(params map[byte]any) {
 	}
 	if v, ok := params[8].(string); ok && v != "" {
 		p.location = v
+		p.held = nil // 扣着的是进这个区之前、不知道在哪翻到的
 	}
 	id, name, loc := p.characterID, p.characterName, p.location
 	p.mu.Unlock()
@@ -389,6 +447,7 @@ func (p *Parser) setLocation(loc string) {
 		return
 	}
 	p.location = loc
+	p.held = nil // 同 handleJoin
 	id, name := p.characterID, p.characterName
 	p.mu.Unlock()
 

@@ -80,14 +80,53 @@ func TestHandleResponse_城市挂单用当前所在地补位置(t *testing.T) {
 	}
 }
 
-func TestHandleResponse_还不知道位置就先丢掉(t *testing.T) {
-	// 位置不明时入库会污染数据,宁可丢——用户切次区就恢复了
+func TestHandleResponse_还不知道位置就先扣着(t *testing.T) {
+	// 位置不明时入库会污染数据,不能发;但也别丢:用户确认位置后补发
+	p := New()
+	got := collect(t, p)
+	p.HandleResponse(1, map[byte]any{
+		paramOperationCode: byte(p.Codes.AuctionGetOffers), 0: []string{offerJSON, requestJSON}})
+	if len(*got) != 0 || p.HeldOrders() != 2 {
+		t.Fatalf("不知道位置时不该产出挂单、要扣着:产出 %d 条、扣着 %d 条", len(*got), p.HeldOrders())
+	}
+}
+
+// 客户端开在游戏中途(2026-10-26 实况:重开客户端后一直在市场里点,一条都没传):
+// 用户确认「我就在 X」,扣着的挂单补上位置发出去,之后翻到的照常带这个位置
+func TestAssumeLocation_确认位置后补发扣着的挂单(t *testing.T) {
+	p := New()
+	got := collect(t, p)
+	var who string
+	p.OnIdentity = func(_, _, l string) { who = l }
+	p.HandleResponse(1, map[byte]any{
+		paramOperationCode: byte(p.Codes.AuctionGetOffers), 0: []string{offerJSON, requestJSON}})
+	n, ok := p.AssumeLocation("1002")
+	if !ok || n != 2 || len(*got) != 2 || (*got)[0].LocationID != "1002" || (*got)[1].LocationID != "1002" {
+		t.Fatalf("要补发 2 条、位置是 1002:ok=%v n=%d %+v", ok, n, *got)
+	}
+	if p.HeldOrders() != 0 || p.Location() != "1002" || who != "1002" {
+		t.Fatalf("确认后不再扣着、位置就是它:扣着 %d、位置 %q、回调 %q", p.HeldOrders(), p.Location(), who)
+	}
+	p.HandleResponse(1, map[byte]any{
+		paramOperationCode: byte(p.Codes.AuctionGetOffers), 0: []string{offerJSON}})
+	if len(*got) != 3 || (*got)[2].LocationID != "1002" {
+		t.Fatalf("之后翻到的照常带位置:%+v", *got)
+	}
+}
+
+func TestAssumeLocation_抓到切区后不覆盖_扣着的扔掉(t *testing.T) {
 	p := New()
 	got := collect(t, p)
 	p.HandleResponse(1, map[byte]any{
 		paramOperationCode: byte(p.Codes.AuctionGetOffers), 0: []string{offerJSON}})
-	if len(*got) != 0 {
-		t.Fatalf("不知道位置时不该产出挂单,得到 %d 条", len(*got))
+	// 切区:扣着的那条是切区之前、不知道在哪翻到的,不能算到新区头上
+	p.HandleRequest(1, map[byte]any{
+		paramOperationCode: byte(p.Codes.GetGameServerByCluster), 0: "1000"})
+	if p.HeldOrders() != 0 || len(*got) != 0 {
+		t.Fatalf("切区后扣着的要扔掉:扣着 %d、产出 %d", p.HeldOrders(), len(*got))
+	}
+	if _, ok := p.AssumeLocation("1002"); ok || p.Location() != "1000" {
+		t.Fatalf("位置已经抓到了,界面确认不该覆盖:%q", p.Location())
 	}
 }
 

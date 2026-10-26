@@ -71,6 +71,15 @@ type Status struct {
 	MarketCryptoSince string `json:"market_crypto_since,omitempty"`
 	OtherEncrypted    int64  `json:"other_encrypted"`
 
+	// HeldOrders 是位置不明、扣着没发的挂单条数(protocol.Parser.HeldOrders)。
+	// LastLocation / LastCity / LastCharacter / LastLocationAt 是上次运行最后记下的位置
+	// (只在这次还不知道位置时给):界面拿它问「还在 X 吗」,点一下就补发扣着的挂单
+	HeldOrders     int    `json:"held_orders"`
+	LastLocation   string `json:"last_location,omitempty"`
+	LastCity       string `json:"last_city,omitempty"`
+	LastCharacter  string `json:"last_character,omitempty"`
+	LastLocationAt string `json:"last_location_at,omitempty"`
+
 	OrdersSeen     int64 `json:"orders_seen"`
 	OrdersUploaded int64 `json:"orders_uploaded"`
 	// StationsUploaded 是传上去的建筑观测条数(op 197 区域地图)
@@ -92,6 +101,9 @@ type Server struct {
 	Status StatusFunc
 	// Quit 由主程序提供,界面点"退出"时调用。
 	Quit func()
+	// AssumeLocation 由主程序提供(protocol.Parser.AssumeLocation):界面上确认
+	// 「我现在就在这儿」。返回补发了几条;位置已经抓到了时 ok=false
+	AssumeLocation func(loc string) (n int, ok bool)
 
 	mu       sync.Mutex
 	fallback bool
@@ -140,6 +152,7 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", s.handleStatus)
 	mux.HandleFunc("POST /local/quit", s.handleQuit)
+	mux.HandleFunc("POST /local/location", s.handleLocation)
 	mux.Handle("/api/", s.reverse())
 	mux.Handle("/ws", s.reverse())
 	// 这条不能写成 "GET /":Go 1.22 的 ServeMux 会判它和 "/api/" 冲突
@@ -189,6 +202,34 @@ func (s *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleLocation:界面上点「还在 X」。body 是 {"location": "1002"}(原始地点 id)
+func (s *Server) handleLocation(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Location string `json:"location"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body); err != nil {
+		http.Error(w, "请求体不是合法的 JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	loc := strings.TrimSpace(body.Location)
+	if loc == "" || len(loc) > 64 {
+		http.Error(w, "缺少地点 id", http.StatusBadRequest)
+		return
+	}
+	if s.AssumeLocation == nil {
+		http.Error(w, "这个客户端不支持手动确认位置", http.StatusNotImplemented)
+		return
+	}
+	n, ok := s.AssumeLocation(loc)
+	if !ok {
+		http.Error(w, "已经抓到你在哪了,不用确认", http.StatusConflict)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(map[string]any{"location": loc, "city": world.DisplayName(loc), "sent": n})
+}
+
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	var st Status
 	if s.Status != nil {
@@ -200,6 +241,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	// 地名在这里统一翻,主程序只管报原始 id。翻不出的原样给,界面照样能显示
 	if st.City == "" {
 		st.City = world.DisplayName(st.Location)
+	}
+	if st.LastCity == "" && st.LastLocation != "" {
+		st.LastCity = world.DisplayName(st.LastLocation)
 	}
 	// 主程序没接加密判定(老的调用方、测试)时也给一句准确的话,不留空白
 	if st.MarketCrypto == "" {

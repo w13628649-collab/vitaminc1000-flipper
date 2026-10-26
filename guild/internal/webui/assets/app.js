@@ -3366,6 +3366,39 @@ async function boot() {
   } catch (e) { /* 目录还没同步 */ }
 }
 
+// 位置不明、挂单扣着没传(客户端开在游戏中途、角色一直没切区):占一整条说清楚。
+// 2026-10-26 用户重开客户端后在市场里点了一晚上,一条都没传,顶栏只有一个不起眼的「—」。
+// 上次记下的位置只当建议,点了才算:客户端关着的时候人可能已经换了城
+function locWarn(s) {
+  const el = $("loc-warn");
+  if (s.location || !s.capturing || !s.held_orders) { el.hidden = true; return; }
+  const at = s.last_location_at ? new Date(s.last_location_at) : null;
+  const when = at && isFinite(at) ? `${at.toLocaleString("zh-CN", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })} 记下的` : "";
+  const btn = s.last_location
+    ? ` 或者 <button class="act mini-act" data-assume-loc="${esc(s.last_location)}">我还在 ${esc(s.last_city || s.last_location)}</button>
+       <span class="sub">${esc([s.last_character, when].filter(Boolean).join(" · "))}</span>`
+    : "";
+  // 按钮在横条里:只在内容变了时重写,免得每秒轮询把正要点的按钮换掉
+  const html = `<b>还不知道你在哪座城,翻到的 ${s.held_orders.toLocaleString("zh-CN")} 条挂单先扣着没传。</b>
+    走出市场再进来一次(或进一次银行)就好,扣着的这些会扔掉;${btn ? "" : "重新翻一遍就行。"}${btn}${btn ? ",扣着的会一起补传" : ""}`;
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  el.hidden = false;
+}
+$("loc-warn").addEventListener("click", async e => {
+  const b = e.target.closest("[data-assume-loc]");
+  if (!b) return;
+  b.disabled = true;
+  try {
+    const r = await fetch("/local/location", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ location: b.dataset.assumeLoc }) });
+    if (!r.ok) throw new Error(await r.text());
+  } catch (err) {
+    alert(`没确认成:${err.message || err}`);
+  }
+  b.disabled = false;
+  pollLocal();
+});
+
 // 客户端自身状态。这些服务端不知道——它只看得到"有数据传上来",
 // 看不到本机抓包到底转没转、Npcap 装没装。
 // 在浏览器里直连服务端时 /local/status 是 404,整块就安静地不显示
@@ -3403,14 +3436,15 @@ async function pollLocal() {
     if (s.location) {
       sub.textContent = s.city || s.location;
       sub.title = s.city && s.city !== s.location ? `地点 id ${s.location}` : `未识别的地点 id ${s.location}`;
-    } else if (s.capturing && s.character) {
-      // 解析器不知道在哪的时候会直接丢掉挂单(城市单的地点在包里是空的,靠它补)
-      sub.textContent = "位置未知,换一次区";
-      sub.title = "客户端还没抓到进图的包,这时翻到的挂单不知道是哪座城的,会被丢掉。换一次区(进出一次建筑或传送)就好";
+    } else if (s.capturing && (s.character || s.held_orders)) {
+      // 解析器不知道在哪时挂单先扣着(城市单的地点在包里是空的,靠它补),下面横条里能确认位置
+      sub.textContent = s.held_orders ? `位置未知 · 扣着 ${s.held_orders} 条` : "位置未知,换一次区";
+      sub.title = "客户端还没抓到进图的包,这时翻到的挂单不知道是哪座城的,先扣着没传。换一次区(进出一次市场 / 银行)就好";
     } else {
       sub.textContent = "角色";
       sub.title = "";
     }
+    locWarn(s);
 
     $("quit").hidden = !s.fallback;
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -56,6 +57,47 @@ func TestStatus_没报加密判定时是未确认(t *testing.T) {
 	got = statusOf(t, Status{MarketCrypto: "encrypted"})
 	if got.MarketCryptoText != "市场数据:被加密,这个号的挂单传不出来" {
 		t.Fatalf("文案按状态补,得到 %q", got.MarketCryptoText)
+	}
+}
+
+// 界面点「我还在 X」:走路由和来源检查,交给主程序的 AssumeLocation;位置已经抓到了回 409
+func TestLocation_确认位置(t *testing.T) {
+	var got string
+	known := false
+	s := &Server{AssumeLocation: func(loc string) (int, bool) {
+		if known {
+			return 0, false
+		}
+		got, known = loc, true
+		return 7, true
+	}}
+	post := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:5000/local/location", strings.NewReader(body))
+		req.Header.Set("Origin", "http://127.0.0.1:5000")
+		rec := httptest.NewRecorder()
+		s.routes().ServeHTTP(rec, req)
+		return rec
+	}
+	rec := post(`{"location":"1002"}`)
+	var res struct {
+		City string `json:"city"`
+		Sent int    `json:"sent"`
+	}
+	if rec.Code != http.StatusOK || json.NewDecoder(rec.Body).Decode(&res) != nil || got != "1002" ||
+		res.Sent != 7 || res.City != "Lymhurst · 市场" {
+		t.Fatalf("确认要成功、补发 7 条:%d %+v %q", rec.Code, res, got)
+	}
+	if rec := post(`{"location":"1002"}`); rec.Code != http.StatusConflict {
+		t.Fatalf("位置已经知道了要回 409,得到 %d", rec.Code)
+	}
+	if rec := post(`{"location":""}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("空地点要回 400,得到 %d", rec.Code)
+	}
+}
+
+func TestStatus_上次位置翻成地名(t *testing.T) {
+	if got := statusOf(t, Status{LastLocation: "1002"}); got.LastCity != "Lymhurst · 市场" {
+		t.Errorf("last_city = %q", got.LastCity)
 	}
 }
 

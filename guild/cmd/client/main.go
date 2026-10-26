@@ -138,12 +138,17 @@ func main() {
 		slog.Info("市场数据状态变化", "from", string(from), "to", string(to))
 	}
 
+	parser := protocol.New()
+	// 上次运行最后记下的位置。客户端开在游戏中途、角色没切区时,界面拿它问「还在 X 吗」
+	last := loadLastLocation()
+
 	// 窗口顶部那排状态由这里喂。服务端不知道这些——
 	// 它只看得到"有个客户端在传数据",看不到抓包到底转没转
 	local := &clientui.Server{
-		Upstream: *server,
-		Token:    *token,
-		Quit:     stop, // 界面上的"退出"按钮,只在开不出窗口时显示
+		Upstream:       *server,
+		Token:          *token,
+		Quit:           stop, // 界面上的"退出"按钮,只在开不出窗口时显示
+		AssumeLocation: parser.AssumeLocation,
 		Status: func() clientui.Status {
 			st := up.snapshot()
 			st.Version = version
@@ -164,11 +169,15 @@ func main() {
 				st.MarketCryptoSince = cs.Since.Format(time.RFC3339)
 			}
 			st.OtherEncrypted = cs.OtherEncrypted
+			st.HeldOrders = parser.HeldOrders()
+			if st.Location == "" && last != nil {
+				st.LastLocation, st.LastCharacter = last.Location, last.Character
+				st.LastLocationAt = last.At.Format(time.RFC3339)
+			}
 			return st
 		},
 	}
 
-	parser := protocol.New()
 	parser.OnOrders = up.add
 	parser.OnMarketRequest = crypt.MarketRequest
 	parser.OnMarketResponded = crypt.MarketResponded
@@ -186,6 +195,9 @@ func main() {
 		up.setIdentity(name, loc)
 		reporter.SetCharacter(name) // 诊断记录带上角色名,便于对人
 		slog.Info("角色位置更新", "character", name, "location", loc)
+		if loc != "" {
+			saveLastLocation(lastLocation{Character: name, Location: loc, At: time.Now()})
+		}
 	}
 
 	h := capture.Handler{
