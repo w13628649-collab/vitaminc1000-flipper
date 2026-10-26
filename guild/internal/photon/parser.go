@@ -124,6 +124,65 @@ type PhotonParser struct {
 	// unknown 按消息类型数没认出来的明文消息。一个 PhotonParser 只在一个抓包
 	// goroutine 里用,不用加锁
 	unknown map[byte]int64
+
+	// seen 是最近处理过的可靠命令,去掉 Photon 的重发(reliableSeen)
+	seen reliableSeen
+}
+
+// reliableSeenMax 是去重窗口:记最近多少条可靠命令。重发间隔几秒、最多持续几十秒,
+// 这段时间里的可靠命令远少于这个数
+const reliableSeenMax = 4096
+
+// seenKey 认一条可靠命令:通道、可靠序号、命令体的哈希。
+//
+// 重发是逐字节一样的同一条命令,所以带上内容哈希:序号在两个方向上、换游戏服务器重连后
+// 都会撞,只有序号和内容都一样才是重发 —— 那样的话丢掉它也不会少任何信息
+type seenKey struct {
+	channel byte
+	seq     uint32
+	sum     uint64
+}
+
+// reliableSeen 是可靠命令的去重窗口(FIFO 淘汰)。
+//
+// Photon 的可靠命令在对端没及时确认时会原样重发,抓包把每一遍都看到了。以前不去重,
+// 每一遍都当新消息处理:2026-10-26 实况,进银行那条「切到 1001」的响应每 3.2 秒重发一遍,
+// 人已经进了市场(1002),迟到的重发又把位置改回银行,之后翻的挂单全记到了 1001 名下,
+// 精炼页只读 Lymhurst,看到的反而是前一天的老单
+type reliableSeen struct {
+	set  map[seenKey]struct{}
+	ring []seenKey
+	next int
+}
+
+// dup 报告 k 是不是窗口里见过的;没见过就记下
+func (r *reliableSeen) dup(k seenKey) bool {
+	if _, ok := r.set[k]; ok {
+		return true
+	}
+	if r.set == nil {
+		r.set = make(map[seenKey]struct{}, reliableSeenMax)
+		r.ring = make([]seenKey, 0, reliableSeenMax)
+	}
+	if len(r.ring) < reliableSeenMax {
+		r.ring = append(r.ring, k)
+	} else {
+		delete(r.set, r.ring[r.next])
+		r.ring[r.next] = k
+		r.next = (r.next + 1) % reliableSeenMax
+	}
+	r.set[k] = struct{}{}
+	return false
+}
+
+// fnv64a 是命令体的哈希(FNV-1a 64 位)。只用来认重发,不用防碰撞攻击
+func fnv64a(b []byte) uint64 {
+	h := uint64(14695981039346656037)
+	for _, c := range b {
+		h ^= uint64(c)
+		h *= 1099511628211
+	}
+	return h
 }
 
 // UnknownMsgTypes 返回到目前为止见过、但没有处理的消息类型及条数。
@@ -340,16 +399,25 @@ func (p *PhotonParser) handleCommand(src []byte, offset int) (int, bool) {
 
 	cmdType := src[offset]
 	offset++
-	offset++ // channelId
+	channel := src[offset]
+	offset++
 	offset++ // commandFlags
 	offset++ // reserved byte
 	cmdLen := int(binary.BigEndian.Uint32(src[offset:]))
 	offset += 4
-	offset += 4 // reliableSequenceNumber
+	seq := binary.BigEndian.Uint32(src[offset:])
+	offset += 4
 	cmdLen -= commandHeaderLength
 
 	if cmdLen < 0 || !available(src, offset, cmdLen) {
 		return offset, false
+	}
+
+	// 可靠命令(含分片)的重发原样丢掉,见 reliableSeen。不可靠命令不会重发
+	if cmdType == cmdSendReliable || cmdType == cmdSendFragment {
+		if p.seen.dup(seenKey{channel, seq, fnv64a(src[offset : offset+cmdLen])}) {
+			return offset + cmdLen, true
+		}
 	}
 
 	switch cmdType {

@@ -66,16 +66,51 @@ func TestPendingSegments_RejectsOversizedTotalLength(t *testing.T) {
 	}
 }
 
+// testSeq 给 reliablePacket 发可靠序号:每次一个新的,同样内容连发两次也不会被当成重发
+var testSeq uint32
+
 // reliablePacket 拼一个只含一条 SendReliable 命令的 Photon 包:
 // 12 字节包头 + 12 字节命令头 + signal 字节 + msgType + body。
 func reliablePacket(msgType byte, body []byte) []byte {
+	testSeq++
+	return reliablePacketSeq(testSeq, msgType, body)
+}
+
+func reliablePacketSeq(seq uint32, msgType byte, body []byte) []byte {
 	hdr := []byte{0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0} // peerId=1, flags=0, 1 条命令
 	cmd := make([]byte, commandHeaderLength)
 	cmd[0] = cmdSendReliable
 	payload := append([]byte{0xF3, msgType}, body...)
 	binary.BigEndian.PutUint32(cmd[4:], uint32(commandHeaderLength+len(payload)))
+	binary.BigEndian.PutUint32(cmd[8:], seq)
 	pkt := append(append(hdr, cmd...), payload...)
 	return pkt
+}
+
+// Photon 重发的可靠命令只处理一次(2026-10-26:迟到的「切到银行」重发把位置改回 1001,
+// 之后在市场翻的挂单全记错了地方)。序号一样但内容不同、内容一样但序号不同的都不是重发
+func TestReliable_重发只处理一次(t *testing.T) {
+	var codes []byte
+	p := NewPhotonParser(nil, nil, func(c byte, _ map[byte]any) { codes = append(codes, c) })
+	p.ReceivePacket(reliablePacketSeq(500, MsgEvent, []byte{3, 0}))
+	p.ReceivePacket(reliablePacketSeq(500, MsgEvent, []byte{3, 0})) // 重发
+	p.ReceivePacket(reliablePacketSeq(500, MsgEvent, []byte{4, 0})) // 序号撞了、内容不同(另一个方向 / 重连后)
+	p.ReceivePacket(reliablePacketSeq(501, MsgEvent, []byte{3, 0})) // 同样内容、新序号
+	p.ReceivePacket(reliablePacketSeq(500, MsgEvent, []byte{3, 0})) // 又一遍重发
+	if string(codes) != string([]byte{3, 4, 3}) {
+		t.Fatalf("重发要丢、别的照常派发:得到 %v", codes)
+	}
+}
+
+// 去重窗口有上限:老的被挤掉,内存不涨
+func TestReliable_去重窗口有上限(t *testing.T) {
+	p := NewPhotonParser(nil, nil, nil)
+	for i := range uint32(reliableSeenMax * 3) {
+		p.ReceivePacket(reliablePacketSeq(i, MsgEvent, []byte{3, 0}))
+	}
+	if len(p.seen.set) != reliableSeenMax || len(p.seen.ring) != reliableSeenMax {
+		t.Fatalf("窗口应封顶在 %d:set %d、ring %d", reliableSeenMax, len(p.seen.set), len(p.seen.ring))
+	}
 }
 
 // 131 = 0x80|3 是加密的操作响应,要带着类型报上去
