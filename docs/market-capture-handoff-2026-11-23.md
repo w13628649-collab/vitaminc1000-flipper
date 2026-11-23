@@ -73,18 +73,70 @@
 3. 位置没认出来，挂单全扣在 `held` 里。
 4. 上传失败，或本地服务端没起来。
 
-**下一步：一次操作拿全样本。** 在 Windows 上按前文第 1 步带 `-record` 启动，进出一次市场，翻一个确认有挂单的物品。带回三样：这一轮的 `client.log`、这一轮的 `.pcap`、顶栏截图（或日志「本地界面已就绪」地址下 `/local/status` 的 JSON）。放到 Linux 的 `/data/code/albion/albion-flipper/captures/2026-11-23/`。
+## 在 Windows 上照做（作者在家排查用）
 
-日志逐层对应：
+全程在家里那台 Windows 上完成，不用往 Linux 传文件。这一节取代上文第 1、2 步里「把录包放到 Linux」的做法。下文的 `<仓库>` 指 Windows 上的仓库目录，WSL 里对应 `/mnt/<盘符>/...`。
 
-| 层 | 看日志哪一行 | 看 status 哪个字段 |
-| --- | --- | --- |
-| 1 抓包 | 「网卡」行的 `category`（有没有 `exitlag`）、「这张网卡跳过」、「检测到 ExitLag」 | `capture_hint`、`driver_warning` |
-| 2 加密 | 「市场数据被加密」或「市场数据状态变化」的 `to` | `market_crypto`、`other_encrypted` |
-| 3 位置 | 有没有「角色位置更新」 | `held_orders`、`orders_seen` |
-| 4 上传 | 「已上传」「上传失败」「上传被服务端拒绝」 | `orders_uploaded`、`server_ok`、`last_error` |
+### 1. 准备
 
-拿到后按前文第 2 步回放，确认是哪一层。这份录包也适合做第一份真实市场夹具。
+1. `git pull`，再双击 `dev-up.cmd`。它会在 WSL 里起数据库和服务端，源码有变就重编 `dist\flipper-client.exe`。
+2. 如果开着 ExitLag：Settings → Advanced → Packet redirection method 应该是 **NDIS (Legacy)**，不是默认的 WFP。用别的加速器的，记下它的模式和虚拟网卡名。
+3. **先开加速器，再开客户端。** 客户端只在启动时枚举一次网卡，之后再开加速器、换网线、切 WiFi，它都看不到。
+
+### 2. 录一轮
+
+1. 关掉已经开着的客户端。录包放仓库外面（256 MB 一个文件，含自己的角色和挂单，不进仓库）：
+
+   ```powershell
+   cd <仓库>\dist
+   .\flipper-client.exe -record $env:USERPROFILE\albion-captures\market-1.32.040
+   ```
+
+   快捷方式不记启动参数，以后双击桌面图标照常不录。
+
+2. **客户端开好再登录角色**，让它抓到 Join 响应。已经在游戏里的话，先出城再进城、切一次区。
+3. 进市场，搜一个确认有挂单的物品，卖单、买单各看一页。记下时间、城市、物品。
+4. 顶栏截图。然后退出客户端，让录包写完。
+
+### 3. 看日志，逐层排除
+
+日志在 `%APPDATA%\AlbionFlipper\client.log`。启动时超过 2 MB 会清空重写。只看这次启动之后的部分，从最后一个「客户端已启动」往下看。顶栏的数字来自本地 `/local/status`，地址在日志「本地界面已就绪」那行，浏览器能直接打开看 JSON。
+
+| 层 | 日志里找 | status 字段 | 出问题时 |
+| --- | --- | --- | --- |
+| 1 抓包 | 「网卡」行的 `category`（有没有 `exitlag`）、「这张网卡跳过」、「检测到 ExitLag」 | `capture_hint`、`driver_warning` | 改 NDIS 模式、先开加速器再开客户端、重装 Npcap |
+| 2 加密 | 「市场数据被加密」，或「市场数据状态变化」的 `to` | `market_crypto`、`other_encrypted` | 号被切成密文，代码修不了，只能靠 AODP 兜底 |
+| 3 位置 | 有没有「角色位置更新」 | `held_orders`、`orders_seen` | 界面上点确认位置，补发扣着的单；再回放查 Join / ChangeCluster 为什么没认出来 |
+| 4 上传 | 「已上传」「上传失败」「上传被服务端拒绝」 | `orders_uploaded`、`server_ok`、`last_error` | 重跑 `dev-up.cmd`，看 WSL 里服务端是否在跑 |
+
+从第 1 层往下看，第一个不正常的就是故障点。
+
+### 4. 回放录包确认
+
+在 WSL 里跑（`dev-up.sh` 用的就是这个 Go）：
+
+```bash
+cd /mnt/<盘符>/<仓库>/guild
+# 先看消息清单:Fed 是交给解析器的包数,下面按 (方向, 码) 列出现次数
+/usr/local/go/bin/go run ./cmd/pcapdump /mnt/c/Users/<用户名>/albion-captures/market-1.32.040/*.pcap
+# 再把市场和位置相关的逐条打出来
+/usr/local/go/bin/go run ./cmd/pcapdump \
+  -dump 'op_request:81,op_request:82,op_response:81,op_response:82,op_response:-1,op_response:2,op_response:41,op_request:17' \
+  -out /tmp/albion-market.jsonl /mnt/c/Users/<用户名>/albion-captures/market-1.32.040/*.pcap
+```
+
+| 回放看到的 | 说明 |
+| --- | --- |
+| 录包是空的，或 `Fed` 接近 0 | 第 1 层：这张网卡上没有 5056 的流量 |
+| 有别的消息，但没有 `op_request:81/82` | 第 1 层，或者翻市场那段没录到。核对时间和网卡 |
+| 有 81/82 请求，没有 `op_response:-1` 或 81/82 响应 | 第 2 层：响应是密文，对照日志的加密判定 |
+| `op_response:-1` 的参数 0 里有挂单 JSON | 明文到了。再看 `op_response:2` 的 key 8、`op_response:41` 的 key 0、`op_request:17` 的 key 0：一个地点都没有 → 第 3 层；有地点 → 往第 4 层查 |
+
+### 5. 收尾
+
+结论写回这份文档：哪一层、哪条日志或回放观察能复核。commit 后立刻 push。
+
+这份录包想留作真实市场夹具的话，参照 `guild/internal/refine/testdata/local/` 的做法：只放本机、加进 `.gitignore`，测试在文件不存在时 `t.Skip`。
 
 ## 后续交接：黑区附近人物、附魔资源和特殊怪
 
